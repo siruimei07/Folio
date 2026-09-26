@@ -1,0 +1,169 @@
+# System overview
+
+Living document: update it when the component split or a data flow changes. Decisions stay in
+ADRs; this file describes the current shape of the system.
+
+- Status: draft, 2026-09-26. Written stack-agnostic; ADR-0001 maps the layers onto technologies.
+- Product source: [`docs/product/brief.md`](../product/brief.md) (Chinese). Section numbers below
+  (brief §N) point into it.
+- Detailed data model: ADR-0002. Versioning and sync format: ADR-0003.
+
+## 1. Requirements summary
+
+### Functional (v1)
+
+| Area | What the system must do | Brief |
+|---|---|---|
+| Library | Semester and course folders, multi-select tags, import (copy), take over existing folders, rename, move, delete to the Recycle Bin, list and grid views, tag filters, smart views | §5.1 |
+| Change detection | Notice changes made by other apps inside the library; honour default and `.gitignore` ignore rules | §5.1 |
+| Search | `Ctrl+K` palette over names, paths, courses, tags and the text of text and Word files | §5.2 |
+| Preview | Images, PDF, Markdown with maths, code, Word, Excel, PowerPoint (no external software), audio and video | §5.3 |
+| Workspace | Uncommitted changes (add, modify, delete, rename or move), per-item include, diffs for text and Word, commit with a template or AI message, reword and uncommit before sync | §5.4 |
+| History | Timeline of commits and operations, per-file history, restore a text or Word version as a new change | §5.6 |
+| Sync | Create or join a remote folder in iCloud Drive; sync = pull, then push; detect direct edits made in the remote from iPad or Mac; conflict handling; free up local space | §5.5 |
+| AI message | Optional DeepSeek (OpenAI-compatible) call with the key in Windows Credential Manager; template fallback | §5.7 |
+| Distribution | Installer, auto-update without paid code signing, first-run onboarding | §9 |
+
+### Non-functional
+
+| Quality | Target |
+|---|---|
+| Scale | 50,000 files / 100 GB per library stays fluid |
+| Latency | Search results about 200 ms after typing stops; common previews under 1 s; UI never blocks on disk or network |
+| Safety | No silent data loss: deletes go to the Recycle Bin, snapshot before sync, crash-safe commit and sync |
+| Offline | Everything except sync and AI works offline; sync resumes later |
+| Privacy | Network only for opt-in DeepSeek calls and update checks; no telemetry |
+| Security | UI untrusted; privileged layer behind a narrow, typed, validated IPC surface (CLAUDE.md §5) |
+| Accessibility | WCAG 2.1 AA, full keyboard operation, reduced-motion support |
+| Platform | Windows 10/11 x64 (ARM64 later if needed); on-disk formats stay platform-neutral |
+
+### Constraints and assumptions
+
+- Team: Sirui plus AI agents; agents write most code, Sirui reviews and approves.
+- Installed toolchain: Node 24, pnpm 11, Rust 1.97 (ADR-0001 pins what the project uses).
+- UI follows the design pipeline (tokens, handoff specs, `frontend-design`), which assumes a web UI.
+- Every user-facing flow gets a Playwright e2e test (CLAUDE.md §4.2).
+- A future macOS app would be written in Swift. It must at least read and write the same remote;
+  reusing the core would be better.
+- Single user, one running instance per machine, one library per machine in v1 (model allows more).
+
+## 2. Components
+
+```text
++----------------------------------------------------------------------+
+| UI (untrusted renderer)                                              |
+|   views: Library, Workspace, History, Settings; command palette      |
+|   preview renderers: PDF, Markdown, code, Word, Excel, PowerPoint    |
+|   i18n strings, design tokens                                        |
++------------------------------ typed IPC -----------------------------+
+| Shell (privileged host)                                              |
+|   command handlers: validate -> call core -> typed result or error   |
+|   events to the UI: changes, job progress, sync state                |
+|   file-bytes protocol (read-only, scoped to library and remote)      |
+|   OS integration: dialogs, open / reveal, Recycle Bin, credentials,  |
+|   shell thumbnails, drag-out, window chrome, updater                 |
++----------------------------------------------------------------------+
+| Core (library code, no UI or shell dependencies)                     |
+|   library    scan, watch, ignore rules, courses, tags, file kinds    |
+|   catalog    SQLite catalog + full-text index (derived, rebuildable) |
+|   extract    text from md / code / txt / docx (pdf, pptx later)      |
+|   versioning working state vs last commit, content store, commits,  |
+|              diff, restore                                           |
+|   sync       remote layout, pull / push, conflicts, placeholders     |
+|   ai         commit-message request builder and HTTP client          |
+|   jobs       background queue: progress, cancellation, one writer   |
++----------------------------------------------------------------------+
+| OS adapters (interfaces the core calls; real and fake versions)      |
+|   file system, watcher, Recycle Bin, credentials, cloud placeholders |
++----------------------------------------------------------------------+
+```
+
+Rules:
+
+- The core never imports UI or shell code. It reaches the OS only through adapters, so it can be
+  tested with fakes and, if the stack allows, reused by a future Swift app.
+- The shell is thin: validation, mapping errors, and OS glue. Business rules live in the core.
+- Large payloads (file bytes for previews) do not travel through IPC messages; the shell serves
+  them through a read-only protocol limited to the library and remote roots.
+
+## 3. Data flows
+
+1. **Start-up**: load settings, open the library, reconcile the catalog with the disk (catches
+   changes made while the app was closed), start the watcher, then render from catalog queries.
+2. **External change**: watcher event, debounce, re-stat and hash only if size or mtime changed,
+   update the catalog and the working-state diff, emit `workspace.changed`.
+3. **Import**: dropped paths plus target course and tags, copied by a background job with
+   progress, catalogued as they land.
+4. **Search**: debounced query, one catalog query (names, paths, tags, full text), top results.
+5. **Preview**: the UI asks for a file by catalog id; bytes come through the scoped protocol with
+   range support; Office and PDF rendering happens in the UI; thumbnails are cached by content hash.
+6. **Commit**: selected changes plus an optional message; the core writes content for
+   fully-versioned files, records the commit, optionally asks the AI module for a message (template
+   on failure), and emits `history.changed`.
+7. **Sync**: snapshot, read new remote records, apply them locally (conflicts go to the user),
+   append local commits to the remote, update the remote file tree, emit progress and a result.
+8. **Remote watch**: watch or poll the remote folder; new records or direct edits raise the
+   `↓N` badge. Nothing local changes until the user syncs.
+
+## 4. IPC surface (shape, not the final contract)
+
+- **Commands** (request/response), grouped by module: `library.*`, `entries.*`, `tags.*`,
+  `search.query`, `preview.*`, `workspace.*`, `history.*`, `sync.*`, `settings.*`, `ai.*`.
+- **Events** (host to UI): `fs.changed`, `workspace.changed`, `history.changed`, `job.progress`,
+  `sync.state`, `remote.available`.
+- **Errors**: one typed union shared by every command, for example `NotFound`, `InvalidInput`,
+  `PermissionDenied`, `FileLocked`, `Conflict`, `RemoteUnavailable`, `PlaceholderNotDownloaded`,
+  `Network`, `Cancelled`, `Internal`. Each carries an i18n message key; the UI renders an explicit
+  error state (CLAUDE.md §5).
+- The contract is defined once and both sides use the same types (CLAUDE.md §5); ADR-0001 decides
+  how (shared TypeScript module, or types generated from the privileged side).
+
+## 5. Where state lives (proposal; ADR-0002 and ADR-0003 decide)
+
+| Data | Location | Synced | Rebuildable |
+|---|---|---|---|
+| User files | Library folder | Yes | No |
+| Tags, course colours and abbreviations | Library `.folio/` (readable text) | Yes | No |
+| History: commits and stored versions | Library `.folio/`, mirrored to the remote | Yes | No |
+| Catalog and full-text index | `%LOCALAPPDATA%\Folio` (SQLite) | No | Yes |
+| Thumbnails and preview cache | `%LOCALAPPDATA%\Folio\cache` | No | Yes |
+| Settings | `%APPDATA%\Folio` | No | No (small) |
+| DeepSeek API key | Windows Credential Manager | No | Re-enter |
+| Logs | `%LOCALAPPDATA%\Folio\logs` (rotating) | No | n/a |
+
+## 6. Scale estimates
+
+- **Initial scan**: stat 50k files takes seconds on an SSD. Hashing 100 GB is disk-bound
+  (minutes), so it runs as a resumable background job and later runs hash only files whose size or
+  mtime changed.
+- **Catalog**: 50k rows plus full text of maybe 10k text and Word files — tens of MB of SQLite.
+- **UI**: lists are virtualised; the UI holds only the visible page, never the whole catalog.
+- **Watcher**: one recursive watch on the library root; on buffer overflow, fall back to a rescan.
+
+## 7. Failure modes
+
+| Failure | Handling |
+|---|---|
+| Crash during commit or sync | Journalled steps; on restart, finish or roll back, never leave half a record |
+| iCloud placeholder not downloaded | Trigger hydration, wait with progress, time out with `PlaceholderNotDownloaded` |
+| iCloud conflict copies (`name 2.ext`) in the remote | Remote history is append-only so they cannot occur there; in the file tree they are detected and shown as conflicts |
+| File locked by another app (e.g. Word) | Retry later; show it as pending, not failed |
+| Invalid Windows file name from iPad or Mac | Keep it out of the local tree and explain in the sync result |
+| Disk full | Abort the job cleanly and report; no partial writes (temp file + rename) |
+| DeepSeek unreachable | Template message; commit still succeeds |
+
+## 8. Testing seams
+
+- Core: unit and integration tests against fake adapters and temp directories; golden tests for
+  the remote format; property tests for sync ordering and conflict detection.
+- IPC: contract tests for validation and error mapping on the privileged side.
+- UI: component tests with the IPC mocked; Playwright e2e against the real app with a temporary
+  library and data directory per test run (CLAUDE.md §7.5).
+
+## 9. Revisit as the system grows
+
+- Several libraries per machine; ARM64 builds.
+- Full-text search for PDF, PowerPoint and Excel; OCR.
+- Paid code signing if SmartScreen warnings bother users.
+- A Swift macOS app: core reuse versus reimplementing the documented remote format.
+- New features in the left rail (deadlines, statistics) as separate core modules.
