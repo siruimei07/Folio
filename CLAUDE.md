@@ -14,8 +14,8 @@ conversation, Sirui wins.
 |---|---|
 | Name | Folio |
 | Owner | Sirui Mei (sole decision-maker for product, scope and merges) |
-| Platforms | Desktop — Windows and macOS |
-| Product one-liner | **TODO (Sirui)** — placeholder until the product brief exists. Do not invent product scope; ask. |
+| Platforms | Desktop — Windows 10/11 only (decided 2026-09-26). macOS is out of scope; a future Mac version would be a separate Swift app. |
+| Product one-liner | Windows desktop document library for students: files organised in semester → course folders with multi-select category tags, quick search, in-app preview, and a GitButler-style change history (full versions for text and Word files, change events only for everything else), pushed to and pulled from a plain folder in iCloud Drive that serves as a versioned backup other devices can browse. Scope and decisions: [`docs/product/brief.md`](docs/product/brief.md) (Chinese). Do not extend scope beyond it without asking. |
 | Tech stack | **UNDECIDED.** Decided by ADR-0001 (see §6). Do not scaffold app code, add a framework, or install runtime dependencies before ADR-0001 is accepted. |
 | Repo | Bootstrapped (§9); no application code yet. GitButler workspace mode, target `origin/main`. Remote `github.com/siruimei07/Folio` (private). |
 | Local path | `E:\CS Projects Development\Documents Manage\Folio` (device `g16-strix`). Open agent sessions in this folder, not its parent. |
@@ -32,7 +32,7 @@ conversation, Sirui wins.
 
 - Keep standard technical terms in English inside Chinese text when no settled translation exists (IPC, design token, hunk, ADR).
 - When an English agent doc needs Sirui's decision, do not ask him to read it: summarise the decision and options in Chinese in chat.
-- In-app UI language is not yet decided. Regardless, all user-visible strings must be externalised (i18n-ready) from the first component; no hard-coded UI strings.
+- In-app UI language: Simplified Chinese (decided 2026-09-26, product brief §3). All user-visible strings must still be externalised (i18n-ready) from the first component so English can be added later; no hard-coded UI strings.
 
 ---
 
@@ -85,7 +85,7 @@ of skills in use. Read it before design, UI, motion, backend or review work.
 - **Motion** respects `prefers-reduced-motion`; durations and easings come from tokens.
 - **Accessibility** baseline: WCAG 2.1 AA contrast, full keyboard operation, visible focus, adequate hit targets.
 - **Data.** Schema is versioned from the first release; every schema change ships with a migration and a migration test.
-- **Cross-platform.** Use platform-neutral path APIs; test keyboard shortcuts on both Windows (Ctrl) and macOS (Cmd); no shell-specific scripts in `package` scripts. The local path contains spaces — quote every path in scripts and tool calls.
+- **Platform.** Windows only (§1). Still keep path handling and every on-disk format platform-neutral: iPad and Mac write into the iCloud remote, and a future Swift app must read it. No shell-specific scripts in `package` scripts. The local path contains spaces — quote every path in scripts and tool calls.
 - **Text files.** UTF-8 without BOM, LF line endings (`.editorconfig` and `.gitattributes` enforce this; `*.cmd` / `*.bat` are CRLF). This machine's ANSI code page is GBK and Windows PowerShell 5.1 defaults to it, which corrupts Chinese text and em dashes. Create and edit files with the Write/Edit tools — never `Set-Content`, `Out-File` or `>` redirection — and pass `-Encoding UTF8` when reading files with `Get-Content`.
 
 ---
@@ -93,11 +93,12 @@ of skills in use. Read it before design, UI, motion, backend or review work.
 ## 6. First milestones
 
 1. **Bootstrap** — done 2026-09-26 (§9).
-2. **Product brief** — Sirui fills §1 "Product one-liner"; a Chinese brief goes to `docs/product/brief.md`.
-3. **ADR-0001: Application stack** (`engineering:system-design` then `engineering:architecture`). Candidates: Electron + React + TypeScript vs Tauri + React + TypeScript. Must weigh: e2e testability with Playwright (first-class for Electron; Tauri needs `tauri-driver` and has no macOS WebDriver), rendering consistency (bundled Chromium vs WebView2/WKWebView), security model, installer size, auto-update, SQLite access, how native the UI must feel (selection, cursors, focus, window chrome, context menus). Must also pin the Node version and package manager (pnpm is installed). Present the recommendation to Sirui in Chinese; he approves.
+2. **Product brief** — drafted 2026-09-26 in `docs/product/brief.md` (Chinese); it fills §1 "Product one-liner", and its §12 lists the product constraints each ADR below must meet.
+3. **ADR-0001: Application stack** (`engineering:system-design` then `engineering:architecture`). Candidates: Electron + React + TypeScript vs Tauri + React + TypeScript. Scope is Windows only (§1), so the macOS WebDriver and WKWebView concerns below no longer apply. Must weigh: e2e testability with Playwright (first-class for Electron; Tauri needs `tauri-driver` and has no macOS WebDriver), rendering consistency (bundled Chromium vs WebView2/WKWebView), security model, installer size, auto-update, SQLite access, how native the UI must feel (selection, cursors, focus, window chrome, context menus). Must also pin the Node version and package manager (pnpm is installed). Present the recommendation to Sirui in Chinese; he approves.
 4. **ADR-0002: Data storage** (SQLite vs JSON files, ORM/query builder, where state lives).
-5. **Design foundation** (Cowork): Design System artifact + token file in `design/tokens/`.
-6. **Scaffold** per the accepted ADRs, then update §1, §5 and the directory map below. Add CI in the same milestone: GitHub Actions running typecheck, lint and tests on `windows-latest` and `macos-latest`.
+5. **ADR-0003: Versioning and sync format** — local history plus push/pull through a folder in iCloud Drive: Git vs a custom format, a remote layout that survives iCloud's lack of locking (append-only history, plain browsable file tree), full versions for text and Word files vs change events only for other files, conflict handling. Constraints: `docs/product/brief.md` §12.
+6. **Design foundation** (Cowork): Design System artifact + token file in `design/tokens/`.
+7. **Scaffold** per the accepted ADRs, then update §1, §5 and the directory map below. Add CI in the same milestone: GitHub Actions running typecheck, lint and tests on `windows-latest`.
 
 ### Directory map (initial; extend after ADR-0001)
 
