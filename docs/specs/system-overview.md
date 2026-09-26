@@ -3,7 +3,8 @@
 Living document: update it when the component split or a data flow changes. Decisions stay in
 ADRs; this file describes the current shape of the system.
 
-- Status: draft, 2026-09-26. Written stack-agnostic; ADR-0001 maps the layers onto technologies.
+- Status: draft, 2026-09-26. The layers map onto technologies in ADR-0001: the UI is React +
+  TypeScript, the shell is Tauri 2, and the core is the Rust crate `folio-core`.
 - Product source: [`docs/product/brief.md`](../product/brief.md) (Chinese). Section numbers below
   (brief §N) point into it.
 - Detailed data model: ADR-0002. Versioning and sync format: ADR-0003.
@@ -118,18 +119,23 @@ Rules:
 - The contract is defined once and both sides use the same types (CLAUDE.md §5); ADR-0001 decides
   how (shared TypeScript module, or types generated from the privileged side).
 
-## 5. Where state lives (proposal; ADR-0002 and ADR-0003 decide)
+## 5. Where state lives
+
+Decided in [ADR-0002](../adr/ADR-0002-data-storage.md) §2; the history layout comes from ADR-0003.
+The rule: text files are the source of truth for everything the user authors, and SQLite is a
+derived, rebuildable catalog. `<app-id>` is the Tauri bundle identifier.
 
 | Data | Location | Synced | Rebuildable |
 |---|---|---|---|
 | User files | Library folder | Yes | No |
-| Tags, course colours and abbreviations | Library `.folio/` (readable text) | Yes | No |
-| History: commits and stored versions | Library `.folio/`, mirrored to the remote | Yes | No |
-| Catalog and full-text index | `%LOCALAPPDATA%\Folio` (SQLite) | No | Yes |
-| Thumbnails and preview cache | `%LOCALAPPDATA%\Folio\cache` | No | Yes |
-| Settings | `%APPDATA%\Folio` | No | No (small) |
+| Library config, ignore rules, tag definitions | `.folio/library.json`, `.folio/ignore`, `.folio/tags.json` | Yes | No |
+| Semester and course settings, tag assignments | `.folio/meta/<semester>/<course>.json` (JSON, one file per course) | Yes | No |
+| History: commits and stored versions | `.folio/`, mirrored to the remote (ADR-0003) | Yes | No |
+| Catalog, extracted text, full-text index | `%LOCALAPPDATA%\<app-id>\libraries\<library-id>\catalog.sqlite` | No | Yes |
+| Thumbnails | `%LOCALAPPDATA%\<app-id>\cache\` (LRU, 2 GB) | No | Yes |
+| Settings (per machine) | `%LOCALAPPDATA%\<app-id>\settings.json` | No | No (small) |
 | DeepSeek API key | Windows Credential Manager | No | Re-enter |
-| Logs | `%LOCALAPPDATA%\Folio\logs` (rotating) | No | n/a |
+| Logs | `%LOCALAPPDATA%\<app-id>\logs\` (daily, 7 days) | No | n/a |
 
 ## 6. Scale estimates
 
