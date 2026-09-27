@@ -1,0 +1,9 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc ee7616c2f9afea3024fb59f862c2b9581feafcecb0fa358ac100a11341b25c50 # shrinks to text = [231, 186, 191, 228, 187, 163], term = "线代"
+cc 8b91dace5e5af6c1fd13502c045b8dd4488a5c7627f3f2fd9ff7e2bfd6ccec1b # shrinks to text = "", term = "\0"
+cc fdee3a750526d1a893c4398a1d6cac02a90f5a9afb76d2933526b47571b26ad2 # shrinks to text = [231, 186, 191, 214, 145], term = "线"

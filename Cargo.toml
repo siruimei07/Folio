@@ -11,6 +11,13 @@ publish = false
 
 [workspace.dependencies]
 folio-core = { path = "crates/folio-core" }
+# SQLite 3.53 with FTS5, compiled in (ADR-0002).
+rusqlite = { version = "0.40.2", features = ["bundled", "pointer"] }
+unicode-normalization = "0.1.25"
+unicode-script = "0.5.8"
+unicode-segmentation = "1.13.3"
+proptest = "1.11.0"
+tempfile = "3.27.0"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
 thiserror = "2.0.21"
