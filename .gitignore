@@ -1,5 +1,7 @@
 # Agent lane files: shared working directory, never committed (CLAUDE.md §7.3)
 .agents/lanes/
+# Work packages that other sessions take on (CLAUDE.md §7.7)
+.agents/work/
 
 # Claude Code per-machine settings
 .claude/settings.local.json

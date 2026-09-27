@@ -132,6 +132,7 @@ docs/
 design/
   tokens/              design-token source of truth
 .agents/lanes/         live lane files (git-ignored, see §7.3)
+.agents/work/          work packages for other sessions (git-ignored, see §7.7)
 CLAUDE.md
 ```
 
@@ -233,6 +234,19 @@ These affect every lane. Run them only when every other lane's status is `checkp
 Cowork hand-off: Cowork writes its files, creates a lane file with `Agent: Cowork` and
 `Status: review`, and leaves the changes uncommitted. The next Claude Code session (or
 Sirui) commits them with `but commit -b docs/<desc> -m "<msg>" <ids>` or `design/<desc>`.
+
+### 7.7 Work packages
+
+A coordinating session may split work into packages in `.agents/work/` (git-ignored, shared
+like the lane files) for other sessions to take on; `.agents/work/README.md` holds the
+protocol. In short:
+
+1. Take only a package whose `Status` is `open` and whose dependencies are done; mark it
+   `claimed`, then start its lane as in §7.3.
+2. Stay inside the package's `Owns`. Its definition of done is binding, and its `verify.sh`
+   must end with `RESULT: PASS` before you hand back.
+3. Hand back with `result.md` in the package folder and `Status: review`. Only the
+   coordinator reports to Sirui, records results in ADRs and asks to land.
 
 ---
 
