@@ -297,19 +297,69 @@ Avoid `pptx-preview` (closed source) and AGPL renderers such as SuperDoc.
      (CLAUDE.md §5). Upgrade in a dependency lane.
 4. [ ] Timeboxed spikes during the scaffold; record results in this ADR or a follow-up:
    a) Playwright over CDP runs one real flow locally and in CI;
-      - Result: passes locally (WebView2 153, two workers). CI is pending its first run. Risk:
-        runner-images issue #14738 reports WebView2 remote debugging failing on the
-        `windows-2025` image with msedgedriver; the fallback is the `windows-2022` image.
+      - Result: passes locally (WebView2 153, two workers). The first CI run on `windows-latest`
+        (Windows Server 2025, 2026-09-27) failed like runner-images issue #14738: WebView2 never
+        opened its debugging port. CI therefore runs on `windows-2022`.
    b) Windows 11 snap layouts with the custom title bar;
+      - Result (2026-09-26): works, so Option B stands. A Win32 child window over the HTML
+        maximize button answers `WM_NCHITTEST` with `HTMAXBUTTON`
+        (`crates/folio-app/src/window_chrome.rs`); it reports hover and press to the page and
+        maximizes on click. Sirui saw the flyout and snapped into a zone. `WindowFromPoint` checks:
+        the maximize button hits the overlay, while minimize, close and the content hit WebView2.
+        The keyboard path is covered by e2e; Playwright's clicks bypass the overlay.
+      - Snap zones need a small minimum window size (Microsoft: at most 500 effective pixels
+        wide). Sirui chose 500 × 320 on 2026-09-26, so the design needs a compact layout for
+        narrow windows.
+      - Review (2026-09-27): the shell accepts overlay bounds only inside the caption area (at
+        most 64 px wide, within 48 px of the top and 160 px of the right edge), so a page cannot
+        spread the overlay over the window; the design's caption sizes must stay inside these
+        limits. The page sends no bounds while the button has no box and when it goes away,
+        which hides the overlay, and a failed move hides it too. Native failures are written to
+        `logs\shell-errors.log` in the data directory. The shell also owns closing, so a page
+        listener cannot veto it, and native file drops stay off until import is designed.
+      - Open: the overlay covers the top resize edge above the maximize button and has no
+        accessible name (the HTML button stays reachable by keyboard and screen readers); both
+        are in progress. Windows 10 and moves between displays with different scaling are
+        untested.
    c) Word, Excel and PowerPoint rendering with the candidates above, on real course files;
    d) `tauri-specta`: commands, typed events and the error union end to end.
-      - Result: commands and the error union work end to end (Rust types, generated bindings, UI,
-        e2e). Typed events are not exercised yet; verify them with the first event.
+      - Result: commands, typed events and the error union work end to end (Rust types,
+        generated bindings, UI, e2e). The first typed event, `MaximizeButtonChanged` (spike 4b),
+        reached the page when the overlay was driven with window messages.
+      - Two defaults changed: the generated `typedError` is replaced so that no command rejects
+        (Tauri rejects a denied call with a plain string), and IPC input types use integers,
+        because `f64` fields export as `number | null`.
 5. [ ] Security baseline:
    - strict CSP (done: the production CSP has no `'unsafe-inline'`);
    - one capability set per window (done: individual permissions only, checked by a test in
      `crates/folio-app/src/ipc.rs`; an e2e test checks that the shell rejects other commands);
    - previews in sandboxed iframes with no IPC access (verify that frames cannot reach Tauri IPC);
+     - Result (2026-09-27, lane `spike/core-preview-sandbox`): the preview frame is
+       `<iframe sandbox="allow-scripts">` on its own `folio-preview` scheme
+       (`crates/folio-app/src/preview.rs`). Its CSP runs only the frame's own scripts (no inline
+       handlers, no `eval`) and blocks fetch-class requests (a local server in the e2e test
+       receives nothing); the window's CSP allows only that frame source. An e2e test probes from inside the frame: its origin is opaque; markup cannot
+       run script; the window's DOM, storage, fetch-class requests, top-level navigation and
+       Tauri's IPC are blocked; nothing the frame sends reaches Tauri.
+     - No CSP directive covers WebRTC: in the security review it reached the internet and the
+       local network from the frame, and no WebView2 flag closed it. The frame removes
+       `RTCPeerConnection` before anything renders, and a nested frame cannot hand it back.
+     - Two platform facts make these layers necessary. On Windows, wry injects Tauri's IPC
+       script, invoke key included, into every frame, and Tauri treats pages of app-registered
+       schemes as local, with the window's permissions. The frame's calls fail only because its
+       CSP blocks the IPC fetch (Tauri would also reject its `Origin: null`) and WebView2 does not
+       deliver frame messages to the handler Tauri listens on. The e2e test fails if a Tauri or
+       WebView2 update changes either.
+     - So the `sandbox` attribute is load-bearing: in the review, a `folio-preview` page loaded
+       without it reached IPC. The scheme therefore serves only the preview page and its built
+       assets: it rejects other paths and other HTML, and never falls back to `index.html` (a
+       missing asset is a 404). Every response, errors included, carries the preview CSP and
+       `nosniff`; the production CSP names no dev-server ancestor; only subresources get CORS.
+       Rules for the preview UI: embed
+       previews only through one component that sets these flags, and give each file a fresh
+       frame, so script from one file never sees the next.
+     - Open: under `pnpm dev` the scheme serves the preview page from the last `vite build`
+       (`apps/desktop/dist`), not from the dev server.
    - sanitised Markdown and HTML.
 6. [ ] Distribution (M4):
    - Update feed: the GitHub repository is private, so its Releases cannot serve friends. Choose

@@ -182,35 +182,62 @@ Tag ids are stable ASCII strings: the presets are `notes`, `slides`, `homework`,
 **A custom FTS5 tokenizer, `folio_cjk`**
 - Written in Rust and registered on every connection through the `fts5_api` of `libsqlite3-sys`.
   rusqlite itself has no tokenizer API.
-- Chinese, Japanese and Korean text: each character becomes a one-character token, and a
-  two-character token (the character plus the next one) is stored at the same position
-  (`FTS5_TOKEN_COLOCATED`).
+- Text is normalised before it is split: default-ignorable characters (soft hyphen, zero-width
+  space, variation selectors) are removed, then NFKC folds full-width forms, Kangxi radicals and
+  decomposed Hangul and kana.
+- Chinese, Japanese and Korean text (letters of the Han, Hiragana, Katakana and Hangul scripts,
+  including marks kana share such as `ー`, but no Common or Inherited letters such as `µ`): each
+  character becomes a one-character token, and a two-character token (the character plus the
+  next one) is stored at the same position (`FTS5_TOKEN_COLOCATED`).
   - A 1-character query matches the one-character token.
-  - A 2-character query matches one two-character token.
-  - A longer query becomes a phrase of two-character tokens at consecutive positions.
+  - A longer query becomes a phrase of its two-character tokens at consecutive positions,
+    followed by its last character as a one-character token: `线性代数` becomes
+    `线性 性代 代数 数`. The last token makes the phrase cover one position per character, so
+    `highlight()` and `snippet()` mark every character (spike, action item 4).
+  - One CR, LF or CRLF between two such characters does not break the pair, because PDF text
+    wraps lines inside sentences. Spaces, tabs, punctuation, blank lines, NUL and invalid UTF-8
+    do.
 
   So any query matches as a contiguous substring, the same pattern as Lucene's CJK bigram filter
   with unigrams enabled.
-- All other text is split on Unicode word boundaries, NFKC-normalised (which folds full-width
-  forms) and case-folded.
-- Token offsets point into the original text. FTS5's own `highlight()` and `snippet()` therefore
-  work, and the table stores the original text only once.
-- It uses current Unicode tables, not `unicode61`'s Unicode 6.1, so newer Han characters are still
-  tokens.
-- Callbacks catch panics, and no unwinding crosses the FFI boundary.
+- All other text is split into words of letters and numbers (with their combining marks) at
+  everything else, including `_ . : ' ’`: `Linear_Algebra_HW1.pdf` has the words `linear`,
+  `algebra`, `hw1` and `pdf`. Words are lower-cased, not fully case-folded.
+- Token offsets point into the original text, also where normalisation changed or expanded a
+  character (an expansion shares the range of its source). FTS5's own `highlight()` and
+  `snippet()` therefore work, and the table stores the original text only once.
+- It uses Unicode 17 tables (a test pins them), not `unicode61`'s Unicode 6.1, so newer Han
+  characters are still tokens.
+- `search::TOKENIZER_VERSION` (now 2) changes whenever the tokens change, new Unicode tables
+  included. The catalog stores it and rebuilds the index before reading or writing when it
+  differs.
+- Callbacks catch panics, and no unwinding crosses the FFI boundary. The crate refuses to build
+  with `panic = "abort"`, which would turn a tokenizer panic into a crash.
 
 **The `search` table**
 - Columns: name, path, tags, body.
 - `detail=full`, which phrase queries need.
-- Prefix indexes support as-you-type prefixes of Latin-script words.
+- `prefix = '3'`: a prefix index for as-you-type prefixes of Latin-script words. A two-character
+  prefix index would also copy every Chinese pair (spike: 44% more space).
 - Ranking: `bm25` with column weights name > tags > path > body, plus a recency boost applied in
   Rust.
 
 **Queries and limits**
 - The core builds every MATCH expression from user input. Each term is quoted and escaped, and no
-  raw user text reaches MATCH.
+  raw user text reaches MATCH. FTS5 reads the query as a C string, so a NUL becomes a space. The
+  privileged layer rejects over-long query text with a typed error before building MATCH.
+- The last Latin term matches as a prefix from two letters on; a single letter matches whole
+  words only. A CJK term never gets the prefix operator.
+- Highlights and snippets are computed only for the rows on screen, one query per row
+  (`MATCH … AND rowid = ?`). In the ranked query they would be computed for every match. The UI
+  renders them as text, never as HTML: the markers `highlight()` inserts are characters removed
+  from stored text beforehand.
 - Body text is capped per file (for example the first 1 MB), and generated or minified files are
-  skipped.
+  skipped. Stored text is valid UTF-8 without NUL: `highlight()` and `snippet()` drop the text
+  after a NUL.
+- Every connection registers the tokenizer, also those that only run `quick_check` or
+  `integrity_check`, which fail without it. A failed write to the `search` table rolls back its
+  transaction or savepoint.
 
 **Fallback.** If the FFI tokenizer proves unstable in the spike, reuse the same tokenisation code
 to pre-tokenise text into a `unicode61` column and do the highlighting in Rust. Query semantics
@@ -312,11 +339,49 @@ iCloud folder is the remote (ADR-0003), not the library.
    - `folio-core::storage` (catalog, migrations, repositories);
    - `folio-core::search` (tokenizer and query builder);
    - `folio-core::meta` (metadata read/write).
-4. [ ] Spike, alongside the ADR-0001 spikes:
+4. [x] Spike, alongside the ADR-0001 spikes (2026-09-27, lane `spike/data-fts5-cjk-tokenizer`):
    - register `folio_cjk` through `fts5_api`;
    - property tests over random Unicode (no panics across FFI; offsets always on character
      boundaries; `highlight()` output correct);
    - index size and query latency on a sample of 50,000 entries and 10,000 text files.
+   - Result: the tokenizer works through `fts5_api` on SQLite 3.53.2, so the fallback is not
+     needed. A connection that has not registered it cannot read the table.
+   - Property tests (proptest in `crates/folio-core`; 256 cases each in `pnpm check`, 20,000 in
+     one run): offsets are UTF-8 ranges inside the text, also for text with invalid UTF-8;
+     `highlight()` marks exactly the occurrences of a Chinese term; any user text passed through
+     `search::phrase` is a valid query. They found two bugs, now fixed:
+     - queries of two or more characters were highlighted one character short: FTS5 marks one
+       position per query token, with the offsets of the first token at each position. The query
+       form in §5 now ends with the last character;
+     - a NUL in a search term ended the query early (`unterminated string`).
+   - The code review of the spike found four gaps in the text rules, each now fixed with a
+     regression test (`TOKENIZER_VERSION` 2): Common and Inherited letters such as `µ` and `ℂ`
+     (1,175 code points) counted as CJK; `_ . : '` stayed inside words, so `algebra` missed
+     `Linear_Algebra_HW1.pdf`; CJK was classified before normalisation (Kangxi radicals,
+     decomposed Hangul and kana); default-ignorable characters and line breaks split Chinese
+     words.
+   - Benchmark (`crates/folio-core/tests/search_benchmark.rs`, release build on g16-strix): 50,000
+     synthetic entries with Zipf-distributed words, 10,000 of them with bodies of 200–20,000
+     characters (44 M characters, 106 MB). The most common character is 10% of the text, against
+     about 4% for 的 in real Chinese, so common-character queries are pessimistic.
+     - Build: 18 s. 334 MB in use with `prefix = '3'` (index 216 MB, stored text 117 MB), about
+       7.5 bytes per body character, so the database passes 1 GB at about three times this
+       sample. `optimize` saves 2%.
+     - A page of 50 results ranked by bm25, with highlights and snippets (median): rare terms
+       1–4 ms; the most common character 45 ms; a two-character word ending in it 81 ms (the
+       worst case); four characters 16 ms; a Latin word or three-letter prefix 6 ms.
+     - Snippets computed inside the ranked query: 13–350 ms, because every match gets one.
+     - A Latin prefix without a prefix index is expanded again for every row's snippet: 324–380
+       ms for one letter (two runs), 35 ms for two. One filtered query for the whole page
+       (`+rowid IN (…)`) expands it once (29 ms) but repeats the phrase match, up to 113 ms.
+     - `prefix = '2 3'` adds 44% to the size and 70% to the build time, because every Chinese
+       pair is also a two-character prefix; `prefix = '3'` adds 2%.
+     - Tokenizer alone: 268 MB/s when indexing and 386 MB/s when `highlight()` and `snippet()`
+       read the text again (they skip the pairs, so it leaves them out). Before the review's
+       normalisation rules it was 307 and 478 MB/s, and 32 MB/s before fast paths for the main
+       Han block. A rerun with the final rules stayed within 10% on every other figure here.
+     - Rare normalisation paths are slow: 1 MB of U+FDFA, which NFKC expands to 18 characters,
+       takes 0.84 s. The body cap also bounds this worst case.
 5. [ ] Tests:
    - migrations `validate()` plus fixtures for each released schema version;
    - metadata round-trips, fixtures for older formats, and read-only mode for a newer format;
