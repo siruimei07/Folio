@@ -91,5 +91,7 @@ Known limits:
 
 ## Gaps today
 
-The scaffold has smoke tests only. Coverage tooling, the `testkit` module, golden vectors and the
-simulation harness arrive with the modules that need them (M1–M3).
+The shell and UI have smoke tests only. `folio-core` has unit, property and integration tests
+for paths, metadata files (with golden bytes), the catalog and search. Coverage tooling, the
+`testkit` module, golden vectors for the remote format and the simulation harness arrive with
+the modules that need them (M1–M3).

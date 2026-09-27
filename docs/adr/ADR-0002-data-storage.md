@@ -330,15 +330,29 @@ iCloud folder is the remote (ADR-0003), not the library.
 ## Action items
 
 1. [x] Sirui approves; set Status to Accepted.
-2. [ ] ADR-0003 defines:
+2. [x] ADR-0003 defines:
    - the history store inside `.folio/`;
    - merge rules for the metadata files;
    - the content-hash algorithm (the catalog stores the hash opaque, with an algorithm prefix);
    - the path-normalisation rules it shares with this ADR.
-3. [ ] Scaffold:
+   - Done in ADR-0003 §2, §4 and §9 (accepted 2026-09-26). The shared path rules are specified
+     in [`docs/specs/library-core.md`](../specs/library-core.md) §3 and implemented in
+     `folio-core::paths`.
+3. [x] Scaffold:
    - `folio-core::storage` (catalog, migrations, repositories);
    - `folio-core::search` (tokenizer and query builder);
    - `folio-core::meta` (metadata read/write).
+   - Result (2026-09-27, lane `claude/amazing-johnson-pzvhzd`, spec
+     [`library-core.md`](../specs/library-core.md)): `paths` (library-relative paths, Windows
+     name rules, case-insensitive keys), `meta` (the `.folio/` layout and files, deterministic
+     and atomic writes, `format_version` handling), `catalog` (schema v1, WAL, recovery,
+     derived versions, repositories) and `search::SearchQuery` with ranked search and
+     highlights. The storage module is named `catalog`, as in the system overview.
+   - The spec (§9) proposes six refinements of this ADR, pending Sirui's approval before this
+     text changes: `path_key` indexed but not unique; semester and course names starting with
+     `_` escaped in `.folio/meta/`; temporary files in `.folio/local/staging/`; the single
+     writer behind a mutex instead of a thread; the module name `catalog`; no semester or
+     course ids on entries (path ranges instead).
 4. [x] Spike, alongside the ADR-0001 spikes (2026-09-27, lane `spike/data-fts5-cjk-tokenizer`):
    - register `folio_cjk` through `fts5_api`;
    - property tests over random Unicode (no panics across FFI; offsets always on character
@@ -386,4 +400,9 @@ iCloud folder is the remote (ADR-0003), not the library.
    - migrations `validate()` plus fixtures for each released schema version;
    - metadata round-trips, fixtures for older formats, and read-only mode for a newer format;
    - a property test that a full rebuild equals the incrementally maintained catalog.
+   - Progress (2026-09-27): migrations apply to an empty database with the tokenizer
+     registered (`validate()` itself opens a connection without it); metadata files have golden
+     bytes, round-trip property tests and a `NewerFormat` error for read-only mode. Fixtures
+     wait for the first released schema and the first older format; the rebuild property test
+     comes with the scan lane.
 6. [x] Update system overview §5.

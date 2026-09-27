@@ -169,7 +169,7 @@ fn split<'a>(
 /// Letters of the scripts that are written without spaces between words. Script extensions
 /// include marks shared by kana, such as the prolonged sound mark `ー`; the letter test keeps
 /// CJK punctuation out.
-fn is_cjk(ch: char) -> bool {
+pub(super) fn is_cjk(ch: char) -> bool {
     is_unified_ideograph(ch)
         || (!ch.is_ascii() && ch.is_alphabetic() && {
             let scripts = ch.script_extension();

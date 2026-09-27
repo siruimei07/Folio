@@ -9,9 +9,11 @@
 //! is a fallback, not a substitute for that boundary.
 
 mod fts5;
+mod query;
 mod tokenizer;
 
 pub use fts5::{TOKENIZER_NAME, register_tokenizer};
+pub use query::{MAX_QUERY_CHARS, QueryError, SearchQuery};
 pub use tokenizer::{Mode, Token, tokenize};
 
 /// Token format version. The catalog must rebuild its index before any read or write when
@@ -23,8 +25,7 @@ pub const TOKENIZER_VERSION: u32 = 2;
 ///
 /// FTS5 reads the query as a C string, where a NUL would end it early. A NUL is never part of a
 /// token, so it becomes a space, which separates tokens the same way.
-/// This quotes syntax only. The future query builder and privileged IPC must reject oversized
-/// user queries before calling it; FTS5 can take quadratic time to parse very long phrases.
+/// This quotes syntax only; [`SearchQuery`] builds whole queries and rejects oversized text.
 pub fn phrase(term: &str) -> String {
     format!("\"{}\"", term.replace('"', "\"\"").replace('\0', " "))
 }

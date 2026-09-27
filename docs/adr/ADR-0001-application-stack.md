@@ -299,7 +299,8 @@ Avoid `pptx-preview` (closed source) and AGPL renderers such as SuperDoc.
    a) Playwright over CDP runs one real flow locally and in CI;
       - Result: passes locally (WebView2 153, two workers). The first CI run on `windows-latest`
         (Windows Server 2025, 2026-09-27) failed like runner-images issue #14738: WebView2 never
-        opened its debugging port. CI therefore runs on `windows-2022`.
+        opened its debugging port. CI therefore runs on `windows-2022`, where the first full run
+        passed (run 5, 2026-09-27, commit `511459f`: checks 6 minutes, e2e 1 minute).
    b) Windows 11 snap layouts with the custom title bar;
       - Result (2026-09-26): works, so Option B stands. A Win32 child window over the HTML
         maximize button answers `WM_NCHITTEST` with `HTMAXBUTTON`
