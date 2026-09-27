@@ -91,19 +91,28 @@ Rules:
 
 1. **Start-up**: load settings, open the library, reconcile the catalog with the disk (catches
    changes made while the app was closed), start the watcher, then render from catalog queries.
-2. **External change**: watcher event, debounce, re-stat and hash only if size or mtime changed,
-   update the catalog and the working-state diff, emit `workspace.changed`.
+2. **External change**: watcher event, debounce, then re-stat. Re-hash only when size or file id
+   changed; mtime is only a hint (ADR-0003 §10). Update the catalog and the working-state diff, then
+   emit `workspace.changed`.
 3. **Import**: dropped paths plus target course and tags, copied by a background job with
    progress, catalogued as they land.
 4. **Search**: debounced query, one catalog query (names, paths, tags, full text), top results.
 5. **Preview**: the UI asks for a file by catalog id; bytes come through the scoped protocol with
    range support; Office and PDF rendering happens in the UI; thumbnails are cached by content hash.
-6. **Commit**: selected changes plus an optional message; the core writes content for
-   fully-versioned files, records the commit, optionally asks the AI module for a message (template
-   on failure), and emits `history.changed`.
-7. **Sync**: snapshot, read new remote records, apply them locally (conflicts go to the user),
-   append local commits to the remote, update the remote file tree, emit progress and a result.
-8. **Remote watch**: watch or poll the remote folder; new records or direct edits raise the
+6. **Commit**: selected changes plus an optional message.
+   - The core writes one pack holding blobs for stored files, trees and the commit, then replaces
+     `HEAD` (ADR-0003 §3, §11).
+   - It optionally asks the AI module for a message, using the template on failure.
+   - It emits `history.changed`.
+7. **Sync**, one round per ADR-0003 §8:
+   1. fetch and verify packs, and find the canonical head;
+   2. import direct edits from the mirror;
+   3. rebase local commits (conflicts go to the user);
+   4. materialise files, with replaced or deleted files going to the Recycle Bin;
+   5. push packs, then the intent, then the mirror files, then the head record last.
+
+   It emits progress and a result.
+8. **Remote watch**: watch or poll the remote folder. New head records or direct edits raise the
    `↓N` badge. Nothing local changes until the user syncs.
 
 ## 4. IPC surface (shape, not the final contract)
@@ -140,8 +149,8 @@ derived, rebuildable catalog. `<app-id>` is the Tauri bundle identifier.
 ## 6. Scale estimates
 
 - **Initial scan**: stat 50k files takes seconds on an SSD. Hashing 100 GB is disk-bound
-  (minutes), so it runs as a resumable background job and later runs hash only files whose size or
-  mtime changed.
+  (minutes), so it runs as a resumable background job. Later runs hash only files whose size or
+  file id changed.
 - **Catalog**: 50k rows plus full text of maybe 10k text and Word files — tens of MB of SQLite.
 - **UI**: lists are virtualised; the UI holds only the visible page, never the whole catalog.
 - **Watcher**: one recursive watch on the library root; on buffer overflow, fall back to a rescan.
@@ -152,7 +161,9 @@ derived, rebuildable catalog. `<app-id>` is the Tauri bundle identifier.
 |---|---|
 | Crash during commit or sync | Journalled steps; on restart, finish or roll back, never leave half a record |
 | iCloud placeholder not downloaded | Trigger hydration, wait with progress, time out with `PlaceholderNotDownloaded` |
-| iCloud conflict copies (`name 2.ext`) in the remote | Remote history is append-only so they cannot occur there; in the file tree they are detected and shown as conflicts |
+| Head record arrived before its pack, or mirror file not yet updated | Pending, not an error: wait for iCloud and show what is outstanding (ADR-0003 §6, §8) |
+| iCloud conflict copies (`name 2.ext`, `name (1).ext`) | Cannot occur in the history area (immutable, device-owned files). In the mirror they are imported and flagged |
+| Direct edit on iPad or Mac collides with a push | Import before overwrite: a push never replaces a mirror file that differs from its base record |
 | File locked by another app (e.g. Word) | Retry later; show it as pending, not failed |
 | Invalid Windows file name from iPad or Mac | Keep it out of the local tree and explain in the sync result |
 | Disk full | Abort the job cleanly and report; no partial writes (temp file + rename) |
