@@ -1,0 +1,21 @@
+{
+  "name": "folio",
+  "private": true,
+  "packageManager": "pnpm@11.25.0",
+  "engines": {
+    "node": ">=24.19.0 <25"
+  },
+  "scripts": {
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build:app": "tauri build --debug --no-bundle",
+    "bundle": "tauri build",
+    "check": "pnpm run check:web && pnpm run check:rust",
+    "check:rust": "cargo fmt --all --check && cargo clippy --workspace --all-targets --locked -- -D warnings && cargo test --workspace --locked",
+    "check:web": "pnpm -r run typecheck && pnpm -r run lint && pnpm -r run test",
+    "e2e": "pnpm run build:app && pnpm --filter @folio/e2e run e2e"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.11.5"
+  }
+}

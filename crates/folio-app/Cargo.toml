@@ -1,0 +1,32 @@
+[package]
+name = "folio-app"
+description = "Folio desktop shell: a thin Tauri layer over folio-core (ADR-0001)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+# main.rs only calls `run()`; skip linking an empty, Tauri-sized test binary for it.
+[[bin]]
+name = "folio-app"
+path = "src/main.rs"
+test = false
+
+[build-dependencies]
+tauri-build = { workspace = true }
+
+[dependencies]
+folio-core = { workspace = true }
+serde = { workspace = true }
+specta = { workspace = true }
+tauri = { workspace = true }
+tauri-specta = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+specta-typescript = { workspace = true }
+
+[lints]
+workspace = true

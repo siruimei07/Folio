@@ -1,0 +1,13 @@
+[package]
+name = "folio-core"
+description = "Folio core: library model, catalog, history and sync. No Tauri, UI or IPC types (ADR-0001)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[dependencies]
+
+[lints]
+workspace = true

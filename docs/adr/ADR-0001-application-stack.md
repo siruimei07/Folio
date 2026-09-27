@@ -287,20 +287,28 @@ Avoid `pptx-preview` (closed source) and AGPL renderers such as SuperDoc.
    - ADR-0003 documents the remote format independently of Rust.
    - ADR-0002 handles one- and two-character Chinese queries: FTS5 trigram does not match
      substrings shorter than three characters.
-3. [ ] Scaffold at the start of M1:
+3. [x] Scaffold at the start of M1 (done 2026-09-26, lane `chore/build-scaffold`):
    - Cargo workspace: `crates/folio-core`, `crates/folio-app`.
    - UI package in a pnpm workspace.
    - Pins: `rust-toolchain.toml`, `packageManager`, `engines`, `.nvmrc`.
    - CI on `windows-latest`: `cargo fmt --check`, `clippy`, `cargo test`, `tsc`, ESLint, Vitest,
      binding-drift check, Playwright e2e.
+   - Tauri is pinned to 2.11.6, not 2.12: 2.12.0 was younger than the one-day minimum release age
+     (CLAUDE.md §5). Upgrade in a dependency lane.
 4. [ ] Timeboxed spikes during the scaffold; record results in this ADR or a follow-up:
    a) Playwright over CDP runs one real flow locally and in CI;
+      - Result: passes locally (WebView2 153, two workers). CI is pending its first run. Risk:
+        runner-images issue #14738 reports WebView2 remote debugging failing on the
+        `windows-2025` image with msedgedriver; the fallback is the `windows-2022` image.
    b) Windows 11 snap layouts with the custom title bar;
    c) Word, Excel and PowerPoint rendering with the candidates above, on real course files;
    d) `tauri-specta`: commands, typed events and the error union end to end.
+      - Result: commands and the error union work end to end (Rust types, generated bindings, UI,
+        e2e). Typed events are not exercised yet; verify them with the first event.
 5. [ ] Security baseline:
-   - strict CSP;
-   - one capability set per window;
+   - strict CSP (done: the production CSP has no `'unsafe-inline'`);
+   - one capability set per window (done: individual permissions only, checked by a test in
+     `crates/folio-app/src/ipc.rs`; an e2e test checks that the shell rejects other commands);
    - previews in sandboxed iframes with no IPC access (verify that frames cannot reach Tauri IPC);
    - sanitised Markdown and HTML.
 6. [ ] Distribution (M4):
@@ -313,5 +321,5 @@ Avoid `pptx-preview` (closed source) and AGPL renderers such as SuperDoc.
        and updates the app; Tauri MSIX support unverified);
      - Azure Artifact Signing ($9.99/month; individuals in the US and Canada only);
      - an OV certificate.
-7. [ ] After the scaffold, update CLAUDE.md §1 (Tech stack), §5 (Tauri-specific guardrails) and
+7. [x] After the scaffold, update CLAUDE.md §1 (Tech stack), §5 (Tauri-specific guardrails) and
    the directory map.

@@ -1,0 +1,10 @@
+packages:
+  - apps/*
+  - e2e
+
+# Refuse to install when Node does not match `engines`. pnpm 11 ignores this setting in .npmrc.
+engineStrict: true
+
+# Versions shared by several packages; reference them as "catalog:".
+catalog:
+  typescript: 6.0.3

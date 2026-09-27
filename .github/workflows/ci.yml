@@ -1,0 +1,62 @@
+name: CI
+
+# Lanes land on main without pull requests, so CI on main is the backstop
+# (docs/specs/testing-strategy.md). Pushes that change only docs skip the Windows run; other
+# branches can still run it by hand.
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['docs/**', '**.md', '.claude/**']
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# The jobs only read the repository; artifact upload and caches do not use GITHUB_TOKEN.
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check and test (Windows)
+    # Not windows-latest: on Windows Server 2025 images WebView2 never opens its remote-debugging
+    # port, so Playwright cannot attach (actions/runner-images#14738). Revisit when that is fixed.
+    runs-on: windows-2022
+    timeout-minutes: 60
+    env:
+      # No debug info in CI builds: smaller objects, faster links and a smaller cache.
+      CARGO_PROFILE_DEV_DEBUG: "0"
+    steps:
+      # Third-party actions are pinned to release commits, like every other dependency
+      # (CLAUDE.md §5). Update the SHA and the version comment together.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Versions come from package.json (packageManager), .nvmrc and rust-toolchain.toml.
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install the pinned Rust toolchain
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          # Branch caches are invisible to main and would push main's cache out.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+          # The Rust build is the slow part; keep it even when e2e fails.
+          cache-on-failure: true
+
+      - run: pnpm install --frozen-lockfile
+      - name: Web and Rust checks
+        run: pnpm check
+      - name: End-to-end tests
+        run: pnpm e2e
+
+      - name: Upload the Playwright report
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-report
+          path: e2e/playwright-report
+          if-no-files-found: ignore

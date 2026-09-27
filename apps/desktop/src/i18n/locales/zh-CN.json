@@ -1,0 +1,15 @@
+{
+  "app": {
+    "name": "Folio"
+  },
+  "appInfo": {
+    "loading": "正在读取应用信息…",
+    "appVersion": "应用版本",
+    "coreVersion": "核心版本",
+    "dataDir": "数据目录"
+  },
+  "errors": {
+    "DataDirUnavailable": "无法确定数据存放位置。请重新启动 Folio；如果问题仍在，请把错误详情发给开发者。",
+    "Transport": "Folio 界面无法连接到后台。请重新启动 Folio。"
+  }
+}
