@@ -3,5 +3,16 @@
   "identifier": "main-window",
   "description": "Permissions of the main window: only what the UI uses. Grant each app command and core permission individually; no default sets.",
   "windows": ["main"],
-  "permissions": ["allow-app-info"]
+  "permissions": [
+    "allow-app-info",
+    "allow-set-maximize-button-bounds",
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    "core:window:allow-close",
+    "core:window:allow-internal-toggle-maximize",
+    "core:window:allow-is-maximized",
+    "core:window:allow-minimize",
+    "core:window:allow-start-dragging",
+    "core:window:allow-toggle-maximize"
+  ]
 }

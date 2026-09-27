@@ -5,7 +5,8 @@
 import type { AppError, TransportError } from './bindings';
 
 export { commands as ipc } from './bindings';
-export type { AppInfo } from './bindings';
+export type { AppInfo, MaximizeButtonChanged } from './bindings';
+export { windowControls } from './window';
 
 /** Every error an IPC call can resolve to; the UI shows the message for its `code`. */
 export type IpcError = AppError | TransportError;

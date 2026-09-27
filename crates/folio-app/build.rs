@@ -4,7 +4,9 @@ fn main() {
     // Every app command must be listed here and granted in `capabilities/`: a window can only
     // call the commands its capability grants (ADR-0001, security baseline).
     let attributes = tauri_build::Attributes::new()
-        .app_manifest(tauri_build::AppManifest::new().commands(&["app_info"]))
+        .app_manifest(
+            tauri_build::AppManifest::new().commands(&["app_info", "set_maximize_button_bounds"]),
+        )
         .windows_attributes(tauri_build::WindowsAttributes::new_without_app_manifest());
     tauri_build::try_build(attributes).expect("failed to run tauri-build");
 

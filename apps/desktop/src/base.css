@@ -1,0 +1,22 @@
+/*
+ * Placeholder base styles and design tokens until the design system exists (CLAUDE.md §6,
+ * milestone 6). Components read visual values only from these custom properties, so the token file
+ * from design/tokens replaces this block without touching them.
+ */
+:root {
+  --title-bar-height: 32px;
+  --title-bar-padding-inline: 12px;
+  --title-bar-font-size: 12px;
+  --caption-button-width: 46px;
+  --caption-glyph-size: 10px;
+  --caption-button-hover-background: rgb(0 0 0 / 6%);
+  --caption-button-pressed-background: rgb(0 0 0 / 10%);
+  --caption-close-hover-background: #c42b1c;
+  --caption-close-hover-color: #fff;
+  --focus-ring-width: 2px;
+}
+
+html,
+body {
+  margin: 0;
+}

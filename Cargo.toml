@@ -21,6 +21,8 @@ tempfile = "3.27.0"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
 thiserror = "2.0.21"
+# The version Tauri's own dependencies (muda, softbuffer) already use, so it compiles only once.
+windows-sys = "0.61.2"
 # Tauri 2.11: 2.12 was released on scaffold day, inside the one-day minimum release age. The exact
 # requirements below hold only these two crates; Cargo.lock holds the rest of the Tauri family
 # (tauri-runtime, tauri-utils, wry), so update them with `cargo update -p <crate> --precise`,

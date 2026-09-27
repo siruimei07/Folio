@@ -4,9 +4,9 @@
 //! side into `apps/desktop/src/ipc/bindings.ts`; never edit that file by hand. New commands must
 //! also be listed in `build.rs` and granted in `capabilities/`.
 
-use tauri_specta::{Builder, collect_commands};
+use tauri_specta::{Builder, collect_commands, collect_events};
 
-use crate::commands;
+use crate::{commands, window_chrome};
 
 /// Replaces tauri-specta's `typedError`, so that every generated command resolves to one result
 /// and never rejects. A command's own error is an `AppError`: an object with a string `code`.
@@ -26,7 +26,11 @@ async function typedError<T, E>(result: Promise<T>): Promise<{ status: "ok"; dat
 
 pub fn builder() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new()
-        .commands(collect_commands![commands::app_info])
+        .commands(collect_commands![
+            commands::app_info,
+            commands::set_maximize_button_bounds,
+        ])
+        .events(collect_events![window_chrome::MaximizeButtonChanged])
         .typed_error_impl(TYPED_ERROR_IMPL)
 }
 
@@ -81,5 +85,18 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn main_window_does_not_publish_native_drag_paths() {
+        let config: serde_json::Value =
+            serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
+        let main = config["app"]["windows"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|window| window["label"] == "main")
+            .unwrap();
+        assert_eq!(main["dragDropEnabled"], false);
     }
 }

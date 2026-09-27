@@ -12,4 +12,10 @@ pub enum AppError {
     /// The data directory could not be determined or is invalid.
     #[error("data directory unavailable: {0}")]
     DataDirUnavailable(String),
+    /// The UI sent a value the shell rejects.
+    #[error("invalid argument: {0}")]
+    InvalidArgument(String),
+    /// A window operation failed.
+    #[error("window operation failed: {0}")]
+    Window(String),
 }

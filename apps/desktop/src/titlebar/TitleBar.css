@@ -1,0 +1,54 @@
+/*
+ * Title bar of the frameless main window (ADR-0001, spike 4b). The look comes from the placeholder
+ * tokens in base.css until the design system exists (CLAUDE.md §6, milestone 6). The mechanics are
+ * final:
+ * - the caption buttons sit at the right edge, where the shell anchors the snap layouts overlay;
+ * - the maximize button's hover and pressed looks also follow its data attributes, because the
+ *   overlay receives the pointer there instead of the page.
+ */
+.title-bar {
+  display: flex;
+  height: var(--title-bar-height);
+  user-select: none;
+}
+
+.title-bar__drag {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  padding-inline: var(--title-bar-padding-inline);
+  font-size: var(--title-bar-font-size);
+}
+
+.title-bar__controls {
+  display: flex;
+}
+
+.title-bar__button {
+  width: var(--caption-button-width);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-family: 'Segoe Fluent Icons', 'Segoe MDL2 Assets';
+  font-size: var(--caption-glyph-size);
+}
+
+.title-bar__button:hover,
+.title-bar__button[data-hovered] {
+  background: var(--caption-button-hover-background);
+}
+
+.title-bar__button:active,
+.title-bar__button[data-pressed] {
+  background: var(--caption-button-pressed-background);
+}
+
+.title-bar__button--close:hover {
+  background: var(--caption-close-hover-background);
+  color: var(--caption-close-hover-color);
+}
+
+.title-bar__button:focus-visible {
+  outline: var(--focus-ring-width) solid;
+  outline-offset: calc(-1 * var(--focus-ring-width));
+}

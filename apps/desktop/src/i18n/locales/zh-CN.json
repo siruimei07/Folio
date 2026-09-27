@@ -8,8 +8,16 @@
     "coreVersion": "核心版本",
     "dataDir": "数据目录"
   },
+  "titleBar": {
+    "minimize": "最小化",
+    "maximize": "最大化",
+    "restore": "向下还原",
+    "close": "关闭"
+  },
   "errors": {
     "DataDirUnavailable": "无法确定数据存放位置。请重新启动 Folio；如果问题仍在，请把错误详情发给开发者。",
+    "InvalidArgument": "Folio 内部出错。请重新启动 Folio；如果问题仍在，请把错误详情发给开发者。",
+    "Window": "窗口操作失败。请重新启动 Folio。",
     "Transport": "Folio 界面无法连接到后台。请重新启动 Folio。"
   }
 }
