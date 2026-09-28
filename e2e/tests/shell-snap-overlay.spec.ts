@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
-import zhCN from '../../apps/desktop/src/i18n/locales/zh-CN.json' with { type: 'json' };
+import titlebar from '../../apps/desktop/src/i18n/locales/en/titlebar.json' with { type: 'json' };
 import { expect, test } from '../fixtures';
 
 // The snap layouts overlay is a native window (crates/folio-app/src/window_chrome.rs) that
@@ -222,7 +222,7 @@ Add-Type -ReferencedAssemblies $references -TypeDefinition @'
 ${probe}
 '@
 $json = [SnapProbe]::Read(${String(processId)}) | ConvertTo-Json -Depth 4 -Compress
-# Base64 keeps the Chinese button names intact through the console code page.
+# Base64 keeps non-ASCII names intact through the console code page.
 [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($json))
 `;
   try {
@@ -252,10 +252,10 @@ test('snap overlay leaves the top edge to resizing and stays out of UI Automatio
 }) => {
   const { page, processId } = folio;
   const states = [
-    { maximized: false, name: zhCN.titleBar.maximize },
-    { maximized: true, name: zhCN.titleBar.restore },
+    { maximized: false, name: titlebar.maximize },
+    { maximized: true, name: titlebar.restore },
     // Restoring must bring the resize border back.
-    { maximized: false, name: zhCN.titleBar.maximize },
+    { maximized: false, name: titlebar.maximize },
   ];
 
   const snapshots: NativeSnapshot[] = [];

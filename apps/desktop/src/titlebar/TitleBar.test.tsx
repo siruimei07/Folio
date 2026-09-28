@@ -3,7 +3,7 @@ import { mockIPC } from '@tauri-apps/api/mocks';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import zhCN from '../i18n/locales/zh-CN.json';
+import titlebar from '../i18n/locales/en/titlebar.json';
 import { TitleBar } from './TitleBar';
 
 /**
@@ -31,9 +31,9 @@ describe('TitleBar', () => {
     const { commands } = mockShell();
     render(<TitleBar />);
 
-    fireEvent.click(screen.getByRole('button', { name: zhCN.titleBar.minimize }));
-    fireEvent.click(screen.getByRole('button', { name: zhCN.titleBar.maximize }));
-    fireEvent.click(screen.getByRole('button', { name: zhCN.titleBar.close }));
+    fireEvent.click(screen.getByRole('button', { name: titlebar.minimize }));
+    fireEvent.click(screen.getByRole('button', { name: titlebar.maximize }));
+    fireEvent.click(screen.getByRole('button', { name: titlebar.close }));
 
     expect(commands).toEqual(
       expect.arrayContaining([
@@ -48,7 +48,7 @@ describe('TitleBar', () => {
     mockShell({ maximized: true });
     render(<TitleBar />);
 
-    expect(await screen.findByRole('button', { name: zhCN.titleBar.restore })).toBeVisible();
+    expect(await screen.findByRole('button', { name: titlebar.restore })).toBeVisible();
   });
 
   it('tells the shell where the maximize button is, for the snap layouts overlay', () => {
@@ -75,7 +75,7 @@ describe('TitleBar', () => {
   it('shows the hover and press the overlay reports on the maximize button', async () => {
     mockShell();
     render(<TitleBar />);
-    const maximize = screen.getByRole('button', { name: zhCN.titleBar.maximize });
+    const maximize = screen.getByRole('button', { name: titlebar.maximize });
 
     await act(() => emit('maximize-button-changed', { hovered: true, pressed: true }));
 

@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { App } from './App';
-import zhCN from './i18n/locales/zh-CN.json';
+import errors from './i18n/locales/en/errors.json';
 import { ipc } from './ipc';
 
 vi.mock('./ipc', { spy: true });
@@ -28,7 +28,7 @@ describe('App', () => {
 
     render(<App />);
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(zhCN.errors.DataDirUnavailable);
+    expect(await screen.findByRole('alert')).toHaveTextContent(errors.DataDirUnavailable);
   });
 
   it('shows the message for a failed IPC call', async () => {
@@ -39,6 +39,6 @@ describe('App', () => {
 
     render(<App />);
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(zhCN.errors.Transport);
+    expect(await screen.findByRole('alert')).toHaveTextContent(errors.Transport);
   });
 });

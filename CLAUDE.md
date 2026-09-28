@@ -32,7 +32,7 @@ conversation, Sirui wins.
 
 - Keep standard technical terms in English inside Chinese text when no settled translation exists (IPC, design token, hunk, ADR).
 - When an English agent doc needs Sirui's decision, do not ask him to read it: summarise the decision and options in Chinese in chat.
-- In-app UI language: English in v1 (decided 2026-09-27, product brief §3; it replaces Simplified Chinese, decided 2026-09-26); a Simplified Chinese UI comes in a later version. Chinese file names and content still display and are searchable. All user-visible strings are externalised (i18n-ready) from the first component; no hard-coded UI strings (ESLint `i18next/no-literal-string`). Until lane `feat/ui-i18n-english` adds the `en` locale as the default, the code still loads `zh-CN.json`: new strings go there, and that lane translates them all.
+- In-app UI language: English in v1 (decided 2026-09-27, product brief §3; it replaces Simplified Chinese, decided 2026-09-26); a Simplified Chinese UI comes in a later version. Chinese file names and content still display and are searchable. All user-visible strings are externalised (i18n-ready) from the first component; no hard-coded UI strings (ESLint `i18next/no-literal-string`). Strings live in `apps/desktop/src/i18n/locales/en/`, one namespace per view: a lane adds strings only to its view's namespace, and `tsc` checks every `t()` key against `en` (`apps/desktop/src/i18n/README.md`).
 
 ---
 
@@ -120,7 +120,7 @@ crates/
   folio-core/          core library: no Tauri, UI or IPC types (ADR-0001)
   folio-app/           Tauri shell: commands, IPC contract (src/ipc.rs), capabilities/, tauri.conf.json, icons/
 apps/
-  desktop/             React + TypeScript UI (Vite); src/ipc = only IPC entry, src/i18n = UI strings (zh-CN), src/tokens = CSS generated from design/tokens
+  desktop/             React + TypeScript UI (Vite); src/ipc = only IPC entry, src/i18n = UI strings (en), src/tokens = CSS generated from design/tokens
 e2e/                   Playwright over WebView2 CDP (fixtures.ts starts the app per test)
 docs/
   agents/              agent reference docs, e.g. skill-routing.md   (English)

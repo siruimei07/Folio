@@ -22,6 +22,15 @@ export default defineConfig([
     rules: {
       // No hard-coded UI strings (CLAUDE.md §2): user-visible text comes from src/i18n/locales.
       'i18next/no-literal-string': ['error', { framework: 'react', mode: 'jsx-only' }],
+      // Dates, times and numbers follow the UI language, never the Windows locale (src/i18n/README.md).
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            ":matches(CallExpression[callee.property.name=/^toLocale(Date|Time)?String$/], :matches(CallExpression, NewExpression)[callee.object.name='Intl']):matches([arguments.length=0], [arguments.0.type='Identifier'][arguments.0.name='undefined'])",
+          message: 'Pass the UI language (i18n.language): without it, Windows chooses the locale.',
+        },
+      ],
     },
   },
   {

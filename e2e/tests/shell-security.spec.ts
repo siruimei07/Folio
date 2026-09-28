@@ -1,9 +1,9 @@
-import zhCN from '../../apps/desktop/src/i18n/locales/zh-CN.json' with { type: 'json' };
+import titlebar from '../../apps/desktop/src/i18n/locales/en/titlebar.json' with { type: 'json' };
 import { expect, test } from '../fixtures';
 
 test('a page close listener cannot veto the shell close decision', async ({ folio }) => {
   const { page } = folio;
-  await page.getByRole('button', { name: zhCN.titleBar.close }).waitFor();
+  await page.getByRole('button', { name: titlebar.close }).waitFor();
   await page.evaluate(`(async () => {
     const { invoke, transformCallback } = window.__TAURI_INTERNALS__;
     await invoke('plugin:event|listen', {
@@ -20,7 +20,7 @@ test('a page close listener cannot veto the shell close decision', async ({ foli
 
 test('the shell rejects oversized overlays and accepts explicit hiding', async ({ folio }) => {
   const { page } = folio;
-  await page.getByRole('button', { name: zhCN.titleBar.maximize }).waitFor();
+  await page.getByRole('button', { name: titlebar.maximize }).waitFor();
   const result = await page.evaluate(`(async () => {
     const { invoke } = window.__TAURI_INTERNALS__;
     let rejection;

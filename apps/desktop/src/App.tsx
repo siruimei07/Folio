@@ -14,7 +14,7 @@ type State =
  * UI → IPC → Rust end to end; real screens start from docs/design/handoff/.
  */
 export function App() {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['shell', 'common', 'errors']);
   const [state, setState] = useState<State>({ kind: 'loading' });
 
   useEffect(() => {
@@ -36,9 +36,9 @@ export function App() {
     <>
       <TitleBar />
       <main>
-        <h1>{t('app.name')}</h1>
+        <h1>{t('common:app.name')}</h1>
         {state.kind === 'loading' && <p>{t('appInfo.loading')}</p>}
-        {state.kind === 'failed' && <p role="alert">{t(`errors.${state.error.code}`)}</p>}
+        {state.kind === 'failed' && <p role="alert">{t(`errors:${state.error.code}`)}</p>}
         {state.kind === 'ready' && (
           <dl>
             <dt>{t('appInfo.appVersion')}</dt>

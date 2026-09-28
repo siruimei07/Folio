@@ -1,0 +1,8 @@
+{
+  "appInfo": {
+    "loading": "Loading app info…",
+    "appVersion": "App version",
+    "coreVersion": "Core version",
+    "dataDir": "Data folder"
+  }
+}

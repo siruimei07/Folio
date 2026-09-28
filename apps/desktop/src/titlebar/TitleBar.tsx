@@ -19,7 +19,7 @@ const GLYPHS = {
  * is a placeholder until the design handoff.
  */
 export function TitleBar() {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['titlebar', 'common']);
   const maximizeButton = useRef<HTMLButtonElement>(null);
   const [maximized, setMaximized] = useState(false);
   const [pointer, setPointer] = useState<MaximizeButtonChanged>({
@@ -36,13 +36,13 @@ export function TitleBar() {
   return (
     <header className="title-bar">
       <div className="title-bar__drag" data-tauri-drag-region>
-        {t('app.name')}
+        {t('common:app.name')}
       </div>
       <div className="title-bar__controls">
         <button
           type="button"
           className="title-bar__button"
-          aria-label={t('titleBar.minimize')}
+          aria-label={t('minimize')}
           onClick={windowControls.minimize}
         >
           <span aria-hidden="true">{GLYPHS.minimize}</span>
@@ -52,7 +52,7 @@ export function TitleBar() {
           ref={maximizeButton}
           type="button"
           className="title-bar__button"
-          aria-label={t(maximized ? 'titleBar.restore' : 'titleBar.maximize')}
+          aria-label={t(maximized ? 'restore' : 'maximize')}
           data-hovered={pointer.hovered || undefined}
           data-pressed={pointer.pressed || undefined}
           onClick={windowControls.toggleMaximize}
@@ -62,7 +62,7 @@ export function TitleBar() {
         <button
           type="button"
           className="title-bar__button title-bar__button--close"
-          aria-label={t('titleBar.close')}
+          aria-label={t('close')}
           onClick={windowControls.close}
         >
           <span aria-hidden="true">{GLYPHS.close}</span>
