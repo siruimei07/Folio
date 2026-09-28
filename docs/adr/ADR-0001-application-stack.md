@@ -293,8 +293,11 @@ Avoid `pptx-preview` (closed source) and AGPL renderers such as SuperDoc.
    - Pins: `rust-toolchain.toml`, `packageManager`, `engines`, `.nvmrc`.
    - CI on `windows-latest`: `cargo fmt --check`, `clippy`, `cargo test`, `tsc`, ESLint, Vitest,
      binding-drift check, Playwright e2e.
-   - Tauri is pinned to 2.11.6, not 2.12: 2.12.0 was younger than the one-day minimum release age
-     (CLAUDE.md §5). Upgrade in a dependency lane.
+   - Tauri was pinned to 2.11.6, not 2.12: 2.12.0 was younger than the one-day minimum release
+     age (CLAUDE.md §5).
+     - Result: Tauri 2.12.0 since 2026-09-28 (lane `chore/build-deps-tauri-2-12`), with `windows`
+       and `windows-core` moved to the versions it locks. `pnpm check` and `pnpm e2e` passed, and
+       Sirui checked snap layouts, maximize/restore and title-bar dragging by hand.
 4. [ ] Timeboxed spikes during the scaffold; record results in this ADR or a follow-up:
    a) Playwright over CDP runs one real flow locally and in CI;
       - Result: passes locally (WebView2 153, two workers). The first CI run on `windows-latest`

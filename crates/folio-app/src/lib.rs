@@ -53,3 +53,21 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running Folio");
 }
+
+#[cfg(test)]
+mod tests {
+    /// The workspace pins `windows` and `windows-core` to the versions Tauri locks (Cargo.toml),
+    /// so each compiles once. A Tauri upgrade that moves them must move the pins too.
+    #[test]
+    fn windows_crates_follow_tauri() {
+        let lock = include_str!("../../../Cargo.lock");
+        for name in ["windows", "windows-core"] {
+            let entry = format!("name = \"{name}\"");
+            let versions = lock.lines().filter(|line| *line == entry).count();
+            assert_eq!(
+                versions, 1,
+                "Cargo.lock holds {versions} versions of `{name}`; pin Tauri's in Cargo.toml"
+            );
+        }
+    }
+}

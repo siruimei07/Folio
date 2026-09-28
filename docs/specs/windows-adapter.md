@@ -238,11 +238,10 @@ the library root or `.folio`) is the delete operation's rule, in the library lay
   thread of its own (`CoInitializeEx` with `COINIT_APARTMENTTHREADED`), whatever the caller's
   thread.
 - A folder goes to the Recycle Bin as one item, with everything below it.
-- **Dependencies.** The `windows` crate for the COM interfaces (WP-03's workspace entry, a
-  version already in `Cargo.lock`). Its `#[implement]` macro expands to `::windows_core` paths,
-  so the sink also needs `windows-core` as a direct dependency: a workspace entry pinned to
-  0.61.2, the version `windows` 0.61.3 uses (Sirui, 2026-09-27, instead of a hand-written
-  vtable). Nothing new is downloaded.
+- **Dependencies.** The `windows` crate for the COM interfaces. Its `#[implement]` macro expands
+  to `::windows_core` paths, so the sink also needs `windows-core` as a direct dependency (Sirui,
+  2026-09-27, instead of a hand-written vtable). Both are workspace entries pinned to the versions
+  Tauri already locks, so nothing new is downloaded.
 
 ### 4.2 Fake
 

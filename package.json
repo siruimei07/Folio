@@ -16,6 +16,6 @@
     "e2e": "pnpm run build:app && pnpm --filter @folio/e2e run e2e"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "2.11.5"
+    "@tauri-apps/cli": "2.12.0"
   }
 }
