@@ -132,7 +132,8 @@ docs/
 design/
   tokens/              design-token source of truth
 .agents/lanes/         live lane files (git-ignored, see §7.3)
-.agents/work/          work packages for other sessions (git-ignored, see §7.7)
+.agents/locks/         shared runtime locks, e.g. the app lock (git-ignored, see §7.5)
+.agents/work/          retired work packages, a read-only archive (git-ignored, see §7.7)
 CLAUDE.md
 ```
 
@@ -220,6 +221,12 @@ These affect every lane. Run them only when every other lane's status is `checkp
 ### 7.5 Shared runtime
 
 - Only one session runs the dev server; others reuse it. Record who runs it in that lane file.
+- `pnpm build:app` and `pnpm e2e` replace and run `target/debug/folio-app.exe`, so only one session runs them at a time. Take the app lock first (`mkdir` fails while another session holds it) and always release it; a lock older than an hour: ask Sirui instead of breaking it. Timing runs hold it too and start only when no other `cargo` or `pnpm` process runs: the lock does not stop other sessions' `pnpm check`.
+  ```bash
+  mkdir -p .agents/locks && mkdir .agents/locks/app && echo "<branch> $(date '+%F %T')" > .agents/locks/app/owner
+  pnpm e2e
+  rm -rf .agents/locks/app
+  ```
 - Tests that write data use a per-lane temporary data directory (env var set per lane), never the shared dev database.
 - If two tasks need incompatible states (framework upgrade, competing prototypes, different build flags), GitButler parallel branches are the wrong tool — ask Sirui before using a separate worktree.
 
@@ -235,18 +242,13 @@ Cowork hand-off: Cowork writes its files, creates a lane file with `Agent: Cowor
 `Status: review`, and leaves the changes uncommitted. The next Claude Code session (or
 Sirui) commits them with `but commit -b docs/<desc> -m "<msg>" <ids>` or `design/<desc>`.
 
-### 7.7 Work packages
+### 7.7 Work packages (retired)
 
-A coordinating session may split work into packages in `.agents/work/` (git-ignored, shared
-like the lane files) for other sessions to take on; `.agents/work/README.md` holds the
-protocol. In short:
-
-1. Take only a package whose `Status` is `open` and whose dependencies are done; mark it
-   `claimed`, then start its lane as in §7.3.
-2. Stay inside the package's `Owns`. Its definition of done is binding, and its `verify.sh`
-   must end with `RESULT: PASS` before you hand back.
-3. Hand back with `result.md` in the package folder and `Status: review`. Only the
-   coordinator reports to Sirui, records results in ADRs and asks to land.
+Since 2026-09-27 work is not split into packages for other sessions to claim. Plan lanes
+instead: a branch name and a short start prompt for each session Sirui opens himself (as in
+the roadmap's appendix A). Each lane reports to Sirui and updates its own ADR lines.
+`.agents/work/` keeps the finished packages WP-01 to WP-04 as a read-only archive: do not
+claim, add or update packages there.
 
 ---
 

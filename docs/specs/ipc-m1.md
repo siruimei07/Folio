@@ -4,8 +4,9 @@ System design for the interface between the M1 UI and the shell: the commands, t
 error union the UI uses for the local library (brief §11, M1). Decisions that are costly to
 reverse are in [ADR-0004](../adr/ADR-0004-ipc-contract.md); this spec fixes the details.
 
-- Status: draft, 2026-09-27 (lane `feat/ipc-m1-contract`). The types live in
-  `crates/folio-app/src/ipc/`; no command has behaviour yet (§3).
+- Status: accepted with ADR-0004 (Sirui, 2026-09-28); written 2026-09-27 in lane
+  `feat/ipc-m1-contract`. The types live in `crates/folio-app/src/ipc/`; no command has
+  behaviour yet (§3). The implementation lanes of §21 change this line as they land.
 - Inputs: [brief](../product/brief.md) §4, §5.1–§5.3, §7, §9, §13;
   [app-shell handoff](../design/handoff/app-shell.md); [ADR-0001](../adr/ADR-0001-application-stack.md)
   §3, §4 and action item 5; [ADR-0002](../adr/ADR-0002-data-storage.md);

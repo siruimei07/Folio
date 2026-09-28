@@ -390,7 +390,7 @@ counting rescans, so a slow CI machine only makes them slower.
 `tests/scan_benchmark.rs` builds the 49,920-file library once and times, per adapter and with a
 catalog of its own: the first scan, a scan without changes, hashing, and a scan after renaming a
 course (renamed back afterwards). On Windows it runs `StdFileSystem` and then
-`WindowsFileSystem`; elsewhere only `StdFileSystem`. Timing runs hold `.agents/work/locks/app`
+`WindowsFileSystem`; elsewhere only `StdFileSystem`. Timing runs hold the app lock (CLAUDE.md §7.5)
 and start only when no other `cargo` or `pnpm` process runs; Microsoft Defender stays as it is,
 and its state is recorded next to the results in library scan §10.
 
