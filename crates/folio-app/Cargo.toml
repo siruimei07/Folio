@@ -23,6 +23,16 @@ specta = { workspace = true }
 tauri = { workspace = true }
 tauri-specta = { workspace = true }
 thiserror = { workspace = true }
+# COM only: the snap overlay's UI Automation provider (window_chrome.rs). `IRawElementProviderSimple`
+# needs the Com, Ole and Variant features.
+windows = { workspace = true, features = [
+  "Win32_Foundation",
+  "Win32_System_Com",
+  "Win32_System_Ole",
+  "Win32_System_Variant",
+  "Win32_UI_Accessibility",
+] }
+windows-core = { workspace = true }
 windows-sys = { workspace = true, features = [
   "Win32_Graphics_Dwm",
   "Win32_Graphics_Gdi",

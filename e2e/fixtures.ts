@@ -17,6 +17,8 @@ const connectTimeoutMs = 30_000;
 
 interface FolioApp {
   page: Page;
+  /** The app process, whose native windows shell specs inspect. */
+  processId: number;
   /** The isolated data directory passed to the app through FOLIO_DATA_DIR. */
   dataDir: string;
 }
@@ -49,7 +51,15 @@ export const test = base.extend<{ folio: FolioApp }>({
       const page = context.pages()[0] ?? (await context.waitForEvent('page'));
       // CDP can attach while WebView2 still shows about:blank, before Tauri's scripts exist.
       await page.waitForURL((url) => url.protocol !== 'about:');
-      await use({ page, dataDir });
+      // WebView2 drops input that arrives before the page's first frame is on screen, so a key
+      // pressed right away can vanish. Two animation frames mean one has been presented. A
+      // hidden or fully covered window renders no frames, so fail fast instead of hanging.
+      await page.evaluate(`new Promise((resolve, reject) => {
+        setTimeout(() => reject(new Error('Folio rendered no frame in 10 s')), 10000);
+        requestAnimationFrame(() => requestAnimationFrame(resolve));
+      })`);
+      if (child.pid === undefined) throw new Error('Folio has no process id');
+      await use({ page, dataDir, processId: child.pid });
     } finally {
       await browser?.close();
       if (child) await stop(child);

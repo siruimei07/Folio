@@ -318,10 +318,18 @@ Avoid `pptx-preview` (closed source) and AGPL renderers such as SuperDoc.
         which hides the overlay, and a failed move hides it too. Native failures are written to
         `logs\shell-errors.log` in the data directory. The shell also owns closing, so a page
         listener cannot veto it, and native file drops stay off until import is designed.
-      - Open: the overlay covers the top resize edge above the maximize button and has no
-        accessible name (the HTML button stays reachable by keyboard and screen readers); both
-        are in progress. Windows 10 and moves between displays with different scaling are
-        untested.
+      - Resize edge and UI Automation (2026-09-27, lane `fix/core-snap-overlay-edges`): while
+        the window is restored, the overlay answers `HTTRANSPARENT` in the top `SM_CYFRAME`
+        rows, so Tauri's own resize border child answers `HTTOP` there, as along the rest of the
+        top edge; below those rows, and over the whole button while maximized, it answers
+        `HTMAXBUTTON`. A minimal UI Automation provider takes the overlay out of the control and
+        content views (Dynamic Annotation of those two properties has no effect), so screen
+        readers find the named HTML button, and land on the window from the overlay. It needs the
+        `windows` and `windows-core` crates, at the versions Tauri already locks.
+        `e2e/tests/shell-snap-overlay.spec.ts` checks both in the running app, restored and
+        maximized.
+      - Open: Windows 10 and moves between displays with different scaling are untested.
+        Dragging the edge above the button and Narrator over it are checked by hand only.
    c) Word, Excel and PowerPoint rendering with the candidates above, on real course files;
    d) `tauri-specta`: commands, typed events and the error union end to end.
       - Result: commands, typed events and the error union work end to end (Rust types,

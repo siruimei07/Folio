@@ -30,6 +30,10 @@ blake3 = "1.8.7"
 ignore = "0.4.33"
 # The version Tauri's own dependencies (muda, softbuffer) already use, so it compiles only once.
 windows-sys = "0.61.2"
+# COM bindings for the few interfaces windows-sys lacks; the versions Tauri, tao and wry already
+# use. The `#[implement]` macro refers to windows-core by name, so it is a direct dependency too.
+windows = "=0.61.3"
+windows-core = "=0.61.2"
 # Tauri 2.11: 2.12 was released on scaffold day, inside the one-day minimum release age. The exact
 # requirements below hold only these two crates; Cargo.lock holds the rest of the Tauri family
 # (tauri-runtime, tauri-utils, wry), so update them with `cargo update -p <crate> --precise`,

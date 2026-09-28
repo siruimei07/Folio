@@ -8,6 +8,10 @@
 //! mouse instead of the page, so it reports hover and press to the page
 //! ([`MaximizeButtonChanged`]) and maximizes or restores the window on click itself.
 //!
+//! The overlay leaves the top resize border above the button to the window
+//! ([`overlay_hit_test`]), and it stays out of the UI Automation control and content views: the
+//! HTML button remains the one control that keyboards and screen readers use.
+//!
 //! Win32 windows may only be changed by the thread that created them. Everything here runs on
 //! the UI thread: Tauri's `setup` hook and synchronous commands run there, and
 //! [`ui_thread_hwnd`] checks it.
@@ -25,24 +29,33 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 use tauri::{AppHandle, Manager, WebviewWindow};
 use tauri_specta::Event;
-use windows_sys::Win32::Foundation::{
-    ERROR_CLASS_ALREADY_EXISTS, HWND, LPARAM, LRESULT, RECT, WPARAM,
+use windows::Win32::System::Variant::VARIANT;
+use windows::Win32::UI::Accessibility::{
+    IRawElementProviderSimple, IRawElementProviderSimple_Impl, ProviderOptions,
+    ProviderOptions_ServerSideProvider, UIA_IsContentElementPropertyId,
+    UIA_IsControlElementPropertyId, UIA_PATTERN_ID, UIA_PROPERTY_ID, UiaDisconnectProvider,
+    UiaHostProviderFromHwnd, UiaReturnRawElementProvider, UiaRootObjectId,
 };
-use windows_sys::Win32::Graphics::Gdi::{GetStockObject, HBRUSH, NULL_BRUSH};
+use windows_core::{IUnknown, implement};
+use windows_sys::Win32::Foundation::{
+    ERROR_CLASS_ALREADY_EXISTS, HWND, LPARAM, LRESULT, POINT, RECT, WPARAM,
+};
+use windows_sys::Win32::Graphics::Gdi::{GetStockObject, HBRUSH, NULL_BRUSH, ScreenToClient};
 use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows_sys::Win32::System::Threading::GetCurrentThreadId;
-use windows_sys::Win32::UI::HiDpi::GetDpiForWindow;
+use windows_sys::Win32::UI::HiDpi::{GetDpiForWindow, GetSystemMetricsForDpi};
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
     TME_LEAVE, TME_NONCLIENT, TRACKMOUSEEVENT, TrackMouseEvent,
 };
 use windows_sys::Win32::UI::Shell::{DefSubclassProc, RemoveWindowSubclass, SetWindowSubclass};
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DefWindowProcW, DestroyWindow, FindWindowExW, GWLP_USERDATA, GWLP_WNDPROC,
-    GetClientRect, GetWindowLongPtrW, GetWindowThreadProcessId, HTMAXBUTTON, HWND_TOP, IsZoomed,
-    PostMessageW, RegisterClassExW, SC_MAXIMIZE, SC_RESTORE, SW_HIDE, SWP_NOACTIVATE,
-    SWP_SHOWWINDOW, SetWindowLongPtrW, SetWindowPos, ShowWindow, WM_DPICHANGED, WM_NCDESTROY,
-    WM_NCHITTEST, WM_NCLBUTTONDOWN, WM_NCLBUTTONUP, WM_NCMOUSELEAVE, WM_NCMOUSEMOVE, WM_SIZE,
-    WM_SYSCOMMAND, WNDCLASSEXW, WS_CHILD, WS_CLIPSIBLINGS,
+    GetClientRect, GetWindowLongPtrW, GetWindowThreadProcessId, HTMAXBUTTON, HTTRANSPARENT,
+    HWND_TOP, IsZoomed, PostMessageW, RegisterClassExW, SC_MAXIMIZE, SC_RESTORE, SM_CYFRAME,
+    SW_HIDE, SWP_NOACTIVATE, SWP_SHOWWINDOW, SetWindowLongPtrW, SetWindowPos, ShowWindow,
+    WM_DPICHANGED, WM_GETOBJECT, WM_NCDESTROY, WM_NCHITTEST, WM_NCLBUTTONDOWN, WM_NCLBUTTONUP,
+    WM_NCMOUSELEAVE, WM_NCMOUSEMOVE, WM_SIZE, WM_SYSCOMMAND, WNDCLASSEXW, WS_CHILD,
+    WS_CLIPSIBLINGS,
 };
 use windows_sys::w;
 
@@ -54,6 +67,25 @@ const SUBCLASS_ID: usize = 1;
 const MAX_BUTTON_WIDTH: u32 = 64;
 const CAPTION_HEIGHT: u32 = 48;
 const CAPTION_RIGHT_BAND: u32 = 160;
+
+/// The overlay's answer to `WM_NCHITTEST`, in physical pixels of the parent's client area.
+///
+/// Along the rest of the top edge, a restored window resizes through Tauri's drag-resize child
+/// (tauri-runtime-wry, `undecorated_resizing`): its region is the top `SM_CYFRAME` rows of the
+/// client area, where it answers `HTTOP`, and it is empty while the window is maximized. Over the
+/// button, `HTTRANSPARENT` hands those rows to it, because it is the next window below in this
+/// thread (tao's own hit test on the parent answers `HTTOP` there too).
+fn overlay_hit_test(point: POINT, rect: RECT, top_band: i32, maximized: bool) -> LRESULT {
+    let on_button = point.x >= rect.left
+        && point.x < rect.right
+        && point.y >= rect.top
+        && point.y < rect.bottom;
+    if on_button && (maximized || point.y >= top_band) {
+        HTMAXBUTTON as LRESULT
+    } else {
+        HTTRANSPARENT as LRESULT
+    }
+}
 
 /// Where the HTML maximize button is, in whole CSS pixels. `right` is the distance from the
 /// window's right edge to the button's right edge. Caption buttons are anchored to the right, so
@@ -101,6 +133,48 @@ impl ButtonBounds {
             right,
             bottom: top + px(self.height).max(1),
         }
+    }
+}
+
+/// The overlay's UI Automation provider. It takes the overlay out of the control and content
+/// views, which screen readers navigate, and leaves every other property to the window's default
+/// provider (`HostRawElementProvider`). Without it, the overlay is an unnamed pane over the button.
+///
+/// UI Automation calls it on its own threads (no `ProviderOptions_UseComThreading`), so clients
+/// never wait for the UI thread. That is sound because it never changes and only passes its
+/// window handle to `UiaHostProviderFromHwnd`, which any thread may call.
+#[implement(IRawElementProviderSimple)]
+struct OverlayProvider {
+    overlay: windows::Win32::Foundation::HWND,
+}
+
+impl IRawElementProviderSimple_Impl for OverlayProvider_Impl {
+    fn ProviderOptions(&self) -> windows::core::Result<ProviderOptions> {
+        Ok(ProviderOptions_ServerSideProvider)
+    }
+
+    fn GetPatternProvider(&self, _pattern: UIA_PATTERN_ID) -> windows::core::Result<IUnknown> {
+        // S_OK without an object: the overlay supports no control pattern. windows-rs cannot
+        // write a null result, so this relies on UI Automation passing a null-initialized slot.
+        Err(windows::core::Error::empty())
+    }
+
+    fn GetPropertyValue(&self, property: UIA_PROPERTY_ID) -> windows::core::Result<VARIANT> {
+        Ok(
+            if property == UIA_IsControlElementPropertyId
+                || property == UIA_IsContentElementPropertyId
+            {
+                VARIANT::from(false)
+            } else {
+                // VT_EMPTY: the default provider answers.
+                VARIANT::default()
+            },
+        )
+    }
+
+    fn HostRawElementProvider(&self) -> windows::core::Result<IRawElementProviderSimple> {
+        // SAFETY: only queries UI Automation; a destroyed window yields an error.
+        unsafe { UiaHostProviderFromHwnd(self.overlay) }
     }
 }
 
@@ -172,6 +246,10 @@ struct OverlayState {
     app: AppHandle,
     bounds: Cell<Option<ButtonBounds>>,
     button: Cell<MaximizeButtonChanged>,
+    uia: IRawElementProviderSimple,
+    /// Set once a hit test could not read the window's geometry, so the log gets one line and
+    /// not one per mouse move.
+    hit_test_failed: Cell<bool>,
 }
 
 /// # Safety
@@ -225,6 +303,11 @@ unsafe fn create_overlay(parent: HWND, app: AppHandle) -> Result<(), AppError> {
             app,
             bounds: Cell::new(None),
             button: Cell::new(MaximizeButtonChanged::default()),
+            uia: OverlayProvider {
+                overlay: windows::Win32::Foundation::HWND(overlay),
+            }
+            .into(),
+            hit_test_failed: Cell::new(false),
         });
         SetWindowLongPtrW(overlay, GWLP_USERDATA, Box::into_raw(state) as isize);
 
@@ -373,11 +456,73 @@ unsafe extern "system" fn overlay_proc(
             WM_NCDESTROY => {
                 let state = SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0) as *mut OverlayState;
                 if !state.is_null() {
-                    drop(Box::from_raw(state));
+                    let state = Box::from_raw(state);
+                    // Tell UI Automation the window is gone, and cut clients off the provider
+                    // before the handle can be reused.
+                    UiaReturnRawElementProvider(
+                        windows::Win32::Foundation::HWND(hwnd),
+                        windows::Win32::Foundation::WPARAM(0),
+                        windows::Win32::Foundation::LPARAM(0),
+                        None,
+                    );
+                    if let Err(error) = UiaDisconnectProvider(&state.uia) {
+                        diagnostics::report(
+                            &state.app,
+                            &format!(
+                                "failed to disconnect the overlay's UI Automation provider: {error}"
+                            ),
+                        );
+                    }
                 }
             }
-            // The whole point: Windows shows the snap layouts flyout for this answer.
-            WM_NCHITTEST => return HTMAXBUTTON as LRESULT,
+            // The object id is a DWORD in the low half of lParam.
+            WM_GETOBJECT if lparam as i32 == UiaRootObjectId => {
+                if let Some(state) = overlay_state(hwnd) {
+                    return UiaReturnRawElementProvider(
+                        windows::Win32::Foundation::HWND(hwnd),
+                        windows::Win32::Foundation::WPARAM(wparam),
+                        windows::Win32::Foundation::LPARAM(lparam),
+                        &state.uia,
+                    )
+                    .0;
+                }
+            }
+            WM_NCHITTEST => {
+                let Some(state) = overlay_state(hwnd) else {
+                    return HTTRANSPARENT as LRESULT;
+                };
+                let Some(bounds) = state.bounds.get() else {
+                    return HTTRANSPARENT as LRESULT;
+                };
+                // GET_X/Y_LPARAM semantics preserve negative screen coordinates.
+                let mut point = POINT {
+                    x: lparam as i16 as i32,
+                    y: (lparam >> 16) as i16 as i32,
+                };
+                let mut client = RECT::default();
+                if ScreenToClient(state.parent, &mut point) == 0
+                    || GetClientRect(state.parent, &mut client) == 0
+                {
+                    if !state.hit_test_failed.replace(true) {
+                        diagnostics::report(
+                            &state.app,
+                            &format!(
+                                "failed to read the window geometry for the snap layouts \
+                                 overlay's hit test (logged once): {}",
+                                std::io::Error::last_os_error()
+                            ),
+                        );
+                    }
+                    return HTTRANSPARENT as LRESULT;
+                }
+                let dpi = GetDpiForWindow(state.parent);
+                return overlay_hit_test(
+                    point,
+                    bounds.client_rect(client.right, dpi),
+                    GetSystemMetricsForDpi(SM_CYFRAME, dpi),
+                    IsZoomed(state.parent) != 0,
+                );
+            }
             WM_NCMOUSEMOVE => {
                 if let Some(state) = overlay_state(hwnd)
                     && !state.button.get().hovered
@@ -446,6 +591,74 @@ unsafe extern "system" fn overlay_proc(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    const TRANSPARENT: LRESULT = HTTRANSPARENT as LRESULT;
+    const MAX_BUTTON: LRESULT = HTMAXBUTTON as LRESULT;
+
+    #[test]
+    fn top_band_resizes_restored_window() {
+        // SM_CYFRAME at 100 %, 150 % and 200 % scaling.
+        for (dpi, band) in [(96, 4), (144, 6), (192, 8)] {
+            let rect = bounds(46, 0, 46, 32).client_rect(1280, dpi);
+            let x = rect.left;
+            let hit = |x, y| overlay_hit_test(POINT { x, y }, rect, band, false);
+            // Tauri's drag-resize region covers rows 0..band; the button starts right below.
+            assert_eq!(hit(x, 0), TRANSPARENT, "{dpi} dpi");
+            assert_eq!(hit(x, band - 1), TRANSPARENT, "{dpi} dpi");
+            assert_eq!(hit(x, band), MAX_BUTTON, "{dpi} dpi");
+            assert_eq!(
+                hit(rect.right - 1, rect.bottom - 1),
+                MAX_BUTTON,
+                "{dpi} dpi"
+            );
+            // Outside the button, whatever the row.
+            assert_eq!(hit(rect.left - 1, band), TRANSPARENT, "{dpi} dpi");
+            assert_eq!(hit(rect.right, band), TRANSPARENT, "{dpi} dpi");
+            assert_eq!(hit(x, rect.bottom), TRANSPARENT, "{dpi} dpi");
+        }
+    }
+
+    #[test]
+    fn maximized_window_has_no_top_band() {
+        let rect = bounds(46, 0, 46, 32).client_rect(1280, 144);
+        let hit = |y| overlay_hit_test(POINT { x: rect.left, y }, rect, 6, true);
+        assert_eq!(hit(0), MAX_BUTTON);
+        assert_eq!(hit(5), MAX_BUTTON);
+        assert_eq!(hit(rect.bottom - 1), MAX_BUTTON);
+        assert_eq!(hit(rect.bottom), TRANSPARENT);
+    }
+
+    #[test]
+    fn provider_takes_the_overlay_out_of_control_and_content_views() {
+        use windows::Win32::System::Variant::VT_BOOL;
+        use windows::Win32::UI::Accessibility::UIA_NamePropertyId;
+
+        let provider: IRawElementProviderSimple = OverlayProvider {
+            overlay: windows::Win32::Foundation::HWND(null_mut()),
+        }
+        .into();
+        // SAFETY: calls into an in-process object that never touches its window handle here.
+        unsafe {
+            for property in [
+                UIA_IsControlElementPropertyId,
+                UIA_IsContentElementPropertyId,
+            ] {
+                let value = provider.GetPropertyValue(property).unwrap();
+                assert_eq!(value.vt(), VT_BOOL);
+                assert!(!bool::try_from(&value).unwrap());
+            }
+            // Everything else comes from the window's default provider.
+            assert!(
+                provider
+                    .GetPropertyValue(UIA_NamePropertyId)
+                    .unwrap()
+                    .is_empty()
+            );
+            assert!(
+                (provider.ProviderOptions().unwrap() & ProviderOptions_ServerSideProvider).0 != 0
+            );
+        }
+    }
 
     fn bounds(right: u32, top: u32, width: u32, height: u32) -> ButtonBounds {
         ButtonBounds {
