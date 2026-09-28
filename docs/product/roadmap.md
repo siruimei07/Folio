@@ -8,8 +8,8 @@
 
 - **现在在哪**：阶段 0 基本完成（2026-09-28）。原来排队的 4 个 stack 已合并，main 上的 CI 通过；M1 的**底层**已全部在 main 上：核心库（路径、元数据、catalog、中文搜索、扫描与对账）、Windows 适配（文件 ID、回收站、文件监视）、M1 的 IPC 合约（ADR-0004 已接受）、设计基础（token 和界面规格）。Tauri 已升到 2.12（Codex 完成，你手动检查通过），但还缺 Claude Code 评审、没有合并。M1 的**功能层**还没开始：35 个 M1 命令只有声明、没有实现，界面只有标题栏。
 - **开始第 1 波之前**：一个 Claude Code session 评审并合并 Tauri 升级，再合并三个文档分支（§5 步骤 0.5，附录 A.1）。不碰 Cargo 和 lockfile 的第 1 波 lane（界面架构 ADR、Office spike、Cowork 设计、英文界面）现在就可以同时开始；`feat/core-library-state` 等 0.5 合并后再开。
-- **还剩多少**：到 v1.0 大约 55 个 lane：M1 约 19 个，M2 约 14 个，M3 约 15 个，M4 约 6 个。按「核心 / 界面 / 设计 / 验证」四条轨道并行，同一时间 3～5 个 lane。
-- **分工**（每个 lane 在表里标了「分工」，说明见 §4.1）：Codex 只做后端编码（你 2026-09-28 的决定，写在上级目录的 `AGENTS.md`），约 22 个后端 lane 可以交给 **Codex**；19 个前端 lane，以及 10 个规格、合约、前端依赖、发布、实测和说明文档 lane 由 Claude Code 做；3 个设计 lane 由 Cowork 做。
+- **还剩多少**：到 v1.0 大约 57 个 lane：M1 约 21 个（ADR-0005 加了两个），M2 约 14 个，M3 约 15 个，M4 约 6 个。按「核心 / 界面 / 设计 / 验证」四条轨道并行，同一时间 3～5 个 lane。
+- **分工**（每个 lane 在表里标了「分工」，说明见 §4.1）：Codex 只做后端编码（你 2026-09-28 的决定，写在上级目录的 `AGENTS.md`），约 22 个后端 lane 可以交给 **Codex**；20 个前端 lane，以及 11 个规格、合约、前端依赖、发布、实测和说明文档 lane 由 Claude Code 做；3 个设计 lane 由 Cowork 做。
 - **需要你现在决定**：批准步骤 0.5 的两次合并。§2 的版本定义和 M1→M4 的顺序没有单独确认过，本文按它执行，有异议随时改。完整清单见 §6。
 
 ## 2. 「上线」指什么（建议）
@@ -48,7 +48,7 @@ brief §11 把 M4 定为「可以发给同学朋友用」，所以本文把 **v1
 
 - **M1 功能层**：35 个 planned 命令都没有实现（真正运行的只有 `app_info` 和 `set_maximize_button_bounds`）；资料库、搜索、预览、导入、设置、首次使用这些界面都没有。
 - **M1 期间该做的验证**：Office 预览（尤其 PPT）的技术验证（ADR-0001 行动项 4c；brief §11 要求在 M1 期间做）。
-- **界面架构**：数据缓存、视图切换、无障碍组件、长列表虚拟化都还没有定，也没有 ADR。
+- **界面架构**：已定（2026-09-28 更新）：ADR-0005 已接受，细节在 `docs/specs/ui-architecture.md`；要装的界面依赖在它的 §16，由同步点 1 的 `chore/build-deps-ui-m1` 安装。
 - **M2 和 M3 的前置工作**：`remote-format.md` 和 golden vectors（ADR-0003 行动项 2，「M2 之前」）；同步仿真 harness（行动项 3，「M3 之前」）；真实 iCloud 实测（行动项 4）和它的前提——把开发机上的 iCloud for Windows 从 13.4 升级（行动项 5，要你来做）。
 - **分发**：更新源、签名方案、安装说明（ADR-0001 行动项 6）。
 
@@ -130,7 +130,7 @@ brief §11 把 M4 定为「可以发给同学朋友用」，所以本文把 **v1
 | 0.4 | 版本管理 | 整理：WP-03 标为 done；`.agents/work/` 只作只读存档，规则写进 CLAUDE.md §7.7；app lock 移到 `.agents/locks/app`（§7.5） | 已完成，在 `docs/docs-retire-work-packages` 上待合并 |
 | 0.5 | 版本管理 | 收尾：Claude Code 评审 Tauri 升级（`/code-review`、`/security-review`、`/simplify`），补上 ADR-0001 行动项 3，合并；再用 `--whole-stack` 合并三个文档分支 | 待做（附录 A.1），需要你批准合并 |
 
-### M1 本地资料库 → v0.1（约 19 个 lane）
+### M1 本地资料库 → v0.1（约 21 个 lane）
 
 **第 1 波**（4 个 lane 加 Cowork 并行，只有一个写 Rust）。ADR-0005、Office spike、Cowork 设计和英文界面不碰 Cargo 和 lockfile，现在就可以开；`feat/core-library-state` 等 0.5 合并后再开，免得它对 Cargo 文件的改动挂在 Tauri 分支上。
 
@@ -144,14 +144,16 @@ brief §11 把 M4 定为「可以发给同学朋友用」，所以本文把 **v1
 
 **同步点 1**：land 第 1 波 → 你批准 ADR-0005 → `chore/build-deps-ui-m1`（构建，Claude Code：一次装齐 M1 界面依赖，独占操作）。
 
-**第 2 波**（3 个核心 lane、1 个界面 lane、1 个小 lane）
+**第 2 波**（3 个核心 lane、2 个界面 lane、2 个小 lane；ADR-0005 加了 `feat/ipc-m1-resolve-paths` 和 `feat/ui-data-layer`）
 
 | Lane | 分工 | 做什么 | 依赖 | 拥有路径 | 规模 |
 |---|---|---|---|---|---|
-| `feat/data-browse-queries` | 后端 · Codex | 树、列表、网格的查询（自然排序、继承的标签、多个标签取交集、「最近添加」「未打标签」）和分页搜索，以及对应命令 | library-state | `folio-core` 的查询模块、`folio-app` 的浏览命令 | M |
+| `feat/ipc-m1-resolve-paths` | 后端（合约） | 声明 `resolve_paths`：按相对路径找到笔记旁边的图片（ADR-0005 产品决定 1，形状见 ui-architecture §10.4）；只声明、不注册，重新生成 bindings；先于 browse-queries 合并 | library-state（它在重排命令注册） | `docs/specs/ipc-m1.md`、`folio-app` 的 IPC 类型和 planned 声明、`bindings.ts` | S |
+| `feat/data-browse-queries` | 后端 · Codex | 树、列表、网格的查询（自然排序、继承的标签、多个标签取交集、「最近添加」「未打标签」）和分页搜索，以及对应命令；实现 `resolve_paths` | library-state、resolve-paths 合约 | `folio-core` 的查询模块、`folio-app` 的浏览命令 | M |
 | `feat/core-library-ops` | 后端 · Codex | 学期、课程、标签、条目的增改删和排序（删除只进回收站）；课程编号等元数据改动，同时修订 ADR-0002 和 library-core（ipc-m1 §20，需你批准） | library-state | `folio-core` 的操作模块和 `meta/model.rs`、`folio-app` 的操作命令 | L |
 | `feat/core-file-scheme` | 后端 · Codex | `folio-file` 协议（只读，限定在资料库内）、缩略图缓存、用默认程序打开（从不运行程序或脚本）、在资源管理器中显示；CSP；e2e 证明预览 frame 读不到这个协议 | library-state | `folio-app` 的文件协议、缩略图、打开 | M |
-| `feat/ui-app-shell` | 前端 | 窗口骨架：标题栏、工具栏（同步部分先占位）、方块栏、内容区、窄窗口布局；主题和减少动态效果；WebView2 背景色（不闪白）；handoff §10 的共用组件；窗口命令失败的错误状态 | ADR-0005、依赖、i18n | `apps/desktop/src/` 的外壳和共用组件 | L |
+| `feat/ui-app-shell` | 前端 | 窗口骨架：标题栏、工具栏（同步部分先占位）、方块栏（M2 之前只有 Library）、内容区、窄窗口布局；主题和减少动态效果；WebView2 背景色（不闪白）；handoff §10 的共用组件；窗口命令失败的错误状态；ESLint 的目录和安全规则 | ADR-0005、依赖、i18n | `apps/desktop/src/` 的 `app/`、`components/`、`lib/`、`titlebar/` | L |
+| `feat/ui-data-layer` | 前端 | 数据层：TanStack Query 缓存、按 `CatalogChanged` 失效、分页列表、跟随移动的引用；浏览器面板和组件测试用的假 shell（含 5 万条的数据）；测试渲染工具（ui-architecture §5、§11） | ADR-0005、依赖 | `apps/desktop/src/` 的 `data/`、`ipc/mock/`、`test/` 的渲染工具 | M |
 | `chore/core-logging` | 后端 · Codex | 正式日志模块替换 `diagnostics.rs` | — | `folio-app` 的日志 | S |
 
 **第 3 波**
@@ -160,9 +162,9 @@ brief §11 把 M4 定为「可以发给同学朋友用」，所以本文把 **v1
 |---|---|---|---|---|
 | `feat/core-import` | 后端 · Codex | 选择文件对话框、原生拖放（`dragDropEnabled` 和一次性 token）、`check_import`、带进度的导入任务、可选删除原文件 | library-ops | M |
 | `feat/core-app-settings` | 后端（含合约） | M1 要用的本机设置，合约和实现一起：设备名、外观、减少动态效果、忽略规则（ipc-m1 §1 把设置留给了后续合约，这里先做最小的一组） | library-state | S |
-| `feat/ui-library-view` | 前端 | 资料库视图：树、标签筛选、快捷视图、列表 / 网格、排序、多选、重命名 / 移动 / 删除、批量打标签、右键菜单 | app-shell、browse、ops | L |
-| `feat/ui-search-palette` | 前端 | `Ctrl+K` 搜索：输入即出结果、分组、高亮只当文本渲染、方向键和回车 | app-shell、browse | M |
-| `feat/ui-preview` | 前端 | 预览区：图片、PDF（pdf.js）、Markdown（公式、代码高亮、清洗过的 HTML）、代码、音视频、其他；每个文件一个新 frame；验证 HEIC | app-shell、file-scheme | L |
+| `feat/ui-library-view` | 前端 | 资料库视图：树、标签筛选、快捷视图、列表 / 网格、排序、多选、重命名 / 移动 / 删除、批量打标签、右键菜单 | app-shell、data-layer、browse、ops | L |
+| `feat/ui-search-palette` | 前端 | `Ctrl+K` 搜索：输入即出结果、分组、高亮只当文本渲染、方向键和回车 | app-shell、data-layer、browse | M |
+| `feat/ui-preview` | 前端 | 预览区：图片、PDF（pdf.js）、Markdown（公式、代码高亮、清洗过的 HTML、笔记旁边的图片）、代码、音视频、其他；链接只显示地址、可复制；每个文件一个新 frame；验证 HEIC | app-shell、data-layer、file-scheme、browse（`resolve_paths`） | L |
 
 **第 4 波**
 
@@ -248,7 +250,7 @@ brief §11 把 M4 定为「可以发给同学朋友用」，所以本文把 **v1
 | 现在 | §2 的版本定义和 M1→M4 的顺序（brief §11 仍是「待确认」） | 决定 | 没有单独确认；本文按它执行，有异议随时改 |
 | M1 期间，越早越好 | 升级 iCloud for Windows | 手动 | 待做 |
 | M1 第 1 波 | 给 Office spike 准备一批真实课程文件（含中文 PPT） | 手动 | 待做 |
-| M1 同步点 1 | 批准 ADR-0005 界面架构 | 批准 | 待定 |
+| M1 同步点 1 | 批准 ADR-0005 界面架构 | 批准 | 已完成（2026-09-28）：笔记旁边的图片 M1 就做；预览里的链接只显示地址；v0.1 的方块栏只有 Library；新开 `feat/ui-data-layer` |
 | M1 第 1 波之后 | 审阅 Cowork 的首次使用、导入等设计 | 决定 | 待定 |
 | M1 第 1 波之后 | 根据 spike 决定 PPT 预览做到什么程度（不够好就降级为「用默认程序打开」） | 决定 | 待定 |
 | M1 第 2 波 | 批准课程编号等对 ADR-0002 的修订 | 批准 | 待定 |
