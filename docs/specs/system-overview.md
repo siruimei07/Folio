@@ -118,6 +118,10 @@ Rules:
 
 ## 4. IPC surface (shape, not the final contract)
 
+The M1 contract is specified in [ipc-m1.md](ipc-m1.md) ([ADR-0004](../adr/ADR-0004-ipc-contract.md)):
+there, `fs.changed` is `CatalogChanged` and `job.progress` is `JobChanged`. The shape below still
+guides the M2 and M3 additions.
+
 - **Commands** (request/response), grouped by module: `library.*`, `entries.*`, `tags.*`,
   `search.query`, `preview.*`, `workspace.*`, `history.*`, `sync.*`, `settings.*`, `ai.*`.
 - **Events** (host to UI): `fs.changed`, `workspace.changed`, `history.changed`, `job.progress`,

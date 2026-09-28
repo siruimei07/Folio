@@ -17,34 +17,149 @@ export const commands = {
 	width: number,
 	height: number,
 } | null) => typedError<null, AppError>(__TAURI_INVOKE("set_maximize_button_bounds", { bounds })),
+	libraryStatus: () => typedError<LibraryStatus, AppError>(__TAURI_INVOKE("library_status")),
+	/**  Opens the folder dialog; `null` when the user cancels. */
+	pickLibraryFolder: () => typedError<{
+	token: string,
+	path: string,
+	content: FolderContent,
+	/**  The folder is inside a cloud-sync folder: warn (ADR-0002 §6). */
+	syncRoot: SyncProvider | null,
+} | null, AppError>(__TAURI_INVOKE("pick_library_folder")),
+	createLibrary: (request: CreateLibrary) => typedError<LibraryOpened, AppError>(__TAURI_INVOKE("create_library", { request })),
+	openLibrary: (request: OpenLibrary) => typedError<LibraryOpened, AppError>(__TAURI_INVOKE("open_library", { request })),
+	listSemesters: () => typedError<Semester[], AppError>(__TAURI_INVOKE("list_semesters")),
+	createSemester: (request: CreateSemester) => typedError<Semester, AppError>(__TAURI_INVOKE("create_semester", { request })),
+	updateSemester: (request: UpdateSemester) => typedError<Semester, AppError>(__TAURI_INVOKE("update_semester", { request })),
+	reorderSemesters: (request: ReorderSemesters) => typedError<Semester[], AppError>(__TAURI_INVOKE("reorder_semesters", { request })),
+	listCourses: (request: ListCourses) => typedError<Course[], AppError>(__TAURI_INVOKE("list_courses", { request })),
+	createCourse: (request: CreateCourse) => typedError<Course, AppError>(__TAURI_INVOKE("create_course", { request })),
+	updateCourse: (request: UpdateCourse) => typedError<Course, AppError>(__TAURI_INVOKE("update_course", { request })),
+	reorderCourses: (request: ReorderCourses) => typedError<Course[], AppError>(__TAURI_INVOKE("reorder_courses", { request })),
+	listTags: () => typedError<Tag[], AppError>(__TAURI_INVOKE("list_tags")),
+	createTag: (request: CreateTag) => typedError<Tag, AppError>(__TAURI_INVOKE("create_tag", { request })),
+	updateTag: (request: UpdateTag) => typedError<Tag, AppError>(__TAURI_INVOKE("update_tag", { request })),
+	reorderTags: (request: ReorderTags) => typedError<Tag[], AppError>(__TAURI_INVOKE("reorder_tags", { request })),
+	deleteTag: (request: DeleteTag) => typedError<TagDeleted, AppError>(__TAURI_INVOKE("delete_tag", { request })),
+	setEntryTags: (request: SetEntryTags) => typedError<BatchResult, AppError>(__TAURI_INVOKE("set_entry_tags", { request })),
+	listChildren: (request: ListChildren) => typedError<Page<EntryRow>, AppError>(__TAURI_INVOKE("list_children", { request })),
+	listFiles: (request: ListFiles) => typedError<Page<EntryRow>, AppError>(__TAURI_INVOKE("list_files", { request })),
+	getEntry: (request: GetEntry) => typedError<EntryRow, AppError>(__TAURI_INVOKE("get_entry", { request })),
+	createFolder: (request: CreateFolder) => typedError<EntryRow, AppError>(__TAURI_INVOKE("create_folder", { request })),
+	renameEntry: (request: RenameEntry) => typedError<EntryRow, AppError>(__TAURI_INVOKE("rename_entry", { request })),
+	moveEntries: (request: MoveEntries) => typedError<BatchResult, AppError>(__TAURI_INVOKE("move_entries", { request })),
+	deleteEntries: (request: DeleteEntries) => typedError<BatchResult, AppError>(__TAURI_INVOKE("delete_entries", { request })),
+	search: (request: Search) => typedError<SearchPage, AppError>(__TAURI_INVOKE("search", { request })),
+	openEntry: (request: OpenEntry) => typedError<Opened, AppError>(__TAURI_INVOKE("open_entry", { request })),
+	revealEntry: (request: RevealEntry) => typedError<null, AppError>(__TAURI_INVOKE("reveal_entry", { request })),
+	/**  Opens the file dialog; `null` when the user cancels. */
+	pickImportFiles: () => typedError<{
+	token: string,
+	files: number,
+	folders: number,
+	/**  The first ten top-level names, for display. */
+	names: string[],
+} | null, AppError>(__TAURI_INVOKE("pick_import_files")),
+	checkImport: (request: CheckImport) => typedError<ImportCheck, AppError>(__TAURI_INVOKE("check_import", { request })),
+	/**  Starts an import job; returns its id. */
+	importFiles: (request: ImportFiles) => typedError<string, AppError>(__TAURI_INVOKE("import_files", { request })),
+	listJobs: () => typedError<Job[], AppError>(__TAURI_INVOKE("list_jobs")),
+	cancelJob: (request: CancelJob) => typedError<null, AppError>(__TAURI_INVOKE("cancel_job", { request })),
+	/**  Replaces the catalog and scans the library from scratch; returns the job id. */
+	rebuildCatalog: () => typedError<string, AppError>(__TAURI_INVOKE("rebuild_catalog")),
+	listProblems: (request: ListProblems) => typedError<Page<ProblemItem>, AppError>(__TAURI_INVOKE("list_problems", { request })),
 };
 
 /** Events */
 export const events = {
+	catalogChanged: makeEvent<CatalogChanged>("catalog-changed"),
+	dropHover: makeEvent<DropHover>("drop-hover"),
+	filesDropped: makeEvent<FilesDropped>("files-dropped"),
+	jobChanged: makeEvent<JobChanged>("job-changed"),
+	libraryStateChanged: makeEvent<LibraryStateChanged>("library-state-changed"),
 	maximizeButtonChanged: makeEvent<MaximizeButtonChanged>("maximize-button-changed"),
+	problemsChanged: makeEvent<ProblemsChanged>("problems-changed"),
 };
+
+/* Constants */
+export const LIMITS = {"abbrGraphemes":3,"batch":10000,"courseCodeChars":32,"displayNameChars":128,"eventEntries":200,"filterTags":16,"nameUnits":255,"pageSize":500,"queryChars":256,"searchResults":500} as const;
 
 /* Types */
 /**
- *  The error every command returns (CLAUDE.md §5, "No silent failures").
+ *  The error every command returns (CLAUDE.md §5, "No silent failures"; docs/specs/ipc-m1.md
+ *  §16).
  * 
  *  Serialised as `{ code, detail }`. The UI maps `code` to a message under `errors` in
- *  `apps/desktop/src/i18n/locales/zh-CN.json`; `tsc` fails if a code has no message.
- *  `detail` is for logs and bug reports, never shown to users on its own.
+ *  `apps/desktop/src/i18n/locales/zh-CN.json`; `tsc` fails if a code has no message. Each case the
+ *  UI words differently has its own code. `detail` is for logs and bug reports, never shown to
+ *  users on its own.
  */
 export type AppError = 
 /**  The data directory could not be determined or is invalid. */
 { code: "DataDirUnavailable"; detail: string } | 
-/**  The UI sent a value the shell rejects. */
+/**  The UI sent a value the shell rejects: a bug in the UI. */
 { code: "InvalidArgument"; detail: string } | 
 /**  A window operation failed. */
-{ code: "Window"; detail: string };
+{ code: "Window"; detail: string } | 
+/**  No library is open. */
+{ code: "NoLibrary"; detail: string } | 
+/**  The folder has no `.folio/library.json`. */
+{ code: "NotALibrary"; detail: string } | 
+/**  The folder is, or is inside, a library. */
+{ code: "AlreadyALibrary"; detail: string } | 
+/**  A newer Folio wrote the library; update Folio to open it. */
+{ code: "NewerFormat"; detail: string } | 
+/**  A newer Folio wrote some metadata: tags and settings cannot change until Folio is updated. */
+{ code: "ReadOnly"; detail: string } | 
+/**  The entry, tag, semester, course or job is gone, or not where the UI saw it. */
+{ code: "NotFound"; detail: string } | 
+/**  The name is taken in that folder (ignoring case), or by another tag. */
+{ code: "AlreadyExists"; detail: string } | 
+/**  A folder into itself or below itself, or a semester folder. */
+{ code: "InvalidMove"; detail: string } | 
+/**  A typed name is empty. */
+{ code: "NameEmpty"; detail: string } | 
+/**  A typed name is longer than its field allows. */
+{ code: "NameTooLong"; detail: string } | 
+/**  A typed name holds a character its field does not allow. */
+{ code: "NameInvalidCharacter"; detail: string } | 
+/**  A file or folder name ends with a dot or a space. */
+{ code: "NameTrailingDotOrSpace"; detail: string } | 
+/**  A name reserved by Windows (`CON`, `NUL`, …) or by Folio (`.folio` at the library root). */
+{ code: "NameReserved"; detail: string } | 
+/**  The path would be longer than Windows allows. */
+{ code: "PathTooLong"; detail: string } | 
+/**  Another program holds the file. */
+{ code: "InUse"; detail: string } | 
+/**  Windows denied access. */
+{ code: "AccessDenied"; detail: string } | 
+/**  The disk is full. */
+{ code: "DiskFull"; detail: string } | 
+/**  Another file-system failure. */
+{ code: "FileSystem"; detail: string } | 
+/**  The search text is longer than `LIMITS.queryChars`. */
+{ code: "QueryTooLong"; detail: string } | 
+/**  A choice token is unknown, used or expired: the user must choose again. */
+{ code: "ChoiceExpired"; detail: string } | 
+/**  `open_entry` does not run programs or scripts. */
+{ code: "Blocked"; detail: string } | 
+/**  The catalog is being rebuilt; try again when it is done. */
+{ code: "Busy"; detail: string } | 
+/**  A bug or damaged state; the log has the details. */
+{ code: "Internal"; detail: string };
 
 /**  Versions and the data directory, for the placeholder screen and for bug reports. */
 export type AppInfo = {
 	appVersion: string,
 	coreVersion: string,
 	dataDir: string,
+};
+
+/**  What a batch command did: items are independent, so some may fail while others succeed. */
+export type BatchResult = {
+	done: number,
+	/**  Every item that failed. */
+	failed: ItemFailure[],
 };
 
 /**
@@ -59,6 +174,359 @@ export type ButtonBounds = {
 	height: number,
 };
 
+/**  Stops a queued or running job between files. */
+export type CancelJob = {
+	job: string,
+};
+
+/**
+ *  Committed catalog changes, Folio's own or from other programs; at most ten a second, merged
+ *  (spec §15).
+ */
+export type CatalogChanged = {
+	/**  The catalog revision after these changes. */
+	revision: number,
+	/**  At most `LIMITS.eventEntries` changes. */
+	entries: EntryChange[],
+	/**
+	 *  `false`: more changed than `entries` lists, or the catalog was rebuilt. Refetch
+	 *  everything.
+	 */
+	complete: boolean,
+	/**  Tag definitions changed: names, colours, order or deletions. */
+	tags: boolean,
+	/**  Semesters or courses changed: their folders, settings or order. */
+	groups: boolean,
+};
+
+export type CheckImport = {
+	/**  An `ImportSource` token. */
+	source: string,
+	/**  The folder to import into. */
+	target: EntryRef,
+};
+
+export type ConflictPolicy = 
+/**  The file in the library goes to the Recycle Bin; the new one takes its path and tags. */
+"replace" | 
+/**  The new file takes the first free name: `name (2).ext`, `name (3).ext`, … */
+"keepBoth" | 
+/**  The new file stays out. */
+"skip";
+
+/**  A folder directly in a semester. */
+export type Course = {
+	folder: EntryRef,
+	name: string,
+	/**  Badge text, 1–3 characters; `null`: the UI derives it from the name. */
+	abbr: string | null,
+	/**  A code the user typed, such as `MAT232`. */
+	code: string | null,
+	/**  A key of the tag and course palette; `null`: the UI's default. */
+	color: string | null,
+	archived: boolean,
+	/**  Files inside the course, at any depth. */
+	files: number,
+};
+
+export type CreateCourse = {
+	semester: EntryRef,
+	name: string,
+	abbr: string | null,
+	code: string | null,
+	color: string | null,
+};
+
+/**  A folder inside a course; semesters and courses have their own commands. */
+export type CreateFolder = {
+	parent: EntryRef,
+	name: string,
+};
+
+/**
+ *  Makes the chosen folder this machine's library: a new one in an empty folder, or taking over
+ *  the content of a folder without moving anything (brief §5.1).
+ */
+export type CreateLibrary = {
+	/**  A `FolderChoice` token. */
+	folder: string,
+	name: string,
+	presetTags: PresetTagNames,
+};
+
+export type CreateSemester = {
+	name: string,
+};
+
+export type CreateTag = {
+	name: string,
+	color: string,
+};
+
+/**  Moves entries to the Recycle Bin, folders with everything in them. */
+export type DeleteEntries = {
+	entries: EntryRef[],
+};
+
+/**  Removes the definition and every assignment. */
+export type DeleteTag = {
+	id: string,
+};
+
+/**  Files are dragged over the window; `position` is `null` when they leave or the drag ends. */
+export type DropHover = {
+	position: Point | null,
+};
+
+export type EntryChange = { kind: "added"; entry: EntryRef } | 
+/**  Its size, modification time or file id changed. */
+{ kind: "modified"; entry: EntryRef } | 
+/**  The reference as it was. */
+{ kind: "removed"; entry: EntryRef } | 
+/**  Its own tags changed; for a folder, the folder tags of everything below it too. */
+{ kind: "tagged"; entry: EntryRef } | { kind: "moved"; entry: EntryRef; from: string };
+
+export type EntryFilter = {
+	/**  `null`: no tag filter. */
+	tags: TagFilter | null,
+	/**  Only files added after this time, in milliseconds since the Unix epoch. */
+	addedAfterMs: string | null,
+};
+
+export type EntryKind = "file" | "folder";
+
+/**
+ *  An entry as the UI names it: its catalog id and the path where the UI saw it. The shell acts
+ *  only if the catalog has that id at that path; otherwise the command fails with `NotFound`
+ *  (spec §5.1).
+ */
+export type EntryRef = {
+	/**  The catalog id, in decimal. Kept when the entry moves or is renamed. */
+	id: string,
+	/**  The path below the library root: NFC, `/` between names. */
+	path: string,
+};
+
+/**  A file or folder as lists show it (spec §5.2). */
+export type EntryRow = {
+	id: string,
+	path: string,
+	/**  The last name of the path. */
+	name: string,
+	kind: EntryKind,
+	class: FileClass,
+	/**  Bytes, in decimal; `"0"` for folders. */
+	size: string,
+	/**  Milliseconds since the Unix epoch, in decimal. A hint only (ADR-0003 §10). */
+	modifiedMs: string | null,
+	/**  When the entry came into the library, in milliseconds since the Unix epoch. */
+	addedMs: string,
+	/**  Its own tag ids, in tag order. Ids that `list_tags` does not know are shown as unknown. */
+	tags: string[],
+	/**  Tag ids it gets from the folders above it (spec §8.2), not repeating `tags`. */
+	folderTags: string[],
+};
+
+export type EntrySort = {
+	key: SortKey,
+	descending: boolean,
+};
+
+/**  What a file is, from its extension (library core §4.2): whether its versions are kept. */
+export type FileClass = "text" | "word" | 
+/**  Everything else, folders included. */
+"other";
+
+/**
+ *  Files or folders were dropped on the window. Import them with `check_import` and
+ *  `import_files`.
+ */
+export type FilesDropped = {
+	source: ImportSource,
+	position: Point,
+};
+
+/**
+ *  A folder the user chose in the shell's folder dialog. `token` stands for it in
+ *  `create_library` and `open_library`; `path` is for display only.
+ */
+export type FolderChoice = {
+	token: string,
+	path: string,
+	content: FolderContent,
+	/**  The folder is inside a cloud-sync folder: warn (ADR-0002 §6). */
+	syncRoot: SyncProvider | null,
+};
+
+/**  What the chosen folder holds, from one listing. */
+export type FolderContent = { kind: "empty" } | 
+/**  Already a Folio library: open it. */
+{ kind: "library"; name: string } | 
+/**  Inside another library, which `create_library` refuses. */
+{ kind: "insideLibrary"; root: string } | 
+/**  Content to take over: its first-level folders (the would-be semesters) and files. */
+{ kind: "folders"; folders: number; files: number };
+
+export type GetEntry = {
+	entry: EntryRef,
+};
+
+/**  What an import would do: run it before `import_files` and ask once how to handle clashes. */
+export type ImportCheck = {
+	files: number,
+	folders: number,
+	/**  Bytes to copy, in decimal. */
+	bytes: string,
+	/**  Items that stay out: ignored by the library's rules, links and special files. */
+	skipped: number,
+	/**  The first 100 clashes. */
+	conflicts: ImportConflict[],
+	conflictCount: number,
+};
+
+export type ImportConflict = {
+	/**  A file in the library that the import would replace. */
+	path: string,
+};
+
+export type ImportFailure = {
+	/**  The item's path below its source. */
+	name: string,
+	error: AppError,
+};
+
+export type ImportFiles = {
+	/**  An `ImportSource` token. */
+	source: string,
+	target: EntryRef,
+	/**  Tags for every top-level item the import creates; a new folder passes them on. */
+	tags: string[],
+	/**  For every clash, also those that appear after the check. */
+	onConflict: ConflictPolicy,
+	/**  Moves each source that was imported completely to the Recycle Bin. */
+	deleteOriginals: boolean,
+};
+
+/**  The result of an import job. */
+export type ImportResult = {
+	imported: number,
+	replaced: number,
+	/**  Imported under a new name (`KeepBoth`). */
+	renamed: number,
+	skipped: number,
+	originalsDeleted: number,
+	/**  The first 100 failures. */
+	failures: ImportFailure[],
+	failureCount: number,
+};
+
+/**
+ *  Files or folders the user picked in the shell's dialog or dropped on the window. `token`
+ *  stands for them in `check_import` and `import_files`; the paths stay in the shell.
+ */
+export type ImportSource = {
+	token: string,
+	files: number,
+	folders: number,
+	/**  The first ten top-level names, for display. */
+	names: string[],
+};
+
+export type ItemFailure = {
+	entry: EntryRef,
+	error: AppError,
+};
+
+export type Job = {
+	id: string,
+	kind: JobKind,
+	cancellable: boolean,
+	status: JobStatus,
+};
+
+/**  A job changed state, or made progress (at most every 250 ms). */
+export type JobChanged = {
+	job: Job,
+};
+
+export type JobKind = "scan" | "hash" | "import" | 
+/**  "Rebuild search index": a new catalog, scanned from scratch. */
+"rebuild";
+
+export type JobResult = ({ kind: "scan"; changes: number; problems: number }) & { deferred?: never; entries?: never; hashed?: never } | ({ kind: "hash"; hashed: number; deferred: number }) & { changes?: never; entries?: never; problems?: never } | {
+	kind: "import",
+} & ImportResult | ({ kind: "rebuild"; entries: number }) & { changes?: never; deferred?: never; hashed?: never; problems?: never };
+
+export type JobStatus = { state: "queued" } | { state: "running"; progress: Progress } | { state: "done"; result: JobResult } | { state: "failed"; error: AppError } | 
+/**  Stopped between files; what was done stays done. */
+{ state: "cancelled" };
+
+export type LibraryInfo = {
+	id: string,
+	name: string,
+	/**  The library folder, for display. */
+	root: string,
+	/**
+	 *  A newer Folio wrote some metadata: tags and settings cannot change until Folio is
+	 *  updated (ADR-0002 §3).
+	 */
+	readOnly: boolean,
+	/**  The catalog was replaced when it opened, and the running scan rebuilds it. */
+	recovered: boolean,
+};
+
+export type LibraryOpened = {
+	library: LibraryInfo,
+	/**  The id of the scan job the library started. */
+	scan: string,
+};
+
+/**
+ *  The library opened, was created, or became unavailable or read-only. Drop every cached page
+ *  and reference.
+ */
+export type LibraryStateChanged = {
+	status: LibraryStatus,
+};
+
+/**
+ *  Whether this machine has a library and whether it is open. The shell opens the configured
+ *  library when it starts, and `library_status` waits for that.
+ */
+export type LibraryStatus = 
+/**  No library on this machine yet: the first-run flow. */
+{ state: "none" } | { state: "open"; library: LibraryInfo } | 
+/**  The configured library cannot be opened. */
+{ state: "unavailable"; 
+/**  The library folder, for display. */
+root: string; reason: Unavailable };
+
+/**  The children of one folder, folders first. */
+export type ListChildren = {
+	/**  `null`: the library root. */
+	folder: EntryRef | null,
+	sort: EntrySort,
+	page: PageRequest,
+};
+
+export type ListCourses = {
+	/**  `null`: the courses of every semester, by semester, for showing course codes in paths. */
+	semester: EntryRef | null,
+};
+
+/**  Files at any depth below a folder, filtered. */
+export type ListFiles = {
+	/**  `null`: the whole library, archived semesters included. */
+	scope: EntryRef | null,
+	filter: EntryFilter,
+	sort: EntrySort,
+	page: PageRequest,
+};
+
+export type ListProblems = {
+	page: PageRequest,
+};
+
 /**
  *  Hover and press state of the maximize button. The overlay receives the mouse over the button,
  *  so the page gets no `:hover` or pointer events there and styles the button from this event.
@@ -66,6 +534,298 @@ export type ButtonBounds = {
 export type MaximizeButtonChanged = {
 	hovered: boolean,
 	pressed: boolean,
+};
+
+export type MetadataFailure = 
+/**  A newer Folio wrote it: the metadata is read-only until Folio is updated. */
+{ kind: "newer" } | 
+/**  Not a valid metadata file. */
+{ kind: "invalid" } | { kind: "unreadable"; failure: ReadFailure };
+
+/**  Moves entries into a folder; tags and settings follow them. */
+export type MoveEntries = {
+	entries: EntryRef[],
+	/**  `null`: the library root. */
+	to: EntryRef | null,
+};
+
+/**  Which rule for names a name breaks (library core §3). */
+export type NameRule = "empty" | "notNfc" | 
+/**  `.` or `..`. */
+"dotName" | 
+/**  `< > : " / \ | ? *` or a control character. */
+"invalidCharacter" | "trailingDotOrSpace" | 
+/**  A device name such as `CON` or `NUL`, with any extension. */
+"reservedName" | 
+/**  Longer than 255 UTF-16 code units. */
+"tooLong" | 
+/**  The whole path is longer than 32,767 UTF-16 code units. */
+"pathTooLong";
+
+/**  Opens an entry with its default program; programs and scripts never run (spec §11.1). */
+export type OpenEntry = {
+	entry: EntryRef,
+};
+
+/**  Makes a folder that holds `.folio/library.json` this machine's library. */
+export type OpenLibrary = {
+	/**  A `FolderChoice` token. */
+	folder: string,
+};
+
+export type OpenMode = 
+/**  With the program registered to open it. */
+"default" | 
+/**  A program or script, opened with its registered editor instead of running it. */
+"editor";
+
+export type Opened = {
+	mode: OpenMode,
+};
+
+/**  One window of a sorted list. */
+export type Page<T> = {
+	items: T[],
+	offset: number,
+	/**  Items in the whole list. */
+	total: number,
+	/**  The catalog revision the page was read at (spec §15.2). */
+	revision: number,
+};
+
+/**  A window into a list. `limit` 0 returns only the total. */
+export type PageRequest = {
+	offset: number,
+	/**  At most `LIMITS.pageSize`. */
+	limit: number,
+};
+
+/**  A point in the window's client area, in CSS pixels. */
+export type Point = {
+	x: number,
+	y: number,
+};
+
+/**  Names of the preset tags in the UI's language; the core owns their ids and colours. */
+export type PresetTagNames = {
+	notes: string,
+	slides: string,
+	homework: string,
+	exam: string,
+	reference: string,
+};
+
+/**  `folder` is the path of the folder that holds `name`; `null` is the library root. */
+export type Problem = 
+/**  A name that is not valid Unicode, left out with everything below it. */
+{ kind: "notUnicode"; folder: string | null; name: string } | 
+/**  A name Windows does not allow, left out with everything below it. */
+{ kind: "invalidName"; folder: string | null; name: string; rule: NameRule } | 
+/**
+ *  A name in another Unicode form than NFC, left out until it is renamed. `twin`: the NFC
+ *  form of the name is there too.
+ */
+{ kind: "notNfc"; folder: string | null; name: string; twin: boolean } | 
+/**  Names in one folder that differ only in case; all of them are in the library. */
+{ kind: "caseTwins"; paths: string[] } | 
+/**  A symbolic link or junction, never followed. */
+{ kind: "link"; folder: string | null; name: string } | 
+/**  Neither a file nor a folder. */
+{ kind: "special"; folder: string | null; name: string } | 
+/**
+ *  A folder that could not be listed, whose entries stay as they were, or a file that could
+ *  not be read.
+ */
+{ kind: "unreadable"; path: string; failure: ReadFailure } | 
+/**
+ *  A line of `.folio/ignore` (`file` is `null`) or of a `.gitignore` that is not a valid
+ *  pattern; the other lines apply. Line 0 is the whole file.
+ */
+{ kind: "invalidIgnoreRule"; file: string | null; line: number } | 
+/**  A metadata file, by its path below the library, that could not be read. */
+{ kind: "metadata"; file: string; failure: MetadataFailure } | 
+/**  Settings or tags in `.folio/meta/` for a semester or course folder that does not exist. */
+{ kind: "orphanedMetadata"; folder: string } | 
+/**  Tags or settings that could not follow a moved entry. */
+{ kind: "notRelocated"; from: string; to: string; cause: StrandedCause };
+
+export type ProblemItem = {
+	/**  Stays the same while the problem does. */
+	id: string,
+	problem: Problem,
+	/**  For logs and bug reports. */
+	detail: string,
+};
+
+/**  The problem list changed. */
+export type ProblemsChanged = {
+	total: number,
+};
+
+export type Progress = {
+	/**  Items done: files or entries. */
+	done: number,
+	/**  Items in all, once known. */
+	total: number | null,
+	/**  0–1000 of the work by bytes, for jobs that measure bytes. */
+	permille: number | null,
+	/**  The item in progress, for display. */
+	current: string | null,
+};
+
+export type ReadFailure = "denied" | 
+/**  Another program holds it. */
+"inUse" | 
+/**  Larger than Folio reads. */
+"tooLarge" | "other";
+
+/**  A new name in the same folder. A change of case only is a rename too. */
+export type RenameEntry = {
+	entry: EntryRef,
+	name: string,
+};
+
+/**  The new order: every course of the semester exactly once. */
+export type ReorderCourses = {
+	semester: EntryRef,
+	courses: EntryRef[],
+};
+
+/**  The new order: every semester exactly once. */
+export type ReorderSemesters = {
+	semesters: EntryRef[],
+};
+
+/**  The new order: every tag id exactly once. */
+export type ReorderTags = {
+	tags: string[],
+};
+
+/**  Opens File Explorer with the entry selected. */
+export type RevealEntry = {
+	entry: EntryRef,
+};
+
+export type Search = {
+	/**  At most `LIMITS.queryChars` characters. Text without searchable words finds nothing. */
+	text: string,
+	/**  `null`: the whole library. */
+	scope: EntryRef | null,
+	/**  `offset + limit` at most `LIMITS.searchResults`. */
+	page: PageRequest,
+};
+
+/**  A match with its highlights. Render spans as text, never as HTML. */
+export type SearchHit = {
+	entry: EntryRow,
+	/**  The whole name, matches marked. */
+	name: Span[],
+	/**  Body text around a match, or `null` when the body did not match or there is none. */
+	snippet: Span[] | null,
+};
+
+/**  A window into the best matches at one revision; windows of one revision never overlap. */
+export type SearchPage = {
+	items: SearchHit[],
+	offset: number,
+	/**  More matches follow this page. */
+	more: boolean,
+	revision: number,
+};
+
+/**  A folder directly in the library: a semester or another group, such as "Personal". */
+export type Semester = {
+	folder: EntryRef,
+	name: string,
+	archived: boolean,
+};
+
+/**
+ *  Adds and removes tags on each entry. `add` and `remove` do not overlap, and every tag in
+ *  `add` is defined. Removing a tag an entry only gets from a folder changes nothing.
+ */
+export type SetEntryTags = {
+	entries: EntryRef[],
+	add: string[],
+	remove: string[],
+};
+
+/**  Ties go to the path, so pages never overlap. Missing modification times sort last. */
+export type SortKey = 
+/**  Without case, digits by value (`hw2` before `hw10`), as File Explorer sorts. */
+"name" | 
+/**  For building a tree from flat pages. */
+"path" | "modified" | "size" | 
+/**  By extension, then name. */
+"type" | "added";
+
+export type Span = {
+	text: string,
+	matched: boolean,
+};
+
+/**  Why tags or settings could not follow a move. */
+export type StrandedCause = 
+/**  A newer Folio wrote the metadata. */
+"readOnly" | 
+/**  The entry became a semester or course folder, which cannot have tags. */
+"folderTags" | 
+/**  The file that holds them, or would hold them, cannot be read. */
+"unreadable" | 
+/**  Their new path would be longer than Windows allows. */
+"tooLong";
+
+export type SyncProvider = "iCloud" | "oneDrive" | "dropbox" | "other";
+
+export type Tag = {
+	id: string,
+	name: string,
+	/**  A key of the tag and course palette. */
+	color: string,
+	/**  Entries that carry the tag themselves. */
+	usage: number,
+};
+
+export type TagDeleted = {
+	/**  Assignments removed with the tag. */
+	assignments: number,
+};
+
+/**  Filters by effective tags: a file's own and those of the folders above it. */
+export type TagFilter = 
+/**  Files that have every one of these tags (1 to `LIMITS.filterTags`). */
+{ kind: "withAll"; tags: string[] } | 
+/**  Files without tags. */
+{ kind: "untagged" };
+
+export type Unavailable = 
+/**  The folder is gone, for example on a drive that is not connected. */
+"missing" | 
+/**  The folder has no `.folio/library.json`. */
+"notALibrary" | 
+/**  A newer Folio wrote the library; update Folio to open it. */
+"newerFormat" | "accessDenied" | 
+/**  The catalog could not be opened, for example because another program holds it. */
+"catalogFailed";
+
+/**  Replaces all four fields: send what the dialog shows. */
+export type UpdateCourse = {
+	course: EntryRef,
+	abbr: string | null,
+	code: string | null,
+	color: string | null,
+	archived: boolean,
+};
+
+export type UpdateSemester = {
+	semester: EntryRef,
+	archived: boolean,
+};
+
+export type UpdateTag = {
+	id: string,
+	name: string,
+	color: string,
 };
 
 /* Tauri Specta runtime */

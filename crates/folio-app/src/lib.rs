@@ -3,8 +3,9 @@
 
 mod commands;
 mod diagnostics;
-mod error;
-mod ipc;
+// Public: the IPC contract is this crate's interface to the UI (docs/specs/ipc-m1.md).
+pub mod error;
+pub mod ipc;
 mod paths;
 mod preview;
 mod window_chrome;

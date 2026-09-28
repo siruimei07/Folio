@@ -6,17 +6,11 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
 import { type ButtonBounds, commands, events, type MaximizeButtonChanged } from './bindings';
+import { hold, subscribe } from './events';
 
 /** A failed window command means a missing permission: a bug, reported to the console. */
 function reportError(error: unknown): void {
   console.error('window command failed', error);
-}
-
-/** Stops a Tauri listener once its registration has resolved. */
-function release(unlisten: Promise<() => void>): void {
-  unlisten.then((stop) => {
-    stop();
-  }, reportError);
 }
 
 export const windowControls = {
@@ -35,13 +29,17 @@ export const windowControls = {
   /** Reports the maximized state now and after every resize. Returns the unsubscribe function. */
   watchMaximized: (onChange: (maximized: boolean) => void): (() => void) => {
     const appWindow = getCurrentWindow();
+    let active = true;
     const update = () => {
-      appWindow.isMaximized().then(onChange, reportError);
+      appWindow.isMaximized().then((maximized) => {
+        if (active) onChange(maximized);
+      }, reportError);
     };
     update();
-    const unlisten = appWindow.onResized(update);
+    const release = hold(appWindow.onResized(update));
     return () => {
-      release(unlisten);
+      active = false;
+      release();
     };
   },
 
@@ -81,12 +79,10 @@ export const windowControls = {
     report();
     const observer = new ResizeObserver(report);
     observer.observe(button);
-    const unlisten = events.maximizeButtonChanged.listen((event) => {
-      onChange(event.payload);
-    });
+    const stopListening = subscribe(events.maximizeButtonChanged, onChange);
     return () => {
       observer.disconnect();
-      release(unlisten);
+      stopListening();
       send(null);
     };
   },

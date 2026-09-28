@@ -279,7 +279,8 @@ is also stripped of NUL and capped at 1 MiB, cut at a character boundary.
 | `catalog::Recovery` | Why `open` replaced the database: `Unreadable`, `NewerSchema`, `OtherLibrary` |
 | `search::QueryError` | `TooLong` |
 
-The shell maps them to the IPC error union in the IPC lane; `detail` strings are for logs.
+The shell maps them to the IPC error union ([ipc-m1.md](ipc-m1.md) §16); `detail` strings are for
+logs.
 
 ## 8. Tests
 
