@@ -309,4 +309,5 @@ The shell maps them to the IPC error union in the IPC lane; `detail` strings are
 2. **Library operations**: create a library (writes `library.json` and `tags.json`), take over a
    folder, semesters and courses, tagging, import.
 3. **Windows adapters** on Sirui's machine: watcher, file ids, Recycle Bin, NTFS checks.
+   Specified in [windows-adapter.md](windows-adapter.md) (2026-09-27).
 4. **IPC contract for M1**, then the UI from the design handoff.

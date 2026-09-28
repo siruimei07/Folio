@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use crate::catalog::Catalog;
-use crate::fs::{DirEntry, FileKind, FileSystem, Metadata};
+use crate::fs::{DirEntry, FileKind, FileSystem, Metadata, Presence};
 use crate::meta::{DisplayName, LibraryId, PresetTag, TagDefinitions, TagId};
 use crate::paths::{CoursePath, RelPath, SemesterPath};
 
@@ -79,6 +79,7 @@ struct Node {
     id: Option<u64>,
     modified_ns: i64,
     created_ns: i64,
+    presence: Presence,
 }
 
 /// The names of `path`, split at `/`.
@@ -101,6 +102,7 @@ impl MemState {
             id: Some(self.next_id),
             modified_ns: now,
             created_ns: now,
+            presence: Presence::Local,
         }
     }
 
@@ -224,6 +226,12 @@ impl MemFs {
         self.state().nodes.get_mut(&names(path)).unwrap().id = None;
     }
 
+    /// Makes the file's content local or not, as downloading a placeholder or freeing up its
+    /// space does: nothing else about it changes.
+    pub fn set_presence(&self, path: &str, presence: Presence) {
+        self.state().nodes.get_mut(&names(path)).unwrap().presence = presence;
+    }
+
     pub fn fail_listing(&self, path: &str) {
         self.state().unlistable.insert(names(path));
     }
@@ -257,17 +265,14 @@ impl MemFs {
     }
 
     fn metadata_of(node: &Node) -> Metadata {
-        Metadata {
-            kind: node.kind,
-            size: if node.kind == FileKind::File {
-                node.bytes.len() as u64
-            } else {
-                0
-            },
-            modified_ns: Some(node.modified_ns),
-            created_ns: Some(node.created_ns),
-            file_id: node.id.map(|id| format!("mem:{id}")),
-        }
+        Metadata::new(
+            node.kind,
+            node.bytes.len() as u64,
+            Some(node.modified_ns),
+            Some(node.created_ns),
+            node.id.map(|id| format!("mem:{id}")),
+            node.presence,
+        )
     }
 }
 

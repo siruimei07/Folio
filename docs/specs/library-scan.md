@@ -49,6 +49,7 @@ pub struct Metadata {
     pub modified_ns: Option<i64>,   // nanoseconds since the Unix epoch
     pub created_ns: Option<i64>,     // for the first scan's `added_ns` (§6.3)
     pub file_id: Option<String>,    // stable across renames on one volume; opaque
+    pub presence: Presence,         // Local, Placeholder or Offline (windows-adapter.md §3.1)
 }
 ```
 
@@ -57,8 +58,9 @@ pub struct Metadata {
 - `StdFileSystem` uses `std::fs`. On Windows, `read_dir` takes metadata from the directory listing
   without opening files, and `File::open` shares files for reading, writing and deletion. It
   reports **no file ids**: std exposes them only on nightly, and Unix inode numbers are reused
-  right after a delete, which would pair unrelated files. The Windows adapter adds NTFS file ids
-  (volume serial number and 128-bit file id) from `FileIdExtdDirectoryInfo`.
+  right after a delete, which would pair unrelated files. `win::WindowsFileSystem` adds NTFS
+  file ids (volume serial number and 128-bit file id) from `FileIdExtdDirectoryInfo`, and
+  behaves like `StdFileSystem` off local NTFS ([windows-adapter.md](windows-adapter.md) §3).
 - Tests use `MemFs`, an in-memory fake with NTFS-like ids: kept by renames, new for new files.
   It can also hold names that Windows cannot, and inject listing and read failures.
 
@@ -291,6 +293,9 @@ whose hash is missing (ADR-0003 §2): after a scan added or modified it. It is a
   (Git's racy-clean problem). The report counts them so the caller can run again.
 - A file that cannot be read (locked, access denied) is reported (`Unreadable`) and stays
   pending; a file that vanished waits for the next scan.
+- A file whose content is not on this disk (a cloud placeholder or an offline file) is never
+  read, since reading it downloads it: it stays pending and is counted (`not_local`,
+  [windows-adapter.md](windows-adapter.md) §3.4).
 - `cancel` is checked between files and every 256 KiB; `progress` receives files done and the
   total.
 
@@ -322,7 +327,7 @@ core §7). Problems are recomputed by every scan; the shell keeps the latest lis
 | Mirror | Definitions, settings and entry tags; orphaned files; tag files of unconfigured folders; a file that cannot be read keeps what it gave; of two files that name one folder, the one spelled like it holds moved tags |
 | Hashing | Deferral, verification, locked files, cancellation, resume |
 | Property | ADR-0002: after random creations, edits, saves through temporary files, deletions, renames (case-only ones included), tagging, settings and hashing, the incrementally maintained catalog equals one rebuilt from scratch, apart from when entries were added (§6.3); entries keep their ids and times, files their tags, and semesters and courses their settings while their file ids survive. Mutation checks: each of eight deliberate bugs in matching, relocation, catalog updates and hashing fails it or a unit test |
-| Benchmark | `tests/scan_benchmark.rs`, ignored by default: in the cloud container (release, tmpfs), 49,920 files took 0.91 s for the first scan, 0.30 s for a scan without changes, 0.65 s to hash (100 MB) and 0.33 s to rescan after renaming a 1,040-file course without file ids; the catalog was 29 MB. Removals go in one statement: one per entry made FTS5 flush for each, about 1 ms apiece. To be measured again on NTFS |
+| Benchmark | `tests/scan_benchmark.rs`, ignored by default, release builds. In the cloud container (tmpfs, `StdFileSystem`), 49,920 files took 0.91 s for the first scan, 0.30 s for a scan without changes, 0.65 s to hash (100 MB) and 0.33 s to rescan after renaming a 1,040-file course; the catalog was 29 MB. On NTFS on Sirui's machine (2026-09-28: Core Ultra 9 275HX, NVMe SSD, Microsoft Defender real-time protection on, no other build running; the second of two rounds): `StdFileSystem` 0.59 s, 0.16 s, 9.6 s and 0.20 s (the rename as 2,092 removals and additions), `WindowsFileSystem` 0.64 s, 0.19 s, 9.4 s and 0.24 s (1,046 moves); catalogs of 28.6 MB and 33.4 MB (file ids). Hashing takes about 190 µs a file on NTFS against 13 µs in the container (§12 item 4). Removals go in one statement: one per entry made FTS5 flush for each, about 1 ms apiece |
 
 ## 11. Additions to earlier documents
 
@@ -338,7 +343,8 @@ core §7). Problems are recomputed by every scan; the shell keeps the latest lis
 ## 12. Next lanes
 
 1. **Windows adapter** on Sirui's machine: `FileIdExtdDirectoryInfo`, file ids, placeholder and
-   offline attributes, the watcher (`ReadDirectoryChangesExW`) calling scoped scans.
+   offline attributes, the watcher (`ReadDirectoryChangesExW`) calling scoped scans. Specified in
+   [windows-adapter.md](windows-adapter.md) (2026-09-27), with the Recycle Bin.
 2. **Library operations**: create, take over, semesters and courses, tagging, import, rename to
    NFC, reattaching orphaned metadata; the shell's scan and hashing jobs. If operations update
    the catalog through scoped scans, `catalog::apply_changes` is its only writer of entries and
@@ -350,5 +356,8 @@ core §7). Problems are recomputed by every scan; the shell keeps the latest lis
      the last mirror, given a fingerprint per file in the catalog.
    - Relocation visits every assignment when anything moved, about 40 ms per 17,000; files that
      no move lies above or below could be skipped.
-   - Hashing checks each file's metadata by path before and after reading it; the Windows
-     adapter can take the second check from the open handle.
+   - Hashing checks each file's metadata by path before and after reading it, so it opens every
+     file three times: about 190 µs a file on NTFS with Defender (§10), 9.5 s for 50,000 files.
+     The check after reading can come from the handle that read the file, saving one of the
+     three opens. The check before must stay an open for attributes only: it is what keeps a
+     cloud placeholder from being read ([windows-adapter.md](windows-adapter.md) §3.4).

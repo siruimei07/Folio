@@ -969,6 +969,7 @@ dependencies = [
  "unicode-normalization",
  "unicode-script",
  "unicode-segmentation",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

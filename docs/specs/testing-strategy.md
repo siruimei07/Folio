@@ -97,3 +97,7 @@ run on `MemFs`, an in-memory file system with NTFS-like file ids in `test_suppor
 only), plus one test on a real folder; `tests/scan_benchmark.rs` times a 50,000-file library.
 Coverage tooling, the public `testkit` module, golden vectors for the remote format and the
 simulation harness arrive with the modules that need them (M1–M3).
+
+The Windows adapters ([windows-adapter.md](windows-adapter.md)) are tested on the real OS in
+temporary folders on NTFS, on CI too. Tests that need another file system are ignored by default
+and run by hand with `FOLIO_TEST_NON_NTFS_DIR` set to a folder on exFAT or FAT (`--ignored`).

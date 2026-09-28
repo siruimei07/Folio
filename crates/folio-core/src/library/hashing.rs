@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 
 use super::{Library, LibraryError, Problem};
 use crate::catalog::{Catalog, Entry, EntryId, count_unhashed_files, set_hash, unhashed_files};
-use crate::fs::{FileKind, Metadata};
+use crate::fs::{FileKind, Metadata, Presence};
 use crate::hash::ContentHash;
 
 /// Files read from the catalog at a time.
@@ -25,6 +25,9 @@ pub struct HashReport {
     pub hashed: u64,
     /// Files modified too recently to hash: run again in a few seconds.
     pub deferred: u64,
+    /// Files whose content is not on this disk, such as cloud placeholders: reading them would
+    /// download them (docs/specs/windows-adapter.md §3.4). They stay pending until they are.
+    pub not_local: u64,
     /// Files that could not be read; they stay pending.
     pub problems: Vec<Problem>,
     pub cancelled: bool,
@@ -33,6 +36,7 @@ pub struct HashReport {
 enum Outcome {
     Hashed(ContentHash),
     Deferred,
+    NotLocal,
     /// The file is not what the catalog says any more; the next scan updates it.
     Changed,
     Failed(io::Error),
@@ -41,8 +45,9 @@ enum Outcome {
 
 impl Library {
     /// Hashes every file the catalog has no hash for, in batches, so that progress survives a
-    /// crash or `cancel`. `now_ns` is the current time in nanoseconds since the Unix epoch;
-    /// `progress` gets the files done and the total.
+    /// crash or `cancel`. Files whose content is not on this disk are left for a later run.
+    /// `now_ns` is the current time in nanoseconds since the Unix epoch; `progress` gets the
+    /// files done and the total.
     pub fn hash_pending(
         &self,
         catalog: &Catalog,
@@ -67,6 +72,7 @@ impl Library {
                 match self.hash_file(file, now_ns, cancel, &mut buffer) {
                     Outcome::Hashed(hash) => hashes.push((file, hash)),
                     Outcome::Deferred => report.deferred += 1,
+                    Outcome::NotLocal => report.not_local += 1,
                     Outcome::Changed => {}
                     Outcome::Failed(error) => report
                         .problems
@@ -114,8 +120,9 @@ impl Library {
         };
         // The same before and after reading, or the hash may mix two versions.
         match self.fs.metadata(&native) {
-            Ok(metadata) if unchanged(&metadata) => {}
-            Ok(_) => return Outcome::Changed,
+            Ok(metadata) if !unchanged(&metadata) => return Outcome::Changed,
+            Ok(metadata) if metadata.presence != Presence::Local => return Outcome::NotLocal,
+            Ok(_) => {}
             Err(error) => return failed(error),
         }
         let hash = match self

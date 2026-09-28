@@ -9,7 +9,7 @@ use super::*;
 use crate::catalog::{
     Entry, EntryId, all_courses, entries_in, entry, entry_tags, semesters, tag_definitions,
 };
-use crate::fs::{FileKind, StdFileSystem};
+use crate::fs::{FileKind, Presence, StdFileSystem};
 use crate::hash::ContentHash;
 use crate::meta::{
     Abbr, Assignments, Color, CourseMeta, CourseSettings, DisplayName, FileClass, GroupMeta,
@@ -1440,6 +1440,31 @@ fn cancelling_keeps_what_was_hashed() {
 }
 
 #[test]
+fn files_not_on_this_disk_stay_pending_and_are_counted() {
+    let f = Fixture::new();
+    for file in ["local.md", "cloud.md", "offline.md"] {
+        f.fs.file(file, file.as_bytes());
+    }
+    f.scan();
+    f.fs.set_presence("cloud.md", Presence::Placeholder);
+    f.fs.set_presence("offline.md", Presence::Offline);
+
+    let report = f.hash_all();
+    assert_eq!((report.hashed, report.not_local), (1, 2));
+    assert_eq!(report.problems, []);
+    assert_eq!(f.entry("cloud.md").record.hash, None);
+
+    // Downloaded: nothing else about the file changed, so no scan is needed.
+    f.fs.set_presence("cloud.md", Presence::Local);
+    let report = f.hash_all();
+    assert_eq!((report.hashed, report.not_local), (1, 1));
+    assert_eq!(
+        f.entry("cloud.md").record.hash,
+        Some(ContentHash::of(b"cloud.md"))
+    );
+}
+
+#[test]
 fn a_scoped_scan_changes_only_its_folder() {
     let f = Fixture::new();
     f.fs.file("a/x.md", b"1");
@@ -1497,16 +1522,33 @@ fn a_scope_that_is_gone_ignored_or_unknown_is_handled() {
     );
 }
 
-#[test]
-fn scans_and_hashes_a_real_folder() {
+/// A library in a temporary folder with the note `2026 秋/线代/笔记.md`, read through the adapter
+/// that `adapter` makes for its root, and its catalog.
+fn real_library(adapter: impl FnOnce(&Path) -> Arc<dyn FileSystem>) -> (TempDir, Library, Catalog) {
     let dir = tempfile::tempdir().unwrap();
     let root = dir.path().join("library");
-    let library = Library::new(&root, Arc::new(StdFileSystem));
-    write_config(library.layout());
     std_fs::create_dir_all(root.join("2026 秋/线代")).unwrap();
     std_fs::write(root.join("2026 秋/线代/笔记.md"), "# 特征值").unwrap();
-    std_fs::write(root.join("Thumbs.db"), "x").unwrap();
+    let library = Library::new(&root, adapter(&root));
+    write_config(library.layout());
     let catalog = open_catalog(dir.path());
+    (dir, library, catalog)
+}
+
+/// Renames the course `2026 秋/线代` outside Folio, then scans: the changes, sorted.
+fn rename_course(library: &Library, catalog: &Catalog) -> Vec<Change> {
+    let root = library.root();
+    std_fs::rename(root.join("2026 秋/线代"), root.join("2026 秋/线性代数")).unwrap();
+    let mut changes = library.scan(catalog, None, 0).unwrap().changes;
+    changes.sort();
+    changes
+}
+
+#[test]
+fn scans_and_hashes_a_real_folder() {
+    let (_dir, library, catalog) = real_library(|_| Arc::new(StdFileSystem));
+    let root = library.root().to_owned();
+    std_fs::write(root.join("Thumbs.db"), "x").unwrap();
 
     let report = library.scan(&catalog, None, 0).unwrap();
     assert_eq!(report.problems, []);
@@ -1538,17 +1580,57 @@ fn scans_and_hashes_a_real_folder() {
     );
 
     std_fs::write(root.join("2026 秋/线代/笔记.md"), "# 特征值与特征向量").unwrap();
-    std_fs::rename(root.join("2026 秋/线代"), root.join("2026 秋/线性代数")).unwrap();
-    let mut changes = library.scan(&catalog, None, 0).unwrap().changes;
-    changes.sort();
     // Without file ids, a renamed folder is a new one.
     assert_eq!(
-        changes,
+        rename_course(&library, &catalog),
         [
             Change::Added(path("2026 秋/线性代数")),
             Change::Added(path("2026 秋/线性代数/笔记.md")),
             Change::Removed(path("2026 秋/线代")),
             Change::Removed(path("2026 秋/线代/笔记.md")),
         ]
+    );
+}
+
+/// With NTFS file ids, a course renamed while Folio was not looking keeps its entries and their
+/// tags, which `StdFileSystem` cannot do (docs/specs/windows-adapter.md §3).
+#[cfg(windows)]
+#[test]
+fn a_real_course_renamed_outside_folio_keeps_its_entries_and_tags() {
+    let (_dir, library, catalog) =
+        real_library(|root| Arc::new(crate::win::WindowsFileSystem::open(root).unwrap()));
+    library.scan(&catalog, None, 0).unwrap();
+    let notes = |at: &str| catalog.read(|tx| entry(tx, &path(at))).unwrap().unwrap();
+    let before = notes("2026 秋/线代/笔记.md");
+    assert!(before.record.file_id.is_some());
+    set_tags(
+        library.layout(),
+        "2026 秋/线代/笔记.md",
+        EntryKind::File,
+        tags(["notes"]),
+    );
+    library.sync_metadata(&catalog).unwrap();
+
+    assert_eq!(
+        rename_course(&library, &catalog),
+        [
+            Change::Moved {
+                from: path("2026 秋/线代"),
+                to: path("2026 秋/线性代数"),
+            },
+            Change::Moved {
+                from: path("2026 秋/线代/笔记.md"),
+                to: path("2026 秋/线性代数/笔记.md"),
+            },
+        ]
+    );
+    let after = notes("2026 秋/线性代数/笔记.md");
+    assert_eq!(
+        (after.id, &after.record.file_id),
+        (before.id, &before.record.file_id)
+    );
+    assert_eq!(
+        catalog.read(|tx| entry_tags(tx, after.id)).unwrap(),
+        tags(["notes"])
     );
 }

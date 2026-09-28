@@ -74,6 +74,8 @@ pub mod paths;
 pub mod search;
 #[cfg(test)]
 mod test_support;
+#[cfg(windows)]
+pub mod win;
 
 /// Version of the core crate, reported to the UI for diagnostics.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
