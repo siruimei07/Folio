@@ -1,0 +1,767 @@
+{
+  "$description": "Folio design tokens shared by light and dark mode. The only source of visual values (CLAUDE.md section 5). CSS name = \"--\" + path joined with \"-\".",
+  "font": {
+    "family": {
+      "sans": {
+        "$type": "fontFamily",
+        "$value": ["Segoe UI Variable Text", "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", "sans-serif"],
+        "$description": "UI text. Microsoft YaHei UI covers Chinese file names and content."
+      },
+      "mono": {
+        "$type": "fontFamily",
+        "$value": ["Cascadia Mono", "Consolas", "monospace"],
+        "$description": "Code preview and diffs."
+      },
+      "math": {
+        "$type": "fontFamily",
+        "$value": ["Cambria Math", "Cambria", "serif"],
+        "$description": "Display formulas in Markdown preview."
+      }
+    },
+    "size": {
+      "body": {
+        "$type": "dimension",
+        "$value": {
+          "value": 14,
+          "unit": "px"
+        },
+        "$description": "Default UI text, tree rows, dialog body (density 4B)."
+      },
+      "label": {
+        "$type": "dimension",
+        "$value": {
+          "value": 13,
+          "unit": "px"
+        },
+        "$description": "Field labels and card descriptions in settings; the course name after the course code in tree rows (26C)."
+      },
+      "small": {
+        "$type": "dimension",
+        "$value": {
+          "value": 12,
+          "unit": "px"
+        },
+        "$description": "Toolbar controls, secondary text, group headers."
+      },
+      "caption": {
+        "$type": "dimension",
+        "$value": {
+          "value": 11,
+          "unit": "px"
+        },
+        "$description": "Counts, timestamps, metadata."
+      },
+      "heading": {
+        "$type": "dimension",
+        "$value": {
+          "value": 15,
+          "unit": "px"
+        },
+        "$description": "Panel titles (Library, Changes, History) and settings card titles."
+      },
+      "dialog-title": {
+        "$type": "dimension",
+        "$value": {
+          "value": 16,
+          "unit": "px"
+        },
+        "$description": "Settings dialog title."
+      },
+      "badge": {
+        "$type": "dimension",
+        "$value": {
+          "value": 10,
+          "unit": "px"
+        },
+        "$description": "Three-letter course badge text at 22 px."
+      },
+      "badge-compact": {
+        "$type": "dimension",
+        "$value": {
+          "value": 9.5,
+          "unit": "px"
+        },
+        "$description": "Course badge text at 20 px (narrow window)."
+      },
+      "code": {
+        "$type": "dimension",
+        "$value": {
+          "value": 13,
+          "unit": "px"
+        },
+        "$description": "Code preview."
+      },
+      "diff": {
+        "$type": "dimension",
+        "$value": {
+          "value": 12.5,
+          "unit": "px"
+        },
+        "$description": "Diff lines."
+      },
+      "search-input": {
+        "$type": "dimension",
+        "$value": {
+          "value": 16,
+          "unit": "px"
+        },
+        "$description": "Search dialog input."
+      },
+      "document-title": {
+        "$type": "dimension",
+        "$value": {
+          "value": 22,
+          "unit": "px"
+        },
+        "$description": "Markdown preview H1."
+      },
+      "document-heading": {
+        "$type": "dimension",
+        "$value": {
+          "value": 16,
+          "unit": "px"
+        },
+        "$description": "Markdown preview H2."
+      }
+    },
+    "weight": {
+      "regular": {
+        "$type": "fontWeight",
+        "$value": 400,
+        "$description": "Body text, descriptions, and the course name after a course code."
+      },
+      "strong": {
+        "$type": "fontWeight",
+        "$value": 600,
+        "$description": "Titles, course codes, file names in path+name pairs, selected nav items."
+      },
+      "badge": {
+        "$type": "fontWeight",
+        "$value": 700,
+        "$description": "Course badge letters."
+      }
+    },
+    "line-height": {
+      "body": {
+        "$type": "number",
+        "$value": 1.45,
+        "$description": "Default line height of UI text."
+      },
+      "reading": {
+        "$type": "number",
+        "$value": 1.65,
+        "$description": "Markdown list items."
+      },
+      "code": {
+        "$type": "number",
+        "$value": 1.7,
+        "$description": "22 px lines at 13 px."
+      },
+      "diff": {
+        "$type": "number",
+        "$value": 1.76,
+        "$description": "Diff lines: 22 px lines at 12.5 px."
+      },
+      "heading": {
+        "$type": "number",
+        "$value": 1.3,
+        "$description": "Markdown preview headings (H1, H2)."
+      }
+    }
+  },
+  "space": {
+    "2": {
+      "$type": "dimension",
+      "$value": {
+        "value": 2,
+        "unit": "px"
+      },
+      "$description": "Spacing step, 2 px."
+    },
+    "4": {
+      "$type": "dimension",
+      "$value": {
+        "value": 4,
+        "unit": "px"
+      },
+      "$description": "Spacing step, 4 px: icon-to-label gaps in small controls."
+    },
+    "6": {
+      "$type": "dimension",
+      "$value": {
+        "value": 6,
+        "unit": "px"
+      },
+      "$description": "Spacing step, 6 px: tree panel padding."
+    },
+    "8": {
+      "$type": "dimension",
+      "$value": {
+        "value": 8,
+        "unit": "px"
+      },
+      "$description": "Spacing step, 8 px: the default gap between items in a row; the panel gap."
+    },
+    "10": {
+      "$type": "dimension",
+      "$value": {
+        "value": 10,
+        "unit": "px"
+      },
+      "$description": "Spacing step, 10 px: gap between rail buttons, toolbar items and commit-lane cards."
+    },
+    "12": {
+      "$type": "dimension",
+      "$value": {
+        "value": 12,
+        "unit": "px"
+      },
+      "$description": "Spacing step, 12 px: panel padding and commit-lane padding."
+    },
+    "14": {
+      "$type": "dimension",
+      "$value": {
+        "value": 14,
+        "unit": "px"
+      },
+      "$description": "Spacing step, 14 px: dot-grid pitch of empty states; padding of the course file grid."
+    },
+    "16": {
+      "$type": "dimension",
+      "$value": {
+        "value": 16,
+        "unit": "px"
+      },
+      "$description": "Spacing step, 16 px: tree indent per level; settings card padding (block)."
+    },
+    "18": {
+      "$type": "dimension",
+      "$value": {
+        "value": 18,
+        "unit": "px"
+      },
+      "$description": "Spacing step, 18 px: settings card padding (inline)."
+    },
+    "20": {
+      "$type": "dimension",
+      "$value": {
+        "value": 20,
+        "unit": "px"
+      },
+      "$description": "Spacing step, 20 px."
+    },
+    "24": {
+      "$type": "dimension",
+      "$value": {
+        "value": 24,
+        "unit": "px"
+      },
+      "$description": "Spacing step, 24 px."
+    },
+    "panel-gap": {
+      "$type": "dimension",
+      "$value": "{space.8}",
+      "$description": "Gap between panels and between the panels and the window edge."
+    },
+    "panel-padding": {
+      "$type": "dimension",
+      "$value": "{space.12}",
+      "$description": "Inline padding inside panels."
+    },
+    "dialog-card-padding": {
+      "$type": "dimension",
+      "$value": "{space.18}",
+      "$description": "Inline padding of settings cards."
+    }
+  },
+  "size": {
+    "row": {
+      "$type": "dimension",
+      "$value": {
+        "value": 32,
+        "unit": "px"
+      },
+      "$description": "Tree rows, change rows, history file rows, settings split rows use their own padding."
+    },
+    "panel-header": {
+      "$type": "dimension",
+      "$value": {
+        "value": 44,
+        "unit": "px"
+      },
+      "$description": "Panel header height (Library, Changes, History, preview header)."
+    },
+    "toolbar": {
+      "$type": "dimension",
+      "$value": {
+        "value": 48,
+        "unit": "px"
+      },
+      "$description": "Toolbar row below the title bar (18C3: no menu bar)."
+    },
+    "narrow-bar": {
+      "$type": "dimension",
+      "$value": {
+        "value": 40,
+        "unit": "px"
+      },
+      "$description": "Single top bar in windows narrower than size.narrow-breakpoint."
+    },
+    "control": {
+      "$type": "dimension",
+      "$value": {
+        "value": 30,
+        "unit": "px"
+      },
+      "$description": "Toolbar controls: sync chip, Sync button, semester, search."
+    },
+    "control-compact": {
+      "$type": "dimension",
+      "$value": {
+        "value": 28,
+        "unit": "px"
+      },
+      "$description": "Icon buttons, narrow-bar controls, small outline buttons."
+    },
+    "dialog-control": {
+      "$type": "dimension",
+      "$value": {
+        "value": 34,
+        "unit": "px"
+      },
+      "$description": "Inputs and field buttons in settings dialogs."
+    },
+    "select": {
+      "$type": "dimension",
+      "$value": {
+        "value": 32,
+        "unit": "px"
+      },
+      "$description": "Select buttons in settings dialogs."
+    },
+    "chip": {
+      "$type": "dimension",
+      "$value": {
+        "value": 26,
+        "unit": "px"
+      },
+      "$description": "Tag filter chips and tag chips in the preview header."
+    },
+    "icon": {
+      "$type": "dimension",
+      "$value": {
+        "value": 16,
+        "unit": "px"
+      },
+      "$description": "Row icons, file-type icons, status icons."
+    },
+    "icon-rail": {
+      "$type": "dimension",
+      "$value": {
+        "value": 18,
+        "unit": "px"
+      },
+      "$description": "Rail icons."
+    },
+    "icon-small": {
+      "$type": "dimension",
+      "$value": {
+        "value": 14,
+        "unit": "px"
+      },
+      "$description": "Icons in chips, small buttons and drag grips."
+    },
+    "status-icon": {
+      "$type": "dimension",
+      "$value": {
+        "value": 16,
+        "unit": "px"
+      },
+      "$description": "Change status icon (20A outlined square + glyph)."
+    },
+    "badge": {
+      "$type": "dimension",
+      "$value": {
+        "value": 22,
+        "unit": "px"
+      },
+      "$description": "Course badge (23A). Below 20 px the badge shows colour only."
+    },
+    "badge-compact": {
+      "$type": "dimension",
+      "$value": {
+        "value": 20,
+        "unit": "px"
+      },
+      "$description": "Course badge in the narrow window; its letters use font.size.badge-compact."
+    },
+    "tag-dot": {
+      "$type": "dimension",
+      "$value": {
+        "value": 7,
+        "unit": "px"
+      },
+      "$description": "Tag dots in rows, chips and filters."
+    },
+    "selection-bar-width": {
+      "$type": "dimension",
+      "$value": {
+        "value": 3,
+        "unit": "px"
+      },
+      "$description": "Accent bar on the left edge of the selected row, rail item and settings nav item."
+    },
+    "rail": {
+      "$type": "dimension",
+      "$value": {
+        "value": 60,
+        "unit": "px"
+      },
+      "$description": "Rail width."
+    },
+    "rail-compact": {
+      "$type": "dimension",
+      "$value": {
+        "value": 48,
+        "unit": "px"
+      },
+      "$description": "Rail width in the narrow window."
+    },
+    "rail-button": {
+      "$type": "dimension",
+      "$value": {
+        "value": 38,
+        "unit": "px"
+      },
+      "$description": "Square rail buttons (Library, Changes, History, settings)."
+    },
+    "rail-button-compact": {
+      "$type": "dimension",
+      "$value": {
+        "value": 32,
+        "unit": "px"
+      },
+      "$description": "Rail buttons in the narrow window."
+    },
+    "avatar": {
+      "$type": "dimension",
+      "$value": {
+        "value": 32,
+        "unit": "px"
+      },
+      "$description": "Avatar at the bottom of the rail."
+    },
+    "avatar-compact": {
+      "$type": "dimension",
+      "$value": {
+        "value": 28,
+        "unit": "px"
+      },
+      "$description": "Avatar in the narrow window."
+    },
+    "library-panel": {
+      "$type": "dimension",
+      "$value": {
+        "value": 340,
+        "unit": "px"
+      },
+      "$description": "Library panel width (tag filters and tree)."
+    },
+    "changes-panel": {
+      "$type": "dimension",
+      "$value": {
+        "value": 290,
+        "unit": "px"
+      },
+      "$description": "Changes list (11 two-column layout)."
+    },
+    "commit-lane": {
+      "$type": "dimension",
+      "$value": {
+        "value": 320,
+        "unit": "px"
+      },
+      "$description": "Commit lane width, next to the changes list."
+    },
+    "history-panel": {
+      "$type": "dimension",
+      "$value": {
+        "value": 440,
+        "unit": "px"
+      },
+      "$description": "Default width; the user can drag between history-panel-min and history-panel-max (19C)."
+    },
+    "history-panel-min": {
+      "$type": "dimension",
+      "$value": {
+        "value": 360,
+        "unit": "px"
+      },
+      "$description": "Narrowest width the history panel can be dragged to."
+    },
+    "history-panel-max": {
+      "$type": "dimension",
+      "$value": {
+        "value": 640,
+        "unit": "px"
+      },
+      "$description": "Widest width the history panel can be dragged to."
+    },
+    "history-time-column": {
+      "$type": "dimension",
+      "$value": {
+        "value": 64,
+        "unit": "px"
+      },
+      "$description": "Right-aligned time column of history entries."
+    },
+    "resize-handle": {
+      "$type": "dimension",
+      "$value": {
+        "value": 8,
+        "unit": "px"
+      },
+      "$description": "Hit area of the history resize handle, centred on the gap between panels."
+    },
+    "search-dialog": {
+      "$type": "dimension",
+      "$value": {
+        "value": 640,
+        "unit": "px"
+      },
+      "$description": "Search dialog width."
+    },
+    "settings-dialog-width": {
+      "$type": "dimension",
+      "$value": {
+        "value": 820,
+        "unit": "px"
+      },
+      "$description": "Settings dialog frame width."
+    },
+    "settings-dialog-height": {
+      "$type": "dimension",
+      "$value": {
+        "value": 640,
+        "unit": "px"
+      },
+      "$description": "Settings dialog frame height."
+    },
+    "settings-nav": {
+      "$type": "dimension",
+      "$value": {
+        "value": 220,
+        "unit": "px"
+      },
+      "$description": "Settings navigation card width."
+    },
+    "window-min-width": {
+      "$type": "dimension",
+      "$value": {
+        "value": 500,
+        "unit": "px"
+      },
+      "$description": "ADR-0001 minimum window size."
+    },
+    "window-min-height": {
+      "$type": "dimension",
+      "$value": {
+        "value": 320,
+        "unit": "px"
+      },
+      "$description": "ADR-0001 minimum window height."
+    },
+    "narrow-breakpoint": {
+      "$type": "dimension",
+      "$value": {
+        "value": 760,
+        "unit": "px"
+      },
+      "$description": "Below this window width the narrow layout (16A) applies."
+    }
+  },
+  "radius": {
+    "panel": {
+      "$type": "dimension",
+      "$value": {
+        "value": 10,
+        "unit": "px"
+      },
+      "$description": "Panels and cards."
+    },
+    "control": {
+      "$type": "dimension",
+      "$value": {
+        "value": 7,
+        "unit": "px"
+      },
+      "$description": "Buttons, inputs, selects, the sync chip and file cards."
+    },
+    "row": {
+      "$type": "dimension",
+      "$value": {
+        "value": 6,
+        "unit": "px"
+      },
+      "$description": "Tree rows, list rows and settings navigation items."
+    },
+    "chip": {
+      "$type": "dimension",
+      "$value": {
+        "value": 6,
+        "unit": "px"
+      },
+      "$description": "Tag chips and filter chips."
+    },
+    "badge": {
+      "$type": "dimension",
+      "$value": {
+        "value": 5,
+        "unit": "px"
+      },
+      "$description": "Course badges at 22 px."
+    },
+    "rail-button": {
+      "$type": "dimension",
+      "$value": {
+        "value": 9,
+        "unit": "px"
+      },
+      "$description": "Rail buttons."
+    },
+    "dialog": {
+      "$type": "dimension",
+      "$value": {
+        "value": 12,
+        "unit": "px"
+      },
+      "$description": "Search and settings dialogs."
+    },
+    "pill": {
+      "$type": "dimension",
+      "$value": {
+        "value": 999,
+        "unit": "px"
+      },
+      "$description": "Count pills, the \"Not synced\" pill and the \"Your commit goes here\" pill."
+    }
+  },
+  "border": {
+    "width": {
+      "$type": "dimension",
+      "$value": {
+        "value": 1,
+        "unit": "px"
+      },
+      "$description": "Borders and separators."
+    }
+  },
+  "focus-ring": {
+    "width": {
+      "$type": "dimension",
+      "$value": {
+        "value": 2,
+        "unit": "px"
+      },
+      "$description": "Keyboard focus outline width."
+    },
+    "offset": {
+      "$type": "dimension",
+      "$value": {
+        "value": 2,
+        "unit": "px"
+      },
+      "$description": "Keyboard focus outline offset; rows and list items use it inset (negative)."
+    }
+  },
+  "title-bar": {
+    "height": {
+      "$type": "dimension",
+      "$value": {
+        "value": 32,
+        "unit": "px"
+      },
+      "$description": "Keeps the maximize button inside the top 48 px for the snap layouts overlay (ADR-0001)."
+    },
+    "padding-inline": {
+      "$type": "dimension",
+      "$value": {
+        "value": 12,
+        "unit": "px"
+      },
+      "$description": "Title bar inline padding."
+    },
+    "font-size": {
+      "$type": "dimension",
+      "$value": "{font.size.small}",
+      "$description": "The word \"Folio\" in the title bar."
+    }
+  },
+  "caption": {
+    "button-width": {
+      "$type": "dimension",
+      "$value": {
+        "value": 46,
+        "unit": "px"
+      },
+      "$description": "Minimize, maximize and close; the maximize button sits 46-92 px from the right edge."
+    },
+    "glyph-size": {
+      "$type": "dimension",
+      "$value": {
+        "value": 10,
+        "unit": "px"
+      },
+      "$description": "Minimize, maximize and close glyphs."
+    }
+  },
+  "motion": {
+    "duration": {
+      "fast": {
+        "$type": "duration",
+        "$value": {
+          "value": 120,
+          "unit": "ms"
+        },
+        "$description": "Hover and press feedback, chevrons."
+      },
+      "base": {
+        "$type": "duration",
+        "$value": {
+          "value": 160,
+          "unit": "ms"
+        },
+        "$description": "Dialogs, search, narrow preview overlay (fade and a 4 px rise)."
+      }
+    },
+    "easing": {
+      "standard": {
+        "$type": "cubicBezier",
+        "$value": [0.2, 0, 0, 1],
+        "$description": "Entering and moving: dialogs, search, the narrow preview."
+      },
+      "exit": {
+        "$type": "cubicBezier",
+        "$value": [0.4, 0, 1, 1],
+        "$description": "Leaving: dialogs and search closing."
+      }
+    }
+  },
+  "z-index": {
+    "resize-handle": {
+      "$type": "number",
+      "$value": 3,
+      "$description": "History resize handle, above the panels."
+    },
+    "search": {
+      "$type": "number",
+      "$value": 10,
+      "$description": "Search scrim; the dialog uses +1."
+    },
+    "dialog": {
+      "$type": "number",
+      "$value": 20,
+      "$description": "Settings scrim; the dialog uses +1."
+    }
+  }
+}

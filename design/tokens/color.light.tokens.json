@@ -1,0 +1,1035 @@
+{
+  "$description": "Folio light mode. Same token paths as the other mode file; pick one per window theme.",
+  "color": {
+    "surface": {
+      "app": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.9529, 0.949, 0.9412],
+          "hex": "#f3f2f0"
+        },
+        "$description": "Window background behind the panels; toolbar row."
+      },
+      "panel": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [1, 1, 1],
+          "hex": "#ffffff"
+        },
+        "$description": "Panels, cards, popovers, dialog cards."
+      },
+      "sunken": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.9686, 0.9647, 0.9569],
+          "hex": "#f7f6f4"
+        },
+        "$description": "Day headers, group headers, notes, segmented-control track."
+      },
+      "chrome": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.9843, 0.9804, 0.9765],
+          "hex": "#fbfaf9"
+        },
+        "$description": "Title bar."
+      },
+      "modal": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.9686, 0.9647, 0.9569],
+          "hex": "#f7f6f4"
+        },
+        "$description": "Settings dialog frame behind its cards."
+      },
+      "page": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [1, 1, 1],
+          "hex": "#ffffff"
+        },
+        "$description": "Paper of PDF, Word and slide previews (stays light in dark mode)."
+      },
+      "hover": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.9569, 0.949, 0.9373],
+          "hex": "#f4f2ef"
+        },
+        "$description": "Hover background of rows and icon buttons."
+      },
+      "selected": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.8863, 0.9412, 0.9294],
+          "hex": "#e2f0ed"
+        },
+        "$description": "Selected row. Always paired with selection.indicator."
+      }
+    },
+    "border": {
+      "default": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.8784, 0.8627, 0.8471],
+          "hex": "#e0dcd8"
+        },
+        "$description": "Panel and card borders, separators."
+      },
+      "strong": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.7765, 0.7529, 0.7294],
+          "hex": "#c6c0ba"
+        },
+        "$description": "Active rail button border, dashed \"Tag\" chip, resize grip."
+      },
+      "control": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.8235, 0.8, 0.7765],
+          "hex": "#d2ccc6"
+        },
+        "$description": "Outline buttons and chips; decorative, the label identifies the control."
+      },
+      "chrome": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.902, 0.8863, 0.8706],
+          "hex": "#e6e2de"
+        },
+        "$description": "Line between title bar and toolbar."
+      },
+      "guide": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.9255, 0.9098, 0.8941],
+          "hex": "#ece8e4"
+        },
+        "$description": "Tree indent guides, row separators in lists."
+      }
+    },
+    "text": {
+      "primary": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.1098, 0.098, 0.0902],
+          "hex": "#1c1917"
+        },
+        "$description": "Primary text and icons on every surface: app, panel, sunken, hover, selected, modal."
+      },
+      "secondary": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.3412, 0.3255, 0.3059],
+          "hex": "#57534e"
+        },
+        "$description": "Secondary labels and descriptions; the course name after the course code (26C)."
+      },
+      "tertiary": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.4314, 0.4039, 0.3804],
+          "hex": "#6e6761"
+        },
+        "$description": "Path prefixes, counts, timestamps. At least 4.5:1 on every surface, including selected."
+      },
+      "on-accent": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [1, 1, 1],
+          "hex": "#ffffff"
+        },
+        "$description": "Text and icons on color.accent.default fills."
+      },
+      "on-primary": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [1, 1, 1],
+          "hex": "#ffffff"
+        },
+        "$description": "Label and icon of the primary (Sync) button."
+      },
+      "on-button-accent": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [1, 1, 1],
+          "hex": "#ffffff"
+        },
+        "$description": "Label of accent buttons (Commit, Save) and the knob of a switch that is on."
+      }
+    },
+    "accent": {
+      "default": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.0588, 0.4627, 0.4314],
+          "hex": "#0f766e"
+        },
+        "$description": "Accent text and icons, active rail icon, selection and nav indicators."
+      },
+      "fill": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.1647, 0.6314, 0.5961],
+          "hex": "#2aa198"
+        },
+        "$description": "Decorative accent fills (illustration). Not for indicators: below 3:1 on selected rows in light mode."
+      },
+      "soft": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.8627, 0.9373, 0.9255],
+          "hex": "#dcefec"
+        },
+        "$description": "Background of the \"Not synced\" pill and of full-version banners."
+      }
+    },
+    "selection": {
+      "indicator": {
+        "$type": "color",
+        "$value": "{color.accent.default}",
+        "$description": "Bar on the left edge of selected rows, active rail item and active settings nav item (WCAG 1.4.11)."
+      }
+    },
+    "focus": {
+      "ring": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.0588, 0.4627, 0.4314],
+          "hex": "#0f766e"
+        },
+        "$description": "Keyboard focus outline, solid; at least 3:1 on every surface."
+      }
+    },
+    "button": {
+      "primary": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.1725, 0.1529, 0.1412],
+          "hex": "#2c2724"
+        },
+        "$description": "Sync button in the toolbar."
+      },
+      "primary-hover": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.2706, 0.251, 0.2314],
+          "hex": "#45403b"
+        },
+        "$description": "Hover background of the primary button."
+      },
+      "accent": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.0588, 0.4627, 0.4314],
+          "hex": "#0f766e"
+        },
+        "$description": "Commit, Save, \"Your commit goes here\" pill."
+      },
+      "accent-hover": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.0431, 0.3804, 0.3569],
+          "hex": "#0b615b"
+        },
+        "$description": "Hover background of accent buttons."
+      }
+    },
+    "input": {
+      "background": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [1, 1, 1],
+          "hex": "#ffffff"
+        },
+        "$description": "Text fields and selects."
+      },
+      "background-readonly": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.9686, 0.9647, 0.9569],
+          "hex": "#f7f6f4"
+        },
+        "$description": "Read-only fields such as the library folder path."
+      },
+      "border": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.8235, 0.8, 0.7765],
+          "hex": "#d2ccc6"
+        },
+        "$description": "Side and top borders of text fields; the bottom edge (color.input.border-bottom) carries the 3:1 boundary."
+      },
+      "border-bottom": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.5412, 0.5137, 0.4902],
+          "hex": "#8a837d"
+        },
+        "$description": "Darker bottom edge (Fluent style) so empty inputs meet 3:1."
+      }
+    },
+    "toggle": {
+      "on": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.0588, 0.4627, 0.4314],
+          "hex": "#0f766e"
+        },
+        "$description": "Track of a switch that is on."
+      },
+      "off": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.5412, 0.5137, 0.4902],
+          "hex": "#8a837d"
+        },
+        "$description": "Track border and knob of an off switch."
+      }
+    },
+    "overlay": {
+      "scrim": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.1098, 0.098, 0.0902],
+          "alpha": 0.24,
+          "hex": "#1c1917"
+        },
+        "$description": "Behind the search dialog."
+      },
+      "modal-scrim": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.9529, 0.949, 0.9412],
+          "alpha": 0.72,
+          "hex": "#f3f2f0"
+        },
+        "$description": "Behind settings dialogs (GitButler-style wash). Leaves the title bar uncovered."
+      },
+      "rail-hover": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.1098, 0.098, 0.0902],
+          "alpha": 0.05,
+          "hex": "#1c1917"
+        },
+        "$description": "Hover wash on the history resize handle."
+      }
+    },
+    "search": {
+      "highlight": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.9922, 0.902, 0.5412],
+          "hex": "#fde68a"
+        },
+        "$description": "Matched characters in search results."
+      }
+    },
+    "status": {
+      "added": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.1843, 0.5608, 0.3882],
+          "hex": "#2f8f63"
+        },
+        "$description": "Added status icon (20A). At least 3:1 on panel, hover and selected rows."
+      },
+      "modified": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.7176, 0.4745, 0.1216],
+          "hex": "#b7791f"
+        },
+        "$description": "Modified status icon (20A). Lowest status pair: 3.11:1 on a selected row in light mode."
+      },
+      "deleted": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.7843, 0.2824, 0.2392],
+          "hex": "#c8483d"
+        },
+        "$description": "Deleted status icon (20A)."
+      },
+      "renamed": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.2353, 0.4353, 0.8118],
+          "hex": "#3c6fcf"
+        },
+        "$description": "Renamed or moved status icon (20A)."
+      }
+    },
+    "diff": {
+      "added-background": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.9059, 0.9647, 0.9216],
+          "hex": "#e7f6eb"
+        },
+        "$description": "Background of added diff lines."
+      },
+      "removed-background": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.9922, 0.9255, 0.9255],
+          "hex": "#fdecec"
+        },
+        "$description": "Background of removed diff lines."
+      },
+      "added-text": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.0745, 0.4784, 0.2275],
+          "hex": "#137a3a"
+        },
+        "$description": "The + sign and added line numbers."
+      },
+      "removed-text": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.7255, 0.1098, 0.1098],
+          "hex": "#b91c1c"
+        },
+        "$description": "The - sign and removed line numbers, on color.diff.removed-background."
+      }
+    },
+    "syntax": {
+      "keyword": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.4863, 0.2275, 0.9294],
+          "hex": "#7c3aed"
+        },
+        "$description": "Code preview keywords, on color.surface.panel."
+      },
+      "string": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.0824, 0.502, 0.2392],
+          "hex": "#15803d"
+        },
+        "$description": "Code preview strings, on color.surface.panel."
+      },
+      "function": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.1137, 0.3059, 0.8471],
+          "hex": "#1d4ed8"
+        },
+        "$description": "Code preview function and type names, on color.surface.panel."
+      },
+      "comment": {
+        "$type": "color",
+        "$value": "{color.text.tertiary}",
+        "$description": "Code preview comments."
+      }
+    },
+    "pattern": {
+      "dots": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.851, 0.8314, 0.8118],
+          "hex": "#d9d4cf"
+        },
+        "$description": "Dot grid behind the empty preview and the commit lane."
+      }
+    },
+    "illustration": {
+      "line": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.7608, 0.7333, 0.7059],
+          "hex": "#c2bbb4"
+        },
+        "$description": "Outlines in the empty-state desk illustration."
+      },
+      "fill": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.9843, 0.9804, 0.9725],
+          "hex": "#fbfaf8"
+        },
+        "$description": "Paper in the desk illustration."
+      },
+      "bar": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.8863, 0.8706, 0.851],
+          "hex": "#e2ded9"
+        },
+        "$description": "Text bars on the illustrated pages."
+      },
+      "soft": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.8118, 0.9098, 0.8902],
+          "hex": "#cfe8e3"
+        },
+        "$description": "Soft teal shapes in the illustration."
+      },
+      "accent": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.1647, 0.6314, 0.5961],
+          "hex": "#2aa198"
+        },
+        "$description": "The single accent shape in the illustration."
+      }
+    },
+    "avatar": {
+      "background": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.8627, 0.9373, 0.9255],
+          "hex": "#dcefec"
+        },
+        "$description": "Avatar circle in the rail."
+      },
+      "text": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.0588, 0.4627, 0.4314],
+          "hex": "#0f766e"
+        },
+        "$description": "Avatar initial (the device name's first letter), on color.avatar.background."
+      }
+    }
+  },
+  "palette": {
+    "$description": "Ten named colours for courses and tags (24B Morandi). Metadata stores the name only (ADR-0002 \"color\": \"blue\"). tint = course badge background, text = badge text (at least 6:1 on tint), dot = tag dots and swatches, solid = file-type icons (at least 3.7:1 on panel).",
+    "red": {
+      "tint": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.9882, 0.8902, 0.8824],
+          "hex": "#fce3e1"
+        },
+        "$description": "Course badge background for red courses."
+      },
+      "text": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.4706, 0.251, 0.2471],
+          "hex": "#78403f"
+        },
+        "$description": "Course badge letters, on palette.red.tint."
+      },
+      "dot": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.7098, 0.4392, 0.4314],
+          "hex": "#b5706e"
+        },
+        "$description": "Tag dots and colour swatches (red)."
+      },
+      "solid": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.6314, 0.3765, 0.3686],
+          "hex": "#a1605e"
+        },
+        "$description": "File-type icons (PDF) and other red marks on panels."
+      }
+    },
+    "orange": {
+      "tint": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.9804, 0.898, 0.851],
+          "hex": "#fae5d9"
+        },
+        "$description": "Course badge background for orange courses."
+      },
+      "text": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.4588, 0.2706, 0.1608],
+          "hex": "#754529"
+        },
+        "$description": "Course badge letters, on palette.orange.tint."
+      },
+      "dot": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.7451, 0.5098, 0.3804],
+          "hex": "#be8261"
+        },
+        "$description": "Tag dots and colour swatches (orange)."
+      },
+      "solid": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.6431, 0.4235, 0.298],
+          "hex": "#a46c4c"
+        },
+        "$description": "File-type icons (PowerPoint) and other orange marks on panels."
+      }
+    },
+    "amber": {
+      "tint": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.9569, 0.9098, 0.8353],
+          "hex": "#f4e8d5"
+        },
+        "$description": "Course badge background for amber courses."
+      },
+      "text": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.4118, 0.302, 0.0941],
+          "hex": "#694d18"
+        },
+        "$description": "Course badge letters, on palette.amber.tint."
+      },
+      "dot": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.7451, 0.6118, 0.3765],
+          "hex": "#be9c60"
+        },
+        "$description": "Tag dots and colour swatches (amber)."
+      },
+      "solid": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.6235, 0.498, 0.2745],
+          "hex": "#9f7f46"
+        },
+        "$description": "File-type icons (archives) and other amber marks on panels."
+      }
+    },
+    "green": {
+      "tint": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.8745, 0.9373, 0.8706],
+          "hex": "#dfefde"
+        },
+        "$description": "Course badge background for green courses."
+      },
+      "text": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.2078, 0.3686, 0.2157],
+          "hex": "#355e37"
+        },
+        "$description": "Course badge letters, on palette.green.tint."
+      },
+      "dot": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.3922, 0.5804, 0.3961],
+          "hex": "#649465"
+        },
+        "$description": "Tag dots and colour swatches (green)."
+      },
+      "solid": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.3294, 0.5098, 0.3333],
+          "hex": "#548255"
+        },
+        "$description": "File-type icons (Excel) and other green marks on panels."
+      }
+    },
+    "teal": {
+      "tint": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.8353, 0.9412, 0.9333],
+          "hex": "#d5f0ee"
+        },
+        "$description": "Course badge background for teal courses."
+      },
+      "text": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0, 0.3765, 0.3608],
+          "hex": "#00605c"
+        },
+        "$description": "Course badge letters, on palette.teal.tint."
+      },
+      "dot": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.2627, 0.6275, 0.6078],
+          "hex": "#43a09b"
+        },
+        "$description": "Tag dots and colour swatches (teal)."
+      },
+      "solid": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.1804, 0.5412, 0.5216],
+          "hex": "#2e8a85"
+        },
+        "$description": "File-type icons (images) and other teal marks on panels."
+      }
+    },
+    "blue": {
+      "tint": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.8588, 0.9255, 0.9882],
+          "hex": "#dbecfc"
+        },
+        "$description": "Course badge background for blue courses."
+      },
+      "text": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.1608, 0.3373, 0.4824],
+          "hex": "#29567b"
+        },
+        "$description": "Course badge letters, on palette.blue.tint."
+      },
+      "dot": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.3176, 0.5255, 0.6941],
+          "hex": "#5186b1"
+        },
+        "$description": "Tag dots and colour swatches (blue)."
+      },
+      "solid": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.2627, 0.4627, 0.6235],
+          "hex": "#43769f"
+        },
+        "$description": "File-type icons (Word) and other blue marks on panels."
+      }
+    },
+    "indigo": {
+      "tint": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.8941, 0.9098, 0.9922],
+          "hex": "#e4e8fd"
+        },
+        "$description": "Course badge background for indigo courses."
+      },
+      "text": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.2824, 0.3059, 0.4902],
+          "hex": "#484e7d"
+        },
+        "$description": "Course badge letters, on palette.indigo.tint."
+      },
+      "dot": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.3961, 0.4235, 0.6471],
+          "hex": "#656ca5"
+        },
+        "$description": "Tag dots and colour swatches (indigo)."
+      },
+      "solid": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.3608, 0.3882, 0.6],
+          "hex": "#5c6399"
+        },
+        "$description": "File-type icons (Markdown) and other indigo marks on panels."
+      }
+    },
+    "violet": {
+      "tint": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.9373, 0.898, 0.9725],
+          "hex": "#efe5f8"
+        },
+        "$description": "Course badge background for violet courses."
+      },
+      "text": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.3686, 0.2745, 0.4549],
+          "hex": "#5e4674"
+        },
+        "$description": "Course badge letters, on palette.violet.tint."
+      },
+      "dot": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.549, 0.4353, 0.651],
+          "hex": "#8c6fa6"
+        },
+        "$description": "Tag dots and colour swatches (violet)."
+      },
+      "solid": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.4902, 0.3804, 0.5843],
+          "hex": "#7d6195"
+        },
+        "$description": "File-type icons (code) and other violet marks on panels."
+      }
+    },
+    "pink": {
+      "tint": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.9804, 0.8863, 0.9176],
+          "hex": "#fae2ea"
+        },
+        "$description": "Course badge background for pink courses."
+      },
+      "text": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.4549, 0.2471, 0.3333],
+          "hex": "#743f55"
+        },
+        "$description": "Course badge letters, on palette.pink.tint."
+      },
+      "dot": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.7294, 0.4706, 0.5725],
+          "hex": "#ba7892"
+        },
+        "$description": "Tag dots and colour swatches (pink)."
+      },
+      "solid": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.6353, 0.3922, 0.4863],
+          "hex": "#a2647c"
+        },
+        "$description": "File-type icons (audio and video) and other pink marks on panels."
+      }
+    },
+    "stone": {
+      "tint": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.9294, 0.9137, 0.898],
+          "hex": "#ede9e5"
+        },
+        "$description": "Course badge background for stone courses."
+      },
+      "text": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.3529, 0.3176, 0.2784],
+          "hex": "#5a5147"
+        },
+        "$description": "Course badge letters, on palette.stone.tint."
+      },
+      "dot": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.5608, 0.5176, 0.4706],
+          "hex": "#8f8478"
+        },
+        "$description": "Tag dots and colour swatches (stone)."
+      },
+      "solid": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.4902, 0.451, 0.4039],
+          "hex": "#7d7367"
+        },
+        "$description": "File-type icons (plain text) and other stone marks on panels."
+      }
+    }
+  },
+  "caption": {
+    "button-hover-background": {
+      "$type": "color",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [0, 0, 0],
+        "alpha": 0.06,
+        "hex": "#000000"
+      },
+      "$description": "Hover background of the minimize and maximize buttons."
+    },
+    "button-pressed-background": {
+      "$type": "color",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [0, 0, 0],
+        "alpha": 0.1,
+        "hex": "#000000"
+      },
+      "$description": "Pressed background of the caption buttons."
+    },
+    "close-hover-background": {
+      "$type": "color",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [0.7686, 0.1686, 0.1098],
+        "hex": "#c42b1c"
+      },
+      "$description": "Windows 11 close-button red."
+    },
+    "close-hover-color": {
+      "$type": "color",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [1, 1, 1],
+        "hex": "#ffffff"
+      },
+      "$description": "Close glyph on the red hover background."
+    }
+  },
+  "shadow": {
+    "overlay": {
+      "$type": "shadow",
+      "$value": [
+        {
+          "color": {
+            "colorSpace": "srgb",
+            "components": [0.1098, 0.098, 0.0902],
+            "alpha": 0.16,
+            "hex": "#1c1917"
+          },
+          "offsetX": {
+            "value": 0,
+            "unit": "px"
+          },
+          "offsetY": {
+            "value": 18,
+            "unit": "px"
+          },
+          "blur": {
+            "value": 44,
+            "unit": "px"
+          },
+          "spread": {
+            "value": 0,
+            "unit": "px"
+          }
+        },
+        {
+          "color": {
+            "colorSpace": "srgb",
+            "components": [0.1098, 0.098, 0.0902],
+            "alpha": 0.07,
+            "hex": "#1c1917"
+          },
+          "offsetX": {
+            "value": 0,
+            "unit": "px"
+          },
+          "offsetY": {
+            "value": 2,
+            "unit": "px"
+          },
+          "blur": {
+            "value": 8,
+            "unit": "px"
+          },
+          "spread": {
+            "value": 0,
+            "unit": "px"
+          }
+        }
+      ],
+      "$description": "Search and settings dialogs."
+    }
+  }
+}
