@@ -1,18 +1,21 @@
 //! Where the metadata files live (docs/specs/library-core.md §4.1).
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use super::{
     CourseMeta, EntryKind, GroupMeta, LibraryConfig, MetaError, RootMeta, TagDefinitions, read,
-    write,
+    read_bytes, write,
 };
-use crate::paths::{CoursePath, MAX_NAME_UNITS, RelPath, SemesterPath, same_name, utf16_len};
+use crate::files;
+use crate::paths::{
+    CoursePath, MAX_NAME_UNITS, PathKey, RelPath, SemesterPath, same_name, utf16_len,
+};
 
 /// Folio's folder at the library root.
 const FOLIO_DIR: &str = ".folio";
 
-const ROOT_FILE: &str = "_root.json";
-const GROUP_FILE: &str = "_group.json";
+pub(super) const ROOT_FILE: &str = "_root.json";
+pub(super) const GROUP_FILE: &str = "_group.json";
 
 /// The paths inside one library's `.folio/` folder. Nothing else builds them.
 #[derive(Debug, Clone)]
@@ -23,6 +26,11 @@ pub struct Layout {
 impl Layout {
     pub fn new(root: impl Into<PathBuf>) -> Self {
         Self { root: root.into() }
+    }
+
+    /// The library folder.
+    pub fn root(&self) -> &Path {
+        &self.root
     }
 
     pub fn folio_dir(&self) -> PathBuf {
@@ -51,27 +59,31 @@ impl Layout {
         self.folio_dir().join("local").join("staging")
     }
 
+    /// The journal of a scan's metadata writes (docs/specs/library-scan.md §7.1); never synced
+    /// (ADR-0003 §4).
+    pub fn scan_journal_file(&self) -> PathBuf {
+        self.folio_dir()
+            .join("local")
+            .join("journal")
+            .join("scan.json")
+    }
+
     /// The path of the file that holds tags in `file`.
     pub fn tag_file_path(&self, file: &TagFile) -> Result<PathBuf, MetaError> {
-        match file {
-            TagFile::Root => Ok(self.meta_dir().join(ROOT_FILE)),
-            TagFile::Group(semester) => self.group_file(semester),
-            TagFile::Course(course) => self.course_file(course),
-        }
+        let mut path = self.meta_dir();
+        path.extend(file.meta_path()?.split('/'));
+        Ok(path)
     }
 
-    fn group_file(&self, semester: &SemesterPath) -> Result<PathBuf, MetaError> {
-        Ok(self
-            .meta_dir()
-            .join(escape(semester.name(), "")?)
-            .join(GROUP_FILE))
+    /// The folder in `.folio/meta/` that holds a semester's files.
+    pub(super) fn semester_dir(&self, semester: &SemesterPath) -> Result<PathBuf, MetaError> {
+        Ok(self.meta_dir().join(escape(semester.name(), "")?))
     }
 
-    fn course_file(&self, course: &CoursePath) -> Result<PathBuf, MetaError> {
-        Ok(self
-            .meta_dir()
-            .join(escape(course.semester_name(), "")?)
-            .join(escape(course.name(), ".json")?))
+    /// The library's ignore rules, or `None` if it has none: text without a byte order mark,
+    /// invalid UTF-8 replaced.
+    pub fn read_ignore(&self) -> Result<Option<String>, MetaError> {
+        Ok(read_bytes(&self.ignore_file())?.map(|bytes| files::lossy_text(&bytes)))
     }
 
     pub fn read_library(&self) -> Result<Option<LibraryConfig>, MetaError> {
@@ -99,7 +111,7 @@ impl Layout {
     }
 
     pub fn read_group_meta(&self, semester: &SemesterPath) -> Result<Option<GroupMeta>, MetaError> {
-        read(&self.group_file(semester)?)
+        read(&self.tag_file_path(&TagFile::Group(semester.clone()))?)
     }
 
     pub fn write_group_meta(
@@ -107,11 +119,15 @@ impl Layout {
         semester: &SemesterPath,
         meta: &GroupMeta,
     ) -> Result<(), MetaError> {
-        write(self, &self.group_file(semester)?, meta)
+        write(
+            self,
+            &self.tag_file_path(&TagFile::Group(semester.clone()))?,
+            meta,
+        )
     }
 
     pub fn read_course_meta(&self, course: &CoursePath) -> Result<Option<CourseMeta>, MetaError> {
-        read(&self.course_file(course)?)
+        read(&self.tag_file_path(&TagFile::Course(course.clone()))?)
     }
 
     pub fn write_course_meta(
@@ -119,7 +135,11 @@ impl Layout {
         course: &CoursePath,
         meta: &CourseMeta,
     ) -> Result<(), MetaError> {
-        write(self, &self.course_file(course)?, meta)
+        write(
+            self,
+            &self.tag_file_path(&TagFile::Course(course.clone()))?,
+            meta,
+        )
     }
 }
 
@@ -146,8 +166,19 @@ pub fn unescape_name(escaped: &str) -> Option<&str> {
     }
 }
 
+/// The semester whose folder in `.folio/meta/` has this name.
+pub(super) fn semester_named(name: &str) -> Option<SemesterPath> {
+    SemesterPath::new(RelPath::parse(unescape_name(name)?).ok()?).ok()
+}
+
+/// The course of `semester` whose file in the semester's folder has this name.
+pub(super) fn course_named(semester: &SemesterPath, file: &str) -> Option<CoursePath> {
+    let name = RelPath::parse(unescape_name(file.strip_suffix(".json")?)?).ok()?;
+    CoursePath::new(semester.path().join(&name).ok()?).ok()
+}
+
 /// The metadata file that holds tags.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TagFile {
     /// `meta/_root.json`: files at the library root.
     Root,
@@ -156,6 +187,65 @@ pub enum TagFile {
     /// `meta/<semester>/<course>.json`: everything inside a course.
     Course(CoursePath),
 }
+
+impl TagFile {
+    /// The file's path below `.folio/meta/`, names joined by `/`, which [`TagFile::at`] reads
+    /// back.
+    pub(super) fn meta_path(&self) -> Result<String, MetaError> {
+        Ok(match self {
+            Self::Root => ROOT_FILE.to_owned(),
+            Self::Group(semester) => format!("{}/{GROUP_FILE}", escape(semester.name(), "")?),
+            Self::Course(course) => format!(
+                "{}/{}",
+                escape(course.semester().name(), "")?,
+                escape(course.name(), ".json")?
+            ),
+        })
+    }
+
+    /// The file whose [`TagFile::meta_path`] is `path`; `None` for any other path.
+    pub(super) fn at(path: &str) -> Option<Self> {
+        match *path.split('/').collect::<Vec<_>>() {
+            [ROOT_FILE] => Some(Self::Root),
+            [folder, GROUP_FILE] => semester_named(folder).map(Self::Group),
+            [folder, file] => course_named(&semester_named(folder)?, file).map(Self::Course),
+            _ => None,
+        }
+    }
+
+    /// The file of the same kind for `folder`, or `None` if `folder` has the wrong depth for it
+    /// or the file is `Root`.
+    pub fn with_folder(&self, folder: RelPath) -> Option<Self> {
+        match self {
+            Self::Root => None,
+            Self::Group(_) => SemesterPath::new(folder).ok().map(Self::Group),
+            Self::Course(_) => CoursePath::new(folder).ok().map(Self::Course),
+        }
+    }
+
+    /// The folder whose content the file describes; its keys are relative to it. `None` is the
+    /// library root.
+    pub fn folder(&self) -> Option<&RelPath> {
+        match self {
+            Self::Root => None,
+            Self::Group(semester) => Some(semester.path()),
+            Self::Course(course) => Some(course.path()),
+        }
+    }
+
+    /// The file's identity on NTFS: names that differ only in case name the same file.
+    pub fn key(&self) -> TagFileKey {
+        TagFileKey(match self {
+            Self::Root => None,
+            Self::Group(semester) => Some((false, semester.path().key())),
+            Self::Course(course) => Some((true, course.path().key())),
+        })
+    }
+}
+
+/// See [`TagFile::key`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct TagFileKey(Option<(bool, PathKey)>);
 
 /// Where the tags of an entry live: the file, and the key inside it. Semester and course folders
 /// carry no tags, so they have no location.

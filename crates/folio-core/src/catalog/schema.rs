@@ -41,12 +41,15 @@ CREATE TABLE entries (
     mtime_ns INTEGER,
     file_id TEXT,
     hash TEXT,
-    first_seen_at INTEGER NOT NULL
+    -- When a scan first saw the entry; a rebuild takes the file's creation time instead.
+    added_ns INTEGER NOT NULL
 ) STRICT;
 CREATE INDEX entries_by_path_key ON entries (path_key);
 CREATE INDEX entries_by_parent ON entries (parent_id, name);
-CREATE INDEX entries_by_first_seen ON entries (first_seen_at);
+CREATE INDEX entries_by_added ON entries (added_ns);
 CREATE INDEX entries_by_file_id ON entries (file_id) WHERE file_id IS NOT NULL;
+-- The files the hashing pass still has to read; queries repeat the condition (entries::UNHASHED).
+CREATE INDEX entries_unhashed ON entries (id) WHERE hash IS NULL AND kind = 'file';
 
 CREATE TABLE tags (
     id TEXT PRIMARY KEY,

@@ -1,6 +1,7 @@
 # ADR-0002: Data storage
 
-- **Status:** Accepted (Sirui, 2026-09-26)
+- **Status:** Accepted (Sirui, 2026-09-26). Amended 2026-09-27 with the six refinements of
+  [`library-core.md`](../specs/library-core.md) §9, approved by Sirui.
 - **Date:** 2026-09-26
 - **Deciders:** Sirui Mei
 - **Inputs:**
@@ -73,6 +74,9 @@ reconciles itself from the files, so a crash between the two steps loses nothing
 | DeepSeek API key | Windows Credential Manager | — | No | Re-enter |
 | Logs | `%LOCALAPPDATA%\<app-id>\logs\` | Text; daily rotation; 7 days kept | No | n/a |
 
+A semester or course name that starts with `_` gets one more `_` inside `.folio/meta/`
+(`_misc` → `__misc.json`), so it never collides with `_group.json` or `_root.json`.
+
 **Why the versioning and ignore rules sync.** Every PC must agree on which files get full versions
 and which files are ignored. Otherwise two PCs would record different histories for the same
 library.
@@ -97,8 +101,9 @@ specific to one machine.
 - A key may name a folder, which tags the folder itself.
 
 **Writing and merging**
-- Writes are atomic: write a temporary file in the same folder, call `sync_all`, then rename it over
-  the old file. Sharing violations (antivirus, Explorer previews) are retried.
+- Writes are atomic: write a temporary file in `.folio/local/staging/` (same volume, never synced;
+  ADR-0003 §4), call `sync_all`, then rename it over the old file. No temporary file ever appears
+  in a synced folder. Sharing violations (antivirus, Explorer previews) are retried.
 - Merge rules and versioning of these files are defined in ADR-0003, which treats them as fully
   versioned text.
 
@@ -139,7 +144,9 @@ Tag ids are stable ASCII strings: the presets are `notes`, `slides`, `homework`,
   version.
 
 **Connections**
-- One writer thread owns the read-write connection and receives work over a channel.
+- One read-write connection behind a mutex serves every write, so one write runs at a time. The
+  shell already calls the core from blocking tasks, so a dedicated writer thread would add
+  nothing.
 - Writes use `BEGIN IMMEDIATE`. Bulk rebuilds commit in batches far below 100 MB per transaction.
 - A few read-only connections serve queries; WAL lets them run alongside the writer.
 - The core API is synchronous, and the shell calls it through `spawn_blocking`. This keeps the core
@@ -170,7 +177,7 @@ Tag ids are stable ASCII strings: the presets are `notes`, `slides`, `homework`,
 
 | Table | Purpose |
 |---|---|
-| `entries` | One row per file or folder: path, `path_key` (case-folded NFC, unique), parent, kind, size, mtime, NTFS file id (for rename detection), content hash (algorithm-prefixed, set by ADR-0003), class (text / Word / other), semester and course ids, `first_seen_at` |
+| `entries` | One row per file or folder: path, `path_key` (case-insensitive; indexed but not unique, because NTFS upcase tables differ between volumes and case-sensitive directories can hold case twins, which the scan reports instead), parent, kind, size, mtime, NTFS file id (for rename detection), content hash (algorithm-prefixed, set by ADR-0003), class (text / Word / other), `first_seen_at` (now `added_ns`; a rebuild takes files' creation times, [`library-scan.md`](../specs/library-scan.md) §6.3). No semester or course ids: a semester or course view is a range scan on `path`, so renaming one touches only paths |
 | `semesters`, `courses`, `tags`, `entry_tags` | Mirrors of the `.folio/` metadata, for filtering and sorting |
 | `extracts` | Text-extraction status per entry and the content hash it was extracted from |
 | `search` | FTS5 table, described in the next section |
@@ -339,7 +346,7 @@ iCloud folder is the remote (ADR-0003), not the library.
      in [`docs/specs/library-core.md`](../specs/library-core.md) §3 and implemented in
      `folio-core::paths`.
 3. [x] Scaffold:
-   - `folio-core::storage` (catalog, migrations, repositories);
+   - `folio-core::catalog` (catalog, migrations, repositories);
    - `folio-core::search` (tokenizer and query builder);
    - `folio-core::meta` (metadata read/write).
    - Result (2026-09-27, lane `claude/amazing-johnson-pzvhzd`, spec
@@ -348,9 +355,9 @@ iCloud folder is the remote (ADR-0003), not the library.
      and atomic writes, `format_version` handling), `catalog` (schema v1, WAL, recovery,
      derived versions, repositories) and `search::SearchQuery` with ranked search and
      highlights. The storage module is named `catalog`, as in the system overview.
-   - The spec (§9) proposes six refinements of this ADR, pending Sirui's approval before this
-     text changes: `path_key` indexed but not unique; semester and course names starting with
-     `_` escaped in `.folio/meta/`; temporary files in `.folio/local/staging/`; the single
+   - The spec (§9) refined this ADR in six places, approved by Sirui on 2026-09-27 and folded
+     into §2–§4 above: `path_key` indexed but not unique; semester and course names starting
+     with `_` escaped in `.folio/meta/`; temporary files in `.folio/local/staging/`; the single
      writer behind a mutex instead of a thread; the module name `catalog`; no semester or
      course ids on entries (path ranges instead).
 4. [x] Spike, alongside the ADR-0001 spikes (2026-09-27, lane `spike/data-fts5-cjk-tokenizer`):
@@ -403,6 +410,12 @@ iCloud folder is the remote (ADR-0003), not the library.
    - Progress (2026-09-27): migrations apply to an empty database with the tokenizer
      registered (`validate()` itself opens a connection without it); metadata files have golden
      bytes, round-trip property tests and a `NewerFormat` error for read-only mode. Fixtures
-     wait for the first released schema and the first older format; the rebuild property test
-     comes with the scan lane.
+     wait for the first released schema and the first older format.
+   - The rebuild property test exists (2026-09-27, scan lane,
+     [`library-scan.md`](../specs/library-scan.md) §10): after random creations, edits,
+     deletions, renames (case-only ones included), tagging, settings and hashing, the catalog
+     that scans kept up to date equals one rebuilt from scratch, and entries keep their ids,
+     files their tags and semesters and courses their settings while their file ids survive.
+     It found one bug before the lane was done: an entry that stayed at its path while another
+     folder took its parent's name kept its old parent, and the scan failed on the foreign key.
 6. [x] Update system overview §5.

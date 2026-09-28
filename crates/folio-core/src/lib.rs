@@ -66,7 +66,9 @@ pub(crate) fn is_lower_hex(text: &str) -> bool {
 
 pub mod catalog;
 mod files;
+pub mod fs;
 pub mod hash;
+pub mod library;
 pub mod meta;
 pub mod paths;
 pub mod search;

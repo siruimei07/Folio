@@ -7,20 +7,24 @@
 
 mod layout;
 mod model;
+mod tree;
 
 use std::fs::File;
-use std::io::{self, Read};
+use std::io;
 use std::path::{Path, PathBuf};
 
 use serde::de::{self, DeserializeOwned, Deserializer, MapAccess, SeqAccess, Visitor};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-pub use layout::{Layout, TagFile, is_folio_owned, tag_location, unescape_name};
+pub use layout::{Layout, TagFile, TagFileKey, is_folio_owned, tag_location, unescape_name};
 pub use model::{
     Abbr, Assignments, Color, CourseMeta, CourseSettings, DisplayName, EntryKind, Extension,
     FileClass, GroupMeta, GroupSettings, LibraryConfig, LibraryId, PresetTag, RootMeta,
     TagDefinition, TagDefinitions, TagId, ValueError, VersioningRules,
+};
+pub use tree::{
+    Content, MetaTree, Moves, Owners, ScanJournal, Settings, Stranded, StrandedCause, relocated,
 };
 
 use crate::files;
@@ -68,7 +72,6 @@ trait MetaFile: Serialize + DeserializeOwned {
     }
 }
 
-/// Reads a metadata file; a missing file is `None`. Paths come from [`Layout`] only.
 fn io_error(path: &Path) -> impl FnOnce(io::Error) -> MetaError {
     let path = path.to_owned();
     move |source| MetaError::Io { path, source }
@@ -81,21 +84,26 @@ fn invalid<T: MetaFile>(path: &Path, reason: impl std::fmt::Display) -> MetaErro
     }
 }
 
-fn read<T: MetaFile>(path: &Path) -> Result<Option<T>, MetaError> {
+/// A file of `.folio/`, or `None` if it is missing. Paths come from [`Layout`] only.
+fn read_bytes(path: &Path) -> Result<Option<Vec<u8>>, MetaError> {
     let file = match files::retry_transient(|| File::open(path)) {
         Ok(file) => file,
         Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
         Err(error) => return Err(io_error(path)(error)),
     };
-    let mut bytes = Vec::new();
-    file.take(MAX_FILE_BYTES + 1)
-        .read_to_end(&mut bytes)
-        .map_err(io_error(path))?;
-    if bytes.len() as u64 > MAX_FILE_BYTES {
-        return Err(MetaError::TooLarge {
+    match files::read_capped(file, MAX_FILE_BYTES).map_err(io_error(path))? {
+        Some(bytes) => Ok(Some(bytes)),
+        None => Err(MetaError::TooLarge {
             path: path.to_owned(),
-        });
+        }),
     }
+}
+
+/// Reads a metadata file; a missing file is `None`. Paths come from [`Layout`] only.
+fn read<T: MetaFile>(path: &Path) -> Result<Option<T>, MetaError> {
+    let Some(bytes) = read_bytes(path)? else {
+        return Ok(None);
+    };
     match from_bytes(&bytes) {
         Ok(value) => Ok(Some(value)),
         Err(Problem::Newer(found)) => Err(MetaError::NewerFormat {

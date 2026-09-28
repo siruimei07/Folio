@@ -22,10 +22,18 @@ use rusqlite::{
     Connection, ErrorCode, OpenFlags, OptionalExtension, Transaction, TransactionBehavior,
 };
 
-pub use entries::{Entry, EntryId, EntryRecord, children, delete_entry, entry, upsert_entry};
+pub use entries::{
+    Entry, EntryChanges, EntryId, EntryRecord, apply_changes, children, count_unhashed_files,
+    delete_entry, entries_in, entries_with_key, entry, entry_by_id, has_no_entries, set_hash,
+    unhashed_files, upsert_entry,
+};
 pub use fulltext::{Hit, HitText, MAX_BODY_BYTES, Span, hit_text, search, set_body};
-pub use groups::{courses, put_course, put_semester, remove_course, remove_semester, semesters};
-pub use tags::{entry_tags, replace_tag_definitions, set_entry_tags, tag_definitions};
+pub use groups::{
+    all_courses, courses, put_course, put_semester, remove_course, remove_semester, semesters,
+};
+pub use tags::{
+    all_entry_tags, entry_tags, replace_tag_definitions, set_entry_tags, tag_definitions,
+};
 
 use crate::meta::LibraryId;
 use crate::paths::{PATHS_VERSION, RelPath};
@@ -125,10 +133,22 @@ impl Catalog {
         &self,
         change: impl FnOnce(&Transaction<'_>) -> Result<T, CatalogError>,
     ) -> Result<T, CatalogError> {
+        self.write_with(change)
+    }
+
+    /// [`Catalog::write`] for a change with its own error type, such as one that also writes
+    /// the `.folio/` files: the writer's lock serializes those too (docs/specs/library-scan.md
+    /// §7.4).
+    pub fn write_with<T, E: From<CatalogError>>(
+        &self,
+        change: impl FnOnce(&Transaction<'_>) -> Result<T, E>,
+    ) -> Result<T, E> {
         let mut writer = lock(&self.writer);
-        let transaction = writer.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let transaction = writer
+            .transaction_with_behavior(TransactionBehavior::Immediate)
+            .map_err(CatalogError::from)?;
         let value = change(&transaction)?;
-        transaction.commit()?;
+        transaction.commit().map_err(CatalogError::from)?;
         Ok(value)
     }
 
@@ -219,6 +239,29 @@ impl From<rusqlite_migration::Error> for Failure {
 const LIBRARY_ID: &str = "library_id";
 const TOKENIZER: &str = "tokenizer_version";
 const PATHS: &str = "paths_version";
+const SCAN_JOURNAL: &str = "scan_journal";
+const FIRST_SCAN: &str = "first_scan_ns";
+
+/// The id of the last scan journal whose scan committed (docs/specs/library-scan.md §7.1).
+pub fn committed_scan_journal(conn: &Connection) -> Result<Option<String>, CatalogError> {
+    Ok(info(conn, SCAN_JOURNAL)?)
+}
+
+/// Records the id of a scan's journal in the transaction that commits the scan.
+pub fn set_committed_scan_journal(conn: &Connection, id: &str) -> Result<(), CatalogError> {
+    Ok(set_info(conn, SCAN_JOURNAL, id)?)
+}
+
+/// Whether a scan has committed to this catalog: not yet for a new or rebuilt one
+/// (docs/specs/library-scan.md §6.3).
+pub fn was_scanned(conn: &Connection) -> Result<bool, CatalogError> {
+    Ok(info(conn, FIRST_SCAN)?.is_some())
+}
+
+/// Records, in the transaction of the first scan that commits, when it ran.
+pub fn set_first_scan(conn: &Connection, now_ns: i64) -> Result<(), CatalogError> {
+    Ok(set_info(conn, FIRST_SCAN, &now_ns.to_string())?)
+}
 
 fn open_writer(path: &Path, library: &LibraryId) -> Result<Connection, Failure> {
     if let Some(folder) = path.parent() {
@@ -264,7 +307,7 @@ fn open_reader(path: &Path) -> Result<Connection, CatalogError> {
 fn configure(conn: &Connection) -> rusqlite::Result<()> {
     register_tokenizer(conn)?;
     // Room for every statement the repositories cache.
-    conn.set_prepared_statement_cache_capacity(32);
+    conn.set_prepared_statement_cache_capacity(64);
     conn.execute_batch(
         "PRAGMA synchronous = NORMAL;
          PRAGMA foreign_keys = ON;

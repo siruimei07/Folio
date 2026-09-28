@@ -80,6 +80,19 @@ impl RelPath {
         Ok(Self(joined))
     }
 
+    /// This path inside `folder`, or itself when `folder` is `None`, the library root.
+    pub fn below(&self, folder: Option<&Self>) -> Result<Self, PathError> {
+        match folder {
+            None => Ok(self.clone()),
+            Some(folder) => folder.join(self),
+        }
+    }
+
+    /// This path, then each of its ancestors, the nearest first.
+    pub fn ancestors(&self) -> impl Iterator<Item = Self> + use<> {
+        std::iter::successors(Some(self.clone()), Self::parent)
+    }
+
     /// The semester folder this path is in and the rest of it, or `None` for a name directly in
     /// the library.
     pub fn semester_and_rest(&self) -> Option<(SemesterPath, Self)> {
@@ -126,6 +139,11 @@ impl RelPath {
     /// The case-insensitive identity of this path.
     pub fn key(&self) -> PathKey {
         PathKey(self.0.chars().map(key_char).collect())
+    }
+
+    /// The case-insensitive identity of the last name.
+    pub fn name_key(&self) -> PathKey {
+        PathKey(self.name().chars().map(key_char).collect())
     }
 
     /// The path below `root` on this machine.
@@ -424,6 +442,19 @@ mod tests {
         assert_eq!(file.strip_prefix(&course), Some(path("作业/hw2.pdf")));
         assert_eq!(course.strip_prefix(&course), None);
         assert_eq!(course.join(&path("作业/hw2.pdf")).unwrap(), file);
+    }
+
+    #[test]
+    fn places_paths_below_folders_and_lists_their_ancestors() {
+        let course = path("2026 秋/线性代数");
+        assert_eq!(
+            path("作业/hw2.pdf").below(Some(&course)).unwrap(),
+            path("2026 秋/线性代数/作业/hw2.pdf")
+        );
+        assert_eq!(path("readme.md").below(None).unwrap(), path("readme.md"));
+        let ancestors: Vec<_> = path("a/b/c").ancestors().collect();
+        assert_eq!(ancestors, [path("a/b/c"), path("a/b"), path("a")]);
+        assert_eq!(path("作业/HW2.pdf").name_key(), path("hw2.PDF").key());
     }
 
     #[test]

@@ -24,6 +24,10 @@ serde_json = "1.0.151"
 thiserror = "2.0.21"
 # Ids for libraries and tags (ADR-0002 §3); the version tempfile already uses.
 getrandom = "0.4.3"
+# Content hashes (ADR-0003 §2).
+blake3 = "1.8.7"
+# Gitignore semantics for ignore rules (ADR-0003 §10); only its `gitignore` module is used.
+ignore = "0.4.33"
 # The version Tauri's own dependencies (muda, softbuffer) already use, so it compiles only once.
 windows-sys = "0.61.2"
 # Tauri 2.11: 2.12 was released on scaffold day, inside the one-day minimum release age. The exact

@@ -89,6 +89,19 @@ pub fn set_entry_tags(
     refresh_search_tags(conn, entry)
 }
 
+/// The tags of every entry that has any.
+pub fn all_entry_tags(
+    conn: &Connection,
+) -> Result<BTreeMap<EntryId, BTreeSet<TagId>>, CatalogError> {
+    let mut tags = BTreeMap::<EntryId, BTreeSet<TagId>>::new();
+    let mut statement = conn.prepare_cached("SELECT entry_id, tag_id FROM entry_tags")?;
+    for row in statement.query_map([], |row| Ok((EntryId(row.get(0)?), row.get(1)?)))? {
+        let (entry, tag) = row?;
+        tags.entry(entry).or_default().insert(tag);
+    }
+    Ok(tags)
+}
+
 pub fn entry_tags(conn: &Connection, entry: EntryId) -> Result<BTreeSet<TagId>, CatalogError> {
     let tags = conn
         .prepare_cached("SELECT tag_id FROM entry_tags WHERE entry_id = ?1")?

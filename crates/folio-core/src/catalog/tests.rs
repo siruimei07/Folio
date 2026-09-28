@@ -1,7 +1,6 @@
 use std::collections::BTreeSet;
 use std::fs;
 use std::panic::{AssertUnwindSafe, catch_unwind};
-use std::path::Path;
 use std::sync::{Arc, mpsc};
 use std::thread;
 
@@ -15,13 +14,7 @@ use crate::meta::{
     TagDefinition, TagDefinitions, TagId,
 };
 use crate::search::{SearchQuery, phrase};
-use crate::test_support::{course_at, library_id, path, presets, semester};
-
-fn open(dir: &Path) -> Catalog {
-    let opened = Catalog::open(&dir.join("catalog.sqlite"), &library_id()).unwrap();
-    assert_eq!(opened.recovered, None);
-    opened.catalog
-}
+use crate::test_support::{course_at, library_id, open_catalog, path, presets, semester};
 
 fn folder(text: &str) -> EntryRecord {
     EntryRecord {
@@ -44,7 +37,7 @@ fn file(text: &str, size: u64) -> EntryRecord {
     }
 }
 
-/// Adds records in order at time 100 and returns their ids.
+/// Adds records in order, at time 100, and returns their ids.
 fn add(catalog: &Catalog, records: &[EntryRecord]) -> Vec<EntryId> {
     catalog
         .write(|tx| {
@@ -95,7 +88,7 @@ fn count(catalog: &Catalog, table: &str) -> i64 {
 #[test]
 fn creates_a_wal_catalog_and_keeps_its_data() {
     let dir = tempfile::tempdir().unwrap();
-    let catalog = open(dir.path());
+    let catalog = open_catalog(dir.path());
     add(&catalog, &[folder("2026 秋")]);
 
     let (mode, foreign_keys, trusted_schema): (String, bool, bool) = catalog
@@ -113,14 +106,14 @@ fn creates_a_wal_catalog_and_keeps_its_data() {
     );
 
     drop(catalog);
-    let catalog = open(dir.path());
+    let catalog = open_catalog(dir.path());
     assert_eq!(root_names(&catalog), ["2026 秋"]);
 }
 
 #[test]
 fn reads_use_the_tokenizer_and_run_while_a_write_is_open() {
     let dir = tempfile::tempdir().unwrap();
-    let catalog = Arc::new(open(dir.path()));
+    let catalog = Arc::new(open_catalog(dir.path()));
     add(&catalog, &[folder("线性代数")]);
     assert_eq!(matches(&catalog, &phrase("代数")), ["线性代数"]);
 
@@ -148,7 +141,7 @@ fn reads_use_the_tokenizer_and_run_while_a_write_is_open() {
 #[test]
 fn a_failed_or_panicking_write_changes_nothing() {
     let dir = tempfile::tempdir().unwrap();
-    let catalog = open(dir.path());
+    let catalog = open_catalog(dir.path());
 
     let failed = catalog.write(|tx| {
         upsert_entry(tx, &folder("a"), 100)?;
@@ -192,7 +185,7 @@ fn replaces_a_file_that_is_not_a_database() {
 fn replaces_a_newer_schema_and_another_librarys_catalog() {
     let dir = tempfile::tempdir().unwrap();
     let file = dir.path().join("catalog.sqlite");
-    add(&open(dir.path()), &[folder("a")]);
+    add(&open_catalog(dir.path()), &[folder("a")]);
     rusqlite::Connection::open(&file)
         .unwrap()
         .execute_batch("PRAGMA user_version = 99")
@@ -215,7 +208,7 @@ fn replaces_a_newer_schema_and_another_librarys_catalog() {
 fn replaces_a_catalog_whose_data_no_longer_validates() {
     let dir = tempfile::tempdir().unwrap();
     let file = dir.path().join("catalog.sqlite");
-    add(&open(dir.path()), &[folder("a")]);
+    add(&open_catalog(dir.path()), &[folder("a")]);
     // As if a newer rule rejected a stored path, while the path keys must be recomputed.
     let conn = rusqlite::Connection::open(&file).unwrap();
     conn.execute_batch(
@@ -292,7 +285,7 @@ fn only_a_failing_environment_keeps_the_file() {
 fn replaces_a_catalog_with_an_invalid_schema_version() {
     let dir = tempfile::tempdir().unwrap();
     let file = dir.path().join("catalog.sqlite");
-    add(&open(dir.path()), &[folder("a")]);
+    add(&open_catalog(dir.path()), &[folder("a")]);
     rusqlite::Connection::open(&file)
         .unwrap()
         .execute_batch("PRAGMA user_version = -1")
@@ -310,7 +303,7 @@ fn replaces_a_catalog_with_an_invalid_schema_version() {
 #[test]
 fn refreshes_derived_data_written_by_older_code() {
     let dir = tempfile::tempdir().unwrap();
-    let catalog = open(dir.path());
+    let catalog = open_catalog(dir.path());
     add(&catalog, &[folder("Notes"), file("Notes/线性代数.md", 1)]);
     catalog
         .write(|tx| {
@@ -322,7 +315,7 @@ fn refreshes_derived_data_written_by_older_code() {
         .unwrap();
     drop(catalog);
 
-    let catalog = open(dir.path());
+    let catalog = open_catalog(dir.path());
     let (tokenizer, path_keys, key) = catalog
         .read(|tx| {
             Ok((
@@ -345,7 +338,7 @@ fn refreshes_derived_data_written_by_older_code() {
 #[test]
 fn inserts_entries_below_their_folders() {
     let dir = tempfile::tempdir().unwrap();
-    let catalog = open(dir.path());
+    let catalog = open_catalog(dir.path());
     let hash = ContentHash::parse(&format!("b3:{}", "ab".repeat(32))).unwrap();
     let homework = EntryRecord {
         file_id: Some("0011".to_owned()),
@@ -365,7 +358,7 @@ fn inserts_entries_below_their_folders() {
         .read(|tx| entry(tx, &homework.path))
         .unwrap()
         .unwrap();
-    assert_eq!((&stored.record, stored.first_seen_at), (&homework, 100));
+    assert_eq!((&stored.record, stored.added_ns), (&homework, 100));
     let key: String = catalog
         .read(|tx| {
             Ok(tx.query_row(
@@ -386,9 +379,9 @@ fn inserts_entries_below_their_folders() {
 }
 
 #[test]
-fn updates_keep_the_id_and_the_first_seen_time() {
+fn updates_keep_the_id_and_the_time_it_was_added() {
     let dir = tempfile::tempdir().unwrap();
-    let catalog = open(dir.path());
+    let catalog = open_catalog(dir.path());
     let [id] = add(&catalog, &[file("a.md", 10)])[..] else {
         unreachable!()
     };
@@ -400,7 +393,7 @@ fn updates_keep_the_id_and_the_first_seen_time() {
         .unwrap()
         .unwrap();
     assert_eq!(
-        (updated, stored.id, stored.record.size, stored.first_seen_at),
+        (updated, stored.id, stored.record.size, stored.added_ns),
         (id, id, 20, 100)
     );
     assert_eq!(count(&catalog, "search"), 1);
@@ -409,7 +402,7 @@ fn updates_keep_the_id_and_the_first_seen_time() {
 #[test]
 fn a_folder_that_becomes_a_file_loses_its_descendants() {
     let dir = tempfile::tempdir().unwrap();
-    let catalog = open(dir.path());
+    let catalog = open_catalog(dir.path());
     add(&catalog, &[folder("a"), folder("a/b"), file("a/b/c.md", 1)]);
     add(&catalog, &[file("a", 5)]);
     assert!(
@@ -427,7 +420,7 @@ fn a_folder_that_becomes_a_file_loses_its_descendants() {
 #[test]
 fn deleting_an_entry_removes_its_subtree_with_search_rows_and_tags() {
     let dir = tempfile::tempdir().unwrap();
-    let catalog = open(dir.path());
+    let catalog = open_catalog(dir.path());
     let ids = add(
         &catalog,
         &[
@@ -459,7 +452,7 @@ fn deleting_an_entry_removes_its_subtree_with_search_rows_and_tags() {
 #[test]
 fn every_delete_removes_search_rows_and_none_orphans_children() {
     let dir = tempfile::tempdir().unwrap();
-    let catalog = open(dir.path());
+    let catalog = open_catalog(dir.path());
     add(&catalog, &[folder("a"), file("a/b.md", 1), file("c.md", 1)]);
 
     // A delete that bypasses the repositories still takes the search row with it.
@@ -482,7 +475,7 @@ fn every_delete_removes_search_rows_and_none_orphans_children() {
 #[test]
 fn lists_the_children_of_a_folder_by_name() {
     let dir = tempfile::tempdir().unwrap();
-    let catalog = open(dir.path());
+    let catalog = open_catalog(dir.path());
     add(
         &catalog,
         &[
@@ -506,7 +499,7 @@ fn lists_the_children_of_a_folder_by_name() {
 #[test]
 fn finds_entries_by_the_names_of_their_tags() {
     let dir = tempfile::tempdir().unwrap();
-    let catalog = open(dir.path());
+    let catalog = open_catalog(dir.path());
     catalog
         .write(|tx| replace_tag_definitions(tx, &presets("课件")))
         .unwrap();
@@ -554,7 +547,7 @@ fn finds_entries_by_the_names_of_their_tags() {
 #[test]
 fn mirrors_semester_and_course_settings() {
     let dir = tempfile::tempdir().unwrap();
-    let catalog = open(dir.path());
+    let catalog = open_catalog(dir.path());
     let group = |order| GroupSettings {
         archived: false,
         order,
@@ -595,23 +588,21 @@ fn mirrors_semester_and_course_settings() {
         ]
     );
 
+    // A semester's settings and its courses' settings come from different files.
     catalog
-        .write(|tx| remove_semester(tx, &semester("2026 秋")))
+        .write(|tx| {
+            remove_semester(tx, &semester("2026 秋"))?;
+            remove_course(tx, &course_at("2026 秋/数据结构"))
+        })
         .unwrap();
     assert_eq!(semester_names(&catalog), ["2026 春"]);
-    assert!(
-        catalog
-            .read(|tx| courses(tx, &semester("2026 秋")))
-            .unwrap()
-            .is_empty()
-    );
-    assert_eq!(
-        catalog
-            .read(|tx| courses(tx, &semester("2026 春")))
-            .unwrap()
-            .len(),
-        1
-    );
+    let all: Vec<_> = catalog
+        .read(|tx| all_courses(tx))
+        .unwrap()
+        .into_iter()
+        .map(|(course, _)| course.path().to_string())
+        .collect();
+    assert_eq!(all, ["2026 春/微积分", "2026 秋/线性代数"]);
 }
 
 fn query(text: &str) -> SearchQuery {
@@ -634,7 +625,7 @@ fn found(catalog: &Catalog, text: &str, limit: u32) -> Vec<String> {
 #[test]
 fn ranks_names_above_tags_above_folders_above_text() {
     let dir = tempfile::tempdir().unwrap();
-    let catalog = open(dir.path());
+    let catalog = open_catalog(dir.path());
     let algebra = TagId::parse("algebra").unwrap();
     let definitions = TagDefinitions {
         tags: [(
@@ -678,7 +669,7 @@ fn ranks_names_above_tags_above_folders_above_text() {
 #[test]
 fn recent_changes_rank_first_among_equal_matches() {
     let dir = tempfile::tempdir().unwrap();
-    let catalog = open(dir.path());
+    let catalog = open_catalog(dir.path());
     let modified = |text: &str, days_ago: i64| EntryRecord {
         mtime_ns: Some((NOW - days_ago * 86_400) * 1_000_000_000),
         ..file(text, 1)
@@ -704,7 +695,7 @@ fn recent_changes_rank_first_among_equal_matches() {
 #[test]
 fn marks_matches_in_the_name_and_a_body_snippet() {
     let dir = tempfile::tempdir().unwrap();
-    let catalog = open(dir.path());
+    let catalog = open_catalog(dir.path());
     let ids = add(
         &catalog,
         &[
@@ -761,7 +752,7 @@ fn marks_matches_in_the_name_and_a_body_snippet() {
 #[test]
 fn stores_clean_body_text_up_to_the_limit() {
     let dir = tempfile::tempdir().unwrap();
-    let catalog = open(dir.path());
+    let catalog = open_catalog(dir.path());
     let [id] = add(&catalog, &[file("a.md", 1)])[..] else {
         unreachable!()
     };

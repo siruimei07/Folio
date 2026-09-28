@@ -3,11 +3,12 @@
 System design for the data layer of M1 (brief §11) inside `folio-core`. Decisions stay in the
 ADRs; this spec fixes the details the ADRs leave open and the API the next lanes build on.
 
-- Status: draft, 2026-09-27 (lane `claude/amazing-johnson-pzvhzd`).
+- Status: accepted with the lane, 2026-09-27 (lane `claude/amazing-johnson-pzvhzd`).
 - Inputs: [brief](../product/brief.md) §4, §5.1, §5.2, §5.8; [ADR-0002](../adr/ADR-0002-data-storage.md);
   [ADR-0003](../adr/ADR-0003-versioning-and-sync.md) §2, §10; [system overview](system-overview.md)
   §2–§5; [testing strategy](testing-strategy.md).
-- Section 9 lists where this spec refines ADR-0002. Sirui approves those with the lane.
+- Section 9 lists where this spec refines ADR-0002. Sirui approved them on 2026-09-27, and
+  ADR-0002 now includes them.
 
 ## 1. Scope
 
@@ -131,8 +132,8 @@ code point; tag lists and extension lists are sorted and free of duplicates.
 | `library.json` | `id`: 32 lowercase hex (128 random bits); `name`; `versioning`: `text_extensions`, `text_max_size` (bytes), `word_extensions` |
 | `tags.json` | `tags`: map from tag id to `{color, name, order}` |
 | `_root.json` | `tags` |
-| `_group.json` | `group`: `{archived, order}`; `tags` |
-| `<course>.json` | `course`: `{abbr, archived, color, order}`; `tags` |
+| `_group.json` | `group`: `{archived, order}`, left out until the group is configured; `tags` |
+| `<course>.json` | `course`: `{abbr, archived, color, order}`, left out until the course is configured; `tags` |
 
 Value rules:
 
@@ -196,10 +197,10 @@ ADR-0002 §4).
 
 | Table | Columns |
 |---|---|
-| `info` | `key`, `value`: `library_id`, `tokenizer_version`, `paths_version` |
+| `info` | `key`, `value`: `library_id`, `tokenizer_version`, `paths_version`; the scan's `scan_journal` and `first_scan_ns` ([library-scan.md](library-scan.md) §6.3, §7.1) |
 | `semesters` | `path` (one segment), `sort_order`, `archived` |
 | `courses` | `path` (two segments), `abbr`, `color`, `sort_order`, `archived` |
-| `entries` | `id`; `path` (unique); `path_key` (indexed); `parent_id` (not cascading); `name`; `kind` (`file`, `folder`); `class` (`text`, `word`, `other`); `size`; `mtime_ns`; `file_id`; `hash` (`b3:` + 64 hex); `first_seen_at` (Unix seconds) |
+| `entries` | `id`; `path` (unique); `path_key` (indexed); `parent_id` (not cascading); `name`; `kind` (`file`, `folder`); `class` (`text`, `word`, `other`); `size`; `mtime_ns`; `file_id`; `hash` (`b3:` + 64 hex); `added_ns` (when a scan first saw it; a rebuild takes the file's creation time, [library-scan.md](library-scan.md) §6.3) |
 | `tags` | `id`, `name`, `color`, `sort_order` |
 | `entry_tags` | `entry_id` (cascading), `tag_id`. No foreign key to `tags`: an assignment may name a tag that `tags.json` has not synced yet, or no longer defines |
 | `search` | FTS5 over `name`, `path` (the parent folder), `tags` (tag names), `body`; `rowid` = entry id; `folio_cjk`, `detail=full`, `prefix='3'` |
@@ -304,10 +305,7 @@ The shell maps them to the IPC error union in the IPC lane; `detail` strings are
 
 ## 10. Next lanes
 
-1. **Scan and reconcile**: walk the library through a file-system adapter, apply `.folio/ignore`
-   and the defaults (brief §5.1), classify, hash, find NFC/NFD and case twins, and bring the
-   catalog in line; rename a subtree; the ADR-0002 property test that a rebuilt catalog equals an
-   incrementally maintained one.
+1. **Scan and reconcile**: done, specified in [library-scan.md](library-scan.md) (2026-09-27).
 2. **Library operations**: create a library (writes `library.json` and `tags.json`), take over a
    folder, semesters and courses, tagging, import.
 3. **Windows adapters** on Sirui's machine: watcher, file ids, Recycle Bin, NTFS checks.

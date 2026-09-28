@@ -92,6 +92,8 @@ Known limits:
 ## Gaps today
 
 The shell and UI have smoke tests only. `folio-core` has unit, property and integration tests
-for paths, metadata files (with golden bytes), the catalog and search. Coverage tooling, the
-`testkit` module, golden vectors for the remote format and the simulation harness arrive with
-the modules that need them (M1–M3).
+for paths, metadata files (with golden bytes), the catalog, search and library scans. Scan tests
+run on `MemFs`, an in-memory file system with NTFS-like file ids in `test_support` (unit tests
+only), plus one test on a real folder; `tests/scan_benchmark.rs` times a 50,000-file library.
+Coverage tooling, the public `testkit` module, golden vectors for the remote format and the
+simulation harness arrive with the modules that need them (M1–M3).

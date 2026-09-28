@@ -5,13 +5,7 @@ use proptest::prelude::*;
 
 use super::layout::escape;
 use super::*;
-use crate::test_support::{course_at, library_id, path, presets, semester};
-
-fn tags<const N: usize>(ids: [&str; N]) -> BTreeSet<TagId> {
-    ids.into_iter()
-        .map(|id| TagId::parse(id).unwrap())
-        .collect()
-}
+use crate::test_support::{course_at, library_id, path, presets, semester, tags};
 
 fn text<T: MetaFile>(value: &T) -> String {
     String::from_utf8(to_bytes(value).unwrap()).unwrap()
@@ -34,12 +28,12 @@ fn course() -> CourseMeta {
     assignments.set(path("作业/hw2.pdf"), tags(["homework"]));
     assignments.set(path("复习笔记.md"), tags(["notes", "exam"]));
     CourseMeta {
-        course: CourseSettings {
+        course: Some(CourseSettings {
             abbr: Abbr::parse("线代").unwrap(),
             archived: false,
             color: Color::parse("blue").unwrap(),
             order: 1,
-        },
+        }),
         tags: assignments,
     }
 }
@@ -134,10 +128,10 @@ fn writes_library_settings_and_tag_definitions() {
 #[test]
 fn writes_empty_maps_on_one_line() {
     let group = GroupMeta {
-        group: GroupSettings {
+        group: Some(GroupSettings {
             archived: true,
             order: 3,
-        },
+        }),
         tags: Assignments::default(),
     };
     assert_eq!(
@@ -201,8 +195,26 @@ fn rejects_unknown_and_missing_fields() {
     );
     assert!(reason.contains("unknown field `x`"), "{reason}");
 
-    let reason = invalid::<GroupMeta>(r#"{"format_version": 1, "tags": {}}"#);
-    assert!(reason.contains("missing field `group`"), "{reason}");
+    let reason =
+        invalid::<GroupMeta>(r#"{"format_version": 1, "group": {"order": 1}, "tags": {}}"#);
+    assert!(reason.contains("missing field `archived`"), "{reason}");
+    let reason = invalid::<CourseMeta>(r#"{"format_version": 1}"#);
+    assert!(reason.contains("missing field `tags`"), "{reason}");
+}
+
+#[test]
+fn settings_are_optional_and_left_out_when_missing() {
+    let mut tags_only = CourseMeta::default();
+    tags_only.tags.set(path("作业/hw1.pdf"), tags(["homework"]));
+    assert_eq!(
+        text(&tags_only),
+        "{\n  \"format_version\": 1,\n  \"tags\": {\n    \"作业/hw1.pdf\": [\"homework\"]\n  }\n}\n"
+    );
+    assert_eq!(parse::<CourseMeta>(&text(&tags_only)), Ok(tags_only));
+    assert_eq!(
+        parse::<GroupMeta>(r#"{"format_version": 1, "tags": {}}"#),
+        Ok(GroupMeta::default())
+    );
 }
 
 #[test]
@@ -227,6 +239,18 @@ fn rejects_keys_that_differ_only_in_case() {
             "tags": {"HW/a.pdf": ["homework"], "hw/A.pdf": ["exam"]}}"#,
     );
     assert!(reason.contains("differ only in case"), "{reason}");
+}
+
+#[test]
+fn setting_tags_replaces_a_path_that_differs_only_in_case() {
+    let mut assignments = Assignments::default();
+    assignments.set(path("HW/a.pdf"), tags(["homework"]));
+    assignments.set(path("hw/A.pdf"), tags(["exam"]));
+    let all: Vec<_> = assignments.iter().collect();
+    assert_eq!(all, [(&path("hw/A.pdf"), &tags(["exam"]))]);
+
+    assignments.set(path("Hw/a.PDF"), BTreeSet::new());
+    assert!(assignments.is_empty());
 }
 
 #[test]
@@ -332,6 +356,33 @@ fn escapes_names_that_start_with_an_underscore() {
     assert_eq!(unescape_name("线性代数"), Some("线性代数"));
     assert_eq!(unescape_name("_group"), None);
     assert_eq!(unescape_name("_root.json"), None);
+}
+
+#[test]
+fn metadata_file_paths_read_back_and_nothing_else_does() {
+    for file in [
+        TagFile::Root,
+        TagFile::Group(semester("2026 秋")),
+        TagFile::Group(semester("_misc")),
+        TagFile::Course(course_at("2026 秋/线性代数")),
+        TagFile::Course(course_at("_s/_group")),
+    ] {
+        let text = file.meta_path().unwrap();
+        assert_eq!(TagFile::at(&text), Some(file), "{text}");
+    }
+    for text in [
+        "",
+        "_root.json/",
+        "s/c.json/x.json",
+        "_s/c.json",
+        "s/_c.json",
+        "s/c.JSON",
+        "../c.json",
+        "s/..\\c.json",
+        "C:\\c.json",
+    ] {
+        assert_eq!(TagFile::at(text), None, "{text}");
+    }
 }
 
 #[test]
@@ -458,7 +509,7 @@ proptest! {
         order in any::<u32>(),
     ) {
         let mut meta = course();
-        meta.course.order = order;
+        meta.course.as_mut().unwrap().order = order;
         meta.tags = Assignments::default();
         for (key, ids) in entries {
             let ids = ids.iter().map(|id| TagId::parse(id).unwrap()).collect();

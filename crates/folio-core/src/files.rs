@@ -1,7 +1,7 @@
 //! Replacing files atomically (ADR-0002 §3, docs/specs/library-core.md §4.3).
 
 use std::fs::{self, File};
-use std::io::{self, Write};
+use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
@@ -34,6 +34,13 @@ pub fn write_atomically(staging: &Path, target: &Path, bytes: &[u8]) -> io::Resu
             format!("{error} (could not remove {}: {cleanup})", temp.display()),
         ),
     })
+}
+
+/// Everything `reader` yields, or `None` if that is more than `limit` bytes.
+pub fn read_capped(reader: impl Read, limit: u64) -> io::Result<Option<Vec<u8>>> {
+    let mut bytes = Vec::new();
+    reader.take(limit + 1).read_to_end(&mut bytes)?;
+    Ok((bytes.len() as u64 <= limit).then_some(bytes))
 }
 
 /// A new, uniquely named file in `staging`.
@@ -76,22 +83,28 @@ fn retry<T>(
     }
 }
 
-/// Sharing and lock violations, and the access-denied error Windows also returns while another
-/// program holds a file open for deletion.
-#[cfg(windows)]
-fn is_transient(error: &io::Error) -> bool {
-    const ERROR_ACCESS_DENIED: i32 = 5;
-    const ERROR_SHARING_VIOLATION: i32 = 32;
-    const ERROR_LOCK_VIOLATION: i32 = 33;
-    matches!(
-        error.raw_os_error(),
-        Some(ERROR_ACCESS_DENIED | ERROR_SHARING_VIOLATION | ERROR_LOCK_VIOLATION)
-    )
+/// The text of a file: without a byte order mark, invalid UTF-8 replaced.
+pub fn lossy_text(bytes: &[u8]) -> String {
+    let bytes = bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(bytes);
+    String::from_utf8_lossy(bytes).into_owned()
 }
 
-#[cfg(not(windows))]
-fn is_transient(_error: &io::Error) -> bool {
-    false
+/// Sharing and lock violations, and the access-denied error Windows also returns while another
+/// program holds a file open for deletion.
+fn is_transient(error: &io::Error) -> bool {
+    const ERROR_ACCESS_DENIED: i32 = 5;
+    is_in_use(error) || (cfg!(windows) && error.raw_os_error() == Some(ERROR_ACCESS_DENIED))
+}
+
+/// Whether another program holds the file open: a sharing or lock violation.
+pub fn is_in_use(error: &io::Error) -> bool {
+    const ERROR_SHARING_VIOLATION: i32 = 32;
+    const ERROR_LOCK_VIOLATION: i32 = 33;
+    cfg!(windows)
+        && matches!(
+            error.raw_os_error(),
+            Some(ERROR_SHARING_VIOLATION | ERROR_LOCK_VIOLATION)
+        )
 }
 
 #[cfg(test)]
@@ -121,6 +134,12 @@ mod tests {
 
         assert!(write_atomically(&staging, &target, b"data").is_err());
         assert_eq!(fs::read_dir(&staging).unwrap().count(), 0);
+    }
+
+    #[test]
+    fn reads_up_to_a_limit() {
+        assert_eq!(read_capped(&b"abc"[..], 3).unwrap(), Some(b"abc".to_vec()));
+        assert_eq!(read_capped(&b"abcd"[..], 3).unwrap(), None);
     }
 
     #[test]

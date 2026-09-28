@@ -1,0 +1,9 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc e8bd3f32899f1464c0894dd9abbe896440fbae703d8a981c15227f8844927eb6 # shrinks to ops = [Remove(13272485450557700773), Remove(4305193092823968223), Rename(7189400447142825545, 8), Write(0, 0), Write(0, 0), Write(0, 0), Rename(0, 0), Write(10, 0)]
+cc cf1dff90e8a0a2b333c94e17ab48f7b32d618cf71e152cc4487d2e457fb6ecf8 # shrinks to ops = [Remove(10116362627318395396), Remove(11082228313011972636), Replace(5, 0), Rename(8128137619154962116, 8), Rename(14454528318216354165, 18), Scan, Tag(10222896506585072829, 1), Remove(7727879828716657117), Replace(0, 0), Rename(0, 2)]
+cc ffe63c9f6514765f72ac4321ac98b649767aa4acf581ff2a6a5424a753f875b5 # shrinks to ops = [Replace(0, 0), Rename(5996664700477806373, 23), Remove(37011415989269782), Rename(0, 5), Settings(10565584513920722214, 0), Folder(9), Scan, Write(0, 0), Settings(4717832065529236143, 1)]

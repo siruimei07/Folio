@@ -6,7 +6,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 use unicode_segmentation::UnicodeSegmentation;
 
 use super::{MetaError, MetaFile};
-use crate::paths::RelPath;
+use crate::paths::{RelPath, same_name};
 
 /// A value that breaks a rule of the metadata format.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -103,7 +103,7 @@ text_value!(
     }
 );
 
-fn random_hex(bytes: usize) -> Result<String, MetaError> {
+pub(super) fn random_hex(bytes: usize) -> Result<String, MetaError> {
     let mut random = vec![0; bytes];
     getrandom::fill(&mut random).map_err(|error| MetaError::Random(error.to_string()))?;
     Ok(random.iter().map(|byte| format!("{byte:02x}")).collect())
@@ -328,11 +328,16 @@ impl Assignments {
         self.0.get(path)
     }
 
-    /// Replaces the tags of `path`; no tags removes it.
+    /// Replaces the tags of `path` and of a path that differs from it only in case, which names
+    /// the same file on Windows; no tags removes them.
     pub fn set(&mut self, path: RelPath, tags: BTreeSet<TagId>) {
-        if tags.is_empty() {
-            self.0.remove(&path);
-        } else {
+        // No two paths here differ only in case (`check`), so an exact match is the only one.
+        // Otherwise compare like `RelPath::key`, without building a key for every path.
+        if self.0.remove(&path).is_none() {
+            self.0
+                .retain(|other, _| !same_name(other.as_str(), path.as_str()));
+        }
+        if !tags.is_empty() {
             self.0.insert(path, tags);
         }
     }
@@ -382,10 +387,12 @@ impl MetaFile for RootMeta {
 
 /// `.folio/meta/<semester>/_group.json`: a semester or other first-level group, and the tags of
 /// files directly in it.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct GroupMeta {
-    pub group: GroupSettings,
+    /// `None` until someone configures the group; the file may still hold tags.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub group: Option<GroupSettings>,
     pub tags: Assignments,
 }
 
@@ -405,10 +412,12 @@ pub struct GroupSettings {
 }
 
 /// `.folio/meta/<semester>/<course>.json`: a course and the tags of everything inside it.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct CourseMeta {
-    pub course: CourseSettings,
+    /// `None` until someone configures the course; the file may still hold tags.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub course: Option<CourseSettings>,
     pub tags: Assignments,
 }
 
