@@ -10,6 +10,7 @@ use crate::catalog::Catalog;
 use crate::fs::{DirEntry, FileKind, FileSystem, Metadata, Presence};
 use crate::meta::{DisplayName, LibraryId, PresetTag, TagDefinitions, TagId};
 use crate::paths::{CoursePath, RelPath, SemesterPath};
+use crate::recycle::{self, RecycleBin, RecycleError, RecycleFailure};
 
 pub fn path(text: &str) -> RelPath {
     RelPath::parse(text).unwrap()
@@ -56,7 +57,8 @@ pub fn presets(slides: &str) -> TagDefinitions {
 
 /// An in-memory file system below `root` with NTFS-like file ids: a rename keeps them, a new
 /// file gets a new one. Names are compared exactly, as on a case-sensitive disk, and may be
-/// anything but `/`. A clock that advances one second per change provides the times.
+/// anything but `/`. A clock that advances one second per change provides the times. It is also
+/// a Recycle Bin, which tests can inspect and make fail.
 pub struct MemFs {
     root: PathBuf,
     state: Mutex<MemState>,
@@ -70,6 +72,10 @@ struct MemState {
     unreadable: BTreeSet<Vec<OsString>>,
     /// Files whose modification time moves while they are read.
     unstable: BTreeSet<Vec<OsString>>,
+    /// Paths the Recycle Bin refuses, and why.
+    unrecyclable: BTreeMap<Vec<OsString>, RecycleFailure>,
+    /// What went to the Recycle Bin, one item per call, in order.
+    bin: Vec<Vec<OsString>>,
 }
 
 #[derive(Clone)]
@@ -116,6 +122,13 @@ impl MemState {
         }
     }
 
+    /// Removes `key` and everything below it.
+    fn take_below(&mut self, key: &[OsString]) {
+        for other in self.below(key) {
+            self.nodes.remove(&other);
+        }
+    }
+
     fn below(&self, key: &[OsString]) -> Vec<Vec<OsString>> {
         self.nodes
             .range(key.to_vec()..)
@@ -134,6 +147,8 @@ impl MemFs {
             unlistable: BTreeSet::new(),
             unreadable: BTreeSet::new(),
             unstable: BTreeSet::new(),
+            unrecyclable: BTreeMap::new(),
+            bin: Vec::new(),
         };
         let root_folder = state.node(FileKind::Folder, Vec::new());
         state.nodes.insert(Vec::new(), root_folder);
@@ -200,11 +215,7 @@ impl MemFs {
 
     /// Removes `path` and everything below it.
     pub fn remove(&self, path: &str) {
-        let key = names(path);
-        let mut state = self.state();
-        for other in state.below(&key) {
-            state.nodes.remove(&other);
-        }
+        self.state().take_below(&names(path));
     }
 
     /// Moves `from` and everything below it to `to`, keeping ids and times.
@@ -238,6 +249,23 @@ impl MemFs {
 
     pub fn fail_reading(&self, path: &str) {
         self.state().unreadable.insert(names(path));
+    }
+
+    /// Makes the Recycle Bin refuse `path` for `failure`, and every folder above it too, as a file
+    /// open in another program does.
+    pub fn fail_recycling(&self, path: &str, failure: RecycleFailure) {
+        self.state().unrecyclable.insert(names(path), failure);
+    }
+
+    /// The paths that went to the Recycle Bin, in order.
+    pub fn recycled(&self) -> Vec<String> {
+        let join = |key: &Vec<OsString>| {
+            key.iter()
+                .map(|name| name.to_string_lossy())
+                .collect::<Vec<_>>()
+                .join("/")
+        };
+        self.state().bin.iter().map(join).collect()
     }
 
     /// Makes the file's modification time move whenever it is read.
@@ -331,5 +359,30 @@ impl FileSystem for MemFs {
             node.modified_ns = now;
         }
         Ok(Box::new(Cursor::new(node.bytes.clone())))
+    }
+}
+
+impl RecycleBin for MemFs {
+    fn recycle(&self, path: &Path) -> Result<(), RecycleError> {
+        recycle::check(path)?;
+        let not_found = || RecycleError::new(path, RecycleFailure::NotFound, "no such file");
+        let key = self.key(path).map_err(|_| not_found())?;
+        assert!(!key.is_empty(), "the fake cannot recycle its root");
+        let mut state = self.state();
+        if !state.nodes.contains_key(&key) {
+            return Err(not_found());
+        }
+        let refused = state
+            .unrecyclable
+            .range(key.clone()..)
+            .take_while(|(failing, _)| failing.starts_with(&key))
+            .map(|(_, failure)| *failure)
+            .next();
+        if let Some(failure) = refused {
+            return Err(RecycleError::new(path, failure, "refused by the fake"));
+        }
+        state.take_below(&key);
+        state.bin.push(key);
+        Ok(())
     }
 }

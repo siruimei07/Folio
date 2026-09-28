@@ -71,6 +71,7 @@ pub mod hash;
 pub mod library;
 pub mod meta;
 pub mod paths;
+pub mod recycle;
 pub mod search;
 #[cfg(test)]
 mod test_support;

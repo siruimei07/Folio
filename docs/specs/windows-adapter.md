@@ -192,13 +192,19 @@ pub trait RecycleBin: Send + Sync {
     /// Never deletes anything for good: what the Recycle Bin cannot take stays where it is.
     fn recycle(&self, path: &Path) -> Result<(), RecycleError>;
 }
+pub struct RecycleError { pub path: PathBuf, pub failure: RecycleFailure, pub detail: String }
 ```
 
-`RecycleError` variants, each with the path: `NotFound`; `Unrecyclable` (the drive has no
-Recycle Bin, the path is too long for it, or the item is larger than its limit); `InUse`;
-`Denied`; `Invalid` (a relative path or a drive root); `Other` with the HRESULT and its message.
-The UI later offers "delete permanently" for `Unrecyclable` as its own confirmed action; this
-adapter never does it.
+`RecycleFailure`: `NotFound`; `Unrecyclable` (the drive has no Recycle Bin, the path is too long
+for it, or the item is larger than its limit); `InUse` (another program holds it or something
+below it); `Denied`; `Invalid`; `Other`. `detail` is for logs, as `Problem::Unreadable`'s is.
+`Invalid` means a path no caller should pass (relative, a whole drive or share, `..`, NUL) or one
+the shell resolves to another file: a bug or a trap, never the user's doing, so the shell maps it
+to an internal error. The UI later offers "delete permanently" for `Unrecyclable` as its own
+confirmed action; this adapter never does it.
+
+The Recycle Bin takes native paths like `FileSystem`. Which paths may be deleted at all (never
+the library root or `.folio`) is the delete operation's rule, in the library layer.
 
 ### 4.1 `WindowsRecycleBin`
 
@@ -208,18 +214,28 @@ adapter never does it.
   its flags contain `TSF_DELETE_RECYCLE_IF_POSSIBLE`. Without it, the shell deletes for good
   whatever the Recycle Bin cannot take, silently under `FOF_NO_UI`. Measured: a 318-character
   path on `E:` (no 8.3 names) and a 26-level, 386-character path on `C:` arrive with flags `0x202`
-  instead of `0x282`; with the guard both files stayed.
-- `PostDeleteItem`'s HRESULT decides the error: `E_ABORT` after the guard → `Unrecyclable`;
-  `COPYENGINE_E_SHARING_VIOLATION_SRC` (`0x80270027`, measured with a handle open without
-  `FILE_SHARE_DELETE`) or a sharing violation → `InUse`; access denied → `Denied`;
-  `COPYENGINE_E_RECYCLE_*` → `Unrecyclable`; file or path not found → `NotFound`. A success
-  names the new item (`C:\$Recycle.Bin\<SID>\$R….txt`, `I:\$RECYCLE.BIN\$R….txt` on exFAT).
+  instead of `0x282`; with the guard both files stayed. A drive whose Recycle Bin is turned off,
+  or an item in the Recycle Bin itself, arrives the same way.
+- **Success** is `PostDeleteItem` reporting the item done and naming the new item in the Recycle
+  Bin (`C:\$Recycle.Bin\<SID>\$R….txt`, `I:\$RECYCLE.BIN\$R….txt` on exFAT); anything else is
+  an error, whatever the rest of the operation reports.
+- **Errors** come from the item's HRESULT: `E_ABORT` after the guard → `Unrecyclable`;
+  `COPYENGINE_E_SHARING_VIOLATION_SRC` (`0x80270027`, measured on a file open without
+  `FILE_SHARE_DELETE`), `COPYENGINE_E_SHARING_VIOLATION_DEST` (`0x80270028`, measured on a
+  folder holding such a file) or a sharing violation → `InUse`; access denied, at the source or
+  the destination → `Denied`; `COPYENGINE_E_RECYCLE_*` → `Unrecyclable`; file or path not found
+  → `NotFound`.
+- **Paths.** The shell's parser rejects `\?\` (`E_INVALIDARG`), so the path is rebuilt name by
+  name after its drive or share, refusing empty names, `.`, `..`, `/` and NUL: outside a verbatim
+  path Win32 would give them a meaning (`\?\C:\srv\share` would become a share). Longer paths
+  still work where the shell can recycle them (it uses 8.3 names where the volume has them).
+- **The same file.** The parser follows folder shortcuts (a `desktop.ini` naming a CLSID with a
+  `target.lnk`) and namespace junctions (`name.{CLSID}`), so a library path could stand for
+  another file. The item's file-system path must name the same file as the path asked for: the
+  same volume serial number and file index. Otherwise `Invalid`, and nothing moves.
 - `IFileOperation` works only in a single-threaded apartment, so each call runs on a short-lived
   thread of its own (`CoInitializeEx` with `COINIT_APARTMENTTHREADED`), whatever the caller's
   thread.
-- Paths are plain absolute paths: `SHCreateItemFromParsingName` rejects `\\?\` (`E_INVALIDARG`),
-  so that prefix is removed. Longer paths still work where the shell can recycle them (it uses
-  8.3 names where the volume has them); where it cannot, the guard refuses.
 - A folder goes to the Recycle Bin as one item, with everything below it.
 - **Dependencies.** The `windows` crate for the COM interfaces (WP-03's workspace entry, a
   version already in `Cargo.lock`). Its `#[implement]` macro expands to `::windows_core` paths,
@@ -229,17 +245,20 @@ adapter never does it.
 
 ### 4.2 Fake
 
-`MemFs` implements `RecycleBin`: it moves the subtree into a bin that tests can inspect, and a
-test can make a path unrecyclable or in use.
+`MemFs` implements `RecycleBin`: each call puts one item in a bin that tests can inspect, and a
+test can make a path unrecyclable or in use. A failure set for a path also stops recycling any
+folder above it, as a file open in another program does on Windows.
 
 ### 4.3 Tests
 
-One contract, run against the fake and the real Recycle Bin: a missing path, a relative path, a
-drive root, a file held open without `FILE_SHARE_DELETE`, a 26-level path (unrecyclable: nothing
-reaches the Recycle Bin), and a file and a folder that go to the Recycle Bin. The last two are
-ignored by default because they add to the user's Recycle Bin; they run by hand, also in
-`FOLIO_TEST_NON_NTFS_DIR`. Tests touch only temporary files they created and never empty the
-Recycle Bin.
+The fake and the real Recycle Bin are tested for the same cases: a missing path, a relative
+path, a drive root, a path through `..`, a file held open without `FILE_SHARE_DELETE` and a
+folder holding one (in use; nothing moves), a 26-level path (unrecyclable: nothing reaches the
+Recycle Bin), and a file and a folder that go to the Recycle Bin. The last two are ignored by
+default because they add to the user's Recycle Bin; they run by hand, also in
+`FOLIO_TEST_NON_NTFS_DIR`, and passed on Sirui's machine on NTFS (`C:`) and exFAT (`I:`) on
+2026-09-28. The Windows side also checks the path rebuilding and that a parsed item is told from
+another file. Tests touch only temporary files they created and never empty the Recycle Bin.
 
 ## 5. Watcher
 

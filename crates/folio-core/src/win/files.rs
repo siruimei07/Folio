@@ -381,13 +381,10 @@ mod tests {
         assert_eq!(adapter.metadata(&file).unwrap(), listed[0].metadata);
     }
 
-    /// Set `FOLIO_TEST_NON_NTFS_DIR` to a folder on exFAT or FAT (on Sirui's machine one on `I:`)
-    /// and run with `--ignored`.
     #[test]
     #[ignore = "needs FOLIO_TEST_NON_NTFS_DIR, a folder on a volume that is not NTFS"]
     fn off_ntfs_lists_like_std_without_file_ids() {
-        let base = std::env::var_os("FOLIO_TEST_NON_NTFS_DIR").expect("FOLIO_TEST_NON_NTFS_DIR");
-        let dir = tempfile::tempdir_in(base).unwrap();
+        let dir = tempfile::tempdir_in(super::super::non_ntfs_dir()).unwrap();
         fs::write(dir.path().join("笔记.md"), "# 线性代数").unwrap();
         fs::create_dir(dir.path().join("作业")).unwrap();
         let adapter = WindowsFileSystem::open(dir.path()).unwrap();

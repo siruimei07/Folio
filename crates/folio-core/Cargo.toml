@@ -22,6 +22,13 @@ unicode-segmentation = { workspace = true }
 
 # The Windows adapter (docs/specs/windows-adapter.md).
 [target.'cfg(windows)'.dependencies]
+# COM only: the Recycle Bin (IFileOperation). windows-core is for its `#[implement]` macro.
+windows = { workspace = true, features = [
+  "Win32_Foundation",
+  "Win32_System_Com",
+  "Win32_UI_Shell",
+] }
+windows-core = { workspace = true }
 windows-sys = { workspace = true, features = [
   "Win32_Foundation",
   "Win32_Storage_FileSystem",
