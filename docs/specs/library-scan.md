@@ -191,8 +191,9 @@ the entry, and with it the time. The schema is unreleased, so migration 1 change
 `scan(catalog, None)` covers the library. `scan(catalog, Some(folder))` covers one folder and
 everything below it, for the watcher lane: the scope widens to the nearest ancestor the catalog
 knows, the `.gitignore` files of its ancestors are read first, and an ignored or missing scope
-removes its entries. Moves are only found inside the scope; the watcher pairs the others from its
-rename events.
+removes its entries. A scope that is a `.gitignore` or `pyvenv.cfg` (any case) covers its folder,
+whose entries it decides; at the root, the library. Moves are only found inside the scope; the watcher pairs moves by file id
+and scopes both ends into one scan ([windows-adapter.md](windows-adapter.md) §5.3).
 
 ## 7. Metadata
 
@@ -320,7 +321,7 @@ core §7). Problems are recomputed by every scan; the shell keeps the latest lis
 |---|---|
 | `fs` | `StdFileSystem` lists kinds, sizes and times, and does not follow links |
 | Walk | Each step of §4 with `MemFs`, including names Windows cannot hold; unreadable folders keep their entries |
-| Ignore rules | Precedence of §5 row by row; case and NFC; invalid lines; `.gitignore` in scopes |
+| Ignore rules | Precedence of §5 row by row; case and NFC; invalid lines; `.gitignore` in scopes; a scope that is a `.gitignore` covers its folder, or the library at the root (it fails without that: checked once by hand) |
 | Reconcile | Add, modify, remove, kind change; moves by id of files and folders, case-only moves, swaps; id-less entries following a moved folder; entry ids survive moves; entries that stay while their folder entry moves or goes, below a folder that cannot be listed too, get the folder entry at their parent path; `added_ns` of a first scan, a later one and a library that started empty |
 | Metadata | Tags and settings follow every kind of move, also where names in `.folio/meta/` differ in case; case-only renames of files and semester folders; broken and newer files are never written; paths that would be too long |
 | Journal | A swap interrupted between the metadata and the catalog is undone and redone, not swapped back; a half-written move is finished; the journal of a committed scan is removed, not undone; a journal that names other files (`..`, `\`, absolute, drive or UNC paths, unescaped names) stops the scan before touching anything and does not block a rebuild; `sync_metadata` settles an interrupted scan first. Mutation checks: undoing nothing, undoing committed journals, or joining the journal's paths as written, fails a test |

@@ -16,6 +16,25 @@ pub fn path(text: &str) -> RelPath {
     RelPath::parse(text).unwrap()
 }
 
+/// The names of `path`, split at `/`.
+pub fn names(path: &str) -> Vec<OsString> {
+    path.split('/').map(OsString::from).collect()
+}
+
+/// A name that is not valid Unicode on this platform.
+pub fn not_unicode() -> OsString {
+    #[cfg(unix)]
+    {
+        use std::os::unix::ffi::OsStringExt;
+        OsString::from_vec(b"f\xff.txt".to_vec())
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::ffi::OsStringExt;
+        OsString::from_wide(&[0x66, 0xD800])
+    }
+}
+
 pub fn semester(text: &str) -> SemesterPath {
     SemesterPath::new(path(text)).unwrap()
 }
@@ -86,11 +105,6 @@ struct Node {
     modified_ns: i64,
     created_ns: i64,
     presence: Presence,
-}
-
-/// The names of `path`, split at `/`.
-fn names(path: &str) -> Vec<OsString> {
-    path.split('/').map(OsString::from).collect()
 }
 
 impl MemState {
@@ -384,5 +398,53 @@ impl RecycleBin for MemFs {
         state.take_below(&key);
         state.bin.push(key);
         Ok(())
+    }
+}
+
+#[cfg(windows)]
+pub use watching::*;
+
+/// Watching real folders.
+#[cfg(windows)]
+mod watching {
+    use std::path::Path;
+    use std::sync::mpsc::{self, Receiver};
+    use std::time::Duration;
+
+    use crate::watch::{Rescan, WatchOptions};
+    use crate::win::{WatchEvent, Watcher};
+
+    /// How long a test waits for what a watcher reports: long enough for a slow CI machine.
+    pub const WATCH_TIMEOUT: Duration = Duration::from_secs(20);
+
+    /// Options for rescans that come quickly.
+    pub fn quick_rescans(file_ids: bool) -> WatchOptions {
+        WatchOptions {
+            settle: Duration::from_millis(100),
+            max_delay: Duration::from_secs(1),
+            ..WatchOptions::new(file_ids)
+        }
+    }
+
+    /// Watches `root` with quick rescans; the events arrive on the receiver.
+    pub fn watch(root: &Path, file_ids: bool) -> (Watcher, Receiver<WatchEvent>) {
+        let (sender, events) = mpsc::channel();
+        let watcher = Watcher::start(root, quick_rescans(file_ids), move |event| {
+            // The test may be done listening.
+            let _ = sender.send(event);
+        })
+        .unwrap();
+        (watcher, events)
+    }
+
+    /// The watcher's next rescan.
+    pub fn next_rescan(events: &Receiver<WatchEvent>) -> Rescan {
+        match events
+            .recv_timeout(WATCH_TIMEOUT)
+            .expect("a rescan in time")
+        {
+            WatchEvent::Rescan(rescan) => rescan,
+            WatchEvent::Failed(error) => panic!("the watch failed: {error}"),
+        }
     }
 }

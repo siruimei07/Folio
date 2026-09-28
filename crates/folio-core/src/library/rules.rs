@@ -11,7 +11,7 @@ use unicode_normalization::UnicodeNormalization;
 use super::{LibraryError, Problem};
 use crate::files;
 use crate::meta::Layout;
-use crate::paths::RelPath;
+use crate::paths::{RelPath, same_name};
 
 /// Folio's default ignore rules, in gitignore syntax. `.folio/ignore` can re-include any of them
 /// with `!`.
@@ -51,8 +51,16 @@ __pycache__/
 /// The most bytes read from one file of rules.
 pub(super) const MAX_RULES_BYTES: u64 = 1 << 20;
 
+/// The rules of a folder and everything below it, in gitignore syntax.
+pub(super) const GITIGNORE: &str = ".gitignore";
+
 /// The file whose presence makes a folder a Python virtual environment.
 pub(super) const VENV_MARKER: &str = "pyvenv.cfg";
+
+/// Whether a file with this name, whatever its case, decides what its folder keeps.
+pub(super) fn is_rules_file(name: &str) -> bool {
+    same_name(name, GITIGNORE) || same_name(name, VENV_MARKER)
+}
 
 /// What the rules say about an entry.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

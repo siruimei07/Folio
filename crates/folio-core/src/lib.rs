@@ -75,6 +75,7 @@ pub mod recycle;
 pub mod search;
 #[cfg(test)]
 mod test_support;
+pub mod watch;
 #[cfg(windows)]
 pub mod win;
 

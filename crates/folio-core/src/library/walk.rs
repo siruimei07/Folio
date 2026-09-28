@@ -8,7 +8,8 @@ use std::path::{Path, PathBuf};
 use unicode_normalization::{UnicodeNormalization, is_nfc};
 
 use super::rules::{
-    Gitignores, MAX_RULES_BYTES, Rules, VENV_MARKER, Verdict, is_always_ignored, read_rules,
+    GITIGNORE, Gitignores, MAX_RULES_BYTES, Rules, VENV_MARKER, Verdict, is_always_ignored,
+    read_rules,
 };
 use super::{LibraryError, Problem, ReadFailure};
 use crate::fs::{DirEntry, FileKind, FileSystem, Metadata};
@@ -297,10 +298,7 @@ impl Walker<'_> {
         listing: &[DirEntry],
         parent: &Gitignores,
     ) -> Gitignores {
-        let Some(entry) = listing
-            .iter()
-            .find(|entry| is_file_named(entry, ".gitignore"))
-        else {
+        let Some(entry) = listing.iter().find(|entry| is_file_named(entry, GITIGNORE)) else {
             return parent.clone();
         };
         let name = RelPath::parse(entry.name.to_str().expect("checked"))

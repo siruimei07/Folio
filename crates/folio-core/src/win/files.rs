@@ -11,17 +11,14 @@ use std::io::{self, Read};
 use std::os::windows::io::{AsRawHandle, OwnedHandle};
 use std::path::Path;
 
-use windows_sys::Win32::Foundation::{
-    ERROR_FILE_NOT_FOUND, ERROR_INVALID_FUNCTION, ERROR_INVALID_LEVEL, ERROR_INVALID_PARAMETER,
-    ERROR_NO_MORE_FILES, ERROR_NOT_SUPPORTED, FILETIME,
-};
+use windows_sys::Win32::Foundation::{ERROR_FILE_NOT_FOUND, ERROR_NO_MORE_FILES, FILETIME};
 use windows_sys::Win32::Storage::FileSystem::{
     FILE_ATTRIBUTE_REPARSE_POINT, FILE_ATTRIBUTE_TAG_INFO, FILE_ID_INFO, FileIdExtdDirectoryInfo,
     FileIdExtdDirectoryRestartInfo, GetFileInformationByHandleEx,
 };
 
 use super::dir_info;
-use super::handle::{self, Volume};
+use super::handle::{self, Volume, unsupported};
 use crate::fs::{DirEntry, FileSystem, Metadata, StdFileSystem};
 
 /// Bytes a listing call fills; a large folder takes several calls.
@@ -160,19 +157,6 @@ fn list(folder: &Path, serial: u64) -> io::Result<Vec<DirEntry>> {
             dir_info::entries(&listing.0, serial, &mut entries)?;
         }
     })
-}
-
-/// The error a file system gives for an information class it does not have.
-fn unsupported(error: &io::Error) -> bool {
-    matches!(
-        error.raw_os_error().map(|code| code as u32),
-        Some(
-            ERROR_INVALID_PARAMETER
-                | ERROR_INVALID_FUNCTION
-                | ERROR_NOT_SUPPORTED
-                | ERROR_INVALID_LEVEL
-        )
-    )
 }
 
 #[cfg(test)]

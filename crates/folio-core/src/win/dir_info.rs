@@ -13,10 +13,15 @@ use windows_sys::Win32::Storage::FileSystem::{
 };
 use windows_sys::Win32::System::SystemServices::IO_REPARSE_TAG_AF_UNIX;
 
+use super::chain::Chain;
 use crate::fs::{DirEntry, FileKind, Metadata, Presence};
 
-/// Where the name starts: every fixed field comes before it.
-const NAME: usize = offset_of!(FILE_ID_EXTD_DIR_INFO, FileName);
+const LISTING: Chain = Chain {
+    next: offset_of!(FILE_ID_EXTD_DIR_INFO, NextEntryOffset),
+    name_length: offset_of!(FILE_ID_EXTD_DIR_INFO, FileNameLength),
+    name: offset_of!(FILE_ID_EXTD_DIR_INFO, FileName),
+    what: "directory listing",
+};
 
 /// The bit that marks a reparse tag as naming another file, as symbolic links and junctions do
 /// (`IsReparseTagNameSurrogate`).
@@ -28,64 +33,32 @@ const UNIX_EPOCH: i64 = 116_444_736_000_000_000;
 /// Appends the entries of one listing buffer to `entries`, without `.` and `..`. `serial` is the
 /// volume's serial number, part of every file id.
 pub(super) fn entries(buffer: &[u8], serial: u64, entries: &mut Vec<DirEntry>) -> io::Result<()> {
-    let mut start = 0;
     let mut units = Vec::new();
-    loop {
-        let record = buffer
-            .get(start..)
-            .filter(|record| record.len() >= NAME)
-            .ok_or_else(|| malformed("a record runs past the buffer"))?;
-        let field = |offset: usize, length: usize| &record[offset..offset + length];
-        let u32_at = |offset| u32::from_le_bytes(field(offset, 4).try_into().expect("4 bytes"));
-        let i64_at = |offset| i64::from_le_bytes(field(offset, 8).try_into().expect("8 bytes"));
-
-        let next = u32_at(offset_of!(FILE_ID_EXTD_DIR_INFO, NextEntryOffset)) as usize;
-        let name_length = u32_at(offset_of!(FILE_ID_EXTD_DIR_INFO, FileNameLength)) as usize;
-        let name = record
-            .get(NAME..NAME + name_length)
-            .filter(|name| name.len().is_multiple_of(2))
-            .ok_or_else(|| malformed("a name runs past its record"))?;
-        if next != 0 && next < NAME + name_length {
-            return Err(malformed("records overlap"));
-        }
+    LISTING.walk(buffer, |record| {
         units.clear();
-        units.extend(
-            name.chunks_exact(2)
-                .map(|unit| u16::from_le_bytes([unit[0], unit[1]])),
-        );
+        units.extend(record.name());
         let name = OsString::from_wide(&units);
-        if name != "." && name != ".." {
-            let size = u64::try_from(i64_at(offset_of!(FILE_ID_EXTD_DIR_INFO, EndOfFile)))
-                .map_err(|_| malformed("a negative size"))?;
-            let file_id = u128::from_le_bytes(
-                field(offset_of!(FILE_ID_EXTD_DIR_INFO, FileId), 16)
-                    .try_into()
-                    .expect("16 bytes"),
-            );
-            entries.push(DirEntry {
-                name,
-                metadata: metadata(
-                    u32_at(offset_of!(FILE_ID_EXTD_DIR_INFO, FileAttributes)),
-                    u32_at(offset_of!(FILE_ID_EXTD_DIR_INFO, ReparsePointTag)),
-                    size,
-                    i64_at(offset_of!(FILE_ID_EXTD_DIR_INFO, LastWriteTime)),
-                    i64_at(offset_of!(FILE_ID_EXTD_DIR_INFO, CreationTime)),
-                    file_id_text(serial, file_id),
-                ),
-            });
-        }
-        if next == 0 {
+        if name == "." || name == ".." {
             return Ok(());
         }
-        start += next;
-    }
-}
-
-fn malformed(what: &str) -> io::Error {
-    io::Error::new(
-        io::ErrorKind::InvalidData,
-        format!("malformed directory listing: {what}"),
-    )
+        let u32_at = |offset| u32::from_le_bytes(record.field(offset));
+        let i64_at = |offset| i64::from_le_bytes(record.field(offset));
+        let size = u64::try_from(i64_at(offset_of!(FILE_ID_EXTD_DIR_INFO, EndOfFile)))
+            .map_err(|_| LISTING.malformed("a negative size"))?;
+        let file_id = u128::from_le_bytes(record.field(offset_of!(FILE_ID_EXTD_DIR_INFO, FileId)));
+        entries.push(DirEntry {
+            name,
+            metadata: metadata(
+                u32_at(offset_of!(FILE_ID_EXTD_DIR_INFO, FileAttributes)),
+                u32_at(offset_of!(FILE_ID_EXTD_DIR_INFO, ReparsePointTag)),
+                size,
+                i64_at(offset_of!(FILE_ID_EXTD_DIR_INFO, LastWriteTime)),
+                i64_at(offset_of!(FILE_ID_EXTD_DIR_INFO, CreationTime)),
+                file_id_text(serial, file_id),
+            ),
+        });
+        Ok(())
+    })
 }
 
 /// What a file's attributes, reparse tag, size, times (FILETIMEs) and id say, the same way for
@@ -174,50 +147,32 @@ mod tests {
         }
     }
 
-    /// The records in one buffer, each padded to 8 bytes as Windows pads them.
     fn buffer(records: &[Record]) -> Vec<u8> {
-        let mut buffer = Vec::new();
-        for (index, record) in records.iter().enumerate() {
-            let start = buffer.len();
-            buffer.resize(start + NAME, 0);
-            let name_bytes = record.name.len() as u32 * 2;
-            let fields: [(usize, &[u8]); 6] = [
+        LISTING.lay_out(records.iter().map(|record| {
+            let fields = vec![
                 (
                     offset_of!(FILE_ID_EXTD_DIR_INFO, FileAttributes),
-                    &record.attributes.to_le_bytes(),
+                    record.attributes.to_le_bytes().to_vec(),
                 ),
                 (
                     offset_of!(FILE_ID_EXTD_DIR_INFO, EndOfFile),
-                    &record.size.to_le_bytes(),
+                    record.size.to_le_bytes().to_vec(),
                 ),
                 (
                     offset_of!(FILE_ID_EXTD_DIR_INFO, LastWriteTime),
-                    &(UNIX_EPOCH + 20).to_le_bytes(),
+                    (UNIX_EPOCH + 20).to_le_bytes().to_vec(),
                 ),
                 (
                     offset_of!(FILE_ID_EXTD_DIR_INFO, CreationTime),
-                    &(UNIX_EPOCH + 10).to_le_bytes(),
+                    (UNIX_EPOCH + 10).to_le_bytes().to_vec(),
                 ),
                 (
                     offset_of!(FILE_ID_EXTD_DIR_INFO, FileId),
-                    &record.file_id.to_le_bytes(),
-                ),
-                (
-                    offset_of!(FILE_ID_EXTD_DIR_INFO, FileNameLength),
-                    &name_bytes.to_le_bytes(),
+                    record.file_id.to_le_bytes().to_vec(),
                 ),
             ];
-            for (offset, bytes) in fields {
-                buffer[start + offset..start + offset + bytes.len()].copy_from_slice(bytes);
-            }
-            buffer.extend(record.name.iter().flat_map(|unit| unit.to_le_bytes()));
-            buffer.resize(buffer.len().next_multiple_of(8), 0);
-            if index + 1 < records.len() {
-                let next = (buffer.len() - start) as u32;
-                buffer[start..start + 4].copy_from_slice(&next.to_le_bytes());
-            }
-        }
-        buffer
+            (record.name.clone(), fields)
+        }))
     }
 
     fn parse(buffer: &[u8]) -> io::Result<Vec<DirEntry>> {
@@ -276,7 +231,7 @@ mod tests {
 
         // Cut inside the second record's fixed fields, then inside the first record's name.
         assert!(invalid(&whole[..whole.len() - 40]));
-        assert!(invalid(&whole[..NAME + 3]));
+        assert!(invalid(&whole[..LISTING.name + 3]));
         // The next record starts inside this one.
         let mut overlapping = whole.clone();
         overlapping[..4].copy_from_slice(&8u32.to_le_bytes());

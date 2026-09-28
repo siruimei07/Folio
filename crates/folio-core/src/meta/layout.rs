@@ -1,5 +1,6 @@
 //! Where the metadata files live (docs/specs/library-core.md §4.1).
 
+use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
 use super::{
@@ -13,6 +14,13 @@ use crate::paths::{
 
 /// Folio's folder at the library root.
 const FOLIO_DIR: &str = ".folio";
+
+// What Folio keeps directly in its folder.
+const LIBRARY_FILE: &str = "library.json";
+const TAGS_FILE: &str = "tags.json";
+const IGNORE_FILE: &str = "ignore";
+const META_DIR: &str = "meta";
+const LOCAL_DIR: &str = "local";
 
 pub(super) const ROOT_FILE: &str = "_root.json";
 pub(super) const GROUP_FILE: &str = "_group.json";
@@ -38,32 +46,32 @@ impl Layout {
     }
 
     pub fn library_file(&self) -> PathBuf {
-        self.folio_dir().join("library.json")
+        self.folio_dir().join(LIBRARY_FILE)
     }
 
     pub fn tags_file(&self) -> PathBuf {
-        self.folio_dir().join("tags.json")
+        self.folio_dir().join(TAGS_FILE)
     }
 
     /// Ignore rules in gitignore syntax (ADR-0002 §2).
     pub fn ignore_file(&self) -> PathBuf {
-        self.folio_dir().join("ignore")
+        self.folio_dir().join(IGNORE_FILE)
     }
 
     pub fn meta_dir(&self) -> PathBuf {
-        self.folio_dir().join("meta")
+        self.folio_dir().join(META_DIR)
     }
 
     /// Temporary files for atomic writes; never synced (ADR-0003 §4).
     pub fn staging_dir(&self) -> PathBuf {
-        self.folio_dir().join("local").join("staging")
+        self.folio_dir().join(LOCAL_DIR).join("staging")
     }
 
     /// The journal of a scan's metadata writes (docs/specs/library-scan.md §7.1); never synced
     /// (ADR-0003 §4).
     pub fn scan_journal_file(&self) -> PathBuf {
         self.folio_dir()
-            .join("local")
+            .join(LOCAL_DIR)
             .join("journal")
             .join("scan.json")
     }
@@ -267,4 +275,34 @@ pub fn is_folio_owned(path: &RelPath) -> bool {
     path.names()
         .next()
         .is_some_and(|first| same_name(first, FOLIO_DIR))
+}
+
+/// What a change in Folio's folder touches (docs/specs/windows-adapter.md §5.3).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FolioPart {
+    /// The folder itself, the library's settings or its ignore rules: what the library holds may
+    /// change.
+    Rules,
+    /// The tag definitions or a file in `meta/`.
+    Metadata,
+    /// `local/`, which only this computer uses, or a name Folio does not write.
+    Local,
+}
+
+/// The part of Folio's folder that the path with these names, relative to the library root, is
+/// in, whatever the case of its names; `None` outside the folder.
+pub fn folio_part(names: &[OsString]) -> Option<FolioPart> {
+    let is = |name: &OsString, expected: &str| {
+        name.to_str().is_some_and(|name| same_name(name, expected))
+    };
+    let (first, rest) = names.split_first()?;
+    if !is(first, FOLIO_DIR) {
+        return None;
+    }
+    Some(match rest.first() {
+        None => FolioPart::Rules,
+        Some(name) if is(name, LIBRARY_FILE) || is(name, IGNORE_FILE) => FolioPart::Rules,
+        Some(name) if is(name, TAGS_FILE) || is(name, META_DIR) => FolioPart::Metadata,
+        Some(_) => FolioPart::Local,
+    })
 }

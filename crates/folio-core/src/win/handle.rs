@@ -15,11 +15,14 @@ use std::os::windows::io::{AsRawHandle, OwnedHandle};
 use std::path::{Component, Path, Prefix};
 use std::ptr::null_mut;
 
-use windows_sys::Win32::Foundation::MAX_PATH;
+use windows_sys::Win32::Foundation::{
+    ERROR_INVALID_FUNCTION, ERROR_INVALID_LEVEL, ERROR_INVALID_PARAMETER, ERROR_NOT_SUPPORTED,
+    MAX_PATH,
+};
 use windows_sys::Win32::Storage::FileSystem::{
     BY_HANDLE_FILE_INFORMATION, FILE_ATTRIBUTE_TAG_INFO, FILE_FLAG_BACKUP_SEMANTICS,
-    FILE_FLAG_OPEN_REPARSE_POINT, FILE_ID_INFO, FILE_INFO_BY_HANDLE_CLASS, FILE_LIST_DIRECTORY,
-    FILE_READ_ATTRIBUTES, FileAttributeTagInfo, FileIdInfo, GetDriveTypeW,
+    FILE_FLAG_OPEN_REPARSE_POINT, FILE_FLAG_OVERLAPPED, FILE_ID_INFO, FILE_INFO_BY_HANDLE_CLASS,
+    FILE_LIST_DIRECTORY, FILE_READ_ATTRIBUTES, FileAttributeTagInfo, FileIdInfo, GetDriveTypeW,
     GetFileInformationByHandle, GetFileInformationByHandleEx, GetVolumeInformationByHandleW,
 };
 use windows_sys::Win32::System::WindowsProgramming::DRIVE_REMOTE;
@@ -93,6 +96,16 @@ pub(crate) fn open_folder(path: &Path) -> io::Result<OwnedHandle> {
     open(path, FILE_LIST_DIRECTORY, FILE_FLAG_BACKUP_SEMANTICS)
 }
 
+/// Opens the folder at `path` for overlapped reads of its change records, sharing it with every
+/// other program. A link at `path` is followed.
+pub(crate) fn open_folder_overlapped(path: &Path) -> io::Result<OwnedHandle> {
+    open(
+        path,
+        FILE_LIST_DIRECTORY,
+        FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
+    )
+}
+
 /// Opens what is at `path` for its attributes only, without following a link there. Opening a
 /// cloud placeholder this way does not download it.
 pub(crate) fn open_attributes(path: &Path) -> io::Result<OwnedHandle> {
@@ -160,6 +173,20 @@ pub(crate) fn basic_information(handle: &OwnedHandle) -> io::Result<BY_HANDLE_FI
         return Err(io::Error::last_os_error());
     }
     Ok(value)
+}
+
+/// The errors a file system gives for an information class or a kind of change record it does
+/// not have.
+pub(crate) fn unsupported(error: &io::Error) -> bool {
+    matches!(
+        error.raw_os_error().map(|code| code as u32),
+        Some(
+            ERROR_INVALID_PARAMETER
+                | ERROR_INVALID_FUNCTION
+                | ERROR_NOT_SUPPORTED
+                | ERROR_INVALID_LEVEL
+        )
+    )
 }
 
 #[cfg(test)]

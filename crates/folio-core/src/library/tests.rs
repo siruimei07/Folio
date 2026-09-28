@@ -17,10 +17,12 @@ use crate::meta::{
     tag_location,
 };
 use crate::test_support::{
-    MemFs, course_at, library_id, open_catalog, path, presets, semester, tags,
+    MemFs, course_at, library_id, not_unicode, open_catalog, path, presets, semester, tags,
 };
 
 mod property;
+#[cfg(windows)]
+mod watcher;
 
 /// A library on a [`MemFs`] whose `.folio/` lives in a temporary folder, and its catalog.
 struct Fixture {
@@ -77,10 +79,7 @@ impl Fixture {
     }
 
     fn entry(&self, text: &str) -> Entry {
-        self.catalog
-            .read(|tx| entry(tx, &path(text)))
-            .unwrap()
-            .unwrap_or_else(|| panic!("no entry at {text}"))
+        entry_at(&self.catalog, text).unwrap_or_else(|| panic!("no entry at {text}"))
     }
 
     fn tags(&self, text: &str) -> Vec<String> {
@@ -104,6 +103,10 @@ impl Fixture {
             .hash_pending(catalog, later, &AtomicBool::new(false), &mut |_, _| {})
             .unwrap()
     }
+}
+
+fn entry_at(catalog: &Catalog, text: &str) -> Option<Entry> {
+    catalog.read(|tx| entry(tx, &path(text))).unwrap()
 }
 
 fn write_config(layout: &Layout) {
@@ -172,20 +175,6 @@ fn course_file(layout: &Layout, course: &str) -> std::path::PathBuf {
     layout
         .tag_file_path(&TagFile::Course(course_at(course)))
         .unwrap()
-}
-
-/// A name that is not valid Unicode on this platform.
-fn not_unicode() -> OsString {
-    #[cfg(unix)]
-    {
-        use std::os::unix::ffi::OsStringExt;
-        OsString::from_vec(b"f\xff.txt".to_vec())
-    }
-    #[cfg(windows)]
-    {
-        use std::os::windows::ffi::OsStringExt;
-        OsString::from_wide(&[0x66, 0xD800])
-    }
 }
 
 #[test]
@@ -1522,6 +1511,33 @@ fn a_scope_that_is_gone_ignored_or_unknown_is_handled() {
     );
 }
 
+#[test]
+fn a_scope_that_is_a_rules_file_covers_its_folder() {
+    let f = Fixture::new();
+    f.fs.file(".gitignore", b"");
+    f.fs.file("proj/.gitignore", b"build/\n");
+    f.fs.file("proj/build/out.o", b"x");
+    f.fs.file("x.o", b"x");
+    f.scan();
+    assert!(!f.paths().contains(&"proj/build".to_owned()));
+
+    f.fs.file("proj/.gitignore", b"");
+    let report = f.scan_in("proj/.gitignore");
+    assert!(
+        report
+            .changes
+            .contains(&Change::Added(path("proj/build/out.o"))),
+        "{report:?}"
+    );
+    // At the root, the whole library.
+    f.fs.file(".gitignore", b"*.o\n");
+    let report = f.scan_in(".gitignore");
+    assert!(
+        report.changes.contains(&Change::Removed(path("x.o"))),
+        "{report:?}"
+    );
+}
+
 /// A library in a temporary folder with the note `2026 秋/线代/笔记.md`, read through the adapter
 /// that `adapter` makes for its root, and its catalog.
 fn real_library(adapter: impl FnOnce(&Path) -> Arc<dyn FileSystem>) -> (TempDir, Library, Catalog) {
@@ -1570,10 +1586,7 @@ fn scans_and_hashes_a_real_folder() {
         )
         .unwrap();
     assert_eq!(report.hashed, 1);
-    let notes = catalog
-        .read(|tx| entry(tx, &path("2026 秋/线代/笔记.md")))
-        .unwrap()
-        .unwrap();
+    let notes = entry_at(&catalog, "2026 秋/线代/笔记.md").unwrap();
     assert_eq!(
         notes.record.hash,
         Some(ContentHash::of("# 特征值".as_bytes()))
@@ -1600,7 +1613,7 @@ fn a_real_course_renamed_outside_folio_keeps_its_entries_and_tags() {
     let (_dir, library, catalog) =
         real_library(|root| Arc::new(crate::win::WindowsFileSystem::open(root).unwrap()));
     library.scan(&catalog, None, 0).unwrap();
-    let notes = |at: &str| catalog.read(|tx| entry(tx, &path(at))).unwrap().unwrap();
+    let notes = |at: &str| entry_at(&catalog, at).unwrap();
     let before = notes("2026 秋/线代/笔记.md");
     assert!(before.record.file_id.is_some());
     set_tags(

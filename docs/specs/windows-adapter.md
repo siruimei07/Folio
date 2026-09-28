@@ -39,6 +39,7 @@ Bin lane lands after WP-03. Unsafe code follows `search/fts5.rs` (§9).
 | `win` (Windows only) | Declares the submodules below and re-exports their types | No |
 | `win::handle` | Opening files and folders as handles, typed file information, `Volume` | Yes |
 | `win::files` | `WindowsFileSystem` | Yes |
+| `win::chain` | Walks the chains of records that both kinds of buffer hold | No |
 | `win::dir_info` | Parses `FILE_ID_EXTD_DIR_INFO` buffers; attribute rules | No |
 | `win::recycle` | `WindowsRecycleBin` | Yes |
 | `win::watcher` | `Watcher`: its thread and overlapped reads | Yes |
@@ -52,7 +53,7 @@ parsers use `OsString::from_wide`, the rest is FFI.
  shell (later lane)
    │  WindowsFileSystem::open(root) ─────────────┐
    │  Library::new(root, Arc<WindowsFileSystem>) │ has_file_ids()
-   │  Watcher::start(root, file_ids, options, sink)
+   │  Watcher::start(root, WatchOptions::new(file_ids), sink)
    │        │ thread: ReadDirectoryChangesExW → win::notify → watch coalescer
    │        └──► sink(WatchEvent::Rescan(..)) ──► job queue ──► Library::rescan(catalog, ..)
    │                                                               └──► Library::scan(scope)
@@ -276,10 +277,12 @@ ids in every record):
 | Rename changing only case | `REMOVED` (old name), `RENAMED_OLD`, `RENAMED_NEW` |
 | Save through a temporary file | `ADDED` of the temporary file, `RENAMED_OLD`/`NEW` twice, `REMOVED` of the old file: two ids |
 | Move out of the tree / into it | `REMOVED` / `ADDED` (a folder's contents come without records) |
-| Add, remove or rename an entry | Usually also `MODIFIED` of its folder |
+| Add, remove or rename an entry | Also `MODIFIED` of its folder and of every folder above it, up to the watched one (moving `q\x1\f.md` to `q\x2`: `q\x1`, `q`, then `q\x2`) |
 
 Every record of one file carries its id, and a move between folders is a removal and an addition,
-so renames are paired by file id across records and reads, not by record type.
+so renames are paired by file id across records and reads, not by record type. The folders'
+`MODIFIED` records come from NTFS updating its index entries; the folders' own entries have not
+changed.
 
 On exFAT (`I:`), the extended class fails with `ERROR_INVALID_FUNCTION`. Plain records
 (`ReadDirectoryNotifyInformation`) work, without ids and without the folder `MODIFIED`; a
@@ -292,8 +295,7 @@ without an overflow, because the next read was armed at once.
 impl Watcher {
     pub fn start(
         root: &Path,
-        file_ids: bool, // WindowsFileSystem::has_file_ids
-        options: WatchOptions,
+        options: WatchOptions, // WatchOptions::new(WindowsFileSystem::has_file_ids())
         sink: impl FnMut(WatchEvent) + Send + 'static,
     ) -> io::Result<Watcher>;
     pub fn stop(self); // also on drop
@@ -309,31 +311,37 @@ pub enum Rescan {
 - One thread per watcher. It opens the root (`FILE_LIST_DIRECTORY`, sharing everything,
   `FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED`) and waits on the read, a stop event and the
   next due time.
-- With file ids: extended records. Otherwise, or when the extended call
+- With file ids (`WatchOptions::file_ids`): extended records. Otherwise, or when the extended call
   fails, plain records.
 - Filter: file and folder names, size and last write. Not attributes: freeing up space in a
   folder of placeholders would scan for nothing.
-- Buffer: 256 KiB on local volumes, 64 KiB on network ones (their limit). The next read is armed
-  before the records are processed.
+- Buffer: 256 KiB (`WatchOptions::buffer_bytes`), at most 64 KiB when the root's volume is a
+  network share (their limit). The next read is armed before the records are processed.
 - **First a full rescan.** Changes made before the watch started are unknown, so the first event
   is always `Rescan::Full`: the shell starts the watcher and lets that rescan be the start-up
   reconciliation (system overview §3 item 1).
 - **Overflow** (a read that returns zero bytes or `ERROR_NOTIFY_ENUM_DIR`) → `Rescan::Full`.
 - **Failure** (the root deleted or renamed away, the volume gone): `WatchEvent::Failed`, and the
   thread ends. Restarting begins with a full rescan again.
-- `stop` sets the stop event; the thread cancels its read (`CancelIoEx`) and waits for the
-  cancellation to complete before the buffer and `OVERLAPPED` go away.
+- `stop`, or dropping the watcher, sets the stop event and waits for the thread; the thread
+  cancels its read (`CancelIoEx`) and waits for the cancellation to complete before the buffer and
+  `OVERLAPPED` go away.
 - The sink runs on the watcher thread and must not block; the shell hands the event to its job
-  queue.
+  queue. A sink that drops its own watcher does not wait for itself: the thread ends when the sink
+  returns.
 
 ### 5.3 From records to rescans
 
 The coalescer is plain Rust, fed records with their time; it answers when the next rescan is due
-and what it is.
+and what it is. Before it, the parser leaves out every extended record of a folder's
+modification: scoping them would widen every change to its top-level folder, and the records of
+the entries themselves say what changed. A folder's time is caught up by the next scan that
+covers it. Plain records do not say what is a folder, so off NTFS nothing is left out.
 
-1. **Folio's folder** (`.folio` at the root, any case): `ignore` or `library.json` → `Full` (the
-   rules or the classes changed, library scan §5, §6.1); `tags.json` or anything in `meta/` →
-   `Metadata`; the rest (`local/`, later `store/`) → nothing: Folio writes it.
+1. **Folio's folder** (`.folio` at the root, any case; `meta::folio_part`, next to the paths
+   `Layout` builds): the folder itself, `ignore` or `library.json` → `Full` (the rules or the
+   classes changed, library scan §5, §6.1); `tags.json` or anything in `meta/` → `Metadata`; the
+   rest (`local/`, later `store/`) → nothing: Folio writes it.
 2. **Net effect per file id** in the window: *before* is the path of its first record if that
    record says the file existed (`REMOVED`, `RENAMED_OLD`, `MODIFIED`), *after* the path of its
    last record if that one says it exists (`ADDED`, `RENAMED_NEW`, `MODIFIED`). Before and after
@@ -342,8 +350,9 @@ and what it is.
    Names in between, such as temporary files, never become scopes.
 3. **Records without ids** (off NTFS): each path is a scope. Nothing is paired: without ids the
    scan cannot pair a rename either, so renames there lose their tags (ADR-0003 §10).
-4. **Rules files**: a `.gitignore` or `pyvenv.cfg` (any case) scopes its folder, since it changes
-   what belongs below it.
+4. **Rules files**: a `.gitignore` or `pyvenv.cfg` is scoped like any file; a scan scoped to one
+   covers its folder (library scan §6.4), whoever asks for it. A change next to it in the same
+   window is scanned a second time (§11).
 5. **Names the catalog cannot hold** (not Unicode, not NFC, invalid on Windows): the scope is the
    longest valid part of the path, the root meaning `Full`. The scan then reports the name. An
    8.3 alias is a valid name that matches nothing, and the scan's widening (library scan §6.4)
@@ -368,10 +377,11 @@ runs a full rescan later.
 
 | Area | Tests |
 |---|---|
-| Parsing | Buffers of both record kinds built in the test; overruns are errors |
-| Coalescer | Every row of §5.1, as recorded; `.folio` rules; rules files; invalid names; merging and the cap; timing with a fake clock; periodic and overflow rescans |
-| Windows (temporary folders, also on CI) | A real watcher, library and catalog: after creations, edits, renames, moves between folders, case-only renames, saves through temporary files and deletions, the catalog equals one a fresh full scan builds; a file moved between courses keeps its tags; a 4 KiB buffer with a blocked sink overflows into a full rescan; plain records forced on NTFS; stopping cancels the read |
-| Off NTFS | `FOLIO_TEST_NON_NTFS_DIR`, by hand |
+| Parsing | Buffers of both record kinds built in the test, folder modifications left out of extended ones; overruns are errors |
+| Coalescer | The rows of §5.1, as recorded; `.folio` rules; invalid names; merging (also a sibling that sorts between a folder and its contents) and the cap; timing; periodic and overflow rescans |
+| Watcher (temporary folders, also on CI) | The first rescan is full; a new file is scoped; a move between folders is one scope holding both; plain records forced on NTFS cover both sides; a 4 KiB buffer behind a blocked sink overflows into a full rescan; stopping ends the events; a sink that drops its own watcher ends the thread (it fails without the check: checked once by hand) |
+| Watcher, adapter and scans (temporary folders, also on CI) | A file moved between courses keeps its entry and tags (it fails with pairing turned off: checked once by hand); after creations, edits, renames, a case-only rename, a save through a temporary file, a folder moved between courses and a deletion, the catalog equals what a fresh full scan builds |
+| Off NTFS | `FOLIO_TEST_NON_NTFS_DIR`, by hand: asked for extended records, the watcher falls back to plain ones (passed on `I:`, exFAT) |
 
 Tests wait for the catalog to reach the expected state, with a timeout of seconds, instead of
 counting rescans, so a slow CI machine only makes them slower.
@@ -404,8 +414,9 @@ and its state is recorded next to the results in library scan §10.
 - Only `win::handle`, `win::files`, `win::recycle` and `win::watcher` allow `unsafe_code`, each
   with a module-level `#![allow(unsafe_code, reason = "…")]` as in `search/fts5.rs`, and every
   `unsafe` block says why it is sound.
-- Buffers are parsed by safe code from byte slices: every offset and length is checked against
-  the buffer, and a record that does not fit is an error.
+- Buffers are parsed by safe code from byte slices, both kinds by one walker (`win::chain`):
+  every offset and length is checked against the buffer, and a record that does not fit is an
+  error.
 - Handles are `std::os::windows::io::OwnedHandle`, closed on drop.
 - A read's buffer and `OVERLAPPED` live until the read completes or its cancellation does.
 
@@ -431,4 +442,13 @@ and its state is recorded next to the results in library scan §10.
   through it on purpose, since their rules are needed.
 - Hashing's second metadata check from the open handle (library scan §12 item 4).
 - Recycling many items in one `IFileOperation` if deleting many files is slow.
-- A folder's `MODIFIED` record scans the whole folder; a scan of one level would be cheaper.
+- Off NTFS, a folder's `MODIFIED` record still scopes the whole folder; a scan of one level
+  would be cheaper.
+- One scan of several scopes. Each scope is a scan of its own today, and each reads
+  `.folio/meta/`, mirrors it and commits (about 100 ms at 17,000 tag assignments, library scan
+  §12 item 4). One plan over all the scopes would pair moves between them, so a move would no
+  longer widen to the folder holding both ends (between semesters, a full rescan today), the cap
+  of 8 scopes could rise, and a scope that widening or a rules file puts inside another would not
+  be scanned twice.
+- The coalescer allocates per record (paths, scopes and their ancestors); measure a burst of tens
+  of thousands of files before tuning it.

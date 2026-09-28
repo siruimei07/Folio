@@ -21,6 +21,7 @@ use crate::meta::{
     EntryKind, Layout, MetaError, MetaTree, ScanJournal, StrandedCause, is_folio_owned,
 };
 use crate::paths::{PathError, RelPath};
+use crate::watch::Rescan;
 
 /// One library: its folder, its `.folio/` files and the adapter that reads its files. The
 /// shell passes the library's catalog to each call.
@@ -221,9 +222,10 @@ impl Library {
         &self.layout
     }
 
-    /// Walks the library, or `scope` and everything below it, and brings the catalog and the
-    /// `.folio/meta/` files in line with it: entries, moves with their tags and settings, and
-    /// the metadata mirror (docs/specs/library-scan.md §4–§7). `now_ns` is the current time in
+    /// Walks the library, or `scope` and everything below it (the folder of a `.gitignore` or
+    /// `pyvenv.cfg`), and brings the catalog and the `.folio/meta/` files in line with it:
+    /// entries, moves with their tags and settings, and the metadata mirror
+    /// (docs/specs/library-scan.md §4–§7). `now_ns` is the current time in
     /// nanoseconds since the Unix epoch, recorded for new entries. Hashes are left to
     /// [`Library::hash_pending`].
     pub fn scan(
@@ -240,6 +242,11 @@ impl Library {
             })?;
         let scope = match scope {
             Some(scope) if is_folio_owned(scope) => return Ok(ScanReport::default()),
+            // A rules file decides what its folder keeps.
+            Some(scope) if rules::is_rules_file(scope.name()) => match scope.parent() {
+                Some(folder) => self.widen(catalog, &folder)?,
+                None => None,
+            },
             Some(scope) => self.widen(catalog, scope)?,
             None => None,
         };
@@ -320,6 +327,38 @@ impl Library {
             ScanJournal::remove(&self.layout)?;
         } else {
             journal.undo(&self.layout)?;
+        }
+        Ok(())
+    }
+
+    /// Carries out a watcher's rescan (docs/specs/windows-adapter.md §5.4): a scan of the whole
+    /// library, a scan of each scope, or a metadata sync. Each report goes to `on_report` with its
+    /// scope, `None` for the whole library, as soon as its scan commits. The first error stops
+    /// the rest; a full rescan later makes up for them.
+    pub fn rescan(
+        &self,
+        catalog: &Catalog,
+        rescan: &Rescan,
+        now_ns: i64,
+        on_report: &mut dyn FnMut(Option<&RelPath>, ScanReport),
+    ) -> Result<(), LibraryError> {
+        match rescan {
+            Rescan::Full => on_report(None, self.scan(catalog, None, now_ns)?),
+            Rescan::Scopes(scopes) => {
+                for scope in scopes {
+                    on_report(Some(scope), self.scan(catalog, Some(scope), now_ns)?);
+                }
+            }
+            Rescan::Metadata => {
+                let problems = self.sync_metadata(catalog)?;
+                on_report(
+                    None,
+                    ScanReport {
+                        changes: Vec::new(),
+                        problems,
+                    },
+                );
+            }
         }
         Ok(())
     }

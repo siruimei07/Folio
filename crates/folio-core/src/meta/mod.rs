@@ -17,7 +17,9 @@ use serde::de::{self, DeserializeOwned, Deserializer, MapAccess, SeqAccess, Visi
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-pub use layout::{Layout, TagFile, TagFileKey, is_folio_owned, tag_location, unescape_name};
+pub use layout::{
+    FolioPart, Layout, TagFile, TagFileKey, folio_part, is_folio_owned, tag_location, unescape_name,
+};
 pub use model::{
     Abbr, Assignments, Color, CourseMeta, CourseSettings, DisplayName, EntryKind, Extension,
     FileClass, GroupMeta, GroupSettings, LibraryConfig, LibraryId, PresetTag, RootMeta,

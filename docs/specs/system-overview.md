@@ -89,8 +89,9 @@ Rules:
 
 ## 3. Data flows
 
-1. **Start-up**: load settings, open the library, reconcile the catalog with the disk (catches
-   changes made while the app was closed), start the watcher, then render from catalog queries.
+1. **Start-up**: load settings, open the library, start the watcher, then render from catalog
+   queries. The watcher's first rescan is the full reconciliation that catches changes made while
+   the app was closed ([windows-adapter.md](windows-adapter.md) §5.2).
 2. **External change**: watcher event, debounce, then re-stat. Re-hash only when size or file id
    changed; mtime is only a hint (ADR-0003 §10). Update the catalog and the working-state diff, then
    emit `workspace.changed`.
