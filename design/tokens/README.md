@@ -35,11 +35,8 @@ CSS name = `--` + token path joined with `-`:
 | `size.history-panel` | `--size-history-panel` |
 | `title-bar.height` | `--title-bar-height` |
 
-The placeholder properties in `apps/desktop/src/base.css` keep their names (`--title-bar-height`,
-`--title-bar-padding-inline`, `--title-bar-font-size`, `--caption-button-width`,
-`--caption-glyph-size`, `--caption-button-hover-background`, `--caption-button-pressed-background`,
-`--caption-close-hover-background`, `--caption-close-hover-color`, `--focus-ring-width`), so the
-generated CSS replaces that block without touching the title bar components.
+The title bar reads `title-bar.*`, `caption.*` and `focus-ring.width` under the names the
+scaffold's placeholders had (`--title-bar-height`, `--caption-button-width`, ...).
 
 Value conversion:
 
@@ -53,21 +50,40 @@ Value conversion:
 | `fontFamily` | names quoted where needed, joined with commas |
 | `fontWeight`, `number` | the number |
 
-Engineering follow-up (Claude Code): add a small generator that emits one CSS file with light values
-in `:root` and dark values under `:root[data-theme="dark"]`, run it from the build and from
-`pnpm check` (fail when the output is stale, like `export_bindings`), and check that the two colour
-files have the same paths. Do not hand-edit the generated CSS.
+Aliases become `var(--<target>)`, so a dark value reaches every alias of it.
+
+## Generated CSS
+
+`apps/desktop/src/tokens/generate.ts` writes `apps/desktop/src/tokens/tokens.css`, which
+`apps/desktop/src/base.css` imports. Do not hand-edit it: change these files, then run
+`pnpm --filter @folio/desktop tokens`. `pnpm check` fails while `tokens.css` is stale (a Vitest
+file snapshot; unlike `export_bindings` for the IPC bindings, the failing test does not rewrite the
+file, the `tokens` script does) and when a stylesheet in `apps/desktop/src` reads a custom property
+that nothing defines.
+
+The generator refuses, naming the file and token: colour files whose paths or types differ, a path
+in both `base` and a colour file, two paths with one CSS name, path segments that are not lower-case
+kebab names, a `$type` or unit outside the tables above, an alias to a missing token, to another
+type or in a cycle, and a `hex` that differs from its `components`. Every token needs its own
+`$type`; groups do not pass theirs down.
 
 ## Modes
 
-App settings → Appearance → Theme offers Light, Dark and System (default System). System follows
-`prefers-color-scheme`; the app sets `data-theme` on the root element.
+App settings → Appearance → Theme offers Light, Dark and System (default System). The app sets
+`data-theme="light"` or `data-theme="dark"` on the root element for Light and Dark and removes it
+for System. `tokens.css` has the light values in `:root` and the dark values under
+`:root[data-theme="dark"]` and, for System, under `prefers-color-scheme: dark` unless
+`data-theme="light"`; each block also sets `color-scheme`, so scroll bars and form controls follow.
+Until the Theme setting exists, the app runs as System.
 
 ## Motion
 
-Two durations (`motion.duration.fast` 120 ms, `motion.duration.base` 160 ms) and two easings. When
-`prefers-reduced-motion: reduce` matches, or the app setting "Reduce motion" is on, the generated
-CSS sets every duration to `0ms`. Components must take durations only from these tokens.
+Two durations (`motion.duration.fast` 120 ms, `motion.duration.base` 160 ms) and two easings.
+Components must take durations only from these tokens. App settings → Appearance → Reduce motion
+offers "Use Windows setting" (default), On and Off: the app sets `data-reduce-motion="on"` or
+`"off"` on the root element and removes it for the default. `tokens.css` sets every duration to
+`0ms` under `data-reduce-motion="on"`, and under `prefers-reduced-motion: reduce` unless
+`data-reduce-motion="off"`.
 
 ## Palette usage
 

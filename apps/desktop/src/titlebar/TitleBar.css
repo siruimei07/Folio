@@ -1,7 +1,7 @@
 /*
- * Title bar of the frameless main window (ADR-0001, spike 4b). The look comes from the placeholder
- * tokens in base.css until the design system exists (CLAUDE.md §6, milestone 6). The mechanics are
- * final:
+ * Title bar of the frameless main window (ADR-0001, spike 4b). Its values come from the design
+ * tokens; the look in docs/design/handoff/app-shell.md §3 (app mark, chrome background, bottom
+ * border) comes with the app shell. The mechanics are final:
  * - the caption buttons sit at the right edge, where the shell anchors the snap layouts overlay;
  * - the maximize button's hover and pressed looks also follow its data attributes, because the
  *   overlay receives the pointer there instead of the page.

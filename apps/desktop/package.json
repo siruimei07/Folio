@@ -7,7 +7,8 @@
     "build": "vite build",
     "typecheck": "tsc",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "tokens": "vitest run src/tokens --update"
   },
   "dependencies": {
     "@tauri-apps/api": "2.11.1",

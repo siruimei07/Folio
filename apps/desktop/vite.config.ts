@@ -17,5 +17,7 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     // Every test starts from unmocked behaviour, so no test file needs its own reset hook.
     mockReset: true,
+    // Stylesheets load empty in tests, but a `?raw` import keeps the text (src/tokens/generate.test.ts).
+    css: { include: [/\.css\?raw$/] },
   },
 });

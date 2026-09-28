@@ -83,7 +83,7 @@ of skills in use. Read it before design, UI, motion, backend or review work.
 - **Core stays shell-agnostic.** `folio-core` has no Tauri, UI or IPC types (ADR-0001); the shell converts core types to IPC types.
 - **New dependencies are at least one day old.** pnpm enforces this with its minimum release age; never add `minimumReleaseAgeExclude` entries. Apply the same rule to crates (pin with `cargo update --precise`) and GitHub Actions (pin to a release's commit SHA). Pin release candidates exactly.
 - **No silent failures.** Every IPC handler and data-layer function returns or throws a typed error; the UI renders an explicit error state (copy via `design:ux-copy`).
-- **Design tokens are the only source of visual values.** No hard-coded colours, spacing, radii, font sizes or durations in components. `design:design-system` audits this. Use one icon family across the app; never mix icon sets.
+- **Design tokens are the only source of visual values.** No hard-coded colours, spacing, radii, font sizes or durations in components. `design:design-system` audits this. Use one icon family across the app; never mix icon sets. Components read the CSS custom properties in `apps/desktop/src/tokens/tokens.css`, generated from `design/tokens/` (`pnpm --filter @folio/desktop tokens`, never edited by hand); a test in `pnpm check` fails when it is stale or when a stylesheet reads a property nothing defines.
 - **Motion** respects `prefers-reduced-motion`; durations and easings come from tokens.
 - **Accessibility** baseline: WCAG 2.1 AA contrast, full keyboard operation, visible focus, adequate hit targets.
 - **Data.** Schema is versioned from the first release; every schema change ships with a migration and a migration test.
@@ -120,7 +120,7 @@ crates/
   folio-core/          core library: no Tauri, UI or IPC types (ADR-0001)
   folio-app/           Tauri shell: commands, IPC contract (src/ipc.rs), capabilities/, tauri.conf.json, icons/
 apps/
-  desktop/             React + TypeScript UI (Vite); src/ipc = only IPC entry, src/i18n = UI strings (zh-CN)
+  desktop/             React + TypeScript UI (Vite); src/ipc = only IPC entry, src/i18n = UI strings (zh-CN), src/tokens = CSS generated from design/tokens
 e2e/                   Playwright over WebView2 CDP (fixtures.ts starts the app per test)
 docs/
   agents/              agent reference docs, e.g. skill-routing.md   (English)
