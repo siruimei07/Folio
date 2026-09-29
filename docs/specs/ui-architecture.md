@@ -590,7 +590,7 @@ each side validates shape and source before acting.
   through `PDFLinkService`, with page destinations inside the document still working. Opening
   addresses in a browser, or other library files from a note, is left for a later version.
 
-Proposed shape of `resolve_paths`, for the contract lane `feat/ipc-m1-resolve-paths` to settle in
+Proposed shape of `resolve_paths`, for the contract lane `feat/ipc-m1-contract-fixes` to settle in
 ipc-m1 (the contract lane may rename or reshape it):
 
 ```ts
@@ -845,15 +845,16 @@ inside the page), `katex` fonts and CSS.
 - **`feat/ui-preview`**: `worker-src blob:` and `'wasm-unsafe-eval'` in `preview.rs` with
   `/security-review` (§10.4); the frame protocol (§10.3); images next to notes and the link
   popover (§10.4); moves `src/preview/frame.ts` into `src/preview/frame/`.
-- **New lane `feat/ipc-m1-resolve-paths`** (wave 2, contract, S; ADR-0005 product decision 1):
-  declares `resolve_paths` (§10.4) in ipc-m1 and `crates/folio-app/src/ipc/`, planned and not
-  registered (ipc-m1 §3), regenerates the bindings, and adds its `LIMITS` key. It lands before
-  `feat/data-browse-queries` implements the command; `feat/ui-data-layer` or `feat/ui-preview`
-  adds it to the fake shell.
+- **New lane `feat/ipc-m1-contract-fixes`** (wave 2, contract, S; ADR-0005 product decision 1;
+  first named `feat/ipc-m1-resolve-paths`, renamed on 2026-09-28 when the M1 design hand-off's
+  contract gaps joined it, roadmap wave 2): declares `resolve_paths` (§10.4) in ipc-m1 and
+  `crates/folio-app/src/ipc/`, planned and not registered (ipc-m1 §3), regenerates the bindings,
+  and adds its `LIMITS` key. It lands before `feat/data-browse-queries` implements the command;
+  `feat/ui-data-layer` or `feat/ui-preview` adds it to the fake shell.
 - **Not in M1**: a reviewed command that opens `http`/`https` links in the default browser
   (ADR-0005, product decision 2).
-- **Later contract**: a command that writes UI errors to the shell's log (§13), with
-  `chore/core-logging`.
+- **Contract for UI error logging**: a command that writes UI errors to the shell's log (§13),
+  declared by `feat/ipc-m1-contract-fixes` and implemented by `chore/core-logging` (roadmap wave 2).
 - **Testing strategy**: add the fake shell, the `renderApp` helper and `@axe-core/playwright` to
   its layers when `feat/ui-data-layer` lands.
 - **CLAUDE.md §6 directory map**: describe `apps/desktop/src` by feature folders once the app-shell
