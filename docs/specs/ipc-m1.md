@@ -73,11 +73,14 @@ implementation lands (ADR-0004 §8):
 
 | Where | Planned command | Implemented command |
 |---|---|---|
-| Stub in `crates/folio-app/src/ipc/planned.rs`, compiled only in test builds | yes | removed |
+| Stub in its group's `crates/folio-app/src/commands/<group>.rs`, compiled only in test builds | yes | removed |
 | `ipc::export_builder` (`export_bindings` test, so `bindings.ts`) | yes | yes |
-| `ipc::builder` (the runtime `invoke_handler`) | no | yes |
-| App manifest in `crates/folio-app/build.rs` | no | yes |
-| Grant in `crates/folio-app/capabilities/main-window.json` | no | yes |
+| `ipc::builder` (the runtime `invoke_handler`), from `commands/<group>/manifest.rs` | no | yes |
+| App manifest in `crates/folio-app/build.rs`, from the same `manifest.rs` | no | yes |
+| Grant in `crates/folio-app/capabilities/<group>.json` | no | yes |
+
+Since `feat/core-library-state` (2026-09-28) each feature group owns these files
+([library-state.md](library-state.md), "Command ownership"); later lanes edit only their group's.
 
 Security impact:
 
@@ -741,10 +744,10 @@ To be made by the lanes that implement them:
 
 ## 21. Next lanes
 
-1. **Library state and jobs** (`feat/core-library-state`): the settings file, `LibraryState`, the
-   job registry and events, `library_status`, `pick_library_folder`, `create_library`,
-   `open_library`, the start-up scan and hashing, `list_jobs`, `cancel_job`, `rebuild_catalog`,
-   `list_problems`.
+1. **Done (2026-09-28).** **Library state and jobs** (`feat/core-library-state`): the settings
+   file, `LibraryState`, the job registry and events, `library_status`, `pick_library_folder`,
+   `create_library`, `open_library`, the start-up scan and hashing, `list_jobs`, `cancel_job`,
+   `rebuild_catalog`, `list_problems` ([library-state.md](library-state.md)).
 2. **Browse and search** (`feat/data-browse-queries`): the core queries for §9.1 and §10 (natural
    name order, effective tags, filters, scopes, the fixed search window) and their commands.
 3. **Library operations** (`feat/core-library-ops`): §7, §8 and §9.2 with the metadata changes of

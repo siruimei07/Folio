@@ -11,6 +11,8 @@ use std::io::{self, Read};
 use std::path::Path;
 use std::time::SystemTime;
 
+pub use crate::files::is_in_use;
+
 /// Read access to the files of a library.
 pub trait FileSystem: Send + Sync {
     /// The entries directly in `folder`, in any order, without `.` and `..`.

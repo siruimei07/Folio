@@ -91,49 +91,53 @@ pub fn upsert_entry(
                 .parent()
                 .map(|folder| folder_id(conn, &folder))
                 .transpose()?;
-            insert_entry(conn, record, added_ns, parent)
+            let id = EntryId(super::reserve_entry_ids(conn, 1)?);
+            insert_entry(conn, id, record, added_ns, parent)?;
+            Ok(id)
         }
     }
 }
 
-/// Inserts a new entry and its search row below `parent_id`, the id of its parent folder.
+/// Inserts entry `id`, reserved by the caller, and its search row below `parent_id`, the id of
+/// its parent folder.
 fn insert_entry(
     conn: &Connection,
+    id: EntryId,
     record: &EntryRecord,
     added_ns: i64,
     parent_id: Option<i64>,
-) -> Result<EntryId, CatalogError> {
+) -> Result<(), CatalogError> {
     let folder = record.path.parent();
     // No `RETURNING`: it makes SQLite open a statement journal, and with it FTS5 flushes its
     // pending terms on every insert, which slows a full scan down about twenty times.
-    let id = conn
-        .prepare_cached(
-            "INSERT INTO entries (path, path_key, parent_id, name, kind, class, size, mtime_ns,
+    conn.prepare_cached(
+        "INSERT INTO entries (id, path, path_key, parent_id, name, kind, class, size, mtime_ns,
                                   file_id, hash, added_ns)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
-        )?
-        .insert(params![
-            record.path,
-            record.path.key().as_str(),
-            parent_id,
-            record.path.name(),
-            record.kind,
-            record.class,
-            record.size,
-            record.mtime_ns,
-            record.file_id,
-            record.hash,
-            added_ns
-        ])?;
+             VALUES (?12, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+    )?
+    .execute(params![
+        record.path,
+        record.path.key().as_str(),
+        parent_id,
+        record.path.name(),
+        record.kind,
+        record.class,
+        record.size,
+        record.mtime_ns,
+        record.file_id,
+        record.hash,
+        added_ns,
+        id.0
+    ])?;
     conn.prepare_cached(
         "INSERT INTO search (rowid, name, path, tags, body) VALUES (?1, ?2, ?3, '', NULL)",
     )?
     .execute(params![
-        id,
+        id.0,
         record.path.name(),
         folder.as_ref().map_or("", RelPath::as_str)
     ])?;
-    Ok(EntryId(id))
+    Ok(())
 }
 
 /// Replaces everything but the path of an entry and the time it was added.
@@ -187,7 +191,11 @@ pub struct EntryChanges {
 /// Applies a scan's changes in an order that keeps `UNIQUE(path)` and the `parent_id` foreign
 /// key intact, and gives every entry the folder entry at its parent path (docs/specs/
 /// library-scan.md §6.3).
-pub fn apply_changes(conn: &Connection, changes: &EntryChanges) -> Result<(), CatalogError> {
+/// Returns the ids of the added entries, in the order of `changes.added`.
+pub fn apply_changes(
+    conn: &Connection,
+    changes: &EntryChanges,
+) -> Result<Vec<EntryId>, CatalogError> {
     // Entries that stay where they are while their folder entry moves or goes: another entry
     // may take the folder's path, say one renamed to its name.
     let leaving = id_list(changes.moved.iter().chain(&changes.removed));
@@ -249,7 +257,9 @@ pub fn apply_changes(conn: &Connection, changes: &EntryChanges) -> Result<(), Ca
 
     // The ids of the folders added so far, so that their children need no lookup.
     let mut added = HashMap::new();
-    for (record, added_ns) in &changes.added {
+    let mut added_ids = Vec::with_capacity(changes.added.len());
+    let first = super::reserve_entry_ids(conn, changes.added.len())?;
+    for ((record, added_ns), id) in changes.added.iter().zip(first..) {
         let parent = match record.path.parent() {
             None => None,
             Some(folder) => Some(match added.get(&folder) {
@@ -257,7 +267,9 @@ pub fn apply_changes(conn: &Connection, changes: &EntryChanges) -> Result<(), Ca
                 None => folder_id(conn, &folder)?,
             }),
         };
-        let id = insert_entry(conn, record, *added_ns, parent)?;
+        let id = EntryId(id);
+        insert_entry(conn, id, record, *added_ns, parent)?;
+        added_ids.push(id);
         if record.kind == EntryKind::Folder {
             added.insert(record.path.clone(), id.0);
         }
@@ -276,7 +288,7 @@ pub fn apply_changes(conn: &Connection, changes: &EntryChanges) -> Result<(), Ca
     for (id, record) in &changes.updated {
         update_entry(conn, *id, record)?;
     }
-    Ok(())
+    Ok(added_ids)
 }
 
 /// The ids of `entries` as a JSON array, for `json_each`.
@@ -367,6 +379,12 @@ pub fn unhashed_files(
     Ok(rows.collect::<Result<_, _>>()?)
 }
 
+pub fn count_entries(conn: &Connection) -> Result<u64, CatalogError> {
+    Ok(conn
+        .prepare_cached("SELECT count(*) FROM entries")?
+        .query_row([], |row| row.get(0))?)
+}
+
 pub fn count_unhashed_files(conn: &Connection) -> Result<u64, CatalogError> {
     Ok(conn
         .prepare_cached(&format!("SELECT count(*) FROM entries WHERE {UNHASHED}"))?
@@ -380,14 +398,16 @@ pub fn set_hash(conn: &Connection, file: &Entry, hash: &ContentHash) -> Result<b
     let changed = conn
         .prepare_cached(&format!(
             "UPDATE entries SET hash = ?2
-             WHERE id = ?1 AND {UNHASHED} AND size = ?3 AND mtime_ns IS ?4 AND file_id IS ?5"
+             WHERE id = ?1 AND {UNHASHED} AND size = ?3 AND mtime_ns IS ?4 AND file_id IS ?5
+               AND path = ?6"
         ))?
         .execute(params![
             file.id.0,
             hash,
             record.size,
             record.mtime_ns,
-            record.file_id
+            record.file_id,
+            record.path
         ])?;
     Ok(changed == 1)
 }

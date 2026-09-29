@@ -192,6 +192,10 @@ pages of one revision consistent.
    regenerated `bindings.ts`, UI wrappers in `apps/desktop/src/ipc/`, the placeholder test.
 3. [ ] Implementation lanes of spec §21, each registering and granting its commands with contract
    tests and `/security-review`.
+   - 2026-09-28, `feat/core-library-state` (§21 item 1): the 8 library and job commands,
+     registered per feature group (`commands/<group>/manifest.rs`, `capabilities/<group>.json`);
+     contract tests and `/security-review` passed. Remaining: items 2–6 (item 6's watcher part is
+     in: scoped scans already feed `CatalogChanged`).
 4. [ ] Operations lane: amend ADR-0002 and library core §4.2 for the course code, optional badge
    text and colour, 1–3 character badges, and palette keys for preset tags (spec §20).
 5. [ ] Preview lane: the `folio-file` scheme, the main window's CSP sources, and an e2e test that

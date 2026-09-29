@@ -3,33 +3,41 @@
 
 mod commands;
 mod diagnostics;
+mod dialogs;
 // Public: the IPC contract is this crate's interface to the UI (docs/specs/ipc-m1.md).
 pub mod error;
 pub mod ipc;
+mod jobs;
+mod library;
 mod paths;
 mod preview;
 mod window_chrome;
 
+use std::sync::Arc;
 use tauri::Manager;
+use tauri_specta::Event;
 
 /// Starts the app. Panics only if Tauri itself cannot start.
 pub fn run() {
     let builder = ipc::builder();
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .invoke_handler(builder.invoke_handler())
         .register_uri_scheme_protocol(preview::SCHEME, |ctx, request| {
             preview::respond(ctx.app_handle(), &request)
         })
         .on_window_event(|window, event| {
-            if let tauri::WindowEvent::CloseRequested { .. } = event {
-                // The shell owns closing; a page event listener must not veto it.
-                // Revisit before introducing background writes or unsaved documents.
-                if let Err(error) = window.destroy() {
-                    diagnostics::report(
-                        window.app_handle(),
-                        &format!("failed to close window: {error}"),
-                    );
-                }
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                let (app, window) = (window.app_handle().clone(), window.clone());
+                drain_then(&app, move || {
+                    // The page cannot veto the shell's destroy.
+                    if let Err(error) = window.destroy() {
+                        diagnostics::report(
+                            window.app_handle(),
+                            &format!("failed to close window: {error}"),
+                        );
+                    }
+                });
             }
         })
         .setup(move |app| {
@@ -39,7 +47,31 @@ pub fn run() {
                     .app_local_data_dir()
                     .map_err(|error| error.to_string())
             });
-            app.manage(paths::DataDir::new(data_dir));
+            app.manage(paths::DataDir::new(data_dir.clone()));
+            let handle = app.handle().clone();
+            let library = library::LibraryState::new(
+                data_dir,
+                Arc::new(move |event| {
+                    use ipc::events::{JobChanged, LibraryStateChanged, ProblemsChanged};
+                    let result = match event {
+                        library::Event::Library(status) => {
+                            LibraryStateChanged { status }.emit(&handle)
+                        }
+                        library::Event::Catalog(event) => event.emit(&handle),
+                        library::Event::Job(job) => JobChanged { job }.emit(&handle),
+                        library::Event::Problems(total) => ProblemsChanged { total }.emit(&handle),
+                        library::Event::Error(error) => {
+                            diagnostics::report(&handle, &error);
+                            return;
+                        }
+                    };
+                    if let Err(error) = result {
+                        diagnostics::report(&handle, &format!("library event failed: {error}"));
+                    }
+                }),
+            );
+            app.manage(library.clone());
+            tauri::async_runtime::spawn_blocking(move || library.initialize());
 
             let main = app
                 .get_webview_window("main")
@@ -50,8 +82,33 @@ pub fn run() {
             }
             Ok(())
         })
-        .run(tauri::generate_context!())
+        .build(tauri::generate_context!())
         .expect("error while running Folio");
+    app.run(|app, event| {
+        if let tauri::RunEvent::ExitRequested { api, .. } = event
+            && !app.state::<library::LibraryState>().is_closed()
+        {
+            api.prevent_exit();
+            let exiting = app.clone();
+            drain_then(app, move || exiting.exit(0));
+        }
+    });
+}
+
+/// Closing the window and exiting share one drain: the first request stops new work, cancels
+/// jobs and joins the library worker off the UI thread, then runs `then`. Later requests wait.
+fn drain_then(app: &tauri::AppHandle, then: impl FnOnce() + Send + 'static) {
+    let state = app.state::<library::LibraryState>().inner().clone();
+    if !state.begin_close() {
+        return;
+    }
+    let app = app.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        if let Err(error) = state.shutdown() {
+            diagnostics::report(&app, &format!("library shutdown failed: {error}"));
+        }
+        then();
+    });
 }
 
 #[cfg(test)]

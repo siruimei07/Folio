@@ -4,6 +4,7 @@ use std::borrow::Cow;
 use std::collections::hash_map::Entry;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use unicode_normalization::{UnicodeNormalization, is_nfc};
 
@@ -44,7 +45,12 @@ pub(super) fn walk(
     rules: &Rules,
     scope: Option<&RelPath>,
     problems: &mut Vec<Problem>,
-) -> Result<Snapshot, LibraryError> {
+    cancel: &AtomicBool,
+    progress: &mut dyn FnMut(u64),
+) -> Result<Option<Snapshot>, LibraryError> {
+    if cancel.load(Ordering::Relaxed) {
+        return Ok(None);
+    }
     let listing = fs.read_dir(root).map_err(|source| LibraryError::Root {
         path: root.to_owned(),
         source,
@@ -55,13 +61,19 @@ pub(super) fn walk(
         problems,
         snapshot: Snapshot::default(),
         queue: Vec::new(),
+        cancel,
+        progress,
+        visited: 0,
     };
     let gitignores = walker.gitignores(None, root, &listing, &Gitignores::default());
     walker.children(None, root, listing, &gitignores, scope);
     while let Some(folder) = walker.queue.pop() {
+        if cancel.load(Ordering::Relaxed) {
+            return Ok(None);
+        }
         walker.visit(folder);
     }
-    Ok(walker.snapshot)
+    Ok((!cancel.load(Ordering::Relaxed)).then_some(walker.snapshot))
 }
 
 struct Walker<'a> {
@@ -70,6 +82,9 @@ struct Walker<'a> {
     problems: &'a mut Vec<Problem>,
     snapshot: Snapshot,
     queue: Vec<Folder>,
+    cancel: &'a AtomicBool,
+    progress: &'a mut dyn FnMut(u64),
+    visited: u64,
 }
 
 /// A folder to list.
@@ -150,8 +165,16 @@ impl Walker<'_> {
         let mut kept = Vec::new();
         let mut not_nfc = Vec::new();
         for entry in listing {
+            if self.cancel.load(Ordering::Relaxed) {
+                return;
+            }
             if next.is_some_and(|next| entry.name != next) {
                 continue;
+            }
+            self.visited = self.visited.saturating_add(1);
+            (self.progress)(self.visited);
+            if self.cancel.load(Ordering::Relaxed) {
+                return;
             }
             let child = (entry.metadata.kind == FileKind::Folder).then(|| native.join(&entry.name));
             let (path, metadata, venv_check) = match self.admit(folder, entry, gitignores) {

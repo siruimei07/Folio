@@ -1,0 +1,12 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "library",
+  "description": "Library status and shell-owned folder choices for the main window.",
+  "windows": ["main"],
+  "permissions": [
+    "allow-library-status",
+    "allow-pick-library-folder",
+    "allow-create-library",
+    "allow-open-library"
+  ]
+}

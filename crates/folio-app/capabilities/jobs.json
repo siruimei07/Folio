@@ -1,0 +1,12 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "jobs",
+  "description": "Library jobs and scan problems for the main window.",
+  "windows": ["main"],
+  "permissions": [
+    "allow-list-jobs",
+    "allow-cancel-job",
+    "allow-rebuild-catalog",
+    "allow-list-problems"
+  ]
+}

@@ -17,6 +17,13 @@ use crate::meta::{
 };
 use crate::paths::{CoursePath, RelPath, SemesterPath};
 
+#[derive(Default)]
+pub(super) struct MirrorChanges {
+    pub tagged: Vec<EntryId>,
+    pub tags: bool,
+    pub groups: bool,
+}
+
 /// Brings tag definitions, semester and course settings and entry tags in line with `tree`.
 /// Every scan reads all of `.folio/meta/` (small files); only differences are written. What a
 /// file that cannot be read gave the catalog before stays.
@@ -25,7 +32,8 @@ pub(super) fn mirror(
     tree: &MetaTree,
     root: &Path,
     problems: &mut Vec<Problem>,
-) -> Result<(), CatalogError> {
+) -> Result<MirrorChanges, CatalogError> {
+    let mut changes = MirrorChanges::default();
     for error in tree.broken().values() {
         problems.push(Problem::metadata(root, error));
     }
@@ -41,6 +49,7 @@ pub(super) fn mirror(
         && tag_definitions(conn)? != definitions
     {
         replace_tag_definitions(conn, &definitions)?;
+        changes.tags = true;
     }
 
     let mut groups = BTreeMap::<SemesterPath, GroupSettings>::new();
@@ -109,28 +118,33 @@ pub(super) fn mirror(
     for (semester, settings) in &groups {
         if !stored.contains(&(semester.clone(), settings.clone())) {
             put_semester(conn, semester, settings)?;
+            changes.groups = true;
         }
     }
     for (semester, _) in stored {
         if !groups.contains_key(&semester) && !kept(TagFile::Group(semester.clone())) {
             remove_semester(conn, &semester)?;
+            changes.groups = true;
         }
     }
     let stored = all_courses(conn)?;
     for (course, settings) in &courses {
         if !stored.contains(&(course.clone(), settings.clone())) {
             put_course(conn, course, settings)?;
+            changes.groups = true;
         }
     }
     for (course, _) in stored {
         if !courses.contains_key(&course) && !kept(TagFile::Course(course.clone())) {
             remove_course(conn, &course)?;
+            changes.groups = true;
         }
     }
     let stored = all_entry_tags(conn)?;
     for (entry, ids) in &tags {
         if stored.get(entry) != Some(ids) {
             set_entry_tags(conn, *entry, ids)?;
+            changes.tagged.push(*entry);
         }
     }
     for entry in stored.keys() {
@@ -144,9 +158,10 @@ pub(super) fn mirror(
         };
         if !from_unreadable_file {
             set_entry_tags(conn, *entry, &BTreeSet::new())?;
+            changes.tagged.push(*entry);
         }
     }
-    Ok(())
+    Ok(changes)
 }
 
 /// The entry at `path`, or else the only one whose path differs from it only in case.

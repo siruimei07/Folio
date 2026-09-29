@@ -1,12 +1,15 @@
 use std::path::Path;
 
+// The app consumes these macros; the build script needs only their command names.
+#[allow(unused_imports, unused_macros)]
+#[path = "src/commands/manifest.rs"]
+mod manifest;
+
 fn main() {
-    // Every app command must be listed here and granted in `capabilities/`: a window can only
-    // call the commands its capability grants (ADR-0001, security baseline).
+    // AppManifest requires a static slice; these names live until the build process exits.
+    let commands = Box::leak(manifest::commands().into_boxed_slice());
     let attributes = tauri_build::Attributes::new()
-        .app_manifest(
-            tauri_build::AppManifest::new().commands(&["app_info", "set_maximize_button_bounds"]),
-        )
+        .app_manifest(tauri_build::AppManifest::new().commands(commands))
         .windows_attributes(tauri_build::WindowsAttributes::new_without_app_manifest());
     tauri_build::try_build(attributes).expect("failed to run tauri-build");
 

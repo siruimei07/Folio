@@ -4,14 +4,14 @@
 //! Rust types are the source of truth. The `export_bindings` test below generates the TypeScript
 //! side into `apps/desktop/src/ipc/bindings.ts`; never edit that file by hand.
 //!
-//! Commands come in two sets (spec §3). Implemented commands are listed in
-//! `implemented_commands!`, and each is also listed in `build.rs` and granted in `capabilities/`:
-//! the app runs these. Planned commands are declared in `planned`, for the bindings only: Tauri
-//! never registers them. `runtime_commands_are_declared_and_granted` keeps the lists in step.
+//! Each feature owns its handlers in `commands/<group>.rs`, its runtime/build list in
+//! `commands/<group>/manifest.rs` and its grant in `capabilities/<group>.json`. Planned commands
+//! live in the group's test-only module for the bindings: Tauri never registers them.
+//! `runtime_commands_are_declared_and_granted` keeps the lists in step.
 //!
 //! The modules are public because, until their commands are implemented, the bindings are what
-//! uses most of their types. Once `planned` is empty, make them private again (here and in
-//! `lib.rs`), so that dead-code warnings come back.
+//! uses most of their types. Once all planned commands are implemented, make them private again
+//! (here and in `lib.rs`), so that dead-code warnings come back.
 
 pub mod entries;
 pub mod events;
@@ -19,8 +19,6 @@ pub mod groups;
 pub mod import;
 pub mod jobs;
 pub mod library;
-#[cfg(test)]
-mod planned;
 pub mod problems;
 pub mod search;
 pub mod tags;
@@ -46,61 +44,68 @@ async function typedError<T, E>(result: Promise<T>): Promise<{ status: "ok"; dat
     }
 }"#;
 
-/// The implemented commands, followed by the ones given.
+// tauri-specta's commands() replaces the previous list. Append each group's tokens first,
+// then collect once; path fragments would be opaque to collect_commands!'s identifier parser.
 macro_rules! implemented_commands {
-    ($($more:tt)*) => {
-        collect_commands![
-            commands::app_info,
-            commands::set_maximize_button_bounds,
-            $($more)*
-        ]
+    ([$($commands:tt)*];) => {
+        collect_commands![$($commands)*]
+    };
+    ([$($commands:tt)*]; $group:ident $(, $remaining:ident)*) => {
+        commands::manifest::$group::append_commands!(
+            implemented_commands, [$($commands)*]; $($remaining),*
+        )
     };
 }
 
 /// What the app runs: the implemented commands.
 pub fn builder() -> Builder<tauri::Wry> {
-    contract(Builder::<tauri::Wry>::new().commands(implemented_commands![]))
+    contract(Builder::<tauri::Wry>::new().commands(implemented_commands!(
+        []; shell, library, browse, operations, file, import, jobs
+    )))
 }
 
-/// What the bindings describe: the implemented and the planned commands.
+/// The fixed M1 contract order keeps bindings stable when a group implements its commands.
+/// Group re-exports resolve to the handler or its test-only stub; later M1 lanes edit no index.
 #[cfg(test)]
 fn export_builder() -> Builder<tauri::Wry> {
-    contract(Builder::<tauri::Wry>::new().commands(implemented_commands![
-        planned::library_status,
-        planned::pick_library_folder,
-        planned::create_library,
-        planned::open_library,
-        planned::list_semesters,
-        planned::create_semester,
-        planned::update_semester,
-        planned::reorder_semesters,
-        planned::list_courses,
-        planned::create_course,
-        planned::update_course,
-        planned::reorder_courses,
-        planned::list_tags,
-        planned::create_tag,
-        planned::update_tag,
-        planned::reorder_tags,
-        planned::delete_tag,
-        planned::set_entry_tags,
-        planned::list_children,
-        planned::list_files,
-        planned::get_entry,
-        planned::create_folder,
-        planned::rename_entry,
-        planned::move_entries,
-        planned::delete_entries,
-        planned::search,
-        planned::open_entry,
-        planned::reveal_entry,
-        planned::pick_import_files,
-        planned::check_import,
-        planned::import_files,
-        planned::list_jobs,
-        planned::cancel_job,
-        planned::rebuild_catalog,
-        planned::list_problems,
+    contract(Builder::<tauri::Wry>::new().commands(collect_commands![
+        commands::shell::app_info,
+        commands::shell::set_maximize_button_bounds,
+        commands::library::library_status,
+        commands::library::pick_library_folder,
+        commands::library::create_library,
+        commands::library::open_library,
+        commands::operations::list_semesters,
+        commands::operations::create_semester,
+        commands::operations::update_semester,
+        commands::operations::reorder_semesters,
+        commands::operations::list_courses,
+        commands::operations::create_course,
+        commands::operations::update_course,
+        commands::operations::reorder_courses,
+        commands::operations::list_tags,
+        commands::operations::create_tag,
+        commands::operations::update_tag,
+        commands::operations::reorder_tags,
+        commands::operations::delete_tag,
+        commands::operations::set_entry_tags,
+        commands::browse::list_children,
+        commands::browse::list_files,
+        commands::browse::get_entry,
+        commands::operations::create_folder,
+        commands::operations::rename_entry,
+        commands::operations::move_entries,
+        commands::operations::delete_entries,
+        commands::browse::search,
+        commands::file::open_entry,
+        commands::file::reveal_entry,
+        commands::import::pick_import_files,
+        commands::import::check_import,
+        commands::import::import_files,
+        commands::jobs::list_jobs,
+        commands::jobs::cancel_job,
+        commands::jobs::rebuild_catalog,
+        commands::jobs::list_problems,
     ]))
 }
 
@@ -185,7 +190,13 @@ mod tests {
             );
         }
 
+        let runtime_count = runtime.len();
         let runtime: BTreeSet<String> = runtime.into_iter().collect();
+        assert_eq!(
+            runtime.len(),
+            runtime_count,
+            "a runtime command is registered twice"
+        );
         assert_eq!(
             manifest_commands(),
             runtime,
@@ -198,18 +209,16 @@ mod tests {
         );
     }
 
-    /// The commands `build.rs` lists in the app manifest: the string literals of its list.
+    /// The same feature-owned command names `build.rs` passes to the app manifest.
     fn manifest_commands() -> BTreeSet<String> {
-        let build = include_str!("../build.rs");
-        let (_, list) = build
-            .split_once(".commands(&[")
-            .expect("build.rs lists the app commands");
-        let (list, _) = list.split_once("])").expect("the command list ends");
-        list.split('"')
-            .skip(1)
-            .step_by(2)
-            .map(str::to_owned)
-            .collect()
+        let commands = crate::commands::manifest::commands();
+        let unique: BTreeSet<&str> = commands.iter().copied().collect();
+        assert_eq!(
+            unique.len(),
+            commands.len(),
+            "a manifest command is listed twice"
+        );
+        unique.into_iter().map(str::to_owned).collect()
     }
 
     /// The app commands the capabilities allow, from their `allow-<command>` permissions.

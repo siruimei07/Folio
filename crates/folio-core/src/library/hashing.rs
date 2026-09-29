@@ -55,6 +55,19 @@ impl Library {
         cancel: &AtomicBool,
         progress: &mut dyn FnMut(u64, u64),
     ) -> Result<HashReport, LibraryError> {
+        self.hash_pending_with_commits(catalog, now_ns, cancel, progress, &mut || {})
+    }
+
+    /// As `hash_pending`, notifying after every batch that changed the catalog. The callback
+    /// runs after releasing the writer lock, including batches preceding a later failure.
+    pub fn hash_pending_with_commits(
+        &self,
+        catalog: &Catalog,
+        now_ns: i64,
+        cancel: &AtomicBool,
+        progress: &mut dyn FnMut(u64, u64),
+        on_commit: &mut dyn FnMut(),
+    ) -> Result<HashReport, LibraryError> {
         let total = catalog.read(|tx| count_unhashed_files(tx))?;
         let mut report = HashReport::default();
         let mut after = EntryId(0);
@@ -85,11 +98,11 @@ impl Library {
                 done += 1;
                 progress(done, total);
                 if since.elapsed() >= WRITE_EVERY {
-                    report.hashed += store(catalog, &mut hashes)?;
+                    report.hashed += store(catalog, &mut hashes, on_commit)?;
                     since = Instant::now();
                 }
             }
-            report.hashed += store(catalog, &mut hashes)?;
+            report.hashed += store(catalog, &mut hashes, on_commit)?;
         }
         Ok(report)
     }
@@ -143,7 +156,11 @@ impl Library {
 }
 
 /// Writes `hashes` to the catalog and empties it; returns how many were stored.
-fn store(catalog: &Catalog, hashes: &mut Vec<(&Entry, ContentHash)>) -> Result<u64, LibraryError> {
+fn store(
+    catalog: &Catalog,
+    hashes: &mut Vec<(&Entry, ContentHash)>,
+    on_commit: &mut dyn FnMut(),
+) -> Result<u64, LibraryError> {
     if hashes.is_empty() {
         return Ok(0);
     }
@@ -155,6 +172,9 @@ fn store(catalog: &Catalog, hashes: &mut Vec<(&Entry, ContentHash)>) -> Result<u
         Ok(stored)
     })?;
     hashes.clear();
+    if stored != 0 {
+        on_commit();
+    }
     Ok(stored)
 }
 
@@ -164,5 +184,52 @@ fn failed(error: io::Error) -> Outcome {
         Outcome::Changed
     } else {
         Outcome::Failed(error)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::meta::{DisplayName, LibraryConfig};
+    use crate::test_support::{MemFs, open_catalog};
+
+    #[test]
+    fn reports_committed_hashes_before_a_later_batch_fails() {
+        let dir = tempfile::tempdir().unwrap();
+        let fs = MemFs::new(dir.path());
+        let library = Library::new(dir.path(), fs.clone());
+        library
+            .layout()
+            .write_library(&LibraryConfig::new(DisplayName::parse("Hashes").unwrap()).unwrap())
+            .unwrap();
+        let catalog = open_catalog(dir.path());
+        for index in 0..=BATCH {
+            fs.file(&format!("{index}.md"), b"hash me");
+        }
+        library.scan(&catalog, None, fs.now_ns()).unwrap();
+        let mut commits = 0;
+        let result = library.hash_pending_with_commits(
+            &catalog,
+            fs.now_ns() + 10_000_000_000,
+            &AtomicBool::new(false),
+            &mut |_, _| {},
+            &mut || {
+                commits += 1;
+                // This write would deadlock if notifications still held the catalog writer.
+                catalog
+                    .write(|tx| {
+                        tx.execute_batch(
+                            "CREATE TRIGGER stop_hash BEFORE UPDATE OF hash ON entries
+                        BEGIN SELECT RAISE(ABORT, 'injected later batch failure'); END;",
+                        )?;
+                        Ok(())
+                    })
+                    .unwrap();
+            },
+        );
+        assert!(matches!(result, Err(LibraryError::Catalog(_))));
+        assert_eq!(commits, 1);
+        let pending = catalog.read(|tx| count_unhashed_files(tx)).unwrap();
+        assert!((1..=u64::from(BATCH)).contains(&pending));
     }
 }

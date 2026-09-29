@@ -5,16 +5,19 @@ mod hashing;
 mod mirror;
 mod plan;
 mod rules;
+pub mod state;
 mod walk;
 
+use std::collections::HashMap;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 pub use hashing::HashReport;
 pub use rules::DEFAULT_IGNORE_RULES;
 
-use crate::catalog::{self, Catalog, CatalogError};
+use crate::catalog::{self, Catalog, CatalogError, EntryId};
 use crate::files;
 use crate::fs::{FileSystem, Metadata};
 use crate::meta::{
@@ -206,6 +209,50 @@ pub struct ScanReport {
     pub problems: Vec<Problem>,
 }
 
+/// Which filesystem problems this committed pass replaced. Every non-ignored pass also
+/// refreshes metadata problems across the library, including a scoped filesystem scan.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub enum ScanCoverage {
+    Full,
+    Scope(RelPath),
+    Metadata,
+    #[default]
+    None,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EntryChangeKind {
+    Added,
+    Modified,
+    Removed,
+    Moved { from: RelPath },
+    Tagged,
+}
+
+/// A committed entry identity; removals carry the former path and identity.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EntryChange {
+    pub id: EntryId,
+    pub path: RelPath,
+    pub kind: EntryChangeKind,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct CommittedScan {
+    pub coverage: ScanCoverage,
+    pub report: ScanReport,
+    pub entries: Vec<EntryChange>,
+    pub tags: bool,
+    pub groups: bool,
+    pub read_only: bool,
+}
+
+impl CommittedScan {
+    pub fn changed(&self) -> bool {
+        !self.entries.is_empty() || self.tags || self.groups
+    }
+}
+
 impl Library {
     pub fn new(root: impl Into<PathBuf>, fs: Arc<dyn FileSystem>) -> Self {
         Self {
@@ -234,6 +281,26 @@ impl Library {
         scope: Option<&RelPath>,
         now_ns: i64,
     ) -> Result<ScanReport, LibraryError> {
+        Ok(self
+            .scan_with_control(catalog, scope, now_ns, &AtomicBool::new(false), &mut |_| {})?
+            .map_or_else(ScanReport::default, |committed| committed.report))
+    }
+
+    /// Returns `None` when cancelled before writing. Progress counts visited entries; the
+    /// total is unknown while walking. Once the write starts, journal and catalog work finish
+    /// without cancellation. Callers serialize scans so snapshots cannot commit out of order.
+    pub fn scan_with_control(
+        &self,
+        catalog: &Catalog,
+        scope: Option<&RelPath>,
+        now_ns: i64,
+        cancel: &AtomicBool,
+        progress: &mut dyn FnMut(u64),
+    ) -> Result<Option<CommittedScan>, LibraryError> {
+        if cancel.load(Ordering::Relaxed) {
+            return Ok(None);
+        }
+        state::validate_metadata(self.root())?;
         let config = self
             .layout
             .read_library()?
@@ -241,7 +308,7 @@ impl Library {
                 path: self.layout.library_file(),
             })?;
         let scope = match scope {
-            Some(scope) if is_folio_owned(scope) => return Ok(ScanReport::default()),
+            Some(scope) if is_folio_owned(scope) => return Ok(Some(CommittedScan::default())),
             // A rules file decides what its folder keeps.
             Some(scope) if rules::is_rules_file(scope.name()) => match scope.parent() {
                 Some(folder) => self.widen(catalog, &folder)?,
@@ -252,56 +319,134 @@ impl Library {
         };
         let mut problems = Vec::new();
         let rules = rules::Rules::load(&self.layout, &mut problems)?;
-        let snapshot = walk::walk(
+        let Some(snapshot) = walk::walk(
             &*self.fs,
             self.root(),
             &rules,
             scope.as_ref(),
             &mut problems,
-        )?;
-        let (changes, journal) = catalog.write_with(|tx| -> Result<_, LibraryError> {
-            let mut tree = self.read_meta(tx)?;
-            // A catalog no scan has committed to, a new library's or a rebuilt one, dates entries
-            // by their files; later scans by when they first saw them (docs/specs/library-scan.md
-            // §6.3).
-            let first = !catalog::was_scanned(tx)?;
-            let added_ns = |metadata: &Metadata| {
-                let created = metadata.created_ns.or(metadata.modified_ns);
-                if first {
-                    created.map_or(now_ns, |created| created.min(now_ns))
-                } else {
-                    now_ns
+            cancel,
+            progress,
+        )?
+        else {
+            return Ok(None);
+        };
+        let Some((mut committed, journal)) =
+            catalog.write_with(|tx| -> Result<_, LibraryError> {
+                if cancel.load(Ordering::Relaxed) {
+                    return Ok(None);
                 }
-            };
-            let current = catalog::entries_in(tx, scope.as_ref())?;
-            let plan = plan::plan(&snapshot, current, &config.versioning, added_ns);
-            // The metadata files first, then the catalog (ADR-0002 §1), with a journal in
-            // between (§7.1).
-            for stranded in tree.relocate(&plan.moves) {
-                problems.push(Problem::NotRelocated {
-                    from: stranded.from,
-                    to: stranded.to,
-                    cause: stranded.cause,
-                });
-            }
-            let journal = tree.save(&self.layout)?;
-            catalog::apply_changes(tx, &plan.entries)?;
-            if let Some(id) = &journal {
-                catalog::set_committed_scan_journal(tx, id)?;
-            }
-            if first {
-                catalog::set_first_scan(tx, now_ns)?;
-            }
-            mirror::mirror(tx, &tree, self.root(), &mut problems)?;
-            Ok((plan.changes, journal))
-        })?;
+                let mut tree = self.read_meta(tx)?;
+                let read_only = tree.is_read_only();
+                // A catalog no scan has committed to, a new library's or a rebuilt one, dates entries
+                // by their files; later scans by when they first saw them (docs/specs/library-scan.md
+                // §6.3).
+                let first = !catalog::was_scanned(tx)?;
+                let added_ns = |metadata: &Metadata| {
+                    let created = metadata.created_ns.or(metadata.modified_ns);
+                    if first {
+                        created.map_or(now_ns, |created| created.min(now_ns))
+                    } else {
+                        now_ns
+                    }
+                };
+                let current = catalog::entries_in(tx, scope.as_ref())?;
+                let before: HashMap<_, _> = current
+                    .iter()
+                    .map(|entry| (entry.id, (entry.record.path.clone(), entry.record.kind)))
+                    .collect();
+                let plan = plan::plan(&snapshot, current, &config.versioning, added_ns);
+                // The metadata files first, then the catalog (ADR-0002 §1), with a journal in
+                // between (§7.1).
+                for stranded in tree.relocate(&plan.moves) {
+                    problems.push(Problem::NotRelocated {
+                        from: stranded.from,
+                        to: stranded.to,
+                        cause: stranded.cause,
+                    });
+                }
+                let journal = tree.save(&self.layout)?;
+                let added_ids = catalog::apply_changes(tx, &plan.entries)?;
+                if let Some(id) = &journal {
+                    catalog::set_committed_scan_journal(tx, id)?;
+                }
+                if first {
+                    catalog::set_first_scan(tx, now_ns)?;
+                }
+                let mirrored = mirror::mirror(tx, &tree, self.root(), &mut problems)?;
+                let mut committed = CommittedScan {
+                    coverage: scope
+                        .clone()
+                        .map_or(ScanCoverage::Full, ScanCoverage::Scope),
+                    tags: mirrored.tags,
+                    groups: mirrored.groups,
+                    read_only,
+                    ..CommittedScan::default()
+                };
+                for (id, path) in &plan.entries.removed {
+                    committed.entries.push(EntryChange {
+                        id: *id,
+                        path: path.clone(),
+                        kind: EntryChangeKind::Removed,
+                    });
+                    committed.groups |= before
+                        .get(id)
+                        .is_some_and(|(path, kind)| is_group(path, *kind));
+                }
+                for (id, path) in &plan.entries.moved {
+                    let (from, kind) = before.get(id).ok_or(CatalogError::NoEntry(*id))?;
+                    committed.groups |= is_group(from, *kind) || is_group(path, *kind);
+                    committed.entries.push(EntryChange {
+                        id: *id,
+                        path: path.clone(),
+                        kind: EntryChangeKind::Moved { from: from.clone() },
+                    });
+                }
+                for (id, (record, _)) in added_ids.into_iter().zip(&plan.entries.added) {
+                    committed.groups |= is_group(&record.path, record.kind);
+                    committed.entries.push(EntryChange {
+                        id,
+                        path: record.path.clone(),
+                        kind: EntryChangeKind::Added,
+                    });
+                }
+                for (id, record) in &plan.entries.updated {
+                    committed.entries.push(EntryChange {
+                        id: *id,
+                        path: record.path.clone(),
+                        kind: EntryChangeKind::Modified,
+                    });
+                }
+                committed.add_tagged(tx, mirrored.tagged)?;
+                committed.report = ScanReport {
+                    changes: plan.changes,
+                    problems,
+                };
+                Ok(Some((committed, journal)))
+            })?
+        else {
+            return Ok(None);
+        };
         if journal.is_some()
-            && let Err(error) = ScanJournal::remove(&self.layout)
+            && let Err(error) = self.finish_journal(catalog)
         {
-            // The catalog committed: the next scan finds the journal settled and removes it.
-            problems.push(Problem::metadata(self.root(), &error));
+            // Another scan may have run since this commit. Settle its journal under the writer
+            // mutex too; never delete an uncommitted writer's journal after releasing that lock.
+            let problem = match error {
+                LibraryError::Meta(error) => Problem::metadata(self.root(), &error),
+                error => Problem::Metadata {
+                    file: ".folio/local/journal/scan.json".to_owned(),
+                    failure: MetadataFailure::Unreadable(ReadFailure::Other),
+                    detail: error.to_string(),
+                },
+            };
+            committed.report.problems.push(problem);
         }
-        Ok(ScanReport { changes, problems })
+        Ok(Some(committed))
+    }
+
+    fn finish_journal(&self, catalog: &Catalog) -> Result<(), LibraryError> {
+        catalog.with_writer(|tx| self.settle_journal(tx))
     }
 
     /// Reads `.folio/meta/` as the catalog knows it: an interrupted scan's journal is settled
@@ -315,6 +460,7 @@ impl Library {
     /// update never committed, the files go back to what they held, so that what reads them
     /// next starts from the state the catalog knows (docs/specs/library-scan.md §7.1).
     fn settle_journal(&self, tx: &rusqlite::Connection) -> Result<(), LibraryError> {
+        state::validate_metadata(self.root())?;
         // A new catalog knows no paths to go back to: the files stay as the scan left them,
         // and a journal that cannot be read does not stand in the way of a rebuild.
         if catalog::has_no_entries(tx)? {
@@ -342,35 +488,106 @@ impl Library {
         now_ns: i64,
         on_report: &mut dyn FnMut(Option<&RelPath>, ScanReport),
     ) -> Result<(), LibraryError> {
+        self.rescan_with_control(
+            catalog,
+            rescan,
+            now_ns,
+            &AtomicBool::new(false),
+            &mut |_| {},
+            &mut |committed| {
+                let scope = match &committed.coverage {
+                    ScanCoverage::Scope(scope) => Some(scope),
+                    _ => None,
+                };
+                on_report(scope, committed.report);
+            },
+        )?;
+        Ok(())
+    }
+
+    /// As `rescan`, with cancellation and committed identities. `false` means a pass was
+    /// cancelled; reports already delivered remain committed.
+    pub fn rescan_with_control(
+        &self,
+        catalog: &Catalog,
+        rescan: &Rescan,
+        now_ns: i64,
+        cancel: &AtomicBool,
+        progress: &mut dyn FnMut(u64),
+        on_report: &mut dyn FnMut(CommittedScan),
+    ) -> Result<bool, LibraryError> {
         match rescan {
-            Rescan::Full => on_report(None, self.scan(catalog, None, now_ns)?),
+            Rescan::Full => {
+                let Some(report) =
+                    self.scan_with_control(catalog, None, now_ns, cancel, progress)?
+                else {
+                    return Ok(false);
+                };
+                on_report(report);
+            }
             Rescan::Scopes(scopes) => {
                 for scope in scopes {
-                    on_report(Some(scope), self.scan(catalog, Some(scope), now_ns)?);
+                    let Some(report) =
+                        self.scan_with_control(catalog, Some(scope), now_ns, cancel, progress)?
+                    else {
+                        return Ok(false);
+                    };
+                    on_report(report);
                 }
             }
             Rescan::Metadata => {
-                let problems = self.sync_metadata(catalog)?;
-                on_report(
-                    None,
-                    ScanReport {
-                        changes: Vec::new(),
-                        problems,
-                    },
-                );
+                let Some(report) = self.sync_metadata_with_control(catalog, cancel)? else {
+                    return Ok(false);
+                };
+                on_report(report);
             }
         }
-        Ok(())
+        Ok(true)
     }
 
     /// Brings the catalog's copy of `.folio/` in line with the files, for example after they
     /// changed outside Folio; every scan does this too.
     pub fn sync_metadata(&self, catalog: &Catalog) -> Result<Vec<Problem>, LibraryError> {
+        Ok(self
+            .sync_metadata_with_control(catalog, &AtomicBool::new(false))?
+            .map_or_else(Vec::new, |committed| committed.report.problems))
+    }
+
+    pub fn sync_metadata_with_control(
+        &self,
+        catalog: &Catalog,
+        cancel: &AtomicBool,
+    ) -> Result<Option<CommittedScan>, LibraryError> {
         catalog.write_with(|tx| {
+            if cancel.load(Ordering::Relaxed) {
+                return Ok(None);
+            }
             let tree = self.read_meta(tx)?;
             let mut problems = Vec::new();
-            mirror::mirror(tx, &tree, self.root(), &mut problems)?;
-            Ok(problems)
+            let mirrored = mirror::mirror(tx, &tree, self.root(), &mut problems)?;
+            let mut committed = CommittedScan {
+                coverage: ScanCoverage::Metadata,
+                report: ScanReport {
+                    changes: Vec::new(),
+                    problems,
+                },
+                tags: mirrored.tags,
+                groups: mirrored.groups,
+                read_only: tree.is_read_only(),
+                ..CommittedScan::default()
+            };
+            committed.add_tagged(tx, mirrored.tagged)?;
+            Ok(Some(committed))
+        })
+    }
+
+    /// Settles recoverable metadata writes before clearing derived rows. The same catalog
+    /// remains usable by readers, and the next scan rebuilds it with fresh entry identities.
+    pub fn reset_catalog(&self, catalog: &Catalog) -> Result<(), LibraryError> {
+        catalog.write_with(|tx| {
+            self.settle_journal(tx)?;
+            catalog::reset_for_rebuild(tx)?;
+            Ok(())
         })
     }
 
@@ -388,6 +605,28 @@ impl Library {
             Ok(None)
         })
     }
+}
+
+impl CommittedScan {
+    fn add_tagged(
+        &mut self,
+        tx: &rusqlite::Connection,
+        ids: Vec<EntryId>,
+    ) -> Result<(), CatalogError> {
+        for id in ids {
+            let entry = catalog::entry_by_id(tx, id)?.ok_or(CatalogError::NoEntry(id))?;
+            self.entries.push(EntryChange {
+                id,
+                path: entry.record.path,
+                kind: EntryChangeKind::Tagged,
+            });
+        }
+        Ok(())
+    }
+}
+
+fn is_group(path: &RelPath, kind: EntryKind) -> bool {
+    kind == EntryKind::Folder && path.depth() <= 2
 }
 
 #[cfg(test)]

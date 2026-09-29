@@ -1,6 +1,6 @@
 import { type ChildProcess, spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -21,28 +21,34 @@ interface FolioApp {
   processId: number;
   /** The isolated data directory passed to the app through FOLIO_DATA_DIR. */
   dataDir: string;
+  /** A fresh folder supplied to the debug native picker, only when explicitly enabled. */
+  libraryDir: string | undefined;
+  /** Closes through the shell, waits for a clean process exit, then reuses the same local data. */
+  restart: () => Promise<Page>;
 }
 
 /**
  * Starts one Folio instance per test with its own WebView2 profile and data directory, and
  * attaches Playwright over CDP (Playwright's WebView2 guide).
  */
-export const test = base.extend<{ folio: FolioApp }>({
-  // Playwright requires an object pattern as the first parameter, even an empty one.
-  folio: async ({}, use, testInfo) => {
+export const test = base.extend<{ folio: FolioApp; libraryFolder: boolean }>({
+  libraryFolder: [false, { option: true }],
+  folio: async ({ libraryFolder }, use, testInfo) => {
     const root = await mkdtemp(path.join(tmpdir(), 'folio-e2e-'));
     const dataDir = path.join(root, 'data');
     const webview2Dir = path.join(root, 'webview2');
+    const libraryDir = libraryFolder ? path.join(root, 'library') : undefined;
 
     let child: ChildProcess | undefined;
     let browser: Browser | undefined;
-    try {
+    async function start(): Promise<{ page: Page; processId: number }> {
       child = await launch({
         // Port 0 lets the OS pick a free port, so parallel runs never attach to each other's
         // app. WebView2 reports the port in DevToolsActivePort.
         WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: '--remote-debugging-port=0',
         WEBVIEW2_USER_DATA_FOLDER: webview2Dir,
         FOLIO_DATA_DIR: dataDir,
+        FOLIO_TEST_LIBRARY_FOLDER: libraryDir,
       });
       browser = await connect(path.join(webview2Dir, 'EBWebView', 'DevToolsActivePort'), child);
       testInfo.annotations.push({ type: 'WebView2', description: browser.version() });
@@ -59,7 +65,36 @@ export const test = base.extend<{ folio: FolioApp }>({
         requestAnimationFrame(() => requestAnimationFrame(resolve));
       })`);
       if (child.pid === undefined) throw new Error('Folio has no process id');
-      await use({ page, dataDir, processId: child.pid });
+      return { page, processId: child.pid };
+    }
+
+    try {
+      if (libraryDir) await mkdir(libraryDir);
+      const app: FolioApp = {
+        ...(await start()),
+        dataDir,
+        libraryDir,
+        restart: async () => {
+          if (!child || !browser) throw new Error('Folio is not running');
+          const closed = app.page.waitForEvent('close');
+          await app.page.evaluate(`setTimeout(() => {
+            void window.__TAURI_INTERNALS__.invoke('plugin:window|close');
+          }, 0)`);
+          await closed;
+          if (!hasExited(child)) {
+            await once(child, 'exit', { signal: AbortSignal.timeout(15_000) });
+          }
+          if (child.exitCode !== 0) {
+            throw new Error(`Folio did not exit cleanly (${String(child.exitCode ?? child.signalCode)})`);
+          }
+          await browser.close();
+          // A stale port file could attach to a WebView2 helper that is still shutting down.
+          await rm(path.join(webview2Dir, 'EBWebView', 'DevToolsActivePort'), { force: true });
+          Object.assign(app, await start());
+          return app.page;
+        },
+      };
+      await use(app);
     } finally {
       await browser?.close();
       if (child) await stop(child);

@@ -24,6 +24,337 @@ mod property;
 #[cfg(windows)]
 mod watcher;
 
+#[cfg(windows)]
+fn metadata_junction(link: &Path, target: &Path) {
+    // Junctions need no symbolic-link privilege; the adapter tests use the same operation.
+    let result = std::process::Command::new("cmd")
+        .args(["/C", "mklink", "/J"])
+        .arg(link)
+        .arg(target)
+        .output()
+        .unwrap();
+    assert!(result.status.success(), "{result:?}");
+}
+
+#[cfg(windows)]
+#[test]
+fn metadata_guard_rejects_junctions_at_every_owned_level() {
+    let outside = TempDir::new().unwrap();
+    let sentinel = outside.path().join("sentinel.txt");
+    std_fs::write(&sentinel, b"outside").unwrap();
+    for relative in [
+        ".folio",
+        ".folio/library.json",
+        ".folio/tags.json",
+        ".folio/ignore",
+        ".folio/meta",
+        ".folio/meta/_root.json",
+        ".folio/meta/semester",
+        ".folio/meta/semester/course.json",
+        ".folio/local",
+        ".folio/local/staging",
+        ".folio/local/journal",
+        ".folio/local/journal/scan.json",
+    ] {
+        let dir = TempDir::new().unwrap();
+        let link = dir.path().join(relative.replace('/', "\\"));
+        std_fs::create_dir_all(link.parent().unwrap()).unwrap();
+        state::validate_metadata(dir.path()).unwrap();
+        metadata_junction(&link, outside.path());
+        let rejected = state::validate_metadata(dir.path());
+        // Remove only the known junction so temporary-directory cleanup cannot traverse it.
+        std_fs::remove_dir(&link).unwrap();
+        assert!(
+            matches!(rejected, Err(MetaError::Invalid { path, .. }) if path == link),
+            "{relative}"
+        );
+        assert_eq!(std_fs::read(&sentinel).unwrap(), b"outside");
+        assert_eq!(std_fs::read_dir(outside.path()).unwrap().count(), 1);
+    }
+}
+
+#[cfg(windows)]
+#[test]
+fn metadata_links_are_rejected_before_initial_scan_and_again_before_writing() {
+    let f = Fixture::new();
+    let outside = TempDir::new().unwrap();
+    std_fs::create_dir(outside.path().join("s")).unwrap();
+    let sentinel = outside.path().join("s/c.json");
+    std_fs::write(&sentinel, b"outside").unwrap();
+    let meta = f.layout().meta_dir();
+    metadata_junction(&meta, outside.path());
+    f.fs.file("s/c/a.md", b"a");
+    let initial = f.library.scan(&f.catalog, None, f.fs.now_ns());
+    std_fs::remove_dir(&meta).unwrap();
+    assert!(matches!(
+        initial,
+        Err(LibraryError::Meta(MetaError::Invalid { .. }))
+    ));
+    assert!(f.entries().is_empty());
+    assert_eq!(std_fs::read(&sentinel).unwrap(), b"outside");
+
+    f.scan();
+    set_tags(f.layout(), "s/c/a.md", EntryKind::File, tags(["notes"]));
+    f.scan();
+    let before = f.entries();
+    let source_metadata = std_fs::read(course_file(f.layout(), "s/c")).unwrap();
+    std_fs::write(&sentinel, &source_metadata).unwrap();
+    f.fs.rename("s/c/a.md", "s/c/b.md");
+    let mut replaced = false;
+    let result = f.library.scan_with_control(
+        &f.catalog,
+        None,
+        f.fs.now_ns(),
+        &AtomicBool::new(false),
+        &mut |_| {
+            if !replaced {
+                std_fs::rename(&meta, f.library.root().join("saved-meta")).unwrap();
+                metadata_junction(&meta, outside.path());
+                replaced = true;
+            }
+        },
+    );
+    assert!(replaced);
+    assert!(matches!(
+        result,
+        Err(LibraryError::Meta(MetaError::Invalid { .. }))
+    ));
+    assert!(matches!(
+        f.library.sync_metadata(&f.catalog),
+        Err(LibraryError::Meta(MetaError::Invalid { .. }))
+    ));
+    assert!(matches!(
+        f.library.reset_catalog(&f.catalog),
+        Err(LibraryError::Meta(MetaError::Invalid { .. }))
+    ));
+    std_fs::remove_dir(&meta).unwrap();
+    assert_eq!(f.entries(), before);
+    assert_eq!(std_fs::read(&sentinel).unwrap(), source_metadata);
+    assert!(!f.layout().scan_journal_file().exists());
+}
+
+#[test]
+fn controlled_scan_cancels_before_catalog_or_metadata_changes() {
+    let f = Fixture::new();
+    f.fs.file("s/c/a.md", b"a");
+    f.scan();
+    set_tags(f.layout(), "s/c/a.md", EntryKind::File, tags(["notes"]));
+    f.scan();
+    let before = f.entries();
+    let metadata = std_fs::read(course_file(f.layout(), "s/c")).unwrap();
+    f.fs.rename("s/c/a.md", "s/c/b.md");
+
+    let cancel = AtomicBool::new(false);
+    let mut visited = 0;
+    let result = f
+        .library
+        .scan_with_control(&f.catalog, None, f.fs.now_ns(), &cancel, &mut |done| {
+            visited = done;
+            cancel.store(true, Ordering::Relaxed);
+        })
+        .unwrap();
+    assert!(result.is_none());
+    assert_eq!(visited, 1);
+    assert_eq!(f.entries(), before);
+    assert_eq!(
+        std_fs::read(course_file(f.layout(), "s/c")).unwrap(),
+        metadata
+    );
+    assert!(!f.layout().scan_journal_file().exists());
+
+    let result = f
+        .library
+        .scan_with_control(&f.catalog, None, f.fs.now_ns(), &cancel, &mut |_| {
+            panic!("already cancelled")
+        })
+        .unwrap();
+    assert!(result.is_none());
+}
+
+#[test]
+fn controlled_scan_reports_effective_scope_and_committed_identities() {
+    let f = Fixture::new();
+    f.fs.file("s/c/a.md", b"a");
+    f.fs.file("s/c/gone.md", b"gone");
+    f.scan();
+    let moved = f.entry("s/c/a.md").id;
+    let removed = f.entry("s/c/gone.md").id;
+    f.fs.rename("s/c/a.md", "s/c/b.md");
+    f.fs.remove("s/c/gone.md");
+    f.fs.file("s/c/new.md", b"new");
+
+    let report = f
+        .library
+        .scan_with_control(
+            &f.catalog,
+            Some(&path("s/c/unknown/deep.md")),
+            f.fs.now_ns(),
+            &AtomicBool::new(false),
+            &mut |_| {},
+        )
+        .unwrap()
+        .unwrap();
+    assert_eq!(report.coverage, ScanCoverage::Scope(path("s/c")));
+    assert!(report.entries.contains(&EntryChange {
+        id: moved,
+        path: path("s/c/b.md"),
+        kind: EntryChangeKind::Moved {
+            from: path("s/c/a.md")
+        },
+    }));
+    assert!(report.entries.contains(&EntryChange {
+        id: removed,
+        path: path("s/c/gone.md"),
+        kind: EntryChangeKind::Removed,
+    }));
+    assert!(report.entries.contains(&EntryChange {
+        id: f.entry("s/c/new.md").id,
+        path: path("s/c/new.md"),
+        kind: EntryChangeKind::Added,
+    }));
+
+    let mut scopes = Vec::new();
+    f.library
+        .rescan(
+            &f.catalog,
+            &Rescan::Scopes(vec![path("s/c/.gitignore")]),
+            f.fs.now_ns(),
+            &mut |scope, _| scopes.push(scope.cloned()),
+        )
+        .unwrap();
+    assert_eq!(scopes, [Some(path("s/c"))]);
+}
+
+#[test]
+fn metadata_report_distinguishes_tags_groups_and_read_only_state() {
+    let f = Fixture::new();
+    f.fs.file("s/c/a.md", b"a");
+    f.scan();
+    set_tags(f.layout(), "s/c/a.md", EntryKind::File, tags(["notes"]));
+    set_course(f.layout(), "s/c", settings("C", 3));
+    f.layout().write_tags(&presets("Renamed slides")).unwrap();
+    let cancel = AtomicBool::new(false);
+    let report = f
+        .library
+        .sync_metadata_with_control(&f.catalog, &cancel)
+        .unwrap()
+        .unwrap();
+    assert_eq!(report.coverage, ScanCoverage::Metadata);
+    assert!(report.changed() && report.tags && report.groups);
+    assert!(!report.read_only);
+    assert_eq!(
+        report.entries,
+        [EntryChange {
+            id: f.entry("s/c/a.md").id,
+            path: path("s/c/a.md"),
+            kind: EntryChangeKind::Tagged,
+        }]
+    );
+    let repeated = f
+        .library
+        .sync_metadata_with_control(&f.catalog, &cancel)
+        .unwrap()
+        .unwrap();
+    assert!(!repeated.changed());
+
+    std_fs::write(course_file(f.layout(), "s/c"), "{\"format_version\":2}").unwrap();
+    let report = f
+        .library
+        .sync_metadata_with_control(&f.catalog, &cancel)
+        .unwrap()
+        .unwrap();
+    assert!(report.read_only);
+    assert!(report.report.problems.iter().any(|problem| matches!(
+        problem,
+        Problem::Metadata {
+            failure: MetadataFailure::Newer,
+            ..
+        }
+    )));
+}
+
+#[test]
+fn rebuilding_keeps_metadata_and_never_reuses_deleted_highest_identity() {
+    let f = Fixture::new();
+    f.fs.file("s/c/a.md", b"a");
+    f.fs.file("s/c/z.md", b"z");
+    f.scan();
+    let highest = f.entries().iter().map(|entry| entry.id).max().unwrap();
+    set_tags(f.layout(), "s/c/a.md", EntryKind::File, tags(["notes"]));
+    f.scan();
+    let metadata = std_fs::read(course_file(f.layout(), "s/c")).unwrap();
+    f.fs.remove("s/c/z.md");
+    f.scan();
+
+    f.library.reset_catalog(&f.catalog).unwrap();
+    assert!(f.entries().is_empty());
+    assert!(!f.catalog.read(|tx| catalog::was_scanned(tx)).unwrap());
+    assert_eq!(
+        std_fs::read(course_file(f.layout(), "s/c")).unwrap(),
+        metadata
+    );
+    f.scan();
+    assert!(f.entries().iter().all(|entry| entry.id > highest));
+    assert_eq!(f.tags("s/c/a.md"), ["notes"]);
+}
+
+#[test]
+fn journal_cleanup_waits_for_the_writer_and_recovers_its_failed_metadata_write() {
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    let f = Fixture::new();
+    f.fs.file("s/c/a.md", b"a");
+    f.scan();
+    set_tags(f.layout(), "s/c/a.md", EntryKind::File, tags(["notes"]));
+    let before = std_fs::read_to_string(course_file(f.layout(), "s/c")).unwrap();
+    let (started, wait_for_start) = mpsc::channel();
+    let (release, wait_for_release) = mpsc::channel();
+    let (cleaned, wait_for_cleanup) = mpsc::channel();
+    let fixture = &f;
+    let metadata = &before;
+    std::thread::scope(|threads| {
+        threads.spawn(move || {
+            let f = fixture;
+            let failed = f.catalog.write(|_| {
+                let journal = serde_json::json!({
+                    "format_version": 1,
+                    "id": "in-flight",
+                    "before": [["s/c.json", metadata]],
+                });
+                std_fs::create_dir_all(f.layout().scan_journal_file().parent().unwrap()).unwrap();
+                std_fs::write(f.layout().scan_journal_file(), journal.to_string()).unwrap();
+                std_fs::write(course_file(f.layout(), "s/c"), "{\"format_version\":1}").unwrap();
+                started.send(()).unwrap();
+                wait_for_release.recv().unwrap();
+                Err::<(), _>(CatalogError::Invalid(
+                    "interrupted before commit".to_owned(),
+                ))
+            });
+            assert!(failed.is_err());
+        });
+        wait_for_start.recv().unwrap();
+        threads.spawn(move || {
+            cleaned
+                .send(fixture.library.finish_journal(&fixture.catalog))
+                .unwrap();
+        });
+        let result = wait_for_cleanup.recv_timeout(Duration::from_millis(100));
+        // Release even on a failure, so this regression cannot strand its writer thread.
+        release.send(()).unwrap();
+        assert!(matches!(result, Err(mpsc::RecvTimeoutError::Timeout)));
+        wait_for_cleanup
+            .recv_timeout(Duration::from_secs(5))
+            .unwrap()
+            .unwrap();
+    });
+    assert_eq!(
+        std_fs::read_to_string(course_file(f.layout(), "s/c")).unwrap(),
+        before
+    );
+    assert!(!f.layout().scan_journal_file().exists());
+}
+
 /// A library on a [`MemFs`] whose `.folio/` lives in a temporary folder, and its catalog.
 struct Fixture {
     _dir: TempDir,

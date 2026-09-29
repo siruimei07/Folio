@@ -57,6 +57,22 @@ pub enum Rescan {
     Metadata,
 }
 
+impl Rescan {
+    /// One rescan covering both, as if their records had come in one window: for a consumer
+    /// that could not run the first before the second arrived.
+    #[must_use]
+    pub fn merge(self, other: Self) -> Self {
+        match (self, other) {
+            (Self::Full, _) | (_, Self::Full) => Self::Full,
+            (Self::Metadata, other) | (other, Self::Metadata) => other,
+            (Self::Scopes(mut scopes), Self::Scopes(more)) => {
+                scopes.extend(more);
+                outermost(scopes.into_iter().collect()).map_or(Self::Full, Self::Scopes)
+            }
+        }
+    }
+}
+
 /// How a watcher reads change records, and when rescans are due.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WatchOptions {
@@ -204,6 +220,12 @@ fn scopes(tracks: impl Iterator<Item = Track>, paths: Vec<Vec<OsString>>) -> Opt
     for path in paths {
         scopes.insert(scope(&path)?);
     }
+    outermost(scopes)
+}
+
+/// The scopes that are below no other, or their deepest common folder beyond `MAX_SCOPES`;
+/// `None` for the whole library.
+fn outermost(scopes: BTreeSet<RelPath>) -> Option<Vec<RelPath>> {
     let outer: Vec<RelPath> = scopes
         .iter()
         .filter(|scope| {
@@ -289,6 +311,28 @@ mod tests {
     }
 
     use Action::{Added, Modified, Removed, RenamedFrom, RenamedTo};
+
+    #[test]
+    fn merged_rescans_keep_outer_scopes_and_widen_like_one_window() {
+        let at = |texts: &[&str]| Rescan::Scopes(texts.iter().map(|text| path(text)).collect());
+        assert_eq!(at(&["a/b"]).merge(at(&["a", "c"])), at(&["a", "c"]));
+        assert_eq!(Rescan::Metadata.merge(at(&["a"])), at(&["a"]));
+        assert_eq!(at(&["a"]).merge(Rescan::Metadata), at(&["a"]));
+        assert_eq!(at(&["a"]).merge(Rescan::Full), Rescan::Full);
+        let many: Vec<String> = (0..=MAX_SCOPES).map(|n| format!("s/{n}")).collect();
+        let (first, rest) = many.split_at(4);
+        let first: Vec<&str> = first.iter().map(String::as_str).collect();
+        let rest: Vec<&str> = rest.iter().map(String::as_str).collect();
+        assert_eq!(at(&first).merge(at(&rest)), at(&["s"]));
+        assert_eq!(
+            at(&["x/1", "x/2"]).merge(at(&["y", "y"])),
+            at(&["x/1", "x/2", "y"])
+        );
+        assert_eq!(
+            at(&first).merge(at(&["t"; MAX_SCOPES])).merge(at(&rest)),
+            Rescan::Full
+        );
+    }
 
     #[test]
     fn starts_with_a_full_rescan_and_repeats_it() {

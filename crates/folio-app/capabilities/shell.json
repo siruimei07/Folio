@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
-  "identifier": "main-window",
-  "description": "Permissions of the main window: only what the UI uses. Grant each app command and core permission individually; no default sets.",
+  "identifier": "shell",
+  "description": "Shell commands and individual core permissions of the main window. Grant each app command and core permission individually; no default sets.",
   "windows": ["main"],
   "permissions": [
     "allow-app-info",

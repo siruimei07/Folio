@@ -346,6 +346,8 @@ Settle in docs/specs/ipc-m1.md and the Rust types in crates/folio-app/src/ipc/, 
 4. An error code of its own for an item the Recycle Bin cannot take, instead of FileSystem (library-actions §16 item 3; docs/specs/windows-adapter.md §4), with its string in the en errors namespace.
 5. Why a folio-file request failed (in use, not on this disk, not found) in a form the preview can read; today the scheme answers 404 for every failure (library-actions §16 item 4; ipc-m1 §11.2).
 6. library_status retries opening a library whose last state is unavailable (docs/design/handoff/first-run.md §12 item 1): behaviour text only, no type change.
+7. A folder holding an incomplete .folio (a creation that failed before library.json, e.g. disk full) is a dead end today: pick_library_folder reports ordinary content, create_library AlreadyALibrary, open_library NotALibrary. Give it a code or FolderContent kind of its own and a way out, with its strings (Sirui, 2026-09-29: settle it in this lane).
+8. The Unavailable reason is guessed from the flattened AppError (crates/folio-app/src/library/mod.rs `unavailable`): a catalog error can show as missing or accessDenied. Decide the reason where the failure happens, and say in ipc-m1 §6 what each reason covers.
 Regenerate the bindings with `cargo test -p folio-app export_bindings`, update the wrappers in apps/desktop/src/ipc/ only where a type changed, and record the changes in ipc-m1 §20. Tick ADR-0005 action item 4, noting that this lane replaced the planned feat/ipc-m1-resolve-paths. Contract tests (the planned-command test must still pass), `pnpm check`, `pnpm e2e` with the app lock, /code-review, /security-review; report to me in Chinese.
 ```
 

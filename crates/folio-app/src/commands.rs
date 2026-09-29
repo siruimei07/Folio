@@ -1,38 +1,37 @@
-use serde::Serialize;
-use specta::Type;
-use tauri::{AppHandle, State, WebviewWindow};
+//! Feature-owned command handlers. New implementations replace their group's test-only stubs,
+//! then update that group's manifest.rs and capabilities/<group>.json in the same change.
+
+pub(crate) mod browse;
+pub(crate) mod file;
+pub(crate) mod import;
+pub(crate) mod jobs;
+pub(crate) mod library;
+// Names are consumed by build.rs and tests; runtime registration consumes the macros only.
+#[cfg_attr(not(test), allow(dead_code))]
+pub(crate) mod manifest;
+pub(crate) mod operations;
+pub(crate) mod shell;
 
 use crate::error::AppError;
-use crate::paths::DataDir;
-use crate::window_chrome::{self, ButtonBounds};
+use crate::library::LibraryState;
 
-/// Versions and the data directory, for the placeholder screen and for bug reports.
-#[derive(Debug, Serialize, Type)]
-#[serde(rename_all = "camelCase")]
-pub struct AppInfo {
-    pub app_version: String,
-    pub core_version: String,
-    pub data_dir: String,
+/// Runs a library call on a blocking thread: library calls wait for startup, locks and disks,
+/// never on the async runtime. `what` names the call if its thread fails.
+async fn blocking<T: Send + 'static>(
+    state: tauri::State<'_, LibraryState>,
+    what: &str,
+    call: impl FnOnce(LibraryState) -> Result<T, AppError> + Send + 'static,
+) -> Result<T, AppError> {
+    let state = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || call(state))
+        .await
+        .map_err(|error| AppError::Internal(format!("{what} worker failed: {error}")))?
 }
 
-#[tauri::command]
-#[specta::specta]
-pub fn app_info(app: AppHandle, data_dir: State<'_, DataDir>) -> Result<AppInfo, AppError> {
-    Ok(AppInfo {
-        app_version: app.package_info().version.to_string(),
-        core_version: folio_core::VERSION.to_owned(),
-        data_dir: data_dir.path()?.display().to_string(),
-    })
-}
-
-/// Tells the shell where the title bar's maximize button is, so the snap layouts overlay covers
-/// it. Synchronous on purpose: Tauri runs synchronous commands on the UI thread, which owns the
-/// windows.
-#[tauri::command]
-#[specta::specta]
-pub fn set_maximize_button_bounds(
-    window: WebviewWindow,
-    bounds: Option<ButtonBounds>,
-) -> Result<(), AppError> {
-    window_chrome::set_maximize_button_bounds(&window, bounds)
+/// What a stub would answer. No call reaches one: Tauri's ACL rejects commands it was not given.
+#[cfg(test)]
+fn planned<T>(command: &str, _request: impl Sized) -> Result<T, AppError> {
+    Err(AppError::Internal(format!(
+        "`{command}` is declared for the bindings only"
+    )))
 }

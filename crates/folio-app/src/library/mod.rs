@@ -1,0 +1,485 @@
+//! Machine-local library selection and the lifetime of its background worker.
+
+mod errors;
+mod problems;
+mod worker;
+
+use std::collections::HashMap;
+use std::ffi::OsString;
+use std::fs;
+use std::path::{Component, Path, PathBuf, Prefix};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError};
+use std::time::{Duration, Instant};
+
+use folio_core::library::state::{self, Settings};
+use folio_core::meta::{DisplayName, Layout};
+use unicode_normalization::UnicodeNormalization;
+
+use crate::error::AppError;
+use crate::ipc::events::CatalogChanged;
+use crate::ipc::jobs::{CancelJob, Job};
+use crate::ipc::library::{
+    CreateLibrary, FolderChoice, FolderContent, LibraryOpened, LibraryStatus, OpenLibrary,
+    Unavailable,
+};
+use crate::ipc::problems::{ListProblems, ProblemItem};
+use crate::ipc::types::{LIMITS, Page};
+use worker::Session;
+
+pub(crate) enum Event {
+    Library(LibraryStatus),
+    Catalog(CatalogChanged),
+    Job(Job),
+    Problems(u32),
+    Error(String),
+}
+
+type Sink = Arc<dyn Fn(Event) + Send + Sync>;
+
+#[derive(Clone)]
+pub(crate) struct LibraryState(Arc<Inner>);
+
+struct Inner {
+    data_dir: Result<PathBuf, AppError>,
+    transition: Mutex<()>,
+    state: Mutex<State>,
+    ready: Condvar,
+    choices: Mutex<HashMap<String, Choice>>,
+    closing: AtomicBool,
+    closed: AtomicBool,
+    emit: Sink,
+}
+
+struct State {
+    ready: bool,
+    status: Result<LibraryStatus, AppError>,
+    session: Option<Arc<Session>>,
+}
+
+struct Choice {
+    root: PathBuf,
+    chosen: Instant,
+}
+const CHOICE_TTL: Duration = Duration::from_secs(10 * 60);
+const MAX_CHOICES: usize = 32;
+
+impl LibraryState {
+    pub fn new(data_dir: Result<PathBuf, AppError>, emit: Sink) -> Self {
+        Self(Arc::new(Inner {
+            data_dir,
+            transition: Mutex::new(()),
+            state: Mutex::new(State {
+                ready: false,
+                status: Ok(LibraryStatus::None),
+                session: None,
+            }),
+            ready: Condvar::new(),
+            choices: Mutex::new(HashMap::new()),
+            closing: AtomicBool::new(false),
+            closed: AtomicBool::new(false),
+            emit,
+        }))
+    }
+
+    /// Runs once on a blocking thread. Always releases commands waiting for startup.
+    pub fn initialize(&self) {
+        let result = self.initialize_inner();
+        let mut state = lock(&self.0.state);
+        if let Err(error) = result {
+            state.status = Err(error);
+        }
+        state.ready = true;
+        self.0.ready.notify_all();
+    }
+
+    fn initialize_inner(&self) -> Result<(), AppError> {
+        let _transition = lock(&self.0.transition);
+        if lock(&self.0.state).ready {
+            return Ok(());
+        }
+        self.accepting()?;
+        let settings = self.settings()?;
+        if let Some(root) = settings.library_root {
+            match Session::prepare(&root, self.data_dir()?, self.0.emit.clone()) {
+                Ok(session) => {
+                    self.publish(session);
+                }
+                Err(error) => {
+                    lock(&self.0.state).status = Ok(unavailable(&root, &error));
+                    (self.0.emit)(Event::Error(format!(
+                        "could not open configured library: {error}"
+                    )));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub fn status(&self) -> Result<LibraryStatus, AppError> {
+        let mut state = lock(&self.0.state);
+        while !state.ready && !self.0.closing.load(Ordering::Acquire) {
+            state = self
+                .0
+                .ready
+                .wait(state)
+                .unwrap_or_else(PoisonError::into_inner);
+        }
+        match &state.session {
+            Some(session) => Ok(session.status()),
+            None => state.status.clone(),
+        }
+    }
+
+    fn data_dir(&self) -> Result<&Path, AppError> {
+        self.0.data_dir.as_deref().map_err(Clone::clone)
+    }
+
+    fn settings(&self) -> Result<Settings, AppError> {
+        Settings::load(self.data_dir()?)
+            .map_err(|error| AppError::DataDirUnavailable(error.to_string()))
+    }
+
+    fn accepting(&self) -> Result<(), AppError> {
+        if self.0.closing.load(Ordering::Acquire) {
+            Err(AppError::Busy("the app is closing".to_owned()))
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn choose(&self, root: PathBuf) -> Result<FolderChoice, AppError> {
+        self.accepting()?;
+        let root = directory(&root)?;
+        let content = classify(&root)?;
+        // The sync-root label only warns (ipc-m1 §6): a failed lookup must not block the choice.
+        let sync_root = crate::dialogs::sync_provider(&root).unwrap_or_else(|error| {
+            (self.0.emit)(Event::Error(format!(
+                "could not check cloud sync folders: {error}"
+            )));
+            None
+        });
+        let mut choices = lock(&self.0.choices);
+        choices.retain(|_, choice| choice.chosen.elapsed() < CHOICE_TTL);
+        if choices.len() >= MAX_CHOICES
+            && let Some(oldest) = choices
+                .iter()
+                .min_by_key(|(_, choice)| choice.chosen)
+                .map(|(id, _)| id.clone())
+        {
+            choices.remove(&oldest);
+        }
+        let token = crate::jobs::id()?;
+        choices.insert(
+            token.clone(),
+            Choice {
+                root: root.clone(),
+                chosen: Instant::now(),
+            },
+        );
+        Ok(FolderChoice {
+            token,
+            path: shown(&root),
+            content,
+            sync_root,
+        })
+    }
+
+    fn consume(&self, token: &str) -> Result<PathBuf, AppError> {
+        let choice = lock(&self.0.choices)
+            .remove(token)
+            .filter(|choice| choice.chosen.elapsed() < CHOICE_TTL)
+            .ok_or_else(|| AppError::ChoiceExpired("choose the folder again".to_owned()))?;
+        let root = directory(&choice.root)?;
+        if root != choice.root {
+            return Err(AppError::ChoiceExpired(
+                "the selected folder changed".to_owned(),
+            ));
+        }
+        Ok(root)
+    }
+
+    pub fn create(&self, request: CreateLibrary) -> Result<LibraryOpened, AppError> {
+        let name = display_name(&request.name)?;
+        let tags = request.preset_tags;
+        // In `PresetTag::ALL` order, which `state::create` names them by.
+        let names = [
+            display_name(&tags.notes)?,
+            display_name(&tags.slides)?,
+            display_name(&tags.homework)?,
+            display_name(&tags.exam)?,
+            display_name(&tags.reference)?,
+        ];
+        self.status()?;
+        let _transition = lock(&self.0.transition);
+        self.accepting()?;
+        let mut settings = self.settings()?;
+        let root = self.consume(&request.folder)?;
+        state::create(&root, name, names).map_err(|error| match errors::meta(error) {
+            AppError::AlreadyExists(detail) => AppError::AlreadyALibrary(detail),
+            error => error,
+        })?;
+        self.replace(&root, &mut settings)
+    }
+
+    pub fn open(&self, request: OpenLibrary) -> Result<LibraryOpened, AppError> {
+        self.status()?;
+        let _transition = lock(&self.0.transition);
+        self.accepting()?;
+        let mut settings = self.settings()?;
+        let root = self.consume(&request.folder)?;
+        read_config(&root)?;
+        self.replace(&root, &mut settings)
+    }
+
+    fn replace(&self, root: &Path, settings: &mut Settings) -> Result<LibraryOpened, AppError> {
+        // In particular, reopening the same catalog must not overlap two writers/journals.
+        let old = lock(&self.0.state).session.take();
+        let previous = old.as_ref().map(|old| old.root().to_owned());
+        if let Some(old) = old {
+            self.drain(&old, "closing the previous library failed");
+        }
+        let result = self
+            .data_dir()
+            .and_then(|data_dir| Session::prepare(root, data_dir, self.0.emit.clone()))
+            .and_then(|session| {
+                settings.library_root = Some(root.to_owned());
+                match settings.save(self.data_dir()?) {
+                    Ok(()) => Ok(self.publish(session)),
+                    Err(error) => {
+                        self.drain(&session, "closing the unsaved library failed");
+                        Err(AppError::DataDirUnavailable(error.to_string()))
+                    }
+                }
+            });
+        // settings.json still names the previous library, so it stays this machine's library.
+        if result.is_err()
+            && let Some(previous) = previous
+        {
+            self.reopen(&previous);
+        }
+        result
+    }
+
+    /// The session is gone whatever its drain reports; a failure only goes to the log.
+    fn drain(&self, session: &Session, context: &str) {
+        if let Err(error) = session.shutdown() {
+            (self.0.emit)(Event::Error(format!("{context}: {error}")));
+        }
+    }
+
+    /// Reopens the previous library after a failed switch, or reports it unavailable.
+    fn reopen(&self, root: &Path) {
+        let reopened = self
+            .data_dir()
+            .and_then(|data_dir| Session::prepare(root, data_dir, self.0.emit.clone()))
+            .map(|session| self.publish(session));
+        if let Err(error) = reopened {
+            let status = unavailable(root, &error);
+            lock(&self.0.state).status = Ok(status.clone());
+            (self.0.emit)(Event::Error(format!(
+                "could not reopen the previous library: {error}"
+            )));
+            (self.0.emit)(Event::Library(status));
+        }
+    }
+
+    fn publish(&self, session: Arc<Session>) -> LibraryOpened {
+        let opened = session.opened();
+        let status = LibraryStatus::Open {
+            library: opened.library.clone(),
+        };
+        {
+            let mut state = lock(&self.0.state);
+            state.status = Ok(status.clone());
+            state.session = Some(session.clone());
+        }
+        lock(&self.0.choices).clear();
+        (self.0.emit)(Event::Library(status));
+        session.activate();
+        opened
+    }
+
+    fn session(&self) -> Result<Arc<Session>, AppError> {
+        self.status()?;
+        self.accepting()?;
+        let session = lock(&self.0.state)
+            .session
+            .clone()
+            .ok_or_else(|| AppError::NoLibrary("open a library first".to_owned()))?;
+        if matches!(session.status(), LibraryStatus::Unavailable { .. }) {
+            return Err(AppError::NoLibrary("the library is unavailable".to_owned()));
+        }
+        Ok(session)
+    }
+
+    pub fn list_jobs(&self) -> Result<Vec<Job>, AppError> {
+        Ok(self.session()?.jobs.list())
+    }
+    pub fn cancel(&self, request: CancelJob) -> Result<(), AppError> {
+        match self.session() {
+            Ok(session) => session.jobs.cancel(&request.job),
+            Err(AppError::NoLibrary(_)) => {
+                Err(AppError::NotFound("job is unknown or finished".to_owned()))
+            }
+            Err(error) => Err(error),
+        }
+    }
+    pub fn rebuild(&self) -> Result<String, AppError> {
+        self.session()?.rebuild()
+    }
+    pub fn problems(&self, request: ListProblems) -> Result<Page<ProblemItem>, AppError> {
+        if request.page.limit > LIMITS.page_size {
+            return Err(AppError::InvalidArgument(
+                "page limit exceeds LIMITS.pageSize".to_owned(),
+            ));
+        }
+        Ok(self.session()?.problems(request.page))
+    }
+
+    /// The close handler uses this before spawning a drain, so repeated page/native requests
+    /// cannot start competing drains. The page never participates in the final destroy.
+    pub fn begin_close(&self) -> bool {
+        // Under the startup condition variable's mutex, so no waiter misses the wakeup.
+        let _state = lock(&self.0.state);
+        let first = !self.0.closing.swap(true, Ordering::AcqRel);
+        self.0.ready.notify_all();
+        first
+    }
+    pub fn is_closed(&self) -> bool {
+        self.0.closed.load(Ordering::Acquire)
+    }
+    /// Always marks the app closed, so an exit request after a failed drain is not held back.
+    pub fn shutdown(&self) -> Result<(), AppError> {
+        self.begin_close();
+        let _transition = lock(&self.0.transition);
+        let session = lock(&self.0.state).session.take();
+        let result = session.map_or(Ok(()), |session| session.shutdown());
+        self.0.closed.store(true, Ordering::Release);
+        result
+    }
+}
+
+/// A panic while one of the library locks is held is a bug, and every guarded value is valid
+/// between statements. Recovering keeps the shell able to drain and exit: an error here would
+/// leave a close request, or the worker, stuck behind a lock that no one can release.
+pub(crate) fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
+    mutex.lock().unwrap_or_else(PoisonError::into_inner)
+}
+
+fn directory(root: &Path) -> Result<PathBuf, AppError> {
+    if !root.is_absolute() {
+        return Err(AppError::InvalidArgument(
+            "folder must be absolute".to_owned(),
+        ));
+    }
+    let root = fs::canonicalize(root).map_err(errors::io)?;
+    if !fs::metadata(&root).map_err(errors::io)?.is_dir() {
+        return Err(AppError::InvalidArgument(
+            "folder is not a directory".to_owned(),
+        ));
+    }
+    Ok(root)
+}
+
+fn read_config(root: &Path) -> Result<folio_core::meta::LibraryConfig, AppError> {
+    // Metadata is privileged write input; validate its parent directories before reading it.
+    state::validate_metadata(root).map_err(errors::meta)?;
+    let layout = Layout::new(root);
+    layout
+        .read_library()
+        .map_err(errors::meta)?
+        .ok_or_else(|| AppError::NotALibrary("missing .folio/library.json".to_owned()))
+}
+
+fn classify(root: &Path) -> Result<FolderContent, AppError> {
+    if Layout::new(root)
+        .library_file()
+        .try_exists()
+        .map_err(errors::io)?
+    {
+        return Ok(FolderContent::Library {
+            name: read_config(root)?.name.as_str().to_owned(),
+        });
+    }
+    for ancestor in root.ancestors().skip(1) {
+        if Layout::new(ancestor)
+            .library_file()
+            .try_exists()
+            .map_err(errors::io)?
+        {
+            return Ok(FolderContent::InsideLibrary {
+                root: shown(ancestor),
+            });
+        }
+    }
+    let (mut folders, mut files) = (0_u32, 0_u32);
+    for entry in fs::read_dir(root).map_err(errors::io)? {
+        let entry = entry.map_err(errors::io)?;
+        if entry.file_type().map_err(errors::io)?.is_dir() {
+            folders = folders.saturating_add(1);
+        } else {
+            files = files.saturating_add(1);
+        }
+    }
+    Ok(if folders == 0 && files == 0 {
+        FolderContent::Empty
+    } else {
+        FolderContent::Folders { folders, files }
+    })
+}
+
+fn display_name(value: &str) -> Result<DisplayName, AppError> {
+    let value: String = value.trim().nfc().collect();
+    if value.is_empty() {
+        return Err(AppError::NameEmpty("display name".to_owned()));
+    }
+    if value.chars().count() > LIMITS.display_name_chars as usize {
+        return Err(AppError::NameTooLong("display name".to_owned()));
+    }
+    if value.chars().any(char::is_control) {
+        return Err(AppError::NameInvalidCharacter(
+            "display name contains a control character".to_owned(),
+        ));
+    }
+    DisplayName::parse(&value).map_err(|error| AppError::InvalidArgument(error.to_string()))
+}
+
+/// A path as Windows users write it, for the UI. The shell keeps canonical paths, which carry
+/// the verbatim `\\?\` prefix; display only, never read back.
+fn shown(path: &Path) -> String {
+    let mut components = path.components();
+    let plain = match components.next() {
+        Some(Component::Prefix(prefix)) => match prefix.kind() {
+            Prefix::VerbatimDisk(letter) => OsString::from(format!("{}:", char::from(letter))),
+            Prefix::VerbatimUNC(server, share) => {
+                let mut plain = OsString::from(r"\\");
+                plain.push(server);
+                plain.push(r"\");
+                plain.push(share);
+                plain
+            }
+            _ => return path.display().to_string(),
+        },
+        _ => return path.display().to_string(),
+    };
+    let mut plain = PathBuf::from(plain);
+    plain.extend(components);
+    plain.display().to_string()
+}
+
+fn unavailable(root: &Path, error: &AppError) -> LibraryStatus {
+    LibraryStatus::Unavailable {
+        root: shown(root),
+        reason: match error {
+            AppError::NotFound(_) => Unavailable::Missing,
+            AppError::NotALibrary(_) => Unavailable::NotALibrary,
+            AppError::NewerFormat(_) => Unavailable::NewerFormat,
+            AppError::AccessDenied(_) => Unavailable::AccessDenied,
+            _ => Unavailable::CatalogFailed,
+        },
+    }
+}
+
+#[cfg(test)]
+mod tests;

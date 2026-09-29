@@ -111,6 +111,74 @@ fn creates_a_wal_catalog_and_keeps_its_data() {
 }
 
 #[test]
+fn rebuild_keeps_open_read_snapshots_and_persisted_identity_allocation() {
+    let dir = tempfile::tempdir().unwrap();
+    let catalog = Arc::new(open_catalog(dir.path()));
+    let first = add(&catalog, &[file("a.md", 1)])[0];
+    let (started, wait_for_start) = mpsc::channel();
+    let (finish, wait_for_finish) = mpsc::channel::<()>();
+    let reader = thread::spawn({
+        let catalog = Arc::clone(&catalog);
+        move || {
+            catalog.read(|tx| {
+                assert!(entry_by_id(tx, first)?.is_some());
+                started.send(()).unwrap();
+                wait_for_finish.recv().unwrap();
+                assert!(entry_by_id(tx, first)?.is_some());
+                Ok(())
+            })
+        }
+    });
+    wait_for_start.recv().unwrap();
+    catalog.write(|tx| reset_for_rebuild(tx)).unwrap();
+    assert!(root_names(&catalog).is_empty());
+    finish.send(()).unwrap();
+    reader.join().unwrap().unwrap();
+    drop(catalog);
+    let catalog = open_catalog(dir.path());
+    let rebuilt = add(&catalog, &[file("a.md", 1)])[0];
+    assert!(rebuilt > first);
+    assert!(catalog.read(|tx| entry_by_id(tx, first)).unwrap().is_none());
+}
+
+#[test]
+fn a_batch_takes_consecutive_ids_above_every_id_used_before() {
+    let dir = tempfile::tempdir().unwrap();
+    let catalog = open_catalog(dir.path());
+    let last = add(&catalog, &[file("a.md", 1), file("b.md", 1)])[1];
+    catalog.write(|tx| delete_entry(tx, &path("b.md"))).unwrap();
+    let changes = EntryChanges {
+        added: vec![(file("c.md", 1), 100), (file("d.md", 1), 100)],
+        ..EntryChanges::default()
+    };
+    let ids = catalog.write(|tx| apply_changes(tx, &changes)).unwrap();
+    assert_eq!(ids, [EntryId(last.0 + 1), EntryId(last.0 + 2)]);
+    assert_eq!(add(&catalog, &[file("e.md", 1)]), [EntryId(last.0 + 3)]);
+}
+
+#[test]
+fn hashing_refuses_an_identity_at_a_different_path() {
+    let dir = tempfile::tempdir().unwrap();
+    let catalog = open_catalog(dir.path());
+    let id = add(&catalog, &[file("new.md", 1)])[0];
+    let mut stale = catalog.read(|tx| entry_by_id(tx, id)).unwrap().unwrap();
+    stale.record.path = path("old.md");
+    let stored = catalog
+        .write(|tx| set_hash(tx, &stale, &ContentHash::of(b"x")))
+        .unwrap();
+    assert!(!stored);
+    assert!(
+        catalog
+            .read(|tx| entry_by_id(tx, id))
+            .unwrap()
+            .unwrap()
+            .record
+            .hash
+            .is_none()
+    );
+}
+
+#[test]
 fn reads_use_the_tokenizer_and_run_while_a_write_is_open() {
     let dir = tempfile::tempdir().unwrap();
     let catalog = Arc::new(open_catalog(dir.path()));
