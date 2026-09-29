@@ -6,7 +6,10 @@ durations.
 
 - Status: v1, 2026-09-27. Derived from the Cowork design canvas "Folio 设计基础" (decisions 1-27,
   summarised in `docs/design/handoff/app-shell.md`). Round 3 added `font.size.label` (26C),
-  `font.line-height.diff` and `font.line-height.heading`.
+  `font.line-height.diff` and `font.line-height.heading`. Round 4 (2026-09-28, lane `design/design-m1-flows`)
+  added the feedback, drop and progress colours, the danger button, `shadow.menu`, and the sizes,
+  z-index and motion tokens of the M1 flows (`docs/design/handoff/first-run.md` and
+  `library-actions.md`).
 - The same tokens, with component previews, are in the Cowork Design System artifact
   "Folio Design System" (<https://claude.ai/artifact/QfXvWuzvoGdhUZCU4tsZyM>); these files stay the
   source of truth.
@@ -78,8 +81,14 @@ Until the Theme setting exists, the app runs as System.
 
 ## Motion
 
-Two durations (`motion.duration.fast` 120 ms, `motion.duration.base` 160 ms) and two easings.
-Components must take durations only from these tokens. App settings → Appearance → Reduce motion
+Four durations and three easings. Transitions use `motion.duration.fast` (120 ms) and
+`motion.duration.base` (160 ms) with `motion.easing.standard` or `motion.easing.exit`; the two loops,
+spinners (`motion.duration.spin`, 900 ms) and indeterminate progress bars
+(`motion.duration.indeterminate`, 1400 ms), use `motion.easing.linear`. Components must take
+durations only from these tokens. Waiting times that are not motion, such as how long a toast stays
+or how long a tooltip waits before it opens, are UI constants in the handoff specs, never duration
+tokens, because reduced motion sets every duration token to `0ms`
+(`docs/design/handoff/library-actions.md` §13). App settings → Appearance → Reduce motion
 offers "Use Windows setting" (default), On and Off: the app sets `data-reduce-motion="on"` or
 `"off"` on the root element and removes it for the default. `tokens.css` sets every duration to
 `0ms` under `data-reduce-motion="on"`, and under `prefers-reduced-motion: reduce` unless
@@ -114,6 +123,30 @@ colour, no fill; glyph stroke 1.5 with round caps in the same colour.
 | Deleted | `color.status.deleted` | `M5 8h6` |
 | Renamed | `color.status.renamed` | `M4.5 8h6.5M8.5 5.5L11 8l-2.5 2.5` |
 
+## Feedback colours
+
+Four tones for messages about what happened. Each has a text-and-icon colour, a soft background and
+a decorative border; colour is never the only cue, since every banner, callout and toast also has an
+icon and words.
+
+| Tone | Text and icons | Background | Border | Icon (Lucide) | Used for |
+|---|---|---|---|---|---|
+| Danger | `color.feedback.danger` | `color.feedback.danger-soft` | `color.feedback.danger-border` | `circle-x`, `circle-alert` for fields | Field errors, error banners and callouts, error toasts, the Delete menu item |
+| Warning | `color.feedback.warning` | `color.feedback.warning-soft` | `color.feedback.warning-border` | `triangle-alert` | Read-only library, a library in a cloud folder, name clashes, partial results |
+| Success | `color.feedback.success` | `color.feedback.success-soft` | `color.feedback.success-border` | `circle-check` | Finished imports, an empty problem list |
+| Info | `color.feedback.info` (= `color.accent.default`) | `color.feedback.info-soft` (= `color.accent.soft`) | `color.feedback.info-border` | `info` | The index is being rebuilt or was recovered |
+
+- Text in banners, callouts and toasts stays `color.text.primary` (titles and a short lead-in, 600)
+  or `color.text.secondary`; only the icon takes the tone colour. Field error messages and the
+  destructive menu item are the exceptions: their text is `color.feedback.danger`.
+- An invalid field keeps its borders and turns its bottom edge `color.feedback.danger`; the message
+  below it is `color.feedback.danger` at `font.size.small` with a `circle-alert` icon.
+- `color.button.danger` with `color.text.on-button-danger` is only for the confirming button of a
+  destructive dialog (Delete course). Everyday deletes go to the Recycle Bin without one.
+- `color.drop.wash` tints the panel that receives dropped files, `color.drop.outline` draws its 2 px
+  dashed outline, and `color.drop.row` fills a tree row that receives them.
+- Progress bars are `size.progress-bar` high: `color.progress.fill` on `color.progress.track`.
+
 ## Contrast (WCAG 2.1 AA)
 
 Checked against the values in these files. Text needs 4.5:1; UI parts and graphics need 3:1.
@@ -140,6 +173,16 @@ Checked against the values in these files. Text needs 4.5:1; UI parts and graphi
 | Status: added on panel | 3.0:1 | 4.02 | 8.94 |
 | Palette text on tint (course badge), lowest of 10 | 4.5:1 | 6.20 | 8.47 |
 | Palette solid on panel (file-type icons), lowest of 10 | 3.0:1 | 3.75 | 7.62 |
+| Danger text, lowest surface (selected row) | 4.5:1 | 5.05 | 5.88 |
+| Danger text on danger-soft | 4.5:1 | 5.14 | 5.91 |
+| Warning text, lowest surface (selected row) | 4.5:1 | 5.06 | 7.44 |
+| Warning text on warning-soft | 4.5:1 | 5.28 | 6.94 |
+| Success text, lowest surface (selected row) | 4.5:1 | 4.75 | 6.97 |
+| Success text on success-soft | 4.5:1 | 4.86 | 6.71 |
+| Text on danger button | 4.5:1 | 5.92 | 7.32 |
+| Progress fill on track | 3.0:1 | 4.01 | 6.29 |
+| Drop outline on drop.wash, lowest | 3.0:1 | 4.53 | 7.14 |
+| Drop outline on drop.row | 3.0:1 | 4.59 | 6.34 |
 
 `color.accent.fill` and `color.border.control` are decorative and are not used for indicators or
 input boundaries: outline buttons and chips are identified by their text labels.

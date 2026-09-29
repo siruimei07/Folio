@@ -14,6 +14,7 @@
   --font-size-caption: 11px;
   --font-size-heading: 15px;
   --font-size-dialog-title: 16px;
+  --font-size-display: 24px;
   --font-size-badge: 10px;
   --font-size-badge-compact: 9.5px;
   --font-size-code: 13px;
@@ -40,6 +41,7 @@
   --space-18: 18px;
   --space-20: 20px;
   --space-24: 24px;
+  --space-32: 32px;
   --space-panel-gap: var(--space-8);
   --space-panel-padding: var(--space-12);
   --space-dialog-card-padding: var(--space-18);
@@ -81,6 +83,19 @@
   --size-window-min-width: 500px;
   --size-window-min-height: 320px;
   --size-narrow-breakpoint: 760px;
+  --size-icon-large: 22px;
+  --size-state-tile: 44px;
+  --size-menu-item: 30px;
+  --size-menu-min-width: 200px;
+  --size-menu-max-width: 320px;
+  --size-toast: 360px;
+  --size-progress-bar: 4px;
+  --size-activity-popover: 380px;
+  --size-dialog-small: 440px;
+  --size-import-dialog: 560px;
+  --size-problems-dialog-width: 720px;
+  --size-problems-dialog-height: 560px;
+  --size-first-run-content: 560px;
   --radius-panel: 10px;
   --radius-control: 7px;
   --radius-row: 6px;
@@ -99,11 +114,17 @@
   --caption-glyph-size: 10px;
   --motion-duration-fast: 120ms;
   --motion-duration-base: 160ms;
+  --motion-duration-spin: 900ms;
+  --motion-duration-indeterminate: 1400ms;
   --motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
   --motion-easing-exit: cubic-bezier(0.4, 0, 1, 1);
+  --motion-easing-linear: cubic-bezier(0, 0, 1, 1);
   --z-index-resize-handle: 3;
+  --z-index-drop-target: 5;
   --z-index-search: 10;
   --z-index-dialog: 20;
+  --z-index-menu: 30;
+  --z-index-toast: 40;
   --color-surface-app: #f3f2f0;
   --color-surface-panel: #ffffff;
   --color-surface-sunken: #f7f6f4;
@@ -123,6 +144,7 @@
   --color-text-on-accent: #ffffff;
   --color-text-on-primary: #ffffff;
   --color-text-on-button-accent: #ffffff;
+  --color-text-on-button-danger: #ffffff;
   --color-accent-default: #0f766e;
   --color-accent-fill: #2aa198;
   --color-accent-soft: #dcefec;
@@ -132,6 +154,8 @@
   --color-button-primary-hover: #45403b;
   --color-button-accent: #0f766e;
   --color-button-accent-hover: #0b615b;
+  --color-button-danger: #b4382e;
+  --color-button-danger-hover: #9c2f26;
   --color-input-background: #ffffff;
   --color-input-background-readonly: #f7f6f4;
   --color-input-border: #d2ccc6;
@@ -146,6 +170,23 @@
   --color-status-modified: #b7791f;
   --color-status-deleted: #c8483d;
   --color-status-renamed: #3c6fcf;
+  --color-feedback-danger: #b4382e;
+  --color-feedback-danger-soft: #fcebea;
+  --color-feedback-danger-border: #efc2bd;
+  --color-feedback-warning: #8a5a00;
+  --color-feedback-warning-soft: #fbf1dc;
+  --color-feedback-warning-border: #ecd7a8;
+  --color-feedback-success: #27764a;
+  --color-feedback-success-soft: #e5f3ea;
+  --color-feedback-success-border: #bfe0cb;
+  --color-feedback-info: var(--color-accent-default);
+  --color-feedback-info-soft: var(--color-accent-soft);
+  --color-feedback-info-border: #b5dcd6;
+  --color-drop-wash: rgb(15 118 110 / 0.06);
+  --color-drop-outline: var(--color-accent-default);
+  --color-drop-row: var(--color-accent-soft);
+  --color-progress-track: var(--color-border-default);
+  --color-progress-fill: var(--color-accent-default);
   --color-diff-added-background: #e7f6eb;
   --color-diff-removed-background: #fdecec;
   --color-diff-added-text: #137a3a;
@@ -207,6 +248,7 @@
   --caption-close-hover-background: #c42b1c;
   --caption-close-hover-color: #ffffff;
   --shadow-overlay: 0px 18px 44px 0px rgb(28 25 23 / 0.16), 0px 2px 8px 0px rgb(28 25 23 / 0.07);
+  --shadow-menu: 0px 8px 24px 0px rgb(28 25 23 / 0.14), 0px 1px 3px 0px rgb(28 25 23 / 0.08);
 }
 
 /* Theme "Dark", or "System" while Windows uses dark mode. */
@@ -231,6 +273,7 @@
   --color-text-on-accent: #0c1a19;
   --color-text-on-primary: #1c1917;
   --color-text-on-button-accent: #0c1a19;
+  --color-text-on-button-danger: #1c1917;
   --color-accent-default: #4fc4bd;
   --color-accent-fill: #36a8a0;
   --color-accent-soft: #173430;
@@ -240,6 +283,8 @@
   --color-button-primary-hover: #d8d2cc;
   --color-button-accent: #36a8a0;
   --color-button-accent-hover: #4fc4bd;
+  --color-button-danger: #f28b82;
+  --color-button-danger-hover: #f4a39b;
   --color-input-background: #191716;
   --color-input-background-readonly: #221f1d;
   --color-input-border: #403b37;
@@ -254,6 +299,23 @@
   --color-status-modified: #e0b25c;
   --color-status-deleted: #ef8a80;
   --color-status-renamed: #86a8f0;
+  --color-feedback-danger: #f28b82;
+  --color-feedback-danger-soft: #3d2523;
+  --color-feedback-danger-border: #6b3a35;
+  --color-feedback-warning: #e8b45c;
+  --color-feedback-warning-soft: #3a2f1b;
+  --color-feedback-warning-border: #6a5530;
+  --color-feedback-success: #79c795;
+  --color-feedback-success-soft: #1d3325;
+  --color-feedback-success-border: #33573f;
+  --color-feedback-info: var(--color-accent-default);
+  --color-feedback-info-soft: var(--color-accent-soft);
+  --color-feedback-info-border: #2b5a55;
+  --color-drop-wash: rgb(79 196 189 / 0.07);
+  --color-drop-outline: var(--color-accent-default);
+  --color-drop-row: var(--color-accent-soft);
+  --color-progress-track: var(--color-border-default);
+  --color-progress-fill: var(--color-accent-default);
   --color-diff-added-background: #132a1b;
   --color-diff-removed-background: #361a1a;
   --color-diff-added-text: #86efac;
@@ -315,6 +377,7 @@
   --caption-close-hover-background: #c42b1c;
   --caption-close-hover-color: #ffffff;
   --shadow-overlay: 0px 18px 44px 0px rgb(0 0 0 / 0.55), 0px 2px 8px 0px rgb(0 0 0 / 0.35);
+  --shadow-menu: 0px 8px 24px 0px rgb(0 0 0 / 0.5), 0px 1px 3px 0px rgb(0 0 0 / 0.35);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -339,6 +402,7 @@
     --color-text-on-accent: #0c1a19;
     --color-text-on-primary: #1c1917;
     --color-text-on-button-accent: #0c1a19;
+    --color-text-on-button-danger: #1c1917;
     --color-accent-default: #4fc4bd;
     --color-accent-fill: #36a8a0;
     --color-accent-soft: #173430;
@@ -348,6 +412,8 @@
     --color-button-primary-hover: #d8d2cc;
     --color-button-accent: #36a8a0;
     --color-button-accent-hover: #4fc4bd;
+    --color-button-danger: #f28b82;
+    --color-button-danger-hover: #f4a39b;
     --color-input-background: #191716;
     --color-input-background-readonly: #221f1d;
     --color-input-border: #403b37;
@@ -362,6 +428,23 @@
     --color-status-modified: #e0b25c;
     --color-status-deleted: #ef8a80;
     --color-status-renamed: #86a8f0;
+    --color-feedback-danger: #f28b82;
+    --color-feedback-danger-soft: #3d2523;
+    --color-feedback-danger-border: #6b3a35;
+    --color-feedback-warning: #e8b45c;
+    --color-feedback-warning-soft: #3a2f1b;
+    --color-feedback-warning-border: #6a5530;
+    --color-feedback-success: #79c795;
+    --color-feedback-success-soft: #1d3325;
+    --color-feedback-success-border: #33573f;
+    --color-feedback-info: var(--color-accent-default);
+    --color-feedback-info-soft: var(--color-accent-soft);
+    --color-feedback-info-border: #2b5a55;
+    --color-drop-wash: rgb(79 196 189 / 0.07);
+    --color-drop-outline: var(--color-accent-default);
+    --color-drop-row: var(--color-accent-soft);
+    --color-progress-track: var(--color-border-default);
+    --color-progress-fill: var(--color-accent-default);
     --color-diff-added-background: #132a1b;
     --color-diff-removed-background: #361a1a;
     --color-diff-added-text: #86efac;
@@ -423,6 +506,7 @@
     --caption-close-hover-background: #c42b1c;
     --caption-close-hover-color: #ffffff;
     --shadow-overlay: 0px 18px 44px 0px rgb(0 0 0 / 0.55), 0px 2px 8px 0px rgb(0 0 0 / 0.35);
+    --shadow-menu: 0px 8px 24px 0px rgb(0 0 0 / 0.5), 0px 1px 3px 0px rgb(0 0 0 / 0.35);
   }
 }
 
@@ -430,11 +514,15 @@
 :root[data-reduce-motion="on"] {
   --motion-duration-fast: 0ms;
   --motion-duration-base: 0ms;
+  --motion-duration-spin: 0ms;
+  --motion-duration-indeterminate: 0ms;
 }
 
 @media (prefers-reduced-motion: reduce) {
   :root:not([data-reduce-motion="off"]) {
     --motion-duration-fast: 0ms;
     --motion-duration-base: 0ms;
+    --motion-duration-spin: 0ms;
+    --motion-duration-indeterminate: 0ms;
   }
 }

@@ -396,3 +396,7 @@ Build requirements from the review:
    sync states (section 3), the drop target (section 5), context menus, an error state for failed
    window commands (today they only reach the console; coordinator notes, WP-02), first-run and
    join-remote flows (brief §7), conflict resolution. These get their own handoff specs.
+   Drawn since (2026-09-28, lane `design/design-m1-flows`): first run in
+   [first-run.md](first-run.md); the drop target, context menus and the error state for failed
+   window commands in [library-actions.md](library-actions.md). Still to draw: Changes and History
+   in the narrow window, the toolbar sync states, join-remote, conflict resolution.

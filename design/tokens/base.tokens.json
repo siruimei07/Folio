@@ -67,6 +67,14 @@
         },
         "$description": "Settings dialog title."
       },
+      "display": {
+        "$type": "dimension",
+        "$value": {
+          "value": 24,
+          "unit": "px"
+        },
+        "$description": "Titles of the welcome screen, the first-run steps and full-window states such as \"Can’t find your library\"."
+      },
       "badge": {
         "$type": "dimension",
         "$value": {
@@ -257,6 +265,14 @@
         "unit": "px"
       },
       "$description": "Spacing step, 24 px."
+    },
+    "32": {
+      "$type": "dimension",
+      "$value": {
+        "value": 32,
+        "unit": "px"
+      },
+      "$description": "Spacing step, 32 px: between the sections of first-run steps and full-window states."
     },
     "panel-gap": {
       "$type": "dimension",
@@ -578,6 +594,110 @@
         "unit": "px"
       },
       "$description": "Below this window width the narrow layout (16A) applies."
+    },
+    "icon-large": {
+      "$type": "dimension",
+      "$value": {
+        "value": 22,
+        "unit": "px"
+      },
+      "$description": "Icons in state tiles (empty and error states)."
+    },
+    "state-tile": {
+      "$type": "dimension",
+      "$value": {
+        "value": 44,
+        "unit": "px"
+      },
+      "$description": "Rounded tile behind the icon of empty states, error states and first-run choices."
+    },
+    "menu-item": {
+      "$type": "dimension",
+      "$value": {
+        "value": 30,
+        "unit": "px"
+      },
+      "$description": "Items of context menus and popover menus."
+    },
+    "menu-min-width": {
+      "$type": "dimension",
+      "$value": {
+        "value": 200,
+        "unit": "px"
+      },
+      "$description": "Narrowest context menu; menus grow with their longest label."
+    },
+    "menu-max-width": {
+      "$type": "dimension",
+      "$value": {
+        "value": 320,
+        "unit": "px"
+      },
+      "$description": "Widest context menu; longer labels truncate and keep a tooltip."
+    },
+    "toast": {
+      "$type": "dimension",
+      "$value": {
+        "value": 360,
+        "unit": "px"
+      },
+      "$description": "Toast width. Toasts stack in the bottom-right corner, above the panels."
+    },
+    "progress-bar": {
+      "$type": "dimension",
+      "$value": {
+        "value": 4,
+        "unit": "px"
+      },
+      "$description": "Height of progress bars: activity popover, first run, import toasts."
+    },
+    "activity-popover": {
+      "$type": "dimension",
+      "$value": {
+        "value": 380,
+        "unit": "px"
+      },
+      "$description": "Width of the activity popover (jobs and problems)."
+    },
+    "dialog-small": {
+      "$type": "dimension",
+      "$value": {
+        "value": 440,
+        "unit": "px"
+      },
+      "$description": "Confirmation dialogs, such as deleting a course."
+    },
+    "import-dialog": {
+      "$type": "dimension",
+      "$value": {
+        "value": 560,
+        "unit": "px"
+      },
+      "$description": "Import dialog width."
+    },
+    "problems-dialog-width": {
+      "$type": "dimension",
+      "$value": {
+        "value": 720,
+        "unit": "px"
+      },
+      "$description": "Problems dialog width."
+    },
+    "problems-dialog-height": {
+      "$type": "dimension",
+      "$value": {
+        "value": 560,
+        "unit": "px"
+      },
+      "$description": "Problems dialog height; its list scrolls."
+    },
+    "first-run-content": {
+      "$type": "dimension",
+      "$value": {
+        "value": 560,
+        "unit": "px"
+      },
+      "$description": "Content column of the welcome screen, the first-run steps and full-window states."
     }
   },
   "radius": {
@@ -732,6 +852,22 @@
           "unit": "ms"
         },
         "$description": "Dialogs, search, narrow preview overlay (fade and a 4 px rise)."
+      },
+      "spin": {
+        "$type": "duration",
+        "$value": {
+          "value": 900,
+          "unit": "ms"
+        },
+        "$description": "One turn of a spinner. 0 under reduced motion, so spinners stand still."
+      },
+      "indeterminate": {
+        "$type": "duration",
+        "$value": {
+          "value": 1400,
+          "unit": "ms"
+        },
+        "$description": "One sweep of an indeterminate progress bar. 0 under reduced motion, so the bar shows a still segment."
       }
     },
     "easing": {
@@ -744,6 +880,11 @@
         "$type": "cubicBezier",
         "$value": [0.4, 0, 1, 1],
         "$description": "Leaving: dialogs and search closing."
+      },
+      "linear": {
+        "$type": "cubicBezier",
+        "$value": [0, 0, 1, 1],
+        "$description": "Spinners and indeterminate progress bars."
       }
     }
   },
@@ -752,6 +893,11 @@
       "$type": "number",
       "$value": 3,
       "$description": "History resize handle, above the panels."
+    },
+    "drop-target": {
+      "$type": "number",
+      "$value": 5,
+      "$description": "Drop target outline and message while files are dragged over the window; below search and dialogs."
     },
     "search": {
       "$type": "number",
@@ -762,6 +908,16 @@
       "$type": "number",
       "$value": 20,
       "$description": "Settings scrim; the dialog uses +1."
+    },
+    "menu": {
+      "$type": "number",
+      "$value": 30,
+      "$description": "Context menus and popovers, above dialogs so a dialog’s own menus show."
+    },
+    "toast": {
+      "$type": "number",
+      "$value": 40,
+      "$description": "Toasts, above menus and dialogs."
     }
   }
 }

@@ -176,6 +176,15 @@
           "hex": "#0c1a19"
         },
         "$description": "Label of accent buttons (Commit, Save) and the knob of a switch that is on."
+      },
+      "on-button-danger": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.1098, 0.098, 0.0902],
+          "hex": "#1c1917"
+        },
+        "$description": "Label of danger buttons (Delete course, Delete semester)."
       }
     },
     "accent": {
@@ -261,6 +270,24 @@
           "hex": "#4fc4bd"
         },
         "$description": "Hover background of accent buttons."
+      },
+      "danger": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.949, 0.5451, 0.5098],
+          "hex": "#f28b82"
+        },
+        "$description": "Destructive confirmations only: Delete course, Delete semester."
+      },
+      "danger-hover": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.9569, 0.6392, 0.6078],
+          "hex": "#f4a39b"
+        },
+        "$description": "Hover background of danger buttons."
       }
     },
     "input": {
@@ -400,6 +427,142 @@
           "hex": "#86a8f0"
         },
         "$description": "Renamed or moved status icon (20A)."
+      }
+    },
+    "feedback": {
+      "danger": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.949, 0.5451, 0.5098],
+          "hex": "#f28b82"
+        },
+        "$description": "Error text and icons: field errors, error banners, callouts and toasts, the Delete menu item. At least 4.5:1 on every surface and on feedback.danger-soft."
+      },
+      "danger-soft": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.2392, 0.1451, 0.1373],
+          "hex": "#3d2523"
+        },
+        "$description": "Background of error banners and callouts."
+      },
+      "danger-border": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.4196, 0.2275, 0.2078],
+          "hex": "#6b3a35"
+        },
+        "$description": "Border of error banners and callouts. Decorative: the icon and the text carry the meaning."
+      },
+      "warning": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.9098, 0.7059, 0.3608],
+          "hex": "#e8b45c"
+        },
+        "$description": "Warning text and icons: read-only library, cloud-folder warning, name clashes, partial results. At least 4.5:1 on every surface and on feedback.warning-soft."
+      },
+      "warning-soft": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.2275, 0.1843, 0.1059],
+          "hex": "#3a2f1b"
+        },
+        "$description": "Background of warning banners and of the name-clash section of the import dialog."
+      },
+      "warning-border": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.4157, 0.3333, 0.1882],
+          "hex": "#6a5530"
+        },
+        "$description": "Border of warning banners. Decorative."
+      },
+      "success": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.4745, 0.7804, 0.5843],
+          "hex": "#79c795"
+        },
+        "$description": "Success icons and text: finished imports, an empty problem list. At least 4.5:1 on every surface and on feedback.success-soft."
+      },
+      "success-soft": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.1137, 0.2, 0.1451],
+          "hex": "#1d3325"
+        },
+        "$description": "Background of success banners."
+      },
+      "success-border": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.2, 0.3412, 0.2471],
+          "hex": "#33573f"
+        },
+        "$description": "Border of success banners. Decorative."
+      },
+      "info": {
+        "$type": "color",
+        "$value": "{color.accent.default}",
+        "$description": "Information icons and text: the index is being rebuilt, the index was recovered."
+      },
+      "info-soft": {
+        "$type": "color",
+        "$value": "{color.accent.soft}",
+        "$description": "Background of information banners."
+      },
+      "info-border": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.1686, 0.3529, 0.3333],
+          "hex": "#2b5a55"
+        },
+        "$description": "Border of information banners. Decorative."
+      }
+    },
+    "drop": {
+      "wash": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.3098, 0.7686, 0.7412],
+          "alpha": 0.07,
+          "hex": "#4fc4bd"
+        },
+        "$description": "Tint over the panel that receives dropped files while they are dragged over it."
+      },
+      "outline": {
+        "$type": "color",
+        "$value": "{color.accent.default}",
+        "$description": "2 px dashed outline of the drop target, a panel or a tree row (at least 3:1 on the wash and on drop.row)."
+      },
+      "row": {
+        "$type": "color",
+        "$value": "{color.accent.soft}",
+        "$description": "Background of the tree row that receives the drop."
+      }
+    },
+    "progress": {
+      "track": {
+        "$type": "color",
+        "$value": "{color.border.default}",
+        "$description": "Unfilled part of progress bars."
+      },
+      "fill": {
+        "$type": "color",
+        "$value": "{color.accent.default}",
+        "$description": "Filled part of progress bars and the progress ring: at least 3:1 on the track and on panels."
       }
     },
     "diff": {
@@ -1030,6 +1193,60 @@
         }
       ],
       "$description": "Search and settings dialogs."
+    },
+    "menu": {
+      "$type": "shadow",
+      "$value": [
+        {
+          "color": {
+            "colorSpace": "srgb",
+            "components": [0, 0, 0],
+            "alpha": 0.5,
+            "hex": "#000000"
+          },
+          "offsetX": {
+            "value": 0,
+            "unit": "px"
+          },
+          "offsetY": {
+            "value": 8,
+            "unit": "px"
+          },
+          "blur": {
+            "value": 24,
+            "unit": "px"
+          },
+          "spread": {
+            "value": 0,
+            "unit": "px"
+          }
+        },
+        {
+          "color": {
+            "colorSpace": "srgb",
+            "components": [0, 0, 0],
+            "alpha": 0.35,
+            "hex": "#000000"
+          },
+          "offsetX": {
+            "value": 0,
+            "unit": "px"
+          },
+          "offsetY": {
+            "value": 1,
+            "unit": "px"
+          },
+          "blur": {
+            "value": 3,
+            "unit": "px"
+          },
+          "spread": {
+            "value": 0,
+            "unit": "px"
+          }
+        }
+      ],
+      "$description": "Context menus, popovers and toasts: a lower elevation than dialogs."
     }
   }
 }
