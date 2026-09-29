@@ -249,12 +249,13 @@ bound what the product can promise (brief §5.3, "no external software"):
 | Format | Candidate | Licence | What to expect |
 |---|---|---|---|
 | PDF | pdf.js (`pdfjs-dist` 6.x) | Apache-2.0 | Full fidelity |
-| Word | `docx-preview` | Apache-2.0 | Continuous flow, no pagination; no charts, SmartArt or TOC fields |
+| Word | `docx-preview` | Apache-2.0 | Continuous flow, no pagination; no charts, SmartArt, DrawingML shapes or TOC fields |
 | Word (text only) | `mammoth` | BSD-2 | Text for indexing and diffs; its output must be sanitised |
-| Excel | SheetJS CE | Apache-2.0 | Values and number formats **without cell styles**; no maintained open-source renderer reproduces styles |
-| PowerPoint | `@aiden0z/pptx-renderer`, `pptx-viewer-core` | Apache-2.0 | Young projects with self-reported fidelity; test with real Chinese decks (spike 4c) |
+| Excel | SheetJS CE 0.20.3, from the SheetJS CDN (npm `xlsx` stops at 0.18.5, which has known CVEs) | Apache-2.0 | Values and number formats **without cell styles**; no maintained open-source renderer reproduces styles |
+| PowerPoint | `@aiden0z/pptx-renderer` (chosen in spike 4c) | Apache-2.0; bundles MPL-2.0 `mtx-decompressor` | Layout, text, tables, charts, SmartArt and Chinese text close to PowerPoint; misses image recolouring and some template shapes; needs aliases for Office cloud fonts |
 
-Avoid `pptx-preview` (closed source) and AGPL renderers such as SuperDoc.
+Avoid `pptx-preview` (closed source) and AGPL renderers such as SuperDoc. Spike 4c rejected
+`pptx-viewer-core`: its framework-free output is low fidelity, and its viewers are full editors.
 
 ## Consequences
 
@@ -334,6 +335,37 @@ Avoid `pptx-preview` (closed source) and AGPL renderers such as SuperDoc.
       - Open: Windows 10 and moves between displays with different scaling are untested.
         Dragging the edge above the button and Narrator over it are checked by hand only.
    c) Word, Excel and PowerPoint rendering with the candidates above, on real course files;
+      - Result (2026-09-28, lane `spike/ui-office-preview`; Chinese report with screenshots in
+        `docs/research/office-preview-spike.md`). Inputs: 4 English Word files, 4 English decks
+        (up to 43 MB), 2 Chinese decks and a workbook. They were rendered in Edge 154 inside the
+        preview frame's sandbox and CSP, and compared with the PDFs and slide PNGs that Office
+        exported.
+      - docx-preview, SheetJS CE and `@aiden0z/pptx-renderer` ran with no CSP violation and no
+        error. From a cold start, the first page or slide appeared at most 420 ms after the frame
+        was created, the 43 MB deck included.
+      - Word: docx-preview 0.4.1. Text, tables and images are all there. It does not paginate like
+        Word, and DrawingML shapes are missing. Set `renderAltChunks: false`.
+      - Excel: SheetJS CE 0.20.3 from the CDN tarball. npm's 0.18.5 carries CVE-2023-30533 and
+        CVE-2024-22363. Values, number formats and merged cells are right; there are no styles.
+      - PowerPoint: `@aiden0z/pptx-renderer` 1.3.0, with `pdfjs: false` (its EMF fallback needs
+        blob Workers) and `RECOMMENDED_ZIP_LIMITS`.
+        - Office cloud fonts such as Aptos and Avenir Next LT Pro are not installed in Windows.
+          The preview page maps them to installed families with `@font-face` `local()`.
+        - Mean SSIM against PowerPoint over 133 slides, with those aliases: 0.73 (0.84 for the
+          Chinese decks).
+        - Image recolouring (duotone) and some template shapes are missing.
+      - `pptx-viewer-core` is rejected:
+        - its SVG export scores 0.60 and drops text wrapping and backgrounds;
+        - its viewers are 11 MB editors. They throw on `localStorage` in the sandbox, hit `eval`
+          and request Google Fonts.
+      - Fallback: every Office preview offers "Open with default app". Legacy, encrypted, oversized
+        or failing files show only that. Word files get a plain-text view once text extraction
+        lands (M2).
+      - Decision (Sirui, 2026-09-28, option A of the report's §8): the PowerPoint preview renders
+        every slide with `@aiden0z/pptx-renderer` and the font aliases, notes that it may differ
+        slightly from PowerPoint, and offers opening the deck in the default app beside it.
+        Rejected: B, the first slide only, as a cover; C, no rendering, only "Open with default
+        app".
    d) `tauri-specta`: commands, typed events and the error union end to end.
       - Result: commands, typed events and the error union work end to end (Rust types,
         generated bindings, UI, e2e). The first typed event, `MaximizeButtonChanged` (spike 4b),
