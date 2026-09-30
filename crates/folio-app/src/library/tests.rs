@@ -848,3 +848,139 @@ fn paths_for_the_ui_have_no_verbatim_prefix() {
         );
     }
 }
+
+fn file_reference(f: &Fixture, path: &str) -> crate::ipc::types::EntryRef {
+    until("catalogued file reference", || {
+        f.events.lock().unwrap().iter().find_map(|event| {
+            if let Event::Catalog(change) = event {
+                change.entries.iter().find_map(|change| match change {
+                    EntryChange::Added { entry } if entry.path == path => Some(entry.clone()),
+                    _ => None,
+                })
+            } else {
+                None
+            }
+        })
+    })
+}
+
+#[test]
+fn file_actions_use_the_current_catalog_pair_and_hold_shutdown_until_they_return() {
+    use crate::ipc::types::EntryRef;
+    let f = Fixture::new();
+    f.state.initialize();
+    fs::write(f.root.join("notes.txt"), b"catalogued bytes").unwrap();
+    let opened = f.create();
+    f.done(&opened.scan);
+    let reference = file_reference(&f, "notes.txt");
+    assert_eq!(
+        f.state
+            .with_entry(&reference, |root, entry| {
+                assert_eq!(root, f.root.canonicalize().unwrap());
+                let pinned = crate::open::PinnedEntry::resolve(root, entry)?;
+                assert_eq!(entry.record.file_id, Some(pinned.file_id()));
+                Ok(entry.record.path.to_string())
+            })
+            .unwrap(),
+        "notes.txt"
+    );
+    for (id, path, invalid) in [
+        ("999999", "notes.txt", false),
+        (reference.id.as_str(), "wrong.txt", false),
+        (reference.id.as_str(), ".folio/library.json", false),
+        ("-1", "notes.txt", true),
+        (reference.id.as_str(), "../outside", true),
+    ] {
+        let result: Result<(), AppError> = f.state.with_entry(
+            &EntryRef {
+                id: id.into(),
+                path: path.into(),
+            },
+            |_, _| panic!("a rejected reference reached a file action"),
+        );
+        if invalid {
+            assert!(matches!(result, Err(AppError::InvalidArgument(_))));
+        } else {
+            assert!(matches!(result, Err(AppError::NotFound(_))));
+        }
+    }
+    let active = f.state.clone();
+    let closing = f.state.clone();
+    let (started, start) = mpsc::channel();
+    let (release, released) = mpsc::channel::<()>();
+    let action = thread::spawn(move || {
+        active.with_entry(&reference, |_, _| {
+            started.send(()).unwrap();
+            released.recv_timeout(Duration::from_secs(3)).unwrap();
+            Ok(())
+        })
+    });
+    start.recv_timeout(Duration::from_secs(3)).unwrap();
+    let (closed, receive) = mpsc::channel();
+    let shutdown = thread::spawn(move || closed.send(closing.shutdown()).unwrap());
+    assert!(matches!(
+        receive.recv_timeout(Duration::from_millis(30)),
+        Err(mpsc::RecvTimeoutError::Timeout)
+    ));
+    assert!(!f.state.is_closed());
+    release.send(()).unwrap();
+    action.join().unwrap().unwrap();
+    receive
+        .recv_timeout(Duration::from_secs(3))
+        .unwrap()
+        .unwrap();
+    shutdown.join().unwrap();
+    assert!(f.state.is_closed());
+}
+
+#[test]
+fn scheme_checks_catalog_before_disk_and_reports_real_lock_and_offline_failures() {
+    use crate::file_scheme;
+    use crate::ipc::entries::FILE_ERROR_HEADER;
+    use crate::open::tests::set_offline;
+    use std::os::windows::fs::OpenOptionsExt;
+    let f = Fixture::new();
+    f.state.initialize();
+    let path = f.root.join("notes.txt");
+    fs::write(&path, b"0123456789").unwrap();
+    let opened = f.create();
+    f.done(&opened.scan);
+    let reference = file_reference(&f, "notes.txt");
+    let cache = crate::thumbnail::Cache::new(Ok(f.data.join("cache/thumbnails")));
+    let req = |id: &str, path: &str| {
+        tauri::http::Request::builder()
+            .uri(format!("http://folio-file.localhost/content/{id}/{path}"))
+            .body(Vec::new())
+            .unwrap()
+    };
+    let (response, error) =
+        file_scheme::respond(&f.state, &cache, &req(&reference.id, &reference.path));
+    assert!(error.is_none(), "{error:?}");
+    assert_eq!(response.body(), b"0123456789");
+    for path in ["wrong.txt", ".folio/library.json"] {
+        let (response, _) = file_scheme::respond(&f.state, &cache, &req(&reference.id, path));
+        assert_eq!(response.headers()[FILE_ERROR_HEADER], "NotFound");
+        assert!(response.body().is_empty());
+    }
+    let held = fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .share_mode(0)
+        .open(&path)
+        .unwrap();
+    let (response, _) =
+        file_scheme::respond(&f.state, &cache, &req(&reference.id, &reference.path));
+    assert_eq!(response.status().as_u16(), 409);
+    assert_eq!(response.headers()[FILE_ERROR_HEADER], "InUse");
+    drop(held);
+    set_offline(&path, true);
+    let (response, _) =
+        file_scheme::respond(&f.state, &cache, &req(&reference.id, &reference.path));
+    assert_eq!(response.headers()[FILE_ERROR_HEADER], "NotLocal");
+    assert!(response.body().is_empty());
+    set_offline(&path, false);
+    fs::remove_file(&path).unwrap();
+    let (response, _) =
+        file_scheme::respond(&f.state, &cache, &req(&reference.id, &reference.path));
+    assert_eq!(response.headers()[FILE_ERROR_HEADER], "NotFound");
+}

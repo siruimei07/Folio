@@ -470,9 +470,13 @@ type Span = { text: string; matched: boolean };
 `open_entry` never runs a program or a script (ADR-0004 §9):
 
 - A file runs code when its extension is a program or shortcut type (`exe com scr pif cpl msi msp
-  msix appx application appref-ms lnk url website hta jar reg scf` and the like), or when the
-  program registered to open it is a command interpreter or script host (cmd, PowerShell, Windows
-  Script Host, mshta, Python, Java, Node, bash or WSL, and the like).
+  msix appx application appref-ms lnk url website hta jar reg scf` and the like, including Office
+  add-ins, which Office loads as code: `xll wll xla xlam xlm ppa ppam`, and installers such as
+  `ppkg vsto xbap`), or when the program registered to open it is a command interpreter or script
+  host (cmd, PowerShell, Windows Script Host, mshta, Python, Java, Node, bash or WSL, and the like).
+- A registration the shell cannot verify as one program taking the file (a COM handler, such as
+  Explorer's for `.zip`, or no registered program) fails with `Blocked` as well; the detail names
+  why, for the log.
 - Such a file opens with its registered "edit" verb (`mode: "editor"`, for example a `.bat` in
   Notepad). Without one, the command fails with `Blocked`, and the UI offers "Show in File
   Explorer".
@@ -496,6 +500,14 @@ File bytes do not travel in IPC messages (system overview §2). A read-only sche
 - `{path}` is the entry's path with each name percent-encoded as UTF-8. The shell serves a
   catalogued file whose id is at that path, like an `EntryRef`, and answers `404` otherwise. Only
   `GET` and `HEAD`.
+- **Sizes.** Tauri buffers each response. Without `Range` a response holds at most 256 MiB, the
+  preview's PDF limit (UI architecture §10.1); a larger file answers `InvalidArgument` and is read
+  with ranges. A `Range` response holds at most 8 MiB from the range's start, and
+  `Content-Range` names what it holds, so a media element asks again for the rest. Ask for
+  `bytes=N-` or `bytes=N-M`: a suffix range (`bytes=-N`) is not CORS-safelisted, so `fetch` sends
+  `OPTIONS` first, which the scheme refuses (`Transport`).
+- Thumbnails are cached by content hash under the catalog's hash of the file (system overview
+  §5); until the hashing job has read a new or changed file, each request makes the image again.
 - **Files not on this disk.** The scheme never reads a cloud placeholder or an offline file, for
   content or for a thumbnail (Sirui, 2026-09-29; the same rule as hashing, Windows adapter §3.4):
   reading one downloads it, and a folder of thumbnails would download the whole folder. It
@@ -520,7 +532,7 @@ read it.
 
 | Code | Status | When |
 |---|---|---|
-| `InvalidArgument` | `400`; `405` for a method other than `GET` and `HEAD`; `416` for a range outside the file, with `Content-Range: bytes */{size}` | A URL the UI never builds: an unknown route, an id that is not a number, a size other than 64, 128 or 256, a path that is not library path text |
+| `InvalidArgument` | `400`; `405` for a method other than `GET` and `HEAD`; `416` for a range outside the file, with `Content-Range: bytes */{size}` | A URL the UI never builds: an unknown route, an id that is not a number, a size other than 64, 128 or 256, a path that is not library path text; a file over 256 MiB without `Range` |
 | `NotFound` | `404` | No catalogued file with that id at that path, or the file went away |
 | `NoLibrary` | `503` | No library is open, or it is unavailable |
 | `AccessDenied` | `403` | Windows denied reading the file |

@@ -26,6 +26,8 @@ use crate::ipc::library::{
 use crate::ipc::problems::{ListProblems, ProblemItem};
 use crate::ipc::types::{LIMITS, Page};
 use errors::Failure;
+// ipc-m1 §16.2: one mapping of I/O errors for the whole shell.
+pub(crate) use errors::io as io_error;
 use worker::Session;
 
 pub(crate) enum Event {
@@ -321,6 +323,35 @@ impl LibraryState {
 
     pub fn list_jobs(&self) -> Result<Vec<Job>, AppError> {
         Ok(self.session()?.jobs.list())
+    }
+
+    /// Checks a reference against the live catalog and runs `action` on the entry while the
+    /// library transition and the catalog writer are held, so no library switch and no Folio
+    /// change lands between the check and the action. Everything else waits meanwhile: keep
+    /// `action` short. File actions pin the path here (`open::PinnedEntry`) and read or launch
+    /// after this returns.
+    pub(crate) fn with_entry<T>(
+        &self,
+        reference: &crate::ipc::types::EntryRef,
+        action: impl FnOnce(&Path, &folio_core::catalog::Entry) -> Result<T, AppError>,
+    ) -> Result<T, AppError> {
+        use folio_core::paths::RelPath;
+        let id = reference
+            .id
+            .parse::<i64>()
+            .ok()
+            .filter(|id| *id > 0 && reference.id.bytes().all(|byte| byte.is_ascii_digit()))
+            .ok_or_else(|| AppError::InvalidArgument("invalid entry id".to_owned()))?;
+        let path = RelPath::parse(&reference.path)
+            .map_err(|error| AppError::InvalidArgument(error.to_string()))?;
+        if folio_core::meta::is_folio_owned(&path) {
+            return Err(AppError::NotFound(
+                "Folio metadata is not an entry".to_owned(),
+            ));
+        }
+        self.status()?;
+        let _transition = lock(&self.0.transition);
+        self.session()?.with_entry(id, &path, action)
     }
     pub fn cancel(&self, request: CancelJob) -> Result<(), AppError> {
         match self.session() {

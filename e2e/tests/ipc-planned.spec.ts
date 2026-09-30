@@ -4,7 +4,7 @@ import { expect, test } from '../fixtures';
 // in the app manifest or granted (spec §3). Tauri's ACL must reject them before any handler could
 // run; a Rust test in folio-app's ipc.rs keeps them out of the manifest and the capabilities.
 test('rejects planned commands before they reach a handler', async ({ folio }) => {
-  for (const command of ['list_children', 'import_files', 'open_entry']) {
+  for (const command of ['list_children', 'import_files']) {
     await expect(
       folio.page.evaluate(`window.__TAURI_INTERNALS__.invoke(${JSON.stringify(command)}, {})`),
     ).rejects.toThrow(/not allowed/);

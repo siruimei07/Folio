@@ -23,8 +23,8 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src ipc: http://ipc.localhost; frame-src http://folio-preview.localhost; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
-      "devCsp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src ipc: http://ipc.localhost ws://localhost:5173; frame-src http://folio-preview.localhost; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob: http://folio-file.localhost; media-src 'self' http://folio-file.localhost; font-src 'self'; connect-src ipc: http://ipc.localhost http://folio-file.localhost; frame-src http://folio-preview.localhost; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+      "devCsp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http://folio-file.localhost; media-src 'self' http://folio-file.localhost; font-src 'self'; connect-src ipc: http://ipc.localhost http://folio-file.localhost ws://localhost:5173; frame-src http://folio-preview.localhost; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
     }
   },
   "bundle": {

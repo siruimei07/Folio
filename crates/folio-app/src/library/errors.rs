@@ -7,7 +7,7 @@ use folio_core::meta::MetaError;
 use crate::error::AppError;
 use crate::ipc::library::Unavailable;
 
-pub(super) fn io(error: io::Error) -> AppError {
+pub(crate) fn io(error: io::Error) -> AppError {
     let detail = error.to_string();
     if folio_core::fs::is_in_use(&error) {
         return AppError::InUse(detail);

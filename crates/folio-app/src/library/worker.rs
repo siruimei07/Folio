@@ -190,6 +190,34 @@ impl Session {
         self.library.root()
     }
 
+    pub(super) fn with_entry<T>(
+        &self,
+        id: i64,
+        path: &folio_core::paths::RelPath,
+        action: impl FnOnce(&Path, &catalog::Entry) -> Result<T, AppError>,
+    ) -> Result<T, AppError> {
+        // Use the existing writer transaction without exposing its connection or a stale
+        // session handle to callers. The wrapper preserves action errors and rollback.
+        struct ActionError(AppError);
+        impl From<catalog::CatalogError> for ActionError {
+            fn from(error: catalog::CatalogError) -> Self {
+                Self(errors::catalog(error))
+            }
+        }
+        self.catalog
+            .write_with(|tx| {
+                let entry = catalog::entry_by_id(tx, catalog::EntryId(id))?
+                    .filter(|entry| entry.record.path == *path)
+                    .ok_or_else(|| {
+                        ActionError(AppError::NotFound(
+                            "the entry moved or disappeared".to_owned(),
+                        ))
+                    })?;
+                action(self.root(), &entry).map_err(ActionError)
+            })
+            .map_err(|error: ActionError| error.0)
+    }
+
     pub fn opened(&self) -> LibraryOpened {
         LibraryOpened {
             library: lock(&self.snapshot).info.clone(),

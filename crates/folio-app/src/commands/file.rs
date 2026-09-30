@@ -1,24 +1,33 @@
 //! File opening commands (ipc-m1.md §11).
 
-// Stubs exist only for bindings; implementing a command removes its stub from this module.
-#[cfg(test)]
-pub(crate) use planned::*;
+use tauri::State;
 
-#[cfg(test)]
-mod planned {
-    use crate::commands::planned;
-    use crate::error::AppError;
-    use crate::ipc::entries::{OpenEntry, Opened, RevealEntry};
+use crate::error::AppError;
+use crate::ipc::entries::{OpenEntry, Opened, RevealEntry};
+use crate::library::LibraryState;
+use crate::open::{self, PinnedEntry};
 
-    #[tauri::command]
-    #[specta::specta]
-    pub fn open_entry(request: OpenEntry) -> Result<Opened, AppError> {
-        planned("open_entry", request)
-    }
+#[tauri::command]
+#[specta::specta]
+pub async fn open_entry(
+    state: State<'_, LibraryState>,
+    request: OpenEntry,
+) -> Result<Opened, AppError> {
+    super::blocking(state, "open entry", move |state| {
+        // The check and the pin hold the catalog writer; the launch runs after, holding nothing.
+        open::open(&state.with_entry(&request.entry, PinnedEntry::resolve)?)
+    })
+    .await
+}
 
-    #[tauri::command]
-    #[specta::specta]
-    pub fn reveal_entry(request: RevealEntry) -> Result<(), AppError> {
-        planned("reveal_entry", request)
-    }
+#[tauri::command]
+#[specta::specta]
+pub async fn reveal_entry(
+    state: State<'_, LibraryState>,
+    request: RevealEntry,
+) -> Result<(), AppError> {
+    super::blocking(state, "reveal entry", move |state| {
+        open::reveal(&state.with_entry(&request.entry, PinnedEntry::resolve)?)
+    })
+    .await
 }

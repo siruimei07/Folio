@@ -4,13 +4,16 @@
 mod commands;
 mod diagnostics;
 mod dialogs;
+mod file_scheme;
 // Public: the IPC contract is this crate's interface to the UI (docs/specs/ipc-m1.md).
 pub mod error;
 pub mod ipc;
 mod jobs;
 mod library;
+mod open;
 mod paths;
 mod preview;
+mod thumbnail;
 mod window_chrome;
 
 use std::sync::Arc;
@@ -25,6 +28,32 @@ pub fn run() {
         .register_uri_scheme_protocol(preview::SCHEME, |ctx, request| {
             preview::respond(ctx.app_handle(), &request)
         })
+        .register_asynchronous_uri_scheme_protocol(
+            file_scheme::SCHEME,
+            |ctx, request, responder| {
+                let app = ctx.app_handle().clone();
+                if ctx.webview_label() != "main" {
+                    responder.respond(file_scheme::failure(
+                        &error::AppError::AccessDenied(
+                            "the scheme is for the main window".to_owned(),
+                        ),
+                        tauri::http::StatusCode::FORBIDDEN,
+                    ));
+                    return;
+                }
+                tauri::async_runtime::spawn_blocking(move || {
+                    let (response, error) = file_scheme::respond(
+                        &app.state::<library::LibraryState>(),
+                        &app.state::<thumbnail::Cache>(),
+                        &request,
+                    );
+                    if let Some(error) = error {
+                        diagnostics::report(&app, &format!("file request failed: {error}"));
+                    }
+                    responder.respond(response);
+                });
+            },
+        )
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
@@ -48,6 +77,18 @@ pub fn run() {
                     .map_err(|error| error.to_string())
             });
             app.manage(paths::DataDir::new(data_dir.clone()));
+            // Tests redirect caches with the same existing data override, so no e2e run
+            // reads or evicts Sirui's real thumbnail cache.
+            let cache = if std::env::var_os(paths::DATA_DIR_ENV).is_some() {
+                data_dir.clone().map(|path| path.join("cache"))
+            } else {
+                app.path()
+                    .app_cache_dir()
+                    .map_err(|error| error::AppError::FileSystem(error.to_string()))
+            };
+            app.manage(thumbnail::Cache::new(
+                cache.map(|path| path.join("thumbnails")),
+            ));
             let handle = app.handle().clone();
             let library = library::LibraryState::new(
                 data_dir,
