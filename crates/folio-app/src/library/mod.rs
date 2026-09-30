@@ -13,7 +13,7 @@ use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant};
 
 use folio_core::library::state::{self, Settings};
-use folio_core::meta::{DisplayName, Layout};
+use folio_core::meta::{DisplayName, Layout, folio_part};
 use unicode_normalization::UnicodeNormalization;
 
 use crate::error::AppError;
@@ -25,6 +25,7 @@ use crate::ipc::library::{
 };
 use crate::ipc::problems::{ListProblems, ProblemItem};
 use crate::ipc::types::{LIMITS, Page};
+use errors::Failure;
 use worker::Session;
 
 pub(crate) enum Event {
@@ -105,10 +106,11 @@ impl LibraryState {
                 Ok(session) => {
                     self.publish(session);
                 }
-                Err(error) => {
-                    lock(&self.0.state).status = Ok(unavailable(&root, &error));
+                Err(failure) => {
+                    lock(&self.0.state).status = Ok(unavailable(&root, failure.reason));
                     (self.0.emit)(Event::Error(format!(
-                        "could not open configured library: {error}"
+                        "could not open configured library: {}",
+                        failure.error
                     )));
                 }
             }
@@ -241,7 +243,9 @@ impl LibraryState {
         }
         let result = self
             .data_dir()
-            .and_then(|data_dir| Session::prepare(root, data_dir, self.0.emit.clone()))
+            .and_then(|data_dir| {
+                Session::prepare(root, data_dir, self.0.emit.clone()).map_err(AppError::from)
+            })
             .and_then(|session| {
                 settings.library_root = Some(root.to_owned());
                 match settings.save(self.data_dir()?) {
@@ -272,13 +276,15 @@ impl LibraryState {
     fn reopen(&self, root: &Path) {
         let reopened = self
             .data_dir()
+            .map_err(Failure::own)
             .and_then(|data_dir| Session::prepare(root, data_dir, self.0.emit.clone()))
             .map(|session| self.publish(session));
-        if let Err(error) = reopened {
-            let status = unavailable(root, &error);
+        if let Err(failure) = reopened {
+            let status = unavailable(root, failure.reason);
             lock(&self.0.state).status = Ok(status.clone());
             (self.0.emit)(Event::Error(format!(
-                "could not reopen the previous library: {error}"
+                "could not reopen the previous library: {}",
+                failure.error
             )));
             (self.0.emit)(Event::Library(status));
         }
@@ -382,14 +388,14 @@ fn directory(root: &Path) -> Result<PathBuf, AppError> {
     Ok(root)
 }
 
-fn read_config(root: &Path) -> Result<folio_core::meta::LibraryConfig, AppError> {
+fn read_config(root: &Path) -> Result<folio_core::meta::LibraryConfig, Failure> {
     // Metadata is privileged write input; validate its parent directories before reading it.
-    state::validate_metadata(root).map_err(errors::meta)?;
+    state::validate_metadata(root).map_err(Failure::metadata)?;
     let layout = Layout::new(root);
     layout
         .read_library()
-        .map_err(errors::meta)?
-        .ok_or_else(|| AppError::NotALibrary("missing .folio/library.json".to_owned()))
+        .map_err(Failure::metadata)?
+        .ok_or_else(|| Failure::not_a_library("missing .folio/library.json".to_owned()))
 }
 
 fn classify(root: &Path) -> Result<FolderContent, AppError> {
@@ -413,16 +419,24 @@ fn classify(root: &Path) -> Result<FolderContent, AppError> {
             });
         }
     }
-    let (mut folders, mut files) = (0_u32, 0_u32);
+    let (mut incomplete, mut folders, mut files) = (false, 0_u32, 0_u32);
     for entry in fs::read_dir(root).map_err(errors::io)? {
         let entry = entry.map_err(errors::io)?;
-        if entry.file_type().map_err(errors::io)?.is_dir() {
+        // Not following links: a link or a file named `.folio` is ordinary content, which
+        // create_library then refuses. A real folder is a creation that failed before
+        // library.json.
+        let folder = entry.file_type().map_err(errors::io)?.is_dir();
+        if folder && folio_part(&[entry.file_name()]).is_some() {
+            incomplete = true;
+        } else if folder {
             folders = folders.saturating_add(1);
         } else {
             files = files.saturating_add(1);
         }
     }
-    Ok(if folders == 0 && files == 0 {
+    Ok(if incomplete {
+        FolderContent::Incomplete { folders, files }
+    } else if folders == 0 && files == 0 {
         FolderContent::Empty
     } else {
         FolderContent::Folders { folders, files }
@@ -468,16 +482,10 @@ fn shown(path: &Path) -> String {
     plain.display().to_string()
 }
 
-fn unavailable(root: &Path, error: &AppError) -> LibraryStatus {
+fn unavailable(root: &Path, reason: Unavailable) -> LibraryStatus {
     LibraryStatus::Unavailable {
         root: shown(root),
-        reason: match error {
-            AppError::NotFound(_) => Unavailable::Missing,
-            AppError::NotALibrary(_) => Unavailable::NotALibrary,
-            AppError::NewerFormat(_) => Unavailable::NewerFormat,
-            AppError::AccessDenied(_) => Unavailable::AccessDenied,
-            _ => Unavailable::CatalogFailed,
-        },
+        reason,
     }
 }
 

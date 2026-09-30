@@ -6,6 +6,7 @@ pub(crate) mod file;
 pub(crate) mod import;
 pub(crate) mod jobs;
 pub(crate) mod library;
+pub(crate) mod log;
 // Names are consumed by build.rs and tests; runtime registration consumes the macros only.
 #[cfg_attr(not(test), allow(dead_code))]
 pub(crate) mod manifest;

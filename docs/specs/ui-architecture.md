@@ -591,7 +591,9 @@ each side validates shape and source before acting.
   addresses in a browser, or other library files from a note, is left for a later version.
 
 Proposed shape of `resolve_paths`, for the contract lane `feat/ipc-m1-contract-fixes` to settle in
-ipc-m1 (the contract lane may rename or reshape it):
+ipc-m1 (the contract lane may rename or reshape it). Settled on 2026-09-29 with this shape and the
+limits `resolvePaths` and `relativePathChars`; ipc-m1 §9.1 is the reference (the window also drops
+`?…` and `#…` parts before percent-decoding):
 
 ```ts
 resolve_paths({ base: EntryRef; paths: string[] }) → (EntryRow | null)[]   // same order as `paths`
@@ -747,7 +749,8 @@ with `i18n.language` for sizes and dates (handoff: "Sep 27", 12-hour "5:05 PM").
   the live region.
 - Each rail view, dialog and the preview sits in an error boundary that shows the `Internal` message
   with "Reload this view". Uncaught errors reach the console through `createRoot`'s
-  `onUncaughtError` / `onCaughtError`; writing them to the shell's log needs a command (§18).
+  `onUncaughtError` / `onCaughtError`, and the shell's log through `log_ui_error` (ipc-m1 §16.4,
+  declared 2026-09-29; `chore/core-logging` implements it).
 - Window-command failures (today only on the console) get an error state in `feat/ui-app-shell`
   (roadmap §3.4).
 
@@ -864,6 +867,7 @@ inside the page), `katex` fonts and CSS.
   (ADR-0005, product decision 2).
 - **Contract for UI error logging**: a command that writes UI errors to the shell's log (§13),
   declared by `feat/ipc-m1-contract-fixes` and implemented by `chore/core-logging` (roadmap wave 2).
+  Declared on 2026-09-29 as `log_ui_error` (ipc-m1 §16.4); `resolve_paths` likewise (§10.4).
 - **Testing strategy**: add the fake shell, the `renderApp` helper and `@axe-core/playwright` to
   its layers when `feat/ui-data-layer` lands.
 - **CLAUDE.md §6 directory map**: describe `apps/desktop/src` by feature folders once the app-shell

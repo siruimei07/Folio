@@ -184,7 +184,8 @@ fn io_at(path: &Path, source: io::Error) -> MetaError {
 }
 
 /// Creates metadata without modifying existing content. `library.json` is published last.
-/// Existing `.folio` content, including a failed earlier creation, is never overwritten.
+/// A `.folio` folder without `library.json`, left by a creation that failed, is finished in
+/// place: what it holds is kept, and only the missing files are written.
 pub fn create(
     root: &Path,
     name: DisplayName,
@@ -214,12 +215,16 @@ pub fn create(
         }]
         .clone()
     });
-    fs::create_dir(layout.folio_dir()).map_err(|source| MetaError::Io {
-        path: layout.folio_dir(),
-        source,
-    })?;
+    let fresh = match fs::create_dir(layout.folio_dir()) {
+        Ok(()) => true,
+        // An incomplete library. validate_metadata refuses a link or a file in its place.
+        Err(source) if source.kind() == io::ErrorKind::AlreadyExists => false,
+        Err(source) => return Err(io_at(&layout.folio_dir(), source)),
+    };
     validate_metadata(root)?;
-    layout.write_tags(&tags)?;
+    if fresh || unlinked_type(&layout.tags_file())?.is_none() {
+        layout.write_tags(&tags)?;
+    }
     layout.write_library(&config)?;
     Ok(config)
 }
@@ -263,7 +268,7 @@ mod tests {
     }
 
     #[test]
-    fn take_over_keeps_files_and_refuses_existing_nested_or_incomplete_metadata() {
+    fn take_over_keeps_files_and_refuses_existing_or_nested_metadata() {
         let dir = tempfile::tempdir().unwrap();
         let file = dir.path().join("notes.md");
         fs::write(&file, b"original").unwrap();
@@ -287,15 +292,43 @@ mod tests {
         fs::create_dir(&nested).unwrap();
         assert!(create(&nested, DisplayName::parse("Nested").unwrap(), names()).is_err());
         assert!(!nested.join(".folio").exists());
-        let incomplete = tempfile::tempdir().unwrap();
-        fs::create_dir(incomplete.path().join(".folio")).unwrap();
-        assert!(
-            create(
-                incomplete.path(),
-                DisplayName::parse("Incomplete").unwrap(),
-                names()
-            )
-            .is_err()
+    }
+
+    #[test]
+    fn an_incomplete_library_is_finished_in_place_and_keeps_its_metadata() {
+        // A creation that stopped after tags.json, with tags already in .folio/meta.
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        fs::create_dir(layout.folio_dir()).unwrap();
+        let mut tags = crate::test_support::presets("Old slides");
+        tags.tags.remove(&PresetTag::Exam.id());
+        layout.write_tags(&tags).unwrap();
+        fs::create_dir(layout.meta_dir()).unwrap();
+        let meta = layout.meta_dir().join("kept.txt");
+        fs::write(&meta, b"kept").unwrap();
+
+        let config = create(dir.path(), DisplayName::parse("Finished").unwrap(), names()).unwrap();
+        assert_eq!(layout.read_library().unwrap(), Some(config));
+        assert_eq!(layout.read_tags().unwrap(), Some(tags));
+        assert_eq!(fs::read(&meta).unwrap(), b"kept");
+
+        // Only tags.json and library.json were missing: the presets fill the first.
+        let bare = tempfile::tempdir().unwrap();
+        fs::create_dir(bare.path().join(".folio")).unwrap();
+        create(bare.path(), DisplayName::parse("Bare").unwrap(), names()).unwrap();
+        let presets = Layout::new(bare.path()).read_tags().unwrap().unwrap();
+        assert_eq!(presets.tags.len(), 5);
+
+        // A file where .folio belongs is not an incomplete library; nothing is written.
+        let file = tempfile::tempdir().unwrap();
+        fs::write(file.path().join(".folio"), b"not metadata").unwrap();
+        assert!(matches!(
+            create(file.path(), DisplayName::parse("File").unwrap(), names()),
+            Err(MetaError::Invalid { .. })
+        ));
+        assert_eq!(
+            fs::read(file.path().join(".folio")).unwrap(),
+            b"not metadata"
         );
     }
 }

@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
-use super::types::EntryRef;
+use super::types::{EntryKind, EntryRef};
 use crate::error::AppError;
 
 /// Files or folders the user picked in the shell's dialog or dropped on the window. `token`
@@ -13,8 +13,16 @@ pub struct ImportSource {
     pub token: String,
     pub files: u32,
     pub folders: u32,
-    /// The first ten top-level names, for display.
-    pub names: Vec<String>,
+    /// The first ten top-level items, for display.
+    pub names: Vec<ImportName>,
+}
+
+/// A top-level item of an import source.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+pub struct ImportName {
+    pub name: String,
+    /// What the item is itself: a link is a `file`, whatever it points to.
+    pub kind: EntryKind,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]

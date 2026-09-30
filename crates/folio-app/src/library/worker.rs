@@ -10,11 +10,12 @@ use folio_core::meta::MetaTree;
 use folio_core::watch::{Rescan, WatchOptions};
 use folio_core::win::{WatchEvent, Watcher, WindowsFileSystem};
 
-use super::{Event, Sink, errors, lock, problems::Problems};
+use super::errors::{self, Failure};
+use super::{Event, Sink, lock, problems::Problems};
 use crate::error::AppError;
 use crate::ipc::events::{CatalogChanged, EntryChange};
 use crate::ipc::jobs::{JobKind, JobResult};
-use crate::ipc::library::{LibraryInfo, LibraryOpened, LibraryStatus};
+use crate::ipc::library::{LibraryInfo, LibraryOpened, LibraryStatus, Unavailable};
 use crate::ipc::problems::ProblemItem;
 use crate::ipc::types::{EntryRef, LIMITS, Page, PageRequest};
 use crate::jobs::{Registry, Ticket, count};
@@ -39,7 +40,7 @@ pub(super) struct Session {
 
 struct Snapshot {
     info: LibraryInfo,
-    failure: Option<AppError>,
+    failure: Option<Unavailable>,
     revision: u32,
     problems: Problems,
     event: Option<CatalogChanged>,
@@ -86,31 +87,38 @@ struct Pending {
     rescan: Option<Rescan>,
     rebuild: Option<Ticket>,
     hash: Option<(Instant, Ticket)>,
-    failure: Option<AppError>,
+    failure: Option<Failure>,
 }
 
 enum Work {
     Scan(Rescan, Option<Ticket>),
     Hash(Ticket),
     Rebuild(Ticket),
-    Failed(AppError),
+    Failed(Failure),
 }
 
 impl Session {
-    pub fn prepare(root: &Path, data_dir: &Path, emit: Sink) -> Result<Arc<Self>, AppError> {
-        let root = super::directory(root)?;
+    /// Each step says why it failed, so the unavailable reason never comes from a guess.
+    pub fn prepare(root: &Path, data_dir: &Path, emit: Sink) -> Result<Arc<Self>, Failure> {
+        let root = super::directory(root).map_err(Failure::root)?;
         let config = super::read_config(&root)?;
-        let fs = Arc::new(WindowsFileSystem::open(&root).map_err(errors::io)?);
+        let fs = Arc::new(
+            WindowsFileSystem::open(&root)
+                .map_err(errors::io)
+                .map_err(Failure::root)?,
+        );
         let options = WatchOptions::new(fs.has_file_ids());
         let library = Library::new(&root, fs);
         let read_only = MetaTree::read(library.layout())
-            .map_err(errors::meta)?
+            .map_err(Failure::metadata)?
             .is_read_only();
         let path = data_dir
             .join("libraries")
             .join(config.id.as_str())
             .join("catalog.sqlite");
-        let opened = Catalog::open(&path, &config.id).map_err(errors::catalog)?;
+        let opened = Catalog::open(&path, &config.id)
+            .map_err(errors::catalog)
+            .map_err(Failure::own)?;
         let active = Arc::new(AtomicBool::new(false));
         let job_sink = emit.clone();
         let job_active = active.clone();
@@ -119,7 +127,7 @@ impl Session {
                 job_sink(Event::Job(job));
             }
         }));
-        let startup = jobs.queue(JobKind::Scan, true)?;
+        let startup = jobs.queue(JobKind::Scan, true).map_err(Failure::own)?;
         let session = Arc::new(Self {
             library,
             catalog: Arc::new(opened.catalog),
@@ -156,20 +164,21 @@ impl Session {
                 session.watch(event);
             }
         })
-        .map_err(errors::io)?;
+        .map_err(errors::io)
+        .map_err(Failure::root)?;
         *lock(&session.watcher) = Some(watcher);
         let worker_session = session.clone();
         let worker = match std::thread::Builder::new()
             .name("folio-library".to_owned())
             .spawn(move || {
-                if let Err(error) = worker_session.run() {
-                    worker_session.fail(error);
+                if let Err(failure) = worker_session.run() {
+                    worker_session.fail(failure);
                 }
             }) {
             Ok(worker) => worker,
             Err(error) => {
-                session.shutdown()?;
-                return Err(errors::io(error));
+                session.shutdown().map_err(Failure::own)?;
+                return Err(Failure::own(errors::io(error)));
             }
         };
         *lock(&session.worker) = Some(worker);
@@ -202,8 +211,8 @@ impl Session {
 
     pub fn status(&self) -> LibraryStatus {
         let snapshot = lock(&self.snapshot);
-        match &snapshot.failure {
-            Some(error) => super::unavailable(self.library.root(), error),
+        match snapshot.failure {
+            Some(reason) => super::unavailable(self.library.root(), reason),
             None => LibraryStatus::Open {
                 library: snapshot.info.clone(),
             },
@@ -229,7 +238,8 @@ impl Session {
                     None => rescan,
                 });
             }
-            WatchEvent::Failed(error) => pending.failure = Some(errors::io(error)),
+            // A watch ends when the folder cannot be watched any more, say because it went away.
+            WatchEvent::Failed(error) => pending.failure = Some(Failure::root(errors::io(error))),
         }
         self.wake.notify_one();
     }
@@ -287,7 +297,9 @@ impl Session {
         Ok(())
     }
 
-    fn run(&self) -> Result<(), AppError> {
+    /// Library and catalog failures keep the reason they got where they happened; a failure of
+    /// the job registry is Folio's own state failing.
+    fn run(&self) -> Result<(), Failure> {
         loop {
             self.flush();
             let Some(work) = self.next()? else {
@@ -296,11 +308,11 @@ impl Session {
                 return Ok(());
             };
             match work {
-                Work::Failed(error) => return Err(error),
+                Work::Failed(failure) => return Err(failure),
                 Work::Scan(rescan, ticket) => {
                     // A job cancelled while queued has finished: skip its work.
                     if let Some(ticket) = &ticket
-                        && !self.jobs.start(ticket)?
+                        && !self.jobs.start(ticket).map_err(Failure::own)?
                     {
                         continue;
                     }
@@ -309,23 +321,23 @@ impl Session {
                         .map_or(&self.stopped, |ticket| ticket.cancel.as_ref());
                     let result = self.scan(&rescan, cancel, ticket.as_ref());
                     if let Some(ticket) = &ticket {
-                        self.jobs.finish(ticket, result.clone())?;
+                        self.finish(ticket, result.as_ref().cloned())?;
                     }
                     if result?.is_some() && !matches!(rescan, Rescan::Metadata) {
                         self.queue_hash(Duration::ZERO)?;
                     }
                 }
                 Work::Hash(ticket) => {
-                    if self.jobs.start(&ticket)? {
+                    if self.jobs.start(&ticket).map_err(Failure::own)? {
                         self.hash(&ticket)?;
                     }
                 }
                 Work::Rebuild(ticket) => {
-                    if !self.jobs.start(&ticket)? {
+                    if !self.jobs.start(&ticket).map_err(Failure::own)? {
                         continue;
                     }
                     let result = self.rebuild_catalog(&ticket);
-                    self.jobs.finish(&ticket, result.clone())?;
+                    self.finish(&ticket, result.as_ref().cloned())?;
                     if result?.is_some() {
                         self.queue_hash(Duration::ZERO)?;
                     }
@@ -334,15 +346,25 @@ impl Session {
         }
     }
 
-    fn next(&self) -> Result<Option<Work>, AppError> {
+    /// Records a job's outcome; a failed job reports its error without the unavailable reason.
+    fn finish(
+        &self,
+        ticket: &Ticket,
+        result: Result<Option<JobResult>, &Failure>,
+    ) -> Result<(), Failure> {
+        let result = result.map_err(|failure| failure.error.clone());
+        self.jobs.finish(ticket, result).map_err(Failure::own)
+    }
+
+    fn next(&self) -> Result<Option<Work>, Failure> {
         let mut pending = lock(&self.pending);
         loop {
             if self.stopped.load(Ordering::Acquire) {
                 return Ok(None);
             }
             if self.active.load(Ordering::Acquire) {
-                if let Some(error) = pending.failure.take() {
-                    return Ok(Some(Work::Failed(error)));
+                if let Some(failure) = pending.failure.take() {
+                    return Ok(Some(Work::Failed(failure)));
                 }
                 if let Some(ticket) = pending.rebuild.take() {
                     return Ok(Some(Work::Rebuild(ticket)));
@@ -353,7 +375,7 @@ impl Session {
                     let ticket = match rescan {
                         Rescan::Full => Some(match pending.startup.take() {
                             Some(startup) => startup,
-                            None => self.jobs.queue(JobKind::Scan, true)?,
+                            None => self.jobs.queue(JobKind::Scan, true).map_err(Failure::own)?,
                         }),
                         Rescan::Scopes(_) | Rescan::Metadata => None,
                     };
@@ -401,7 +423,7 @@ impl Session {
         rescan: &Rescan,
         cancel: &AtomicBool,
         ticket: Option<&Ticket>,
-    ) -> Result<Option<JobResult>, AppError> {
+    ) -> Result<Option<JobResult>, Failure> {
         let mut changes = 0_u64;
         let completed = self
             .library
@@ -431,7 +453,7 @@ impl Session {
     }
 
     /// Hashes the pending files for a started job, and retries files that were too fresh.
-    fn hash(&self, ticket: &Ticket) -> Result<(), AppError> {
+    fn hash(&self, ticket: &Ticket) -> Result<(), Failure> {
         let report = self.library.hash_pending_with_commits(
             &self.catalog,
             now_ns(),
@@ -446,9 +468,9 @@ impl Session {
         );
         let report = match report.map_err(errors::library) {
             Ok(report) => report,
-            Err(error) => {
-                self.jobs.finish(ticket, Err(error.clone()))?;
-                return Err(error);
+            Err(failure) => {
+                self.finish(ticket, Err(&failure))?;
+                return Err(failure);
             }
         };
         if lock(&self.snapshot)
@@ -458,7 +480,7 @@ impl Session {
             self.problems_changed();
         }
         let cancelled = report.cancelled || ticket.cancel.load(Ordering::Acquire);
-        self.jobs.finish(
+        self.finish(
             ticket,
             Ok((!cancelled).then_some(JobResult::Hash {
                 hashed: count(report.hashed),
@@ -471,7 +493,7 @@ impl Session {
         Ok(())
     }
 
-    fn rebuild_catalog(&self, ticket: &Ticket) -> Result<Option<JobResult>, AppError> {
+    fn rebuild_catalog(&self, ticket: &Ticket) -> Result<Option<JobResult>, Failure> {
         if ticket.cancel.load(Ordering::Acquire) {
             return Ok(None);
         }
@@ -488,7 +510,8 @@ impl Session {
         let entries = self
             .catalog
             .read(|tx| catalog::count_entries(tx))
-            .map_err(errors::catalog)?;
+            .map_err(errors::catalog)
+            .map_err(Failure::own)?;
         Ok(Some(JobResult::Rebuild {
             entries: count(entries),
         }))
@@ -563,7 +586,7 @@ impl Session {
         self.send(Event::Problems(count(total as u64)));
     }
 
-    fn queue_hash(&self, delay: Duration) -> Result<(), AppError> {
+    fn queue_hash(&self, delay: Duration) -> Result<(), Failure> {
         let mut pending = lock(&self.pending);
         // A queued rebuild scans and hashes afterwards; a stopped session does nothing more.
         if self.stopped.load(Ordering::Acquire) || self.jobs.busy(JobKind::Rebuild) {
@@ -575,23 +598,23 @@ impl Session {
             .as_ref()
             .is_none_or(|(_, ticket)| !self.jobs.live(ticket))
         {
-            let ticket = self.jobs.queue(JobKind::Hash, true)?;
+            let ticket = self.jobs.queue(JobKind::Hash, true).map_err(Failure::own)?;
             pending.hash = Some((Instant::now() + delay, ticket));
         }
         Ok(())
     }
 
-    fn fail(&self, error: AppError) {
+    fn fail(&self, failure: Failure) {
         {
             let _pending = lock(&self.pending);
             self.stopped.store(true, Ordering::Release);
         }
-        lock(&self.snapshot).failure = Some(error.clone());
+        lock(&self.snapshot).failure = Some(failure.reason);
         self.jobs.cancel_all();
-        self.send(Event::Error(error.to_string()));
+        self.send(Event::Error(failure.error.to_string()));
         self.send(Event::Library(super::unavailable(
             self.library.root(),
-            &error,
+            failure.reason,
         )));
     }
 }
@@ -643,6 +666,31 @@ mod tests {
         .unwrap();
         let session = Session::prepare(&root, &data, Arc::new(|_| {})).unwrap();
         (dir, session)
+    }
+
+    /// A failure while the library runs keeps the reason of where it happened: a watch that ends
+    /// because the drive is not ready is `missing` (it used to read as a catalog failure).
+    #[test]
+    fn a_failed_watch_reports_its_own_reason() {
+        let (_dir, session) = inactive_session();
+        // ERROR_NOT_READY
+        session.watch(WatchEvent::Failed(std::io::Error::from_raw_os_error(21)));
+        session.activate();
+        let status = super::super::tests::until("the library to become unavailable", || {
+            let status = session.status();
+            matches!(status, LibraryStatus::Unavailable { .. }).then_some(status)
+        });
+        session.shutdown().unwrap();
+        assert!(
+            matches!(
+                status,
+                LibraryStatus::Unavailable {
+                    reason: Unavailable::Missing,
+                    ..
+                }
+            ),
+            "{status:?}"
+        );
     }
 
     #[test]

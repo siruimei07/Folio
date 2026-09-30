@@ -201,8 +201,9 @@ for it, or the item is larger than its limit); `InUse` (another program holds it
 below it); `Denied`; `Invalid`; `Other`. `detail` is for logs, as `Problem::Unreadable`'s is.
 `Invalid` means a path no caller should pass (relative, a whole drive or share, `..`, NUL) or one
 the shell resolves to another file: a bug or a trap, never the user's doing, so the shell maps it
-to an internal error. The UI later offers "delete permanently" for `Unrecyclable` as its own
-confirmed action; this adapter never does it.
+to an internal error. The shell maps `Unrecyclable` to the IPC code `NotRecyclable` (ipc-m1
+§16.2). The UI later offers "delete permanently" for it as its own confirmed action; this adapter
+never does it.
 
 The Recycle Bin takes native paths like `FileSystem`. Which paths may be deleted at all (never
 the library root or `.folio`) is the delete operation's rule, in the library layer.

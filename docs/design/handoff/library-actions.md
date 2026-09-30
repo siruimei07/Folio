@@ -251,7 +251,7 @@ changes; it does not use up the token, `import_files` does (IPC §12).
 |---|---|
 | Frame | Section 2.8, `size.import-dialog` (560) wide, 96 px from the top (48 px when it is tall) |
 | Title | "Add files to MAT232" (the course label; "Add files to MAT232 / Problem sets" for a folder; "Add files" while there is no target) |
-| Items | A sunken box (`color.surface.sunken`, 1 px border, `radius.control`, padding 4 0): up to three 30 px rows (padding 0 10, gap 8: a 16 px type icon in its palette colour, or `folder` in `color.text.secondary`; the name, one line, truncated in the middle; "Folder" on the right in `font.size.small` `color.text.tertiary`), then a 26 px line "and Formula sheet.pdf" or "and 7 more" (`font.size.small`, `color.text.tertiary`). Names come from `ImportSource.names` (the first ten top-level names) |
+| Items | A sunken box (`color.surface.sunken`, 1 px border, `radius.control`, padding 4 0): up to three 30 px rows (padding 0 10, gap 8: a 16 px type icon in its palette colour, or `folder` in `color.text.secondary`; the name, one line, truncated in the middle; "Folder" on the right in `font.size.small` `color.text.tertiary`), then a 26 px line "and Formula sheet.pdf" or "and 7 more" (`font.size.small`, `color.text.tertiary`). Names come from `ImportSource.names` (the first ten top-level items; `kind: "folder"` marks the folders) |
 | Summary | `font.size.label`, `color.text.secondary`, tabular figures: "12 files in 1 folder · 48.2 MB" from `check_import` (`files`, `folders`, `bytes`: B, KB, MB, GB with one decimal above 10 KB); while checking, a 14 px spinner and "Checking…" |
 | Left out | Only when `skipped > 0`, `font.size.small`, `color.text.tertiary`: "2 items are left out: your ignore rules skip them (like .git or node_modules), or they're shortcuts or special files." ("1 item is left out: …") |
 | Add to | A 56 px label column "Add to", then a select-style button (`size.select` 32, min 240 px, `color.input.*` borders): course badge, code (600), course name (`color.text.secondary`), "/ Problem sets" for a folder, a 14 px chevron. Opens the folder picker (2.9) |
@@ -451,10 +451,10 @@ through "Add courses" (section 8).
   `color.button.danger-hover`). A semester, from the semester menu, asks the same way ("Delete Fall
   2026?", "The semester folder and its 5 courses with 25 files go to the Recycle Bin…").
 - Failures: a warning toast "Deleted 2 of 3 items" with "Details". Reasons: `InUse` "Another app is
-  using it or something in it.", `NotFound` "It was already gone.", and for `FileSystem`, which is also
-  what a drive without a Recycle Bin returns in M1: "Folio couldn't move it to the Recycle Bin. The
-  drive may not have one, or the path is too long for it. Folio never deletes files for good." (open
-  item 3).
+  using it or something in it.", `NotFound` "It was already gone.", and `NotRecyclable` (a drive
+  without a Recycle Bin, a path too long for it; its own code since 2026-09-29, open item 3): "Folio
+  couldn't move it to the Recycle Bin. The drive may not have one, or the path is too long for it.
+  Folio never deletes files for good."
 
 ## 8. Empty states
 
@@ -509,7 +509,9 @@ The file header stays; the body shows a state block on `color.surface.sunken`: d
 `file-x`, "Can't show this file", "Folio couldn't read it. It may be open in another app, or not
 downloaded from the cloud yet. Try again, or open it in its own app.", buttons "Try again" (`refresh-cw`)
 and "Open with default app". For a file removed meanwhile, `CatalogChanged` closes the preview
-instead (IPC §15.3).
+instead (IPC §15.3). Since 2026-09-29 the scheme says why a request failed (IPC §11.2, open item
+4): for `InUse`, `NotLocal`, `AccessDenied` and `NoThumbnail` the text is the code's message from
+`errors` in place of the text above, which stays for the other codes.
 
 ### 9.3 Opening files
 
@@ -760,15 +762,17 @@ Contract and lane follow-ups; none blocks the M1 UI lanes.
 
 1. **Folders in `ImportSource.names`** (`feat/core-import`): the names do not say which are folders,
    which the item list needs for its icons and "Folder". Suggested: `names: { name: string; folder:
-   boolean }[]`, through a small contract fix lane (roadmap §4 rule 2).
+   boolean }[]`, through a small contract fix lane (roadmap §4 rule 2). Settled 2026-09-29 as
+   `names: { name: string; kind: "file" | "folder" }[]` (IPC §12).
 2. **`ImportResult` counts**: the toasts assume `imported` includes `replaced` and `renamed`; the import
    lane confirms or the wording changes.
 3. **Recycle Bin not available**: M1 maps `RecycleFailure::Unrecyclable` to `FileSystem`. A code of its
    own would let the UI explain it and, later, offer "Delete permanently" as its own confirmed action
-   (Windows adapter §4).
+   (Windows adapter §4). Settled 2026-09-29: `NotRecyclable` (IPC §9.2, §16).
 4. **Why a preview failed**: the `folio-file` scheme answers 404 for every failure. Telling "in use"
-   and "not downloaded" apart would allow specific copy.
-5. **Retrying the library at start-up**: first-run.md §12 item 1.
+   and "not downloaded" apart would allow specific copy. Settled 2026-09-29: the `X-Folio-Error`
+   header names the code, with `NotLocal` and `NoThumbnail` new (IPC §11.2; section 9.2).
+5. **Retrying the library at start-up**: first-run.md §12 item 1. Settled 2026-09-29 (IPC §6).
 6. **Loose files**: files directly in a semester folder or at the library root are in no course.
    Suggestion for `feat/ui-library-view`: list a semester's loose files after its courses as file rows
    at depth 0, under a separator; files at the root appear only in search and the quick views.

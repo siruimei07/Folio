@@ -19,6 +19,7 @@ pub mod groups;
 pub mod import;
 pub mod jobs;
 pub mod library;
+pub mod log;
 pub mod problems;
 pub mod search;
 pub mod tags;
@@ -60,7 +61,7 @@ macro_rules! implemented_commands {
 /// What the app runs: the implemented commands.
 pub fn builder() -> Builder<tauri::Wry> {
     contract(Builder::<tauri::Wry>::new().commands(implemented_commands!(
-        []; shell, library, browse, operations, file, import, jobs
+        []; shell, library, browse, operations, file, import, jobs, log
     )))
 }
 
@@ -97,6 +98,7 @@ fn export_builder() -> Builder<tauri::Wry> {
         commands::operations::move_entries,
         commands::operations::delete_entries,
         commands::browse::search,
+        commands::browse::resolve_paths,
         commands::file::open_entry,
         commands::file::reveal_entry,
         commands::import::pick_import_files,
@@ -106,6 +108,7 @@ fn export_builder() -> Builder<tauri::Wry> {
         commands::jobs::cancel_job,
         commands::jobs::rebuild_catalog,
         commands::jobs::list_problems,
+        commands::log::log_ui_error,
     ]))
 }
 
@@ -123,6 +126,8 @@ fn contract(builder: Builder<tauri::Wry>) -> Builder<tauri::Wry> {
             events::DropHover,
         ])
         .constant("LIMITS", types::LIMITS)
+        .constant("FILE_ERROR_HEADER", entries::FILE_ERROR_HEADER)
+        .constant("FILE_ERROR_CODES", entries::FILE_ERROR_CODES)
         .typed_error_impl(TYPED_ERROR_IMPL)
 }
 

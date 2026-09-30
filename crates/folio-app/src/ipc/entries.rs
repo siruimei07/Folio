@@ -1,4 +1,4 @@
-//! Files and folders: listing, changing and opening them (docs/specs/ipc-m1.md §9, §11.1).
+//! Files and folders: listing, changing and opening them (docs/specs/ipc-m1.md §9, §11).
 
 use serde::{Deserialize, Serialize};
 use specta::Type;
@@ -46,6 +46,18 @@ pub enum TagFilter {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 pub struct GetEntry {
     pub entry: EntryRef,
+}
+
+/// Finds the files a note names by relative path, such as the images next to it (spec §9.1).
+/// The answer lists an `EntryRow` or `null` for each path, in the same order.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+pub struct ResolvePaths {
+    /// The note: a file. Each path is resolved against its folder.
+    pub base: EntryRef,
+    /// Relative paths as the note writes them, percent-decoded, without `?` or `#` parts: names
+    /// between `/` or `\`, with `.` and `..`. At most `LIMITS.resolvePaths`, each at most
+    /// `LIMITS.relativePathChars` characters and well-formed: a lone surrogate fails the call.
+    pub paths: Vec<String>,
 }
 
 /// A folder inside a course; semesters and courses have their own commands.
@@ -101,3 +113,20 @@ pub enum OpenMode {
 pub struct RevealEntry {
     pub entry: EntryRef,
 }
+
+/// The header in which a failed `folio-file` response names the `AppError` code it failed with
+/// (spec §11.2); exported to the UI as `FILE_ERROR_HEADER`.
+pub const FILE_ERROR_HEADER: &str = "X-Folio-Error";
+
+/// The codes a failed `folio-file` response carries; exported to the UI as `FILE_ERROR_CODES`.
+pub const FILE_ERROR_CODES: [&str; 9] = [
+    "InvalidArgument",
+    "NoLibrary",
+    "NotFound",
+    "AccessDenied",
+    "InUse",
+    "NotLocal",
+    "NoThumbnail",
+    "FileSystem",
+    "Internal",
+];

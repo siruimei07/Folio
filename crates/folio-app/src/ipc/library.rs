@@ -22,17 +22,26 @@ pub enum LibraryStatus {
     },
 }
 
+/// Why the library cannot be opened, or stopped working. The shell decides it where the failure
+/// happens, never from an error code alone (spec §6).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub enum Unavailable {
-    /// The folder is gone, for example on a drive that is not connected.
+    /// The folder cannot be reached: it is gone or not a folder, or its drive or share is not
+    /// connected. Also any other failure to open, list or watch it, or to read `.folio/`, except
+    /// those below.
     Missing,
-    /// The folder has no `.folio/library.json`.
+    /// The folder is there, but `.folio/library.json` is missing or damaged, or `.folio/`
+    /// holds a link.
     NotALibrary,
-    /// A newer Folio wrote the library; update Folio to open it.
+    /// A newer Folio wrote `library.json`; update Folio to open it.
     NewerFormat,
+    /// Windows denied access to the folder or to `.folio/`.
     AccessDenied,
-    /// The catalog could not be opened, for example because another program holds it.
+    /// The folder is there, but Folio's own state failed: the catalog could not be opened or
+    /// written (another copy of Folio holds it, the disk is full), `.folio/` could not be
+    /// written because its disk is full or another program holds a file, or the background
+    /// work failed.
     CatalogFailed,
 }
 
@@ -75,6 +84,13 @@ pub enum FolderContent {
     InsideLibrary {
         root: String,
     },
+    /// A `.folio/` folder without `library.json`: a library whose creation did not finish.
+    /// `create_library` finishes it and keeps what `.folio/` holds. The counts leave `.folio/`
+    /// out.
+    Incomplete {
+        folders: u32,
+        files: u32,
+    },
     /// Content to take over: its first-level folders (the would-be semesters) and files.
     Folders {
         folders: u32,
@@ -91,8 +107,8 @@ pub enum SyncProvider {
     Other,
 }
 
-/// Makes the chosen folder this machine's library: a new one in an empty folder, or taking over
-/// the content of a folder without moving anything (brief §5.1).
+/// Makes the chosen folder this machine's library: a new one in an empty folder, taking over
+/// the content of a folder without moving anything (brief §5.1), or finishing an incomplete one.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateLibrary {

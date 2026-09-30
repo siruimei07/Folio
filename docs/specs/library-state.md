@@ -31,7 +31,8 @@ Tauri command -> validate -> spawn_blocking -> LibraryState
 `LibraryState` holds startup completion, a transition gate, choice tokens and the active session.
 Its state lock only protects snapshots/handle replacement, never disk I/O or a thread join.
 Startup opens the configured root before resolving `library_status`. Missing/unsupported roots
-produce `Unavailable`; a missing settings file means `None`. Settings failures are explicit
+produce `Unavailable`, with the reason decided where opening failed (ipc-m1 §6); a missing
+settings file means `None`. Settings failures are explicit
 `DataDirUnavailable` errors, never silently treated as first run.
 
 One session serializes scans, scoped rescans, hashing and rebuilding on a blocking worker. The
@@ -63,10 +64,12 @@ Commands never accept an absolute path. Revalidate the selected root when consum
 The shell keeps canonical `\\?\` paths; every path it sends to the UI drops that prefix. The
 sync-root label only warns: a failed lookup is logged and gives no label, never a refused choice.
 
-Creation validates and NFC-normalizes all names before writing. It reserves a new `.folio`
-directory exclusively, writes presets, then publishes `library.json` last using atomic writes.
+Creation validates and NFC-normalizes all names before writing. It creates the `.folio`
+directory, writes presets, then publishes `library.json` last using atomic writes.
 Existing content is neither moved nor deleted. Existing or nested libraries are refused. A
-failed creation leaves recoverable metadata and reports the exact failure. The settings file
+failed creation leaves recoverable metadata and reports the exact failure; choosing the folder
+again reports it `incomplete`, and creation finishes it in place, keeping what `.folio` holds
+(ipc-m1 §6, 2026-09-29). The transition gate serializes creations in one app. The settings file
 is updated only after the chosen library and catalog have opened successfully. Switching waits
 for the previous session to quiesce before the new session can publish events. If the new
 session fails, the shell reopens the library `settings.json` still names, so the running state

@@ -127,6 +127,7 @@ Boards: "第 1 步 · 新建资料库（空文件夹）", "第 1 步 · 接管�
 | `folders` | "Use this folder as your library" | "4 folders and 2 files at the top level" (counts from `folders`, `files`; "1 folder", "no files" as needed) | "How Folio reads your folders · example" map; the top-level files line; library name; note "Folio adds a hidden .folio folder here for your tags and course settings. Nothing is moved or renamed." | Back · "Use this folder" | `create_library` |
 | `library` | "Open your library" | "Folio library “University of Toronto”" (`name`) | Info banner "This folder is already a Folio library" / "Open it to pick up where you left off. Its tags, courses and settings are inside it." | "Choose another folder…" · "Open library" | `open_library` |
 | `insideLibrary` | "Choose another folder" | "Inside a Folio library" | Danger banner "This folder is inside another library" / "E:\University of Toronto is a Folio library, and a library can't hold another one. Choose that folder to open it, or a folder outside it." (`root`) | Back · "Choose another folder…" | — |
+| `incomplete` (added 2026-09-29, ipc-m1 §6) | "Finish setting up this library" | "Setup didn't finish · 4 folders and 2 files at the top level" (counts as for `folders`; "Setup didn't finish" alone when both are 0) | Information banner "Folio started a library here but didn't finish" / "Its hidden .folio folder has no library file, maybe because the disk was full or Folio closed. Folio can finish now and keep what's already there, like your tags."; then, when `folders` or `files` is not 0, the map and the top-level files line as for `folders`; the library name | Back · "Finish setup" | `create_library` |
 
 The intro line under the titles: new library "Folio keeps your library in this folder. Semester and
 course folders go inside it."; take-over "Folio works with the folders you already have."; the
@@ -295,7 +296,7 @@ vertically (60 px extra space below), content left-aligned, `space.20` apart: th
 | `reason` | Tile | Title | Text | Buttons | Link |
 |---|---|---|---|---|---|
 | `missing` | Warning, `folder-x` | Can't find your library | Folio keeps your library in the folder below, but it isn't there. If you moved or renamed it, show Folio where it is now. If it's on a drive that isn't connected, connect the drive and try again. | "Locate library…" (accent), "Try again" | Or "Start a new library" |
-| `notALibrary` | Warning, `folder-x` | Your library's settings are missing | The folder below is still there, but its hidden .folio folder isn't, so Folio can't find your tags and course settings. If you have a copy of that folder, put it back and try again. | "Try again" (accent), "Locate library…" | Or "Start a new library" |
+| `notALibrary` | Warning, `folder-x` | Your library's settings are missing | The folder below is still there, but its hidden .folio folder is missing or damaged, so Folio can't find your tags and course settings. If you have a copy of that folder, put it back and try again. | "Try again" (accent), "Locate library…" | Or "Start a new library" |
 | `newerFormat` | Warning, `circle-alert` | This library needs a newer Folio | A newer version of Folio saved this library. Update Folio, then open it again. Your files are fine. | "Try again" | Or "Start a new library" |
 | `accessDenied` | Danger, `lock` | Folio can't open your library | Windows denied access to the folder below. Check that you can open it in File Explorer, then try again. | "Try again" (accent), "Locate library…" | — |
 | `catalogFailed` | Danger, `circle-x` | Folio can't open its search index | Your files are fine, but the index Folio keeps on this computer couldn't be opened. This happens when another copy of Folio is running or the disk is full. Close other copies of Folio, then try again. | "Try again" (accent), "Copy details" | — |
@@ -305,9 +306,10 @@ the icon in `color.feedback.warning`; danger tile the same with `danger`.
 
 - "Locate library…" is `pick_library_folder` then `open_library`; its errors show as a banner under
   the path field (section 4.4). "Start a new library" goes to the welcome screen's first card.
-- "Try again" needs the shell to reopen the configured library, which the M1 contract cannot do yet
-  (open item 1). Until it can, the button is left out and the text ends with "Restart Folio to try
-  again."
+- "Try again" calls `library_status`, which reopens the configured library when it is unavailable
+  (ipc-m1 §6, settled 2026-09-29; `feat/core-library-ops` implements it). The screen then follows
+  the answer: the Library view for `open`, this screen with the new reason otherwise. Until that
+  lane lands, the button is left out and the text ends with "Restart Folio to try again."
 - Two failures before any library state exist use the same frame with a danger tile (`circle-x`):
   `DataDirUnavailable` — "Folio can't start" / "It can't find a place on this computer to keep its
   data. Restart Folio. If this keeps happening, copy the details and send them to the developer."; a
@@ -409,7 +411,7 @@ Accepted limitations:
 1. **Reopening the library** (`feat/core-library-state`): "Try again" on the unavailable screen needs
    the shell to retry opening the configured library. Suggested without a new command:
    `library_status` retries the open when the last state is `unavailable`. Until then section 7 hides
-   "Try again".
+   "Try again". Settled as suggested (ipc-m1 §6, 2026-09-29); `feat/core-library-ops` implements it.
 2. **Loose files**: files directly in the library folder or in a semester folder are in no course.
    Search and the quick views find them; where the tree shows them is for `feat/ui-library-view`
    (suggestion in library-actions.md §16).

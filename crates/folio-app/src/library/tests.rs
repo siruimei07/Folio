@@ -158,7 +158,7 @@ fn page(offset: u32, limit: u32) -> ListProblems {
     }
 }
 
-fn until<T>(what: &str, mut poll: impl FnMut() -> Option<T>) -> T {
+pub(super) fn until<T>(what: &str, mut poll: impl FnMut() -> Option<T>) -> T {
     let deadline = Instant::now() + Duration::from_secs(15);
     loop {
         if let Some(value) = poll() {
@@ -220,20 +220,44 @@ fn startup_waits_for_initialization_and_preserves_unreadable_settings() {
     unavailable.shutdown().unwrap();
 }
 
+/// The reason comes from where opening failed, never from the error code alone.
 #[test]
-fn startup_reports_missing_nonlibrary_and_newer_roots_without_replacing_them() {
-    for reason in [
-        Unavailable::Missing,
-        Unavailable::NotALibrary,
-        Unavailable::NewerFormat,
-    ] {
+fn startup_reports_why_the_configured_root_is_unavailable_without_replacing_it() {
+    /// Makes the configured root inside the fixture's library folder.
+    type Configured = fn(&Path) -> PathBuf;
+    let cases: [(Configured, Unavailable); 5] = [
+        (|root| root.join("missing"), Unavailable::Missing),
+        // A file where the library folder was; it used to read as a catalog failure.
+        (
+            |root| {
+                let file = root.join("library.txt");
+                fs::write(&file, b"not a folder").unwrap();
+                file
+            },
+            Unavailable::Missing,
+        ),
+        (Path::to_path_buf, Unavailable::NotALibrary),
+        // A damaged library.json; it used to read as a catalog failure.
+        (
+            |root| {
+                core_library(root);
+                fs::write(Layout::new(root).library_file(), b"{").unwrap();
+                root.to_path_buf()
+            },
+            Unavailable::NotALibrary,
+        ),
+        (
+            |root| {
+                newer_library(root);
+                root.to_path_buf()
+            },
+            Unavailable::NewerFormat,
+        ),
+    ];
+    for (configured, reason) in cases {
         let f = Fixture::new();
-        let root = if reason == Unavailable::Missing {
-            f.root.join("missing")
-        } else {
-            f.root.clone()
-        };
-        let newer = (reason == Unavailable::NewerFormat).then(|| newer_library(&root));
+        let root = configured(&f.root);
+        let library_json = fs::read(Layout::new(&root).library_file()).ok();
         Settings {
             library_root: Some(root.clone()),
             ..Settings::default()
@@ -254,9 +278,10 @@ fn startup_reports_missing_nonlibrary_and_newer_roots_without_replacing_them() {
             fs::read(f.data.join("settings.json")).unwrap(),
             settings_before
         );
-        if let Some(bytes) = newer {
-            assert_eq!(fs::read(Layout::new(&root).library_file()).unwrap(), bytes);
-        }
+        assert_eq!(
+            fs::read(Layout::new(&root).library_file()).ok(),
+            library_json
+        );
         assert!(
             f.events
                 .lock()
@@ -265,6 +290,46 @@ fn startup_reports_missing_nonlibrary_and_newer_roots_without_replacing_them() {
                 .any(|event| matches!(event, Event::Error(_)))
         );
     }
+}
+
+#[test]
+fn an_incomplete_library_is_reported_and_finished_in_place() {
+    let f = Fixture::new();
+    f.state.initialize();
+    // A creation that stopped before library.json, with the tags it had written.
+    let layout = Layout::new(&f.root);
+    fs::create_dir(layout.folio_dir()).unwrap();
+    let tags = folio_core::meta::TagDefinitions::with_presets(|preset| {
+        DisplayName::parse(&format!("Kept {preset:?}")).unwrap()
+    });
+    layout.write_tags(&tags).unwrap();
+    fs::create_dir(f.root.join("Fall")).unwrap();
+    fs::write(f.root.join("notes.md"), b"untouched").unwrap();
+
+    let choice = f.state.choose(f.root.clone()).unwrap();
+    assert_eq!(
+        choice.content,
+        FolderContent::Incomplete {
+            folders: 1,
+            files: 1
+        }
+    );
+    assert!(matches!(
+        f.state.open(OpenLibrary {
+            folder: f.grant(&f.root)
+        }),
+        Err(AppError::NotALibrary(_))
+    ));
+
+    let opened = f.state.create(request(choice.token)).unwrap();
+    assert_eq!(opened.library.name, "Course library");
+    assert_eq!(layout.read_tags().unwrap(), Some(tags));
+    assert_eq!(fs::read(f.root.join("notes.md")).unwrap(), b"untouched");
+    f.done(&opened.scan);
+    assert!(matches!(
+        f.state.choose(f.root.clone()).unwrap().content,
+        FolderContent::Library { .. }
+    ));
 }
 
 #[test]

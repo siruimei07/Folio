@@ -50,6 +50,8 @@ export const commands = {
 	moveEntries: (request: MoveEntries) => typedError<BatchResult, AppError>(__TAURI_INVOKE("move_entries", { request })),
 	deleteEntries: (request: DeleteEntries) => typedError<BatchResult, AppError>(__TAURI_INVOKE("delete_entries", { request })),
 	search: (request: Search) => typedError<SearchPage, AppError>(__TAURI_INVOKE("search", { request })),
+	/**  The file each path names, or `null`, in the order of `paths`. */
+	resolvePaths: (request: ResolvePaths) => typedError<(EntryRow | null)[], AppError>(__TAURI_INVOKE("resolve_paths", { request })),
 	openEntry: (request: OpenEntry) => typedError<Opened, AppError>(__TAURI_INVOKE("open_entry", { request })),
 	revealEntry: (request: RevealEntry) => typedError<null, AppError>(__TAURI_INVOKE("reveal_entry", { request })),
 	/**  Opens the file dialog; `null` when the user cancels. */
@@ -57,8 +59,8 @@ export const commands = {
 	token: string,
 	files: number,
 	folders: number,
-	/**  The first ten top-level names, for display. */
-	names: string[],
+	/**  The first ten top-level items, for display. */
+	names: ImportName[],
 } | null, AppError>(__TAURI_INVOKE("pick_import_files")),
 	checkImport: (request: CheckImport) => typedError<ImportCheck, AppError>(__TAURI_INVOKE("check_import", { request })),
 	/**  Starts an import job; returns its id. */
@@ -68,6 +70,8 @@ export const commands = {
 	/**  Replaces the catalog and scans the library from scratch; returns the job id. */
 	rebuildCatalog: () => typedError<string, AppError>(__TAURI_INVOKE("rebuild_catalog")),
 	listProblems: (request: ListProblems) => typedError<Page<ProblemItem>, AppError>(__TAURI_INVOKE("list_problems", { request })),
+	/**  Writes one UI error to the shell's log. */
+	logUiError: (request: LogUiError) => typedError<null, AppError>(__TAURI_INVOKE("log_ui_error", { request })),
 };
 
 /** Events */
@@ -82,7 +86,11 @@ export const events = {
 };
 
 /* Constants */
-export const LIMITS = {"abbrGraphemes":3,"batch":10000,"courseCodeChars":32,"displayNameChars":128,"eventEntries":200,"filterTags":16,"nameUnits":255,"pageSize":500,"queryChars":256,"searchResults":500} as const;
+export const FILE_ERROR_CODES = ["InvalidArgument","NoLibrary","NotFound","AccessDenied","InUse","NotLocal","NoThumbnail","FileSystem","Internal"] as const;
+
+export const FILE_ERROR_HEADER = "X-Folio-Error" as const;
+
+export const LIMITS = {"abbrGraphemes":3,"batch":10000,"courseCodeChars":32,"displayNameChars":128,"eventEntries":200,"filterTags":16,"logChars":8192,"nameUnits":255,"pageSize":500,"queryChars":256,"relativePathChars":1024,"resolvePaths":64,"searchResults":500} as const;
 
 /* Types */
 /**
@@ -135,6 +143,21 @@ export type AppError =
 { code: "AccessDenied"; detail: string } | 
 /**  The disk is full. */
 { code: "DiskFull"; detail: string } | 
+/**
+ *  The Recycle Bin cannot take the item: its drive has none, its path is too long for it, or
+ *  it is larger than the bin allows. Nothing moved; Folio never deletes for good.
+ */
+{ code: "NotRecyclable"; detail: string } | 
+/**
+ *  The file's content is not on this disk: a cloud placeholder or an offline file, which
+ *  the shell never downloads.
+ */
+{ code: "NotLocal"; detail: string } | 
+/**
+ *  Windows cannot make a thumbnail of the file: no thumbnail handler for its type, or a
+ *  damaged file.
+ */
+{ code: "NoThumbnail"; detail: string } | 
 /**  Another file-system failure. */
 { code: "FileSystem"; detail: string } | 
 /**  The search text is longer than `LIMITS.queryChars`. */
@@ -244,8 +267,8 @@ export type CreateFolder = {
 };
 
 /**
- *  Makes the chosen folder this machine's library: a new one in an empty folder, or taking over
- *  the content of a folder without moving anything (brief §5.1).
+ *  Makes the chosen folder this machine's library: a new one in an empty folder, taking over
+ *  the content of a folder without moving anything (brief §5.1), or finishing an incomplete one.
  */
 export type CreateLibrary = {
 	/**  A `FolderChoice` token. */
@@ -364,6 +387,12 @@ export type FolderContent = { kind: "empty" } |
 { kind: "library"; name: string } | 
 /**  Inside another library, which `create_library` refuses. */
 { kind: "insideLibrary"; root: string } | 
+/**
+ *  A `.folio/` folder without `library.json`: a library whose creation did not finish.
+ *  `create_library` finishes it and keeps what `.folio/` holds. The counts leave `.folio/`
+ *  out.
+ */
+{ kind: "incomplete"; folders: number; files: number } | 
 /**  Content to take over: its first-level folders (the would-be semesters) and files. */
 { kind: "folders"; folders: number; files: number };
 
@@ -407,6 +436,13 @@ export type ImportFiles = {
 	deleteOriginals: boolean,
 };
 
+/**  A top-level item of an import source. */
+export type ImportName = {
+	name: string,
+	/**  What the item is itself: a link is a `file`, whatever it points to. */
+	kind: EntryKind,
+};
+
 /**  The result of an import job. */
 export type ImportResult = {
 	imported: number,
@@ -428,8 +464,8 @@ export type ImportSource = {
 	token: string,
 	files: number,
 	folders: number,
-	/**  The first ten top-level names, for display. */
-	names: string[],
+	/**  The first ten top-level items, for display. */
+	names: ImportName[],
 };
 
 export type ItemFailure = {
@@ -525,6 +561,26 @@ export type ListFiles = {
 
 export type ListProblems = {
 	page: PageRequest,
+};
+
+/**
+ *  One error the UI caught or failed to catch. Error text only: never file content, search text
+ *  or other data the user typed.
+ */
+export type LogUiError = {
+	kind: UiErrorKind,
+	/**
+	 *  Where the UI met it: a view, dialog or command, such as `preview` or
+	 *  `windowControls.minimize`. 1 to 64 ASCII letters, digits, `.`, `-` and `_`.
+	 */
+	source: string,
+	/**
+	 *  At most `LIMITS.logChars` characters, cut at a character boundary: a lone surrogate
+	 *  fails the whole call.
+	 */
+	message: string,
+	/**  The error's stack, and React's component stack when there is one; limited as `message`. */
+	stack: string | null,
 };
 
 /**
@@ -701,6 +757,21 @@ export type ReorderTags = {
 	tags: string[],
 };
 
+/**
+ *  Finds the files a note names by relative path, such as the images next to it (spec §9.1).
+ *  The answer lists an `EntryRow` or `null` for each path, in the same order.
+ */
+export type ResolvePaths = {
+	/**  The note: a file. Each path is resolved against its folder. */
+	base: EntryRef,
+	/**
+	 *  Relative paths as the note writes them, percent-decoded, without `?` or `#` parts: names
+	 *  between `/` or `\`, with `.` and `..`. At most `LIMITS.resolvePaths`, each at most
+	 *  `LIMITS.relativePathChars` characters and well-formed: a lone surrogate fails the call.
+	 */
+	paths: string[],
+};
+
 /**  Opens File Explorer with the entry selected. */
 export type RevealEntry = {
 	entry: EntryRef,
@@ -798,14 +869,40 @@ export type TagFilter =
 /**  Files without tags. */
 { kind: "untagged" };
 
+export type UiErrorKind = 
+/**  Nothing caught it: React's `onUncaughtError`, `window` `error` or `unhandledrejection`. */
+"uncaught" | 
+/**  An error boundary caught it and shows "Reload this view" (React's `onCaughtError`). */
+"boundary" | 
+/**  A command or event subscription failed, and the UI shows the failure itself. */
+"command";
+
+/**
+ *  Why the library cannot be opened, or stopped working. The shell decides it where the failure
+ *  happens, never from an error code alone (spec §6).
+ */
 export type Unavailable = 
-/**  The folder is gone, for example on a drive that is not connected. */
+/**
+ *  The folder cannot be reached: it is gone or not a folder, or its drive or share is not
+ *  connected. Also any other failure to open, list or watch it, or to read `.folio/`, except
+ *  those below.
+ */
 "missing" | 
-/**  The folder has no `.folio/library.json`. */
+/**
+ *  The folder is there, but `.folio/library.json` is missing or damaged, or `.folio/`
+ *  holds a link.
+ */
 "notALibrary" | 
-/**  A newer Folio wrote the library; update Folio to open it. */
-"newerFormat" | "accessDenied" | 
-/**  The catalog could not be opened, for example because another program holds it. */
+/**  A newer Folio wrote `library.json`; update Folio to open it. */
+"newerFormat" | 
+/**  Windows denied access to the folder or to `.folio/`. */
+"accessDenied" | 
+/**
+ *  The folder is there, but Folio's own state failed: the catalog could not be opened or
+ *  written (another copy of Folio holds it, the disk is full), `.folio/` could not be
+ *  written because its disk is full or another program holds a file, or the background
+ *  work failed.
+ */
 "catalogFailed";
 
 /**  Replaces all four fields: send what the dialog shows. */

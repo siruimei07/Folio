@@ -10,7 +10,14 @@ import type { AppError, TransportError } from './bindings';
 export type * from './bindings';
 export { commands as ipc, LIMITS } from './bindings';
 export { shellEvents } from './events';
-export { contentUrl, THUMBNAIL_SIZES, type ThumbnailSize, thumbnailUrl } from './files';
+export {
+  contentUrl,
+  fileError,
+  type FileErrorCode,
+  THUMBNAIL_SIZES,
+  type ThumbnailSize,
+  thumbnailUrl,
+} from './files';
 export { windowControls } from './window';
 
 /** Every error an IPC call can resolve to; the UI shows the message for its `code`. */

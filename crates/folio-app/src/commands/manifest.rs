@@ -10,6 +10,8 @@ pub(crate) mod import;
 pub(crate) mod jobs;
 #[path = "library/manifest.rs"]
 pub(crate) mod library;
+#[path = "log/manifest.rs"]
+pub(crate) mod log;
 #[path = "operations/manifest.rs"]
 pub(crate) mod operations;
 #[path = "shell/manifest.rs"]
@@ -25,6 +27,7 @@ pub fn commands() -> Vec<&'static str> {
         file::COMMANDS,
         import::COMMANDS,
         jobs::COMMANDS,
+        log::COMMANDS,
     ]
     .concat()
 }

@@ -255,8 +255,10 @@ Four questions this ADR left open, with the options Sirui was given and his choi
    (2026-09-28, this lane).
 3. [x] `chore/build-deps-ui-m1`: install the packages of spec §16 after re-checking release ages
    (2026-09-29: installed as listed, every lockfile addition at least one day old; spec §16).
-4. [ ] `feat/ipc-m1-resolve-paths`: declare `resolve_paths` in ipc-m1 and the bindings, planned and
+4. [x] `feat/ipc-m1-resolve-paths`: declare `resolve_paths` in ipc-m1 and the bindings, planned and
    not registered (spec §10.4 has the proposed shape); `feat/data-browse-queries` implements it.
+   (2026-09-29: done by `feat/ipc-m1-contract-fixes`, which replaced this lane and also declared
+   `log_ui_error` for spec §13; ipc-m1 §9.1, §16.4 and §20.2.)
 5. [ ] `feat/ui-data-layer`: data layer and fake shell (spec §5, §11).
 6. [ ] `feat/ui-app-shell`: stores, `<Activity>` view host, shortcuts, layout mode, component
    wrappers, ESLint import and security rules (spec §3, §6, §7.1, §14).

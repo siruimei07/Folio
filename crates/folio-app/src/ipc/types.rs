@@ -29,6 +29,12 @@ pub struct Limits {
     pub course_code_chars: u32,
     /// Changes listed in one `CatalogChanged`.
     pub event_entries: u32,
+    /// Paths in one `resolve_paths` request.
+    pub resolve_paths: u32,
+    /// A relative path in a `resolve_paths` request, in characters.
+    pub relative_path_chars: u32,
+    /// The `message` and the `stack` of a `log_ui_error` report, each in characters.
+    pub log_chars: u32,
 }
 
 pub const LIMITS: Limits = Limits {
@@ -46,6 +52,9 @@ pub const LIMITS: Limits = Limits {
     abbr_graphemes: 3,
     course_code_chars: 32,
     event_entries: 200,
+    resolve_paths: 64,
+    relative_path_chars: 1_024,
+    log_chars: 8_192,
 };
 
 /// A core limit as a `u32`; a limit that does not fit fails the build.

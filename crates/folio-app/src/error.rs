@@ -71,6 +71,18 @@ pub enum AppError {
     /// The disk is full.
     #[error("disk full: {0}")]
     DiskFull(String),
+    /// The Recycle Bin cannot take the item: its drive has none, its path is too long for it, or
+    /// it is larger than the bin allows. Nothing moved; Folio never deletes for good.
+    #[error("the Recycle Bin cannot take it: {0}")]
+    NotRecyclable(String),
+    /// The file's content is not on this disk: a cloud placeholder or an offline file, which
+    /// the shell never downloads.
+    #[error("not on this disk: {0}")]
+    NotLocal(String),
+    /// Windows cannot make a thumbnail of the file: no thumbnail handler for its type, or a
+    /// damaged file.
+    #[error("no thumbnail: {0}")]
+    NoThumbnail(String),
     /// Another file-system failure.
     #[error("file system error: {0}")]
     FileSystem(String),
@@ -106,9 +118,8 @@ mod tests {
         }};
     }
 
-    #[test]
-    fn every_error_serializes_as_its_code_and_a_detail() {
-        let errors = every_error![
+    fn errors() -> Vec<(&'static str, AppError)> {
+        every_error![
             DataDirUnavailable,
             InvalidArgument,
             Window,
@@ -129,18 +140,34 @@ mod tests {
             InUse,
             AccessDenied,
             DiskFull,
+            NotRecyclable,
+            NotLocal,
+            NoThumbnail,
             FileSystem,
             QueryTooLong,
             ChoiceExpired,
             Blocked,
             Busy,
             Internal,
-        ];
-        for (code, error) in errors {
+        ]
+    }
+
+    #[test]
+    fn every_error_serializes_as_its_code_and_a_detail() {
+        for (code, error) in errors() {
             assert_eq!(
                 serde_json::to_value(&error).unwrap(),
                 serde_json::json!({ "code": code, "detail": "detail" })
             );
+        }
+    }
+
+    /// The `folio-file` scheme names its failures with these codes (docs/specs/ipc-m1.md §11.2).
+    #[test]
+    fn file_error_codes_are_error_codes() {
+        let codes: Vec<&str> = errors().into_iter().map(|(code, _)| code).collect();
+        for code in crate::ipc::entries::FILE_ERROR_CODES {
+            assert!(codes.contains(&code), "`{code}` is not an AppError code");
         }
     }
 }

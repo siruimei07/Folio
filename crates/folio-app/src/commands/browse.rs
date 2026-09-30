@@ -8,7 +8,7 @@ pub(crate) use planned::*;
 mod planned {
     use crate::commands::planned;
     use crate::error::AppError;
-    use crate::ipc::entries::{GetEntry, ListChildren, ListFiles};
+    use crate::ipc::entries::{GetEntry, ListChildren, ListFiles, ResolvePaths};
     use crate::ipc::search::{Search, SearchPage};
     use crate::ipc::types::{EntryRow, Page};
 
@@ -34,5 +34,12 @@ mod planned {
     #[specta::specta]
     pub fn search(request: Search) -> Result<SearchPage, AppError> {
         planned("search", request)
+    }
+
+    /// The file each path names, or `null`, in the order of `paths`.
+    #[tauri::command]
+    #[specta::specta]
+    pub fn resolve_paths(request: ResolvePaths) -> Result<Vec<Option<EntryRow>>, AppError> {
+        planned("resolve_paths", request)
     }
 }
