@@ -5,6 +5,11 @@ packages:
 # Refuse to install when Node does not match `engines`. pnpm 11 ignores this setting in .npmrc.
 engineStrict: true
 
+# Install only versions published at least a day ago (CLAUDE.md §5). Strict: fail on a younger
+# version; without it pnpm installs one and adds it to minimumReleaseAgeExclude by itself.
+minimumReleaseAge: 1440
+minimumReleaseAgeStrict: true
+
 # Versions shared by several packages; reference them as "catalog:".
 catalog:
   typescript: 6.0.3

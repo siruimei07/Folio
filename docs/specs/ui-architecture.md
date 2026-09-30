@@ -819,6 +819,15 @@ replace one listed here. Majors are fixed here.
 |---|---|---|---|---|
 | `@axe-core/playwright` | 4.13.0 | 2026-08-11 | MPL-2.0 | the accessibility layer of the testing strategy |
 
+Installed as listed by `chore/build-deps-ui-m1` on 2026-09-29: no package had a newer patch at
+least one day old (`lucide-react` 1.49.0 is a newer minor, and was hours old), and all 51 package
+versions the lockfile gained were published at least one day earlier. The lane also set
+`minimumReleaseAge` and `minimumReleaseAgeStrict` in `pnpm-workspace.yaml`: without strict mode,
+pnpm 11 installs a younger version and adds it to `minimumReleaseAgeExclude` by itself; with it,
+the install fails. One copy each of `react-aria`, `react-stately` and `highlight.js`.
+`pdfjs-dist` brings its optional `@napi-rs/canvas` 1.0.9 (MIT), a native Node canvas (37 MB on
+win32-x64) that only pdf.js's Node build uses; the WebView never loads it.
+
 Considered and not added: `katex` (replaced by Temml, §10.4), `marked`, the unified / remark /
 rehype family (more packages for the same result), `shiki` (heavier; lowlight's tree is enough),
 `sanitize-html` (Node-oriented), `radix-ui` and `@base-ui/react` (ADR-0005 §3), `react-window`,

@@ -253,7 +253,8 @@ Four questions this ADR left open, with the options Sirui was given and his choi
 1. [x] Sirui approves and answers the open decisions; Status set to Accepted (2026-09-28).
 2. [x] The roadmap's wave 2 gains `feat/ui-data-layer` and `feat/ipc-m1-resolve-paths`
    (2026-09-28, this lane).
-3. [ ] `chore/build-deps-ui-m1`: install the packages of spec §16 after re-checking release ages.
+3. [x] `chore/build-deps-ui-m1`: install the packages of spec §16 after re-checking release ages
+   (2026-09-29: installed as listed, every lockfile addition at least one day old; spec §16).
 4. [ ] `feat/ipc-m1-resolve-paths`: declare `resolve_paths` in ipc-m1 and the bindings, planned and
    not registered (spec §10.4 has the proposed shape); `feat/data-browse-queries` implements it.
 5. [ ] `feat/ui-data-layer`: data layer and fake shell (spec §5, §11).
