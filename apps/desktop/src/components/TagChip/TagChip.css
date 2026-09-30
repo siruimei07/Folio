@@ -1,0 +1,75 @@
+/* Tag chips (app-shell handoff 13A): dot + neutral chip; selected in the primary text colour. */
+.tag-chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-6);
+  box-sizing: border-box;
+  height: var(--size-chip);
+  padding: 0 var(--space-8);
+  border: var(--border-width) solid var(--color-border-control);
+  border-radius: var(--radius-chip);
+  background: var(--color-surface-panel);
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--font-size-small);
+  cursor: default;
+  transition:
+    background-color var(--motion-duration-fast) var(--motion-easing-standard),
+    color var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.tag-chip[data-hovered] {
+  background: var(--color-surface-hover);
+}
+
+.tag-chip[data-selected] {
+  border-color: var(--color-text-primary);
+  background: var(--color-text-primary);
+  color: var(--color-surface-panel);
+  font-weight: var(--font-weight-strong);
+}
+
+.tag-chip[data-disabled] {
+  color: var(--color-text-tertiary);
+}
+
+.tag-chip__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* In a list with remove buttons, the chip keeps the button inside its right edge. */
+.tag-chip:has(.tag-chip__remove) {
+  padding-right: var(--space-2);
+}
+
+.tag-chip__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-target-min);
+  height: var(--size-target-min);
+  margin-block: calc(-1 * var(--space-2));
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-row);
+  background: transparent;
+  color: var(--color-text-tertiary);
+  cursor: default;
+}
+
+.tag-chip__remove[data-hovered] {
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
+}
+
+.tag-chip-list,
+.tag-chip-list__tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}

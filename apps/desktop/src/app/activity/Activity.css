@@ -1,0 +1,178 @@
+/* Activity button and popover (library-actions handoff §10.1, §10.2, §14). */
+.activity__button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-6);
+  box-sizing: border-box;
+  height: var(--size-control);
+  padding: 0 var(--space-10) 0 var(--space-8);
+  border: var(--border-width) solid var(--color-border-control);
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: var(--font-size-small);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  cursor: default;
+  transition: background-color var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.activity__button[data-compact] {
+  justify-content: center;
+  width: var(--size-control-compact);
+  height: var(--size-control-compact);
+  padding: 0;
+}
+
+.activity__button[data-hovered] {
+  background: var(--color-surface-panel);
+}
+
+/* While the popover is open: like the active rail button. */
+.activity__button[aria-expanded='true'] {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-panel);
+}
+
+.activity__dot {
+  width: var(--size-status-dot);
+  height: var(--size-status-dot);
+  border-radius: var(--radius-pill);
+  background: var(--color-feedback-warning);
+}
+
+.activity__button[data-compact] {
+  position: relative;
+}
+
+.activity__button[data-compact] .activity__dot {
+  position: absolute;
+  top: calc(-1 * var(--space-2));
+  right: calc(-1 * var(--space-2));
+  box-shadow: 0 0 0 var(--space-2) var(--color-surface-chrome);
+}
+
+/* Tone icons take their tone (tone.css), running jobs the accent; waiting and cancelled stay tertiary. */
+.activity__icon {
+  flex: none;
+  color: var(--tone, var(--color-text-tertiary));
+}
+
+.activity__icon.spinner {
+  color: var(--color-accent-default);
+}
+
+.activity__popover {
+  width: min(var(--size-activity-popover), calc(100vw - 2 * var(--space-8)));
+  max-height: calc(100vh - 4 * var(--size-control));
+}
+
+.activity__panel {
+  display: flex;
+  flex-direction: column;
+  outline: none;
+}
+
+.activity__heading {
+  margin: 0;
+  padding: var(--space-12) var(--space-12) var(--space-6);
+  font-size: var(--font-size-heading);
+  font-weight: var(--font-weight-strong);
+  line-height: var(--font-line-height-heading);
+}
+
+.activity__list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.activity__earlier {
+  margin: var(--space-4) 0 0;
+  padding: var(--space-8) var(--space-12) var(--space-2);
+  border-top: var(--border-width) solid var(--color-border-default);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-strong);
+}
+
+.activity__job {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-10);
+  padding: var(--space-8) var(--space-12);
+}
+
+.activity__job > .activity__icon {
+  margin-top: var(--space-2);
+}
+
+.activity__job-body {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.activity__job-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-8);
+}
+
+.activity__job-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-strong);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activity__job-aside {
+  flex: none;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.activity__job-meta {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.activity__job-bar {
+  margin-top: var(--space-6);
+}
+
+.activity__job-current {
+  display: flex;
+  margin-top: var(--space-4);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-caption);
+}
+
+.activity__footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-10);
+  padding: var(--space-10) var(--space-12);
+  border-top: var(--border-width) solid var(--color-border-default);
+  background: var(--color-surface-sunken);
+}
+
+.activity__footer-text {
+  flex: 1;
+  font-size: var(--font-size-label);
+}
+
+.activity__content {
+  display: flex;
+  flex-direction: column;
+}

@@ -1,0 +1,13 @@
+.key-cap {
+  flex: none;
+  box-sizing: border-box;
+  height: var(--size-key-cap);
+  padding: 0 var(--space-4);
+  border: var(--border-width) solid var(--color-border-default);
+  border-radius: var(--radius-key-cap);
+  color: var(--color-text-tertiary);
+  font: inherit;
+  font-size: var(--font-size-caption);
+  line-height: calc(var(--size-key-cap) - 2 * var(--border-width));
+  white-space: nowrap;
+}

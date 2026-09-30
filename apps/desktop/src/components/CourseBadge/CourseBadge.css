@@ -1,0 +1,42 @@
+/* Course badge (app-shell handoff §10: 12B tinted background, 23A three letters). */
+.course-badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--size-badge);
+  height: var(--size-badge);
+  overflow: hidden;
+  border: var(--border-badge) solid var(--swatch-tint);
+  border-radius: var(--radius-badge);
+  background: var(--swatch-tint);
+  color: var(--swatch-text);
+  font-size: var(--font-size-badge);
+  font-weight: var(--font-weight-badge);
+  letter-spacing: var(--font-letter-spacing-badge);
+  line-height: var(--font-line-height-heading);
+  white-space: nowrap;
+}
+
+.course-badge[data-size='compact'] {
+  width: var(--size-badge-compact);
+  height: var(--size-badge-compact);
+  font-size: var(--font-size-badge-compact);
+}
+
+/* Below 20 px: a square in the dot colour, no text, centred in an icon-sized box. */
+.course-badge[data-size='mini'] {
+  width: var(--size-icon);
+  height: var(--size-icon);
+  border: 0;
+  background: transparent;
+}
+
+.course-badge[data-size='mini']::before {
+  content: '';
+  width: var(--size-badge-mini);
+  height: var(--size-badge-mini);
+  border-radius: var(--radius-badge-mini);
+  background: var(--swatch-dot);
+}

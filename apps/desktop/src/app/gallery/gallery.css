@@ -1,0 +1,87 @@
+/* The dev gallery's own layout. */
+#root:has(.gallery) {
+  overflow: auto;
+}
+
+.gallery {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+  padding: var(--space-24);
+}
+
+.gallery__title {
+  margin: 0 0 var(--space-10);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-strong);
+}
+
+.gallery__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-12);
+}
+
+.gallery__column {
+  display: flex;
+  width: var(--size-toast);
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.gallery__inline {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.gallery__panel {
+  width: var(--size-library-panel);
+  height: calc(var(--size-state-block-width) + var(--size-row));
+}
+
+.gallery__popover {
+  width: var(--size-activity-popover);
+  border: var(--border-width) solid var(--color-border-default);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface-panel);
+  box-shadow: var(--shadow-menu);
+}
+
+.gallery__context {
+  padding: var(--space-16);
+  border: var(--border-width) dashed var(--color-border-strong);
+  border-radius: var(--radius-control);
+  color: var(--color-text-secondary);
+}
+
+.gallery__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  font-size: var(--font-size-label);
+}
+
+.gallery__field input,
+.gallery__callout-host input {
+  box-sizing: border-box;
+  height: var(--size-dialog-control);
+  padding: 0 var(--space-8);
+  border: var(--border-width) solid var(--color-input-border);
+  border-bottom-color: var(--color-input-border-bottom);
+  border-radius: var(--radius-control);
+  background: var(--color-input-background);
+  color: var(--color-text-primary);
+  font: inherit;
+}
+
+.gallery__callout-host {
+  position: relative;
+  margin-bottom: calc(3 * var(--size-row));
+}
+
+.gallery__callout-host input {
+  width: 100%;
+}

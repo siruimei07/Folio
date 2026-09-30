@@ -3,12 +3,13 @@ import { describe, expect, it } from 'vitest';
 import base from '../../../../design/tokens/base.tokens.json';
 import dark from '../../../../design/tokens/color.dark.tokens.json';
 import light from '../../../../design/tokens/color.light.tokens.json';
-import { generateTokensCss, type TokenFiles } from './generate';
+import { generateTokensCss, generateTokensTs, type TokenFiles } from './generate';
 
-describe('tokens.css', () => {
-  it('is the current output of design/tokens', async () => {
-    // Fails when tokens.css is stale; `pnpm --filter @folio/desktop tokens` rewrites it.
+describe('tokens.css and tokens.ts', () => {
+  it('are the current output of design/tokens', async () => {
+    // Fails when either is stale; `pnpm --filter @folio/desktop tokens` rewrites them.
     await expect(generateTokensCss({ base, light, dark })).toMatchFileSnapshot('./tokens.css');
+    await expect(generateTokensTs({ base })).toMatchFileSnapshot('./tokens.ts');
   });
 
   it('defines every custom property that the stylesheets read', () => {
@@ -160,5 +161,42 @@ describe('generateTokensCss', () => {
     ['a name that is not kebab case', { base: { Space: px(1) } }, /Space is not a lower-case kebab name/],
   ])('rejects %s', (_, changes, message) => {
     expect(() => generateTokensCss(files(changes))).toThrow(message);
+  });
+});
+
+describe('generateTokensTs', () => {
+  it('writes every size and space token as pixels, following aliases', () => {
+    const base = {
+      space: { '8': px(8), 'panel-gap': { $type: 'dimension', $value: '{space.8}' } },
+      size: {
+        row: px(32),
+        'narrow-breakpoint': px(760),
+        gap: { $type: 'dimension', $value: '{space.panel-gap}' },
+      },
+      radius: { panel: px(10) },
+    };
+    expect(generateTokensTs({ base })).toMatchInlineSnapshot(`
+      "// Generated from design/tokens/base.tokens.json by src/tokens/generate.ts. Do not edit: change
+      // the tokens, then run \`pnpm --filter @folio/desktop tokens\` (design/tokens/README.md).
+
+      /** The \`size.*\` tokens in CSS pixels, for code that cannot read custom properties. */
+      export const SIZE = {
+        row: 32,
+        narrowBreakpoint: 760,
+        gap: 8,
+      } as const;
+
+      /** The \`space.*\` tokens in CSS pixels, for overlay offsets and other code. */
+      export const SPACE = {
+        8: 8,
+        panelGap: 8,
+      } as const;
+      "
+    `);
+  });
+
+  it('rejects a size that is not in px', () => {
+    const base = { size: { a: { $type: 'dimension', $value: { value: 1, unit: 'rem' } } } };
+    expect(() => generateTokensTs({ base })).toThrow(/size\.a needs a px value/);
   });
 });

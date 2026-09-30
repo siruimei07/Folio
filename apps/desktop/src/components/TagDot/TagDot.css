@@ -1,0 +1,8 @@
+.tag-dot {
+  display: inline-block;
+  flex: none;
+  width: var(--size-tag-dot);
+  height: var(--size-tag-dot);
+  border-radius: var(--radius-pill);
+  background: var(--swatch-dot, var(--color-text-tertiary));
+}

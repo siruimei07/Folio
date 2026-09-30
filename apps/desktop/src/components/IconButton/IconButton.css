@@ -1,0 +1,42 @@
+/* Icon buttons (app-shell handoff §10; 24 px ones in toasts and lists, library-actions §2.4). */
+.icon-button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--size-control-compact);
+  height: var(--size-control-compact);
+  padding: 0;
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: default;
+  transition: background-color var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.icon-button[data-size='small'] {
+  width: var(--size-target-min);
+  height: var(--size-target-min);
+  border-radius: var(--radius-row);
+  color: var(--color-text-tertiary);
+}
+
+.icon-button[data-variant='outline'] {
+  border-color: var(--color-border-control);
+}
+
+.icon-button[data-hovered],
+.icon-button[data-pressed] {
+  background: var(--color-surface-hover);
+}
+
+.icon-button[data-variant='outline'][data-hovered] {
+  background: var(--color-surface-panel);
+}
+
+.icon-button[data-disabled] {
+  color: var(--color-text-tertiary);
+  background: transparent;
+}

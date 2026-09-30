@@ -14,6 +14,7 @@ mod open;
 mod paths;
 mod preview;
 mod thumbnail;
+mod window_background;
 mod window_chrome;
 
 use std::sync::Arc;
@@ -114,9 +115,20 @@ pub fn run() {
             app.manage(library.clone());
             tauri::async_runtime::spawn_blocking(move || library.initialize());
 
-            let main = app
-                .get_webview_window("main")
-                .ok_or("tauri.conf.json declares no main window")?;
+            // Built here rather than from the configuration at start-up, so its first frame has
+            // the app background of Windows' app mode instead of WebView2's white.
+            let config = app
+                .config()
+                .app
+                .windows
+                .iter()
+                .find(|window| window.label == "main")
+                .ok_or("tauri.conf.json declares no main window")?
+                .clone();
+            let dark = window_background::apps_use_dark_mode();
+            let main = tauri::WebviewWindowBuilder::from_config(app.handle(), &config)?
+                .background_color(window_background::first_frame(dark))
+                .build()?;
             if let Err(error) = window_chrome::install(&main) {
                 // The title bar still works without it; only the snap layouts flyout is lost.
                 diagnostics::report(app.handle(), &format!("snap layouts unavailable: {error}"));

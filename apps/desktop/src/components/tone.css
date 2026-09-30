@@ -1,0 +1,28 @@
+/*
+ * One feedback tone for a component: an element with data-tone="<tone>" gets the tone's text and
+ * icon colour, soft background and border (design/tokens/README.md "Feedback colours") as
+ * --tone, --tone-soft and --tone-border. Components read these with their neutral fallbacks.
+ */
+[data-tone='danger'] {
+  --tone: var(--color-feedback-danger);
+  --tone-soft: var(--color-feedback-danger-soft);
+  --tone-border: var(--color-feedback-danger-border);
+}
+
+[data-tone='warning'] {
+  --tone: var(--color-feedback-warning);
+  --tone-soft: var(--color-feedback-warning-soft);
+  --tone-border: var(--color-feedback-warning-border);
+}
+
+[data-tone='success'] {
+  --tone: var(--color-feedback-success);
+  --tone-soft: var(--color-feedback-success-soft);
+  --tone-border: var(--color-feedback-success-border);
+}
+
+[data-tone='info'] {
+  --tone: var(--color-feedback-info);
+  --tone-soft: var(--color-feedback-info-soft);
+  --tone-border: var(--color-feedback-info-border);
+}

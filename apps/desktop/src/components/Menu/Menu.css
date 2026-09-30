@@ -1,0 +1,97 @@
+/* Menus (library-actions handoff §2.7); their surface is the shared Popover. */
+.menu-popover {
+  min-width: var(--size-menu-min-width);
+  max-width: var(--size-menu-max-width);
+}
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4);
+  outline: none;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-10);
+  box-sizing: border-box;
+  height: var(--size-menu-item);
+  padding: 0 var(--space-8);
+  border-radius: var(--radius-row);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-body);
+  cursor: default;
+  outline: none;
+}
+
+.menu-item[data-hovered],
+.menu-item[data-focused],
+.menu-item[data-open] {
+  background: var(--color-surface-hover);
+}
+
+/* The hover tint alone is too faint to show keyboard focus (1.03:1). */
+.menu-item[data-focus-visible] {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: calc(-1 * var(--focus-ring-width));
+}
+
+.menu-item[data-destructive],
+.menu-item[data-destructive] .menu-item__icon {
+  color: var(--color-feedback-danger);
+}
+
+.menu-item[data-disabled],
+.menu-item[data-disabled] .menu-item__icon {
+  color: var(--color-text-tertiary);
+}
+
+.menu-item__check,
+.menu-item__icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-icon);
+  color: var(--color-text-secondary);
+}
+
+.menu-item__check {
+  color: var(--color-accent-default);
+}
+
+.menu-item__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menu-item__shortcut,
+.menu-item__note {
+  flex: none;
+  color: var(--color-text-tertiary);
+  font: inherit;
+  font-size: var(--font-size-small);
+}
+
+.menu-item__chevron {
+  flex: none;
+  color: var(--color-text-tertiary);
+}
+
+.menu-separator {
+  height: var(--border-width);
+  margin: var(--space-4) var(--space-6);
+  border: 0;
+  background: var(--color-border-default);
+}
+
+.context-menu-anchor {
+  position: fixed;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}

@@ -1,8 +1,201 @@
 {
   "appInfo": {
-    "loading": "Loading app info…",
     "appVersion": "App version",
     "coreVersion": "Core version",
     "dataDir": "Data folder"
+  },
+  "placeholder": {
+    "title": "Library",
+    "text": "The Library view arrives with the next update. Until then, this is the version of Folio you're running."
+  },
+  "notifications": "Notifications",
+  "keys": {
+    "ctrl": "Ctrl",
+    "shift": "Shift",
+    "alt": "Alt"
+  },
+  "toolbar": {
+    "search": "Search",
+    "searchPlaceholder": "Search files, courses, tags",
+    "semester": "Switch semester, current {{name}}"
+  },
+  "rail": {
+    "label": "Views",
+    "library": "Library",
+    "changes": "Changes",
+    "history": "History",
+    "librarySettings": "Library settings",
+    "appSettings": "App settings",
+    "appSettingsOn": "App settings for this computer ({{device}})"
+  },
+  "activity": {
+    "title": "Activity",
+    "running": {
+      "scan": "Scanning {{percent}}%",
+      "hash": "Checking files {{percent}}%",
+      "import": "Adding files {{percent}}%",
+      "rebuild": "Rebuilding index {{percent}}%"
+    },
+    "runningUnknown": {
+      "scan": "Scanning…",
+      "hash": "Checking files…",
+      "import": "Adding files…",
+      "rebuild": "Rebuilding index…"
+    },
+    "several_one": "{{count}} task",
+    "several_other": "{{count}} tasks",
+    "waiting": "Waiting",
+    "done": "Done",
+    "doneWithProblems": "Done with problems",
+    "problems_one": "{{count}} problem",
+    "problems_other": "{{count}} problems",
+    "task": {
+      "scan": "scanning the library",
+      "hash": "checking files",
+      "import": "adding files",
+      "rebuild": "rebuilding the search index"
+    },
+    "aria": {
+      "running": "Activity: {{task}}, {{percent}} percent.",
+      "runningWithProblems_one": "Activity: {{task}}, {{percent}} percent. {{count}} problem.",
+      "runningWithProblems_other": "Activity: {{task}}, {{percent}} percent. {{count}} problems.",
+      "runningUnknown": "Activity: {{task}}.",
+      "runningUnknownWithProblems_one": "Activity: {{task}}. {{count}} problem.",
+      "runningUnknownWithProblems_other": "Activity: {{task}}. {{count}} problems.",
+      "several_one": "Activity: {{count}} task running.",
+      "several_other": "Activity: {{count}} tasks running.",
+      "severalWithProblems_one": "Activity: {{tasks}} tasks running. {{count}} problem.",
+      "severalWithProblems_other": "Activity: {{tasks}} tasks running. {{count}} problems.",
+      "waiting": "Activity: waiting to start {{task}}.",
+      "waitingWithProblems_one": "Activity: waiting to start {{task}}. {{count}} problem.",
+      "waitingWithProblems_other": "Activity: waiting to start {{task}}. {{count}} problems.",
+      "done": "Activity: all tasks done.",
+      "doneWithProblems": "Activity: tasks done, some with problems.",
+      "problems_one": "Activity: {{count}} problem found in the last scan.",
+      "problems_other": "Activity: {{count}} problems found in the last scan."
+    },
+    "runningTitle": {
+      "scan": "Scanning the library",
+      "hash": "Checking files",
+      "import": "Adding files",
+      "importTo": "Adding files to {{target}}",
+      "importCount_one": "Adding {{count}} file",
+      "importCount_other": "Adding {{count}} files",
+      "importCountTo_one": "Adding {{count}} file to {{target}}",
+      "importCountTo_other": "Adding {{count}} files to {{target}}",
+      "rebuild": "Rebuilding the search index"
+    },
+    "runningMeta": {
+      "scan": "{{done, number}} of {{total, number}} files",
+      "scanSoFar": "{{done, number}} files so far",
+      "hash": "So Folio can spot changes and moves; {{done, number}} of {{total, number}} files",
+      "hashSoFar": "So Folio can spot changes and moves; {{done, number}} files so far",
+      "import": "{{done, number}} of {{total, number}} files",
+      "importSoFar": "{{done, number}} files so far",
+      "rebuild": "{{done, number}} entries so far"
+    },
+    "queued": {
+      "scan": "Waiting",
+      "hash": "Starts when the scan finishes",
+      "import": "Waiting for another import to finish",
+      "rebuild": "Waiting"
+    },
+    "doneTitle": {
+      "scan": "Scanned the library",
+      "hash_one": "Checked {{count, number}} file",
+      "hash_other": "Checked {{count, number}} files",
+      "import_one": "Added {{count, number}} file",
+      "import_other": "Added {{count, number}} files",
+      "importTo_one": "Added {{count, number}} file to {{target}}",
+      "importTo_other": "Added {{count, number}} files to {{target}}",
+      "importPartial": "Added {{count, number}} of {{total, number}} files",
+      "importPartialTo": "Added {{count, number}} of {{total, number}} files to {{target}}",
+      "rebuild": "Rebuilt the search index"
+    },
+    "doneMeta": {
+      "scanNoChanges": "No changes",
+      "scanChanges_one": "{{count, number}} change",
+      "scanChanges_other": "{{count, number}} changes",
+      "scanProblems_one": "{{count, number}} problem",
+      "scanProblems_other": "{{count, number}} problems",
+      "scan": "{{changes}}, {{problems}}",
+      "hash": "So Folio can spot changes and moves",
+      "hashDeferred_one": "{{count, number}} was busy; Folio tries again later",
+      "hashDeferred_other": "{{count, number}} were busy; Folio tries again later",
+      "importReplaced": "{{count, number}} replaced",
+      "importRenamed_one": "{{count, number}} kept as a copy",
+      "importRenamed_other": "{{count, number}} kept as copies",
+      "importSkipped": "{{count, number}} skipped",
+      "importOriginalsDeleted": "originals moved to the Recycle Bin",
+      "importFailed_one": "{{count, number}} couldn't be copied. Its original stays where it is.",
+      "importFailed_other": "{{count, number}} couldn't be copied. Their originals stay where they are.",
+      "rebuild_one": "{{count, number}} item",
+      "rebuild_other": "{{count, number}} items"
+    },
+    "failedTitle": {
+      "scan": "Scan stopped",
+      "hash": "Couldn't check files",
+      "import": "Couldn't add files",
+      "importTo": "Couldn't add files to {{target}}",
+      "rebuild": "Couldn't rebuild the index"
+    },
+    "cancelledTitle": {
+      "scan": "Scan cancelled",
+      "hash": "Checking cancelled",
+      "import": "Stopped adding files",
+      "importTo": "Stopped adding files to {{target}}",
+      "rebuild": "Rebuild cancelled"
+    },
+    "cancel": {
+      "scan": "Cancel scan",
+      "hash": "Cancel checking files",
+      "import": "Cancel adding files",
+      "rebuild": "Cancel rebuild"
+    },
+    "details": "Details",
+    "percent": "{{percent}}%",
+    "runningList": "Running",
+    "earlier": "Earlier",
+    "footerProblems_one": "{{count, number}} problem in the last scan",
+    "footerProblems_other": "{{count, number}} problems in the last scan",
+    "footerNoProblems": "No problems in the last scan",
+    "viewProblems": "View problems"
+  },
+  "windowErrors": {
+    "minimize": {
+      "title": "Couldn't minimize the window",
+      "text": "Press Windows+Down to minimize it instead. If window buttons keep failing, restart Folio."
+    },
+    "maximize": {
+      "title": "Couldn't maximize the window",
+      "text": "Press Windows+Up to maximize it instead. If window buttons keep failing, restart Folio."
+    },
+    "restore": {
+      "title": "Couldn't restore the window",
+      "text": "Press Windows+Down to restore it instead. If window buttons keep failing, restart Folio."
+    },
+    "close": {
+      "title": "Couldn't close Folio",
+      "text": "Press Alt+F4 to close it instead."
+    },
+    "drag": {
+      "title": "Couldn't move the window",
+      "text": "Press Windows+Left or Windows+Right to snap it to a side instead."
+    },
+    "background": {
+      "title": "Window buttons may not work right",
+      "text": "Restart Folio to fix this. Snap layouts may not appear on the maximize button until then."
+    }
+  },
+  "copyDetails": {
+    "action": "Copy details",
+    "copied": "Copied the details",
+    "failed": "Couldn't copy the details"
+  },
+  "viewError": {
+    "title": "This view stopped working",
+    "previewTitle": "The preview stopped working",
+    "text": "Reload it to carry on. If this keeps happening, copy the details and send them to the developer.",
+    "reload": "Reload this view"
   }
 }

@@ -1,0 +1,299 @@
+/* The window's layout (app-shell handoff §2–§4; library-actions §14). */
+
+.shell {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+}
+
+.shell__body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.shell__content {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 0 var(--space-panel-gap) var(--space-panel-gap) 0;
+}
+
+:root[data-layout='narrow'] .shell__content {
+  padding-top: var(--space-panel-gap);
+}
+
+/*
+ * Toolbar: 48 px under the title bar; in a narrow window its controls fill the 40 px bar. Three
+ * columns: the semester stays centred while both sides fit, and is pushed aside, never covered,
+ * when they do not.
+ */
+.toolbar {
+  display: grid;
+  flex: none;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--space-10);
+  box-sizing: border-box;
+  height: var(--size-toolbar);
+  padding: 0 var(--space-12);
+  user-select: none;
+}
+
+.toolbar[data-compact] {
+  flex: 1;
+  gap: var(--space-6);
+  height: 100%;
+  padding: 0 var(--space-6) 0 0;
+}
+
+.toolbar__start,
+.toolbar__centre,
+.toolbar__end {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-10);
+}
+
+.toolbar__end {
+  justify-content: flex-end;
+}
+
+.toolbar[data-compact] .toolbar__start,
+.toolbar[data-compact] .toolbar__end {
+  gap: var(--space-6);
+}
+
+.toolbar__search {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-8);
+  box-sizing: border-box;
+  width: var(--size-search-button);
+  height: var(--size-control);
+  padding: 0 var(--space-4) 0 var(--space-10);
+  border: var(--border-width) solid var(--color-border-control);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-panel);
+  color: var(--color-text-tertiary);
+  font: inherit;
+  font-size: var(--font-size-small);
+  text-align: left;
+  cursor: text;
+}
+
+.toolbar__search[data-hovered] {
+  border-color: var(--color-border-strong);
+}
+
+.toolbar__search-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.semester-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  box-sizing: border-box;
+  height: var(--size-control);
+  padding: 0 var(--space-10);
+  border: var(--border-width) solid var(--color-border-control);
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-strong);
+  white-space: nowrap;
+  cursor: default;
+}
+
+.semester-button[data-compact] {
+  gap: var(--space-6);
+  height: var(--size-control-compact);
+  padding: 0 var(--space-8);
+  font-size: var(--font-size-caption);
+}
+
+.semester-button[data-hovered],
+.semester-button[data-pressed] {
+  background: var(--color-surface-panel);
+}
+
+.semester-button__chevron {
+  color: var(--color-text-tertiary);
+}
+
+/* Rail (6A): outlined square buttons, 10 px apart, top aligned with the panels. */
+.rail {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-10);
+  box-sizing: border-box;
+  width: var(--size-rail);
+  padding: 0 0 var(--space-10);
+}
+
+:root[data-layout='narrow'] .rail {
+  width: var(--size-rail-compact);
+  padding-top: var(--space-panel-gap);
+}
+
+.rail__slot {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.rail__spacer {
+  flex: 1;
+}
+
+/* The active view's bar at the window's left edge. */
+.rail__indicator {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: var(--size-selection-bar-width);
+  height: var(--size-rail-indicator);
+  border-radius: 0 var(--radius-indicator) var(--radius-indicator) 0;
+  background: var(--color-selection-indicator);
+  transform: translateY(-50%);
+}
+
+.rail__button {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--size-rail-button);
+  height: var(--size-rail-button);
+  padding: 0;
+  border: var(--border-width) solid var(--color-border-control);
+  border-radius: var(--radius-rail-button);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: default;
+  transition:
+    background-color var(--motion-duration-fast) var(--motion-easing-standard),
+    border-color var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+:root[data-layout='narrow'] .rail__button {
+  width: var(--size-rail-button-compact);
+  height: var(--size-rail-button-compact);
+}
+
+.rail__button[data-hovered] {
+  background: var(--color-surface-panel);
+}
+
+.rail__button[data-active] {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-panel);
+  color: var(--color-accent-default);
+}
+
+.rail__avatar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--size-avatar);
+  height: var(--size-avatar);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-avatar-background);
+  color: var(--color-avatar-text);
+  font: inherit;
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-badge);
+  cursor: default;
+}
+
+:root[data-layout='narrow'] .rail__avatar {
+  width: var(--size-avatar-compact);
+  height: var(--size-avatar-compact);
+  font-size: var(--font-size-small);
+}
+
+.rail__avatar[data-active] {
+  box-shadow: 0 0 0 var(--focus-ring-width) var(--color-accent-fill);
+}
+
+/* Until the Library view lands: its panel and the preview beside it. */
+.placeholder-view {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  gap: var(--space-panel-gap);
+}
+
+.placeholder-view__library {
+  flex: none;
+  width: var(--size-library-panel);
+}
+
+.placeholder-view__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  padding: var(--space-panel-padding);
+}
+
+.placeholder-view__text {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-label);
+}
+
+.placeholder-view__info {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-4) var(--space-12);
+  margin: 0;
+  font-size: var(--font-size-label);
+}
+
+.placeholder-view__info dt {
+  color: var(--color-text-secondary);
+}
+
+.placeholder-view__info dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The empty preview: the app surface with a 14 px dot grid. */
+.placeholder-view__preview {
+  flex: 1;
+  min-width: 0;
+  border: var(--border-width) solid var(--color-border-default);
+  border-radius: var(--radius-panel);
+  background-color: var(--color-surface-app);
+  background-image: radial-gradient(var(--color-pattern-dots) var(--border-width), transparent var(--border-width));
+  background-size: var(--space-14) var(--space-14);
+}
+
+:root[data-layout='narrow'] .placeholder-view__library {
+  flex: 1;
+  width: auto;
+}
+
+:root[data-layout='narrow'] .placeholder-view__preview {
+  display: none;
+}

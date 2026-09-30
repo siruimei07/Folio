@@ -1,0 +1,41 @@
+/* Callout (library-actions handoff §2.2): under the field, left edges aligned, notch 14 px in. */
+.callout {
+  position: absolute;
+  top: calc(100% + var(--space-4) + var(--border-width));
+  left: 0;
+  z-index: var(--z-index-menu);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--size-callout-max-width);
+  padding: var(--space-8) var(--space-10);
+  border: var(--border-width) solid var(--color-feedback-danger-border);
+  border-radius: var(--radius-control);
+  background: var(--color-feedback-danger-soft);
+  box-shadow: var(--shadow-menu);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-small);
+  white-space: normal;
+}
+
+/* The notch: a square turned 45°, showing its top and left borders above the callout. */
+.callout::before {
+  content: '';
+  position: absolute;
+  top: calc(-1 * var(--space-4) - var(--border-width));
+  left: var(--space-14);
+  width: var(--space-8);
+  height: var(--space-8);
+  border-top: var(--border-width) solid var(--color-feedback-danger-border);
+  border-left: var(--border-width) solid var(--color-feedback-danger-border);
+  background: var(--color-feedback-danger-soft);
+  transform: rotate(45deg);
+}
+
+.callout__icon {
+  flex: none;
+  margin-top: var(--space-2);
+  color: var(--color-feedback-danger);
+}

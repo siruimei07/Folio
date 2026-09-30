@@ -1,31 +1,76 @@
 /*
- * Title bar of the frameless main window (ADR-0001, spike 4b). Its values come from the design
- * tokens; the look in docs/design/handoff/app-shell.md §3 (app mark, chrome background, bottom
- * border) comes with the app shell. The mechanics are final:
- * - the caption buttons sit at the right edge, where the shell anchors the snap layouts overlay;
+ * Title bar of the frameless main window (ADR-0001, spike 4b; app-shell handoff §2 and §3). The
+ * mechanics are fixed:
+ * - the caption buttons sit at the right edge, where the shell anchors the snap layouts overlay
+ *   (maximize 46–92 px from the right edge, inside the top 48 px);
  * - the maximize button's hover and pressed looks also follow its data attributes, because the
  *   overlay receives the pointer there instead of the page.
  */
+/*
+ * The bar's height with its bottom line, which dialogs' scrims start below. The title bar puts its
+ * variant on the root (data-window-bar), so the scrims, portalled outside it, read the same value.
+ */
+:root {
+  --window-bar-height: calc(var(--title-bar-height) + var(--border-width));
+}
+
+:root[data-window-bar='narrow'] {
+  --window-bar-height: calc(var(--size-narrow-bar) + var(--border-width));
+}
+
 .title-bar {
   display: flex;
-  height: var(--title-bar-height);
+  flex: none;
+  align-items: center;
+  box-sizing: border-box;
+  height: var(--window-bar-height);
+  border-bottom: var(--border-width) solid var(--color-border-chrome);
+  background: var(--color-surface-chrome);
+  color: var(--color-text-primary);
   user-select: none;
 }
 
-.title-bar__drag {
+.title-bar[data-variant='narrow'] {
+  gap: var(--space-6);
+}
+
+.title-bar__mark {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-title-bar-mark);
+  height: 100%;
+}
+
+.title-bar[data-variant='narrow'] .title-bar__mark {
+  width: var(--size-narrow-bar);
+}
+
+.title-bar__title {
+  flex: 1;
+  color: var(--color-text-secondary);
+  font-size: var(--title-bar-font-size);
+}
+
+.title-bar__content {
   display: flex;
   flex: 1;
+  min-width: 0;
   align-items: center;
-  padding-inline: var(--title-bar-padding-inline);
-  font-size: var(--title-bar-font-size);
+  gap: var(--space-6);
+  align-self: stretch;
 }
 
 .title-bar__controls {
   display: flex;
+  flex: none;
+  align-self: stretch;
 }
 
 .title-bar__button {
   width: var(--caption-button-width);
+  padding: 0;
   border: 0;
   background: transparent;
   color: inherit;
@@ -49,6 +94,6 @@
 }
 
 .title-bar__button:focus-visible {
-  outline: var(--focus-ring-width) solid;
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
   outline-offset: calc(-1 * var(--focus-ring-width));
 }

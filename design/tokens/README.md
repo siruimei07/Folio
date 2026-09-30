@@ -64,6 +64,19 @@ file snapshot; unlike `export_bindings` for the IPC bindings, the failing test d
 file, the `tokens` script does) and when a stylesheet in `apps/desktop/src` reads a custom property
 that nothing defines.
 
+The same run writes `apps/desktop/src/tokens/tokens.ts`: every `size.*` and `space.*` token as a
+number of pixels (`SIZE.narrowBreakpoint`, `SIZE.icon`, `SPACE[8]`), for code that cannot read
+custom properties, such as media queries, icon sizes and overlay offsets. Both groups must stay in
+`px`. The shell's first-frame background (`crates/folio-app/src/window_background.rs`) repeats
+`color.surface.app` of both modes; a Rust test fails when it drifts from these files.
+
+Round 5 (2026-09-30, lane `feat/ui-app-shell`) added the component sizes the shell needed without a
+token: `size.title-bar-mark`, `search-button`, `count-pill`, `key-cap`, `target-min`,
+`rail-indicator`, `selection-bar-inset`, `status-dot`, `state-block-width`, `state-block-offset`,
+`callout-max-width` and `badge-mini`; `radius.key-cap`, `radius.indicator` and `radius.badge-mini`;
+`border.badge`; `font.letter-spacing.badge`; `icon.stroke-width` (the canvas draws Lucide icons at
+1.75, not Lucide's default 2); and `z-index.tooltip`.
+
 The generator refuses, naming the file and token: colour files whose paths or types differ, a path
 in both `base` and a colour file, two paths with one CSS name, path segments that are not lower-case
 kebab names, a `$type` or unit outside the tables above, an alias to a missing token, to another

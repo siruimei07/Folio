@@ -5,10 +5,9 @@
 //
 // The contract is docs/specs/ipc-m1.md. Commands it plans but the shell does not implement yet
 // are typed here, and calling one resolves to a `Transport` error (spec §3).
-import type { AppError, TransportError } from './bindings';
-
 export type * from './bindings';
 export { commands as ipc, LIMITS } from './bindings';
+export { formatIpcError, type IpcError, isIpcError } from './errors';
 export { shellEvents } from './events';
 export {
   contentUrl,
@@ -18,7 +17,9 @@ export {
   type ThumbnailSize,
   thumbnailUrl,
 } from './files';
-export { windowControls } from './window';
-
-/** Every error an IPC call can resolve to; the UI shows the message for its `code`. */
-export type IpcError = AppError | TransportError;
+export {
+  setWindowFailureHandler,
+  type WindowCommand,
+  windowControls,
+  type WindowFailure,
+} from './window';

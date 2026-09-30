@@ -1,0 +1,45 @@
+/* Segmented control: a sunken track, the pressed segment on the panel with a 1 px border. */
+.segmented-control {
+  display: inline-flex;
+  flex: none;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: var(--border-width) solid var(--color-border-default);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-sunken);
+}
+
+.segmented-control__segment {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: var(--size-target-min);
+  height: var(--size-target-min);
+  padding: 0 var(--space-8);
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius-row);
+  background: transparent;
+  color: var(--color-text-tertiary);
+  font: inherit;
+  font-size: var(--font-size-small);
+  cursor: default;
+  transition:
+    background-color var(--motion-duration-fast) var(--motion-easing-standard),
+    color var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.segmented-control__segment[data-icon] {
+  padding: 0;
+}
+
+.segmented-control__segment[data-hovered] {
+  color: var(--color-text-primary);
+}
+
+.segmented-control__segment[data-selected] {
+  border-color: var(--color-border-default);
+  background: var(--color-surface-panel);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-strong);
+}

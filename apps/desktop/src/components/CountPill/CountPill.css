@@ -1,0 +1,16 @@
+.count-pill {
+  display: inline-block;
+  flex: none;
+  box-sizing: border-box;
+  min-width: var(--size-count-pill);
+  height: var(--size-count-pill);
+  padding: 0 var(--space-6);
+  border-radius: var(--radius-pill);
+  background: var(--color-text-primary);
+  color: var(--color-surface-panel);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-strong);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--size-count-pill);
+  text-align: center;
+}

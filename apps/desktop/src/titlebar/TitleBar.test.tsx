@@ -4,6 +4,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import titlebar from '../i18n/locales/en/titlebar.json';
+import { setWindowFailureHandler } from '../ipc';
 import { TitleBar } from './TitleBar';
 
 /**
@@ -70,6 +71,84 @@ describe('TitleBar', () => {
     unmount();
 
     expect(bounds).toEqual([null, null]);
+  });
+
+  it('moves the window from the bar, maximizes on a double-click, and not from its buttons', () => {
+    const { commands } = mockShell();
+    render(<TitleBar />);
+    const bar = screen.getByRole('banner');
+
+    fireEvent.mouseDown(bar, { button: 0, detail: 1 });
+    fireEvent.mouseDown(bar, { button: 0, detail: 2 });
+    fireEvent.mouseDown(bar, { button: 2, detail: 1 });
+    fireEvent.mouseDown(screen.getByRole('button', { name: titlebar.minimize }), { button: 0, detail: 1 });
+
+    expect(commands.filter((command) => /start_dragging|toggle_maximize/.test(command))).toEqual([
+      'plugin:window|start_dragging',
+      'plugin:window|toggle_maximize',
+    ]);
+  });
+
+  it('reports a failed window command with what failed', async () => {
+    mockIPC(
+      (command) => {
+        if (command === 'plugin:window|minimize') throw new Error('window.minimize not allowed');
+        return command === 'plugin:window|is_maximized' ? false : undefined;
+      },
+      { shouldMockEvents: true },
+    );
+    const onFailure = vi.fn();
+    const previous = setWindowFailureHandler(onFailure);
+    try {
+      render(<TitleBar />);
+      fireEvent.click(screen.getByRole('button', { name: titlebar.minimize }));
+      await vi.waitFor(() => {
+        expect(onFailure).toHaveBeenCalledWith({
+          command: 'minimize',
+          source: 'windowControls.minimize',
+          error: { code: 'Window', detail: expect.stringContaining('not allowed') as string },
+        });
+      });
+    } finally {
+      setWindowFailureHandler(previous);
+    }
+  });
+
+  it('reports a listener that cannot be registered as a background failure', async () => {
+    mockIPC(
+      (command) => {
+        if (command === 'plugin:event|listen') throw new Error('event.listen not allowed');
+        return command === 'plugin:window|is_maximized' ? false : undefined;
+      },
+      { shouldMockEvents: false },
+    );
+    const onFailure = vi.fn();
+    const previous = setWindowFailureHandler(onFailure);
+    try {
+      render(<TitleBar />);
+      await vi.waitFor(() => {
+        expect(onFailure).toHaveBeenCalledWith(
+          expect.objectContaining({ command: 'background', source: 'windowControls.watchMaximized' }),
+        );
+        expect(onFailure).toHaveBeenCalledWith(
+          expect.objectContaining({ command: 'background', source: 'windowControls.trackMaximizeButton' }),
+        );
+      });
+    } finally {
+      setWindowFailureHandler(previous);
+    }
+  });
+
+  it('holds the toolbar controls in the narrow window’s bar', () => {
+    mockShell();
+    render(
+      <TitleBar variant="narrow">
+        <button type="button">Search</button>
+      </TitleBar>,
+    );
+    expect(screen.getByRole('banner')).toHaveAttribute('data-variant', 'narrow');
+    expect(screen.getByRole('button', { name: 'Search' })).toBeInTheDocument();
+    expect(screen.queryByText('Folio')).not.toBeInTheDocument();
   });
 
   it('shows the hover and press the overlay reports on the maximize button', async () => {

@@ -1,0 +1,45 @@
+/* Panels (app-shell handoff §2). */
+.panel {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  box-sizing: border-box;
+  overflow: hidden;
+  border: var(--border-width) solid var(--color-border-default);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface-panel);
+}
+
+.panel__header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-8);
+  box-sizing: border-box;
+  height: var(--size-panel-header);
+  padding: 0 var(--space-8) 0 var(--space-12);
+  border-bottom: var(--border-width) solid var(--color-border-default);
+}
+
+.panel__title {
+  margin: 0;
+  font-size: var(--font-size-heading);
+  font-weight: var(--font-weight-strong);
+  line-height: var(--font-line-height-heading);
+}
+
+.panel__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-left: auto;
+}
+
+.panel__body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  overflow: auto;
+}

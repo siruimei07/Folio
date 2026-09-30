@@ -1,0 +1,18 @@
+/* Popovers (library-actions handoff §2.7, §10.2, §13). */
+.popover {
+  box-sizing: border-box;
+  overflow: auto;
+  border: var(--border-width) solid var(--color-border-default);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface-panel);
+  box-shadow: var(--shadow-menu);
+  z-index: var(--z-index-menu);
+}
+
+.popover[data-entering] {
+  animation: fade-in var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.popover[data-exiting] {
+  animation: fade-in var(--motion-duration-fast) var(--motion-easing-exit) reverse;
+}

@@ -1,0 +1,33 @@
+/* Change status icon (20A): geometry in design/tokens/README.md "Change status icons". */
+.change-status-icon {
+  flex: none;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.change-status-icon[data-status='added'] {
+  color: var(--color-status-added);
+}
+
+.change-status-icon[data-status='modified'] {
+  color: var(--color-status-modified);
+}
+
+.change-status-icon[data-status='deleted'] {
+  color: var(--color-status-deleted);
+}
+
+.change-status-icon[data-status='renamed'] {
+  color: var(--color-status-renamed);
+}
+
+.change-status-icon__frame {
+  stroke: currentColor;
+  stroke-width: 1.25;
+}
+
+.change-status-icon__glyph {
+  stroke: currentColor;
+  stroke-width: 1.5;
+}

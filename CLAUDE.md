@@ -120,7 +120,11 @@ crates/
   folio-core/          core library: no Tauri, UI or IPC types (ADR-0001)
   folio-app/           Tauri shell: commands, IPC contract (src/ipc.rs), capabilities/, tauri.conf.json, icons/
 apps/
-  desktop/             React + TypeScript UI (Vite); src/ipc = only IPC entry, src/i18n = UI strings (en), src/tokens = CSS generated from design/tokens
+  desktop/             React + TypeScript UI (Vite); src/ by feature folder (docs/specs/ui-architecture.md §4, import rules in eslint.config.js):
+                       app/ = window shell, stores, registry of views, dialogs and toolbar controls; components/ = shared components (React Aria);
+                       lib/ = pure helpers; data/ = query cache; ipc/ = only IPC entry (mock/ = fake shell for the browser pane); titlebar/;
+                       one folder per view (library/, search/, preview/, …); i18n/ = UI strings (en); tokens/ = CSS and TS constants
+                       generated from design/tokens; gallery.html = dev-only gallery of the shell and components
 e2e/                   Playwright over WebView2 CDP (fixtures.ts starts the app per test)
 docs/
   agents/              agent reference docs, e.g. skill-routing.md   (English)

@@ -20,11 +20,15 @@ function reportListenerError(error: unknown): void {
 
 /**
  * Keeps a Tauri listener until the returned function runs. A registration that fails is reported
- * once; stopping before the registration resolves stops the listener as soon as it does.
+ * once, to `onError` (the console by default); stopping before the registration resolves stops
+ * the listener as soon as it does.
  */
-export function hold(registration: Promise<() => unknown>): () => void {
+export function hold(
+  registration: Promise<() => unknown>,
+  onError: (error: unknown) => void = reportListenerError,
+): () => void {
   const unlisten = registration.catch((error: unknown) => {
-    reportListenerError(error);
+    onError(error);
     return undefined;
   });
   return () => {
@@ -37,13 +41,21 @@ interface Listenable<T> {
   listen: (handler: (event: Event<T>) => void) => Promise<UnlistenFn>;
 }
 
-/** Calls `onEvent` with every payload until the returned function runs, and never after it. */
-export function subscribe<T>(event: Listenable<T>, onEvent: (payload: T) => void): () => void {
+/**
+ * Calls `onEvent` with every payload until the returned function runs, and never after it. A
+ * failed registration goes to `onError` (the console by default).
+ */
+export function subscribe<T>(
+  event: Listenable<T>,
+  onEvent: (payload: T) => void,
+  onError?: (error: unknown) => void,
+): () => void {
   let active = true;
   const release = hold(
     event.listen(({ payload }) => {
       if (active) onEvent(payload);
     }),
+    onError,
   );
   return () => {
     active = false;

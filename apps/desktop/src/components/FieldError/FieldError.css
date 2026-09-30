@@ -1,0 +1,18 @@
+.field-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-6);
+  margin: var(--space-6) 0 0;
+  color: var(--color-feedback-danger);
+  font-size: var(--font-size-small);
+}
+
+.field-error__icon {
+  flex: none;
+  margin-top: var(--space-2);
+}
+
+/* An invalid field keeps its borders and turns its bottom edge the danger colour. */
+[aria-invalid='true'] {
+  border-bottom-color: var(--color-feedback-danger);
+}

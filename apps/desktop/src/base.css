@@ -16,3 +16,33 @@ body {
   font-size: var(--font-size-body);
   line-height: var(--font-line-height-body);
 }
+
+/* The window is the page: it never scrolls as a whole, and regions scroll inside it. */
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Focus (app-shell handoff §10): an outline in the focus colour, 2 px outside the element. */
+:focus-visible,
+[data-focus-visible] {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* Read by screen readers, not shown: live regions and extra labels. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Lucide icons at the canvas's line weight. */
+svg.lucide {
+  stroke-width: var(--icon-stroke-width);
+}

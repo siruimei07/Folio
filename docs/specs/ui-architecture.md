@@ -99,6 +99,13 @@ Rules:
 `feat/ui-app-shell` adds these as `no-restricted-imports` overrides in `apps/desktop/eslint.config.js`
 (CLAUDE.md §3.7).
 
+As built (`feat/ui-app-shell`, 2026-09-30): features may import `ipc` types and the file URL
+helpers but not the `ipc`, `shellEvents` or `windowControls` values, nor `ipc/bindings`, `events`,
+`window` or `mock`; `components/` and `lib/` may import `ipc` types only, and neither imports
+`app/`, `data/` or a feature; `lib/` imports no React or state library. `app/` (the shell) may import
+anything, and features may import `app/` stores (`navigation`, `toasts`, `announcer`). The §14
+rules are `no-restricted-syntax` selectors in the same file. `data/` has no import rule.
+
 ## 4. Folder layout
 
 Feature folders sit directly under `src/`, so each UI lane owns `apps/desktop/src/<feature>/**`
@@ -309,6 +316,16 @@ change re-renders the rows it affects, not the list.
 - Dialogs (search, settings, import) are not views: the navigation store opens one at a time, and
   closing returns focus to the element that opened it (§7.1).
 
+As built (`feat/ui-app-shell`): `app/registry.ts` lists what the shell hosts, and each lane adds
+its entry there with a one-line edit: `VIEWS` (rail button, `Ctrl+<n>`, component; the Library
+entry is a placeholder until `feat/ui-library-view` replaces it), `DIALOGS` (a component per
+`DialogKind` of `app/navigation.ts`, which gets `isOpen`, `params` and `onClose` and stays mounted
+so its closing animation plays) and `TOOLBAR` (`sync`, `semester`, `activity` controls, each
+rendered wide or `compact`). Registering `search` shows the toolbar's search button and `Ctrl+K`,
+`librarySettings` the gear and `Ctrl+,`, `appSettings` the avatar: until then they stay hidden,
+like the M2 views. `app/Toolbar.tsx` provides `SemesterButton` and `app/activity/` the `Activity`
+button and popover, both presentational, for the lanes that wire them to data.
+
 ### 6.3 Layout, theme and motion
 
 - **Narrow layout** (window width < `size.narrow-breakpoint`, handoff §2): media queries cannot
@@ -320,6 +337,17 @@ change re-renders the rows it affects, not the list.
 - **Theme and reduce motion**: `data-theme` and `data-reduce-motion` on the root, set before the
   first render from the shell's settings (app-shell lane, roadmap §3.4). Components read durations
   only from tokens; the reduce-motion tokens set them to 0.
+
+As built (`feat/ui-app-shell`): the generator writes `src/tokens/tokens.ts` beside `tokens.css`,
+with every `size.*` and `space.*` token in pixels (`SIZE.narrowBreakpoint`, `SIZE.row`,
+`SPACE[8]`), for media queries, icon sizes and overlay offsets. `main.tsx` calls
+`applyAppearance(DEFAULT_APPEARANCE)` (System and "Use Windows setting", until
+`feat/core-app-settings` stores the choices; `feat/ui-settings` calls it again when they change)
+and `watchLayout()` before the first render. The shell builds the main window itself
+(`create: false` in `tauri.conf.json`) with `color.surface.app` of Windows' app mode as the
+window and WebView2 background (`crates/folio-app/src/window_background.rs`, whose test keeps the
+colours equal to the tokens), so a dark first frame never flashes white; with a stored theme, that
+lane passes the stored mode instead.
 
 ### 6.4 Keyboard shortcuts
 
@@ -340,6 +368,16 @@ change re-renders the rows it affects, not the list.
   it has focus.
 - WebView2's browser accelerator keys (reload, print, find, zoom) should be off in release builds;
   the app-shell lane checks what Tauri exposes and hands a shell change to a backend lane if needed.
+
+As built (`feat/ui-app-shell`): `registerShortcut(combo, run, options)` and the `useShortcut` hook
+register; `handleShortcut(press)` is the one matcher, which the window's listener
+(`installShortcuts`, mounted by `App`) and the preview frame's forwarded presses both call. The
+newest registration of a combination wins while it exists, and where the press happened is looked
+at only once it matches. A modal counts as open while any shared `Modal` is on screen (its overlay
+carries `MODAL_ATTRIBUTE`, `isModalOpen()`), the navigation store's or a view's own. The combos
+live beside the registry (`SEARCH_KEYS`, `LIBRARY_SETTINGS_KEYS`, `viewKeys(n)`), and tooltips,
+menus and key caps print them with `useShortcutLabel` ("Ctrl+K", or "Ctrl K" on a key cap; key
+names from `shell:keys`).
 
 ## 7. Accessible primitives
 
@@ -367,6 +405,43 @@ through the wrapper:
 
 `I18nProvider` gets the UI language, so RAC's own hidden labels follow it. RAC's drag and drop is
 not used: it builds on HTML5 drag events, which Tauri's native file drop turns off (§2).
+
+As built (`feat/ui-app-shell`): the wrappers are `Button`, `IconButton` (tooltip with the label
+and shortcut), `Tooltip` (`TOOLTIP_DELAY_MS` from `lib/timing.ts`), `SegmentedControl`,
+`TagToggle` and `TagChipList`, `Menu` / `MenuItem` / `Submenu` / `MenuButton`, `ContextMenu` with
+`useContextMenuTrigger`, `Modal` and `DialogFrame`, and `ProgressBar`; the presentational parts of
+app-shell handoff §10 and library-actions §2 (`CourseBadge`, `CourseLabel`, `TagDot`,
+`FileTypeIcon`, `ChangeStatusIcon`, `CountPill`, `KeyCap`, `Panel`, `StateBlock`, `Banner`,
+`Callout`, `FieldError`, `Toast`, `ProgressRing`, `Spinner`, `Skeleton`, `MiddleTruncate`) are own
+markup. Menus, submenus, context menus and the Activity popover share one `Popover` surface;
+banners, state blocks, toasts and the activity icons take their tone colours from
+`components/tone.css` (`data-tone`), as badges and dots take palette colours from `palette.css`;
+fades and rises share the keyframes of `components/motion.css`. The folder picker
+(library-actions §2.9) is built from the tree rows, so it comes with `feat/ui-library-view`.
+
+While a modal dialog or modal popover is open, React Aria makes the rest of the window inert.
+Three parts stay usable through its markers: the caption buttons and the toast stack carry
+`data-react-aria-top-layer` (`TOP_LAYER_ATTRIBUTE`), which `ariaHideOutside`,
+`useInteractOutside` and `FocusScope` honour, and the `Announcer` carries
+`data-live-announcer`. The title bar's own element stays out of the inert set because it holds
+the caption buttons, so it still drags the window; a press on it never closes a dismissable
+modal (`WINDOW_BAR_ATTRIBUTE`). The narrow bar's toolbar controls go inert with the rest.
+
+Deviations:
+
+- Toasts are own markup (`components/Toast`, the queue in `app/toasts.ts`, the region in
+  `app/ToastRegion.tsx`), not RAC 1.21's `UNSTABLE_Toast`: that one is unstable, gives each toast
+  `role="alertdialog"` and puts it in the tab order through its landmark, where the handoff asks
+  for `role="status"` / `"alert"` toasts that never take focus. Toast buttons stay reachable with
+  Tab at the end of the page, so "Copy details" of a failed window command, which has no other
+  place, works from the keyboard.
+- RAC composes a tag's remove button name from its own label and the tag's: the label is
+  "Remove tag", the name "Remove tag Notes".
+- A disabled menu item is skipped by the arrow keys (RAC's behaviour), where library-actions §2.7
+  asks for it to stay focusable; RAC 1.21 has no option for that. The item keeps
+  `aria-disabled` and the tertiary colour.
+- RAC's `DialogTrigger` does not set `aria-haspopup="dialog"`; the activity button and the rail's
+  gear and avatar set it themselves.
 
 ### 7.2 Own virtualised collections
 
@@ -754,6 +829,19 @@ with `i18n.language` for sizes and dates (handoff: "Sep 27", 12-hour "5:05 PM").
 - Window-command failures (today only on the console) get an error state in `feat/ui-app-shell`
   (roadmap §3.4).
 
+As built (`feat/ui-app-shell`): `ipc/window.ts` reports each failed window command to one handler
+(`setWindowFailureHandler`), which `App` sets to `app/windowErrors.ts`: the toast of
+library-actions §9.5 per command, replacing that command's earlier toast, the background one once
+per session, "Copy details", and `log_ui_error` with kind `command`. The title bar starts dragging
+(`start_dragging`) and double-click maximizing (`toggle_maximize`) itself instead of Tauri's
+drag-region script, whose failures would only reach the console; the unused
+`core:window:allow-internal-toggle-maximize` grant is gone. `app/log.ts` has `reportUiError`
+(console, then `log_ui_error` with well-formed text cut to `LIMITS.logChars`) and
+`reportUncaughtErrors` for the window's `error` and `unhandledrejection`; `main.tsx` passes
+`onUncaughtError` and `onCaughtError` to `createRoot`, the latter with the `source` of the
+`ErrorBoundary` that caught it (`view.<id>`, `dialog.<kind>`, `shell`). The boundary shows the
+state block of library-actions §9.6 and "Reload this view" mounts the view afresh.
+
 ## 14. Security rules for the UI
 
 1. **The window never parses library data as HTML.** No `dangerouslySetInnerHTML`, `innerHTML`,
@@ -845,6 +933,13 @@ inside the page), `katex` fonts and CSS.
    Math; KaTeX with its own fonts is the fallback if it falls short (`feat/ui-preview`).
 3. The filtered-tree cap of 5,000 matches (`feat/ui-library-view`, §8.2).
 4. Whether Tauri exposes WebView2's browser accelerator keys setting (`feat/ui-app-shell`, §6.4).
+   Checked 2026-09-30: no. wry 0.57 has `with_browser_accelerator_keys`, but tauri-runtime-wry 2.12
+   does not pass it through and Tauri's config has no key for it (zoom keys are already off,
+   `zoomHotkeysEnabled: false`). The shell can set `ICoreWebView2Settings3::
+   SetAreBrowserAcceleratorKeysEnabled(false)` in release builds through
+   `WebviewWindow::with_webview` and the controller, before the first navigation; that needs
+   `webview2-com` as a direct dependency (already in the lockfile through wry). Handed to a backend
+   lane (Codex): release builds only, since debug builds and e2e keep DevTools.
 
 ## 18. Next lanes and changes to other documents
 

@@ -1,6 +1,7 @@
 // Turns the design tokens (design/tokens/*.tokens.json, DTCG format 2025.10) into the CSS custom
-// properties of tokens.css, as design/tokens/README.md specifies. Only the drift test in
-// generate.test.ts runs it; tokens.css is its committed output.
+// properties of tokens.css, and the sizes that code needs as numbers into tokens.ts, as
+// design/tokens/README.md specifies. Only the drift test in generate.test.ts runs it; tokens.css
+// and tokens.ts are its committed output.
 
 /** The three token files, parsed. */
 export interface TokenFiles {
@@ -94,6 +95,48 @@ export function generateTokensCss(files: TokenFiles): string {
   ].join('\n');
 }
 
+/**
+ * Builds tokens.ts: every `size.*` and `space.*` token as a number of CSS pixels, for code that
+ * cannot read custom properties (media queries, virtualisers, overlay offsets; UI architecture
+ * §6.3). Throws like `generateTokensCss`, and on a value that is not in px.
+ */
+export function generateTokensTs(files: Pick<TokenFiles, 'base'>): string {
+  const base = collect(BASE_FILE, files.base);
+  const group = (name: string, doc: string) => {
+    const entries = [...base.values()]
+      .filter((token) => token.path.startsWith(`${name}.`))
+      .map((token) => {
+        const at: Fail = (message) => fail(token.file, token.path, message);
+        const value = resolve(token, base);
+        if (value.type !== 'dimension') return at(`is a ${value.type}, not a dimension`);
+        if (!isRecord(value.value) || value.value.unit !== 'px' || !isFiniteNumber(value.value.value)) {
+          return at('needs a px value to become a number');
+        }
+        return `  ${camelCase(token.path.slice(name.length + 1))}: ${String(value.value.value)},`;
+      });
+    return [`/** ${doc} */`, `export const ${name.toUpperCase()} = {`, ...entries, '} as const;'];
+  };
+  return [
+    '// Generated from design/tokens/base.tokens.json by src/tokens/generate.ts. Do not edit: change',
+    '// the tokens, then run `pnpm --filter @folio/desktop tokens` (design/tokens/README.md).',
+    '',
+    ...group('size', 'The `size.*` tokens in CSS pixels, for code that cannot read custom properties.'),
+    '',
+    ...group('space', 'The `space.*` tokens in CSS pixels, for overlay offsets and other code.'),
+    '',
+  ].join('\n');
+}
+
+/** The token an alias chain ends at; the token itself when it is no alias. */
+function resolve(token: Token, scope: Tokens): Token {
+  const first = aliasOf(token.value);
+  return first === undefined ? token : checkAlias(token, first, scope);
+}
+
+function camelCase(name: string): string {
+  return name.replace(/[-.]([a-z0-9])/g, (_, letter: string) => letter.toUpperCase());
+}
+
 function collect(file: string, tree: unknown): Tokens {
   const tokens: Tokens = new Map();
   const visit = (node: unknown, path: string[]): void => {
@@ -151,17 +194,22 @@ function cssValue(token: Token, scope: Tokens): string {
   return `var(${cssName(target)})`;
 }
 
-/** An alias must lead, possibly through other aliases, to a value of its own type. */
-function checkAlias(token: Token, first: string, scope: Tokens): void {
+/**
+ * An alias must lead, possibly through other aliases, to a value of its own type. Returns the
+ * token the chain ends at.
+ */
+function checkAlias(token: Token, first: string, scope: Tokens): Token {
   const seen = new Set([token.path]);
-  let target: string | undefined = first;
-  while (target !== undefined) {
+  let target = first;
+  for (;;) {
     const next = scope.get(target);
-    if (!next) fail(token.file, token.path, `refers to {${target}}, which does not exist`);
+    if (!next) return fail(token.file, token.path, `refers to {${target}}, which does not exist`);
     if (next.type !== token.type) fail(token.file, token.path, `refers to {${target}}, a ${next.type}`);
     if (seen.has(target)) fail(token.file, token.path, `is part of an alias cycle through {${target}}`);
     seen.add(target);
-    target = aliasOf(next.value);
+    const following = aliasOf(next.value);
+    if (following === undefined) return next;
+    target = following;
   }
 }
 

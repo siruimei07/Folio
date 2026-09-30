@@ -6,37 +6,83 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
 import { type ButtonBounds, commands, events, type MaximizeButtonChanged } from './bindings';
+import { type IpcError, isIpcError } from './errors';
 import { hold, subscribe } from './events';
 
-/** A failed window command means a missing permission: a bug, reported to the console. */
-function reportError(error: unknown): void {
-  console.error('window command failed', error);
+/**
+ * What failed: a caption button, dragging the title bar, or `background` work the user did not
+ * start (reading the maximized state, placing the snap layouts overlay).
+ */
+export type WindowCommand = 'minimize' | 'maximize' | 'restore' | 'close' | 'drag' | 'background';
+
+export interface WindowFailure {
+  command: WindowCommand;
+  /** Where it failed, for the log: `windowControls.<function>`. */
+  source: string;
+  error: IpcError;
+}
+
+type FailureHandler = (failure: WindowFailure) => void;
+
+let onFailure: FailureHandler = ({ source, error }) => {
+  console.error(`${source} failed`, error);
+};
+
+/**
+ * Where window command failures go (library-actions handoff §9.5). The app shows an error toast
+ * and logs them; until it sets a handler they reach the console. Returns the previous handler.
+ */
+export function setWindowFailureHandler(handler: FailureHandler): FailureHandler {
+  const previous = onFailure;
+  onFailure = handler;
+  return previous;
+}
+
+/** Tauri's window API rejects with the plugin's error text; our commands resolve to `IpcError`. */
+function asIpcError(error: unknown): IpcError {
+  if (isIpcError(error)) return error;
+  return { code: 'Window', detail: error instanceof Error ? error.message : String(error) };
+}
+
+function report(command: WindowCommand, source: string) {
+  return (error: unknown) => {
+    onFailure({ command, source: `windowControls.${source}`, error: asIpcError(error) });
+  };
 }
 
 export const windowControls = {
   minimize: (): void => {
-    getCurrentWindow().minimize().catch(reportError);
+    getCurrentWindow().minimize().catch(report('minimize', 'minimize'));
   },
 
-  toggleMaximize: (): void => {
-    getCurrentWindow().toggleMaximize().catch(reportError);
+  /** Maximizes or restores; `maximized` is the state now, so a failure names the right action. */
+  toggleMaximize: (maximized: boolean): void => {
+    getCurrentWindow()
+      .toggleMaximize()
+      .catch(report(maximized ? 'restore' : 'maximize', 'toggleMaximize'));
   },
 
   close: (): void => {
-    getCurrentWindow().close().catch(reportError);
+    getCurrentWindow().close().catch(report('close', 'close'));
+  },
+
+  /** Moves the window with the pointer until the button is released (Windows' own drag loop). */
+  startDragging: (): void => {
+    getCurrentWindow().startDragging().catch(report('drag', 'startDragging'));
   },
 
   /** Reports the maximized state now and after every resize. Returns the unsubscribe function. */
   watchMaximized: (onChange: (maximized: boolean) => void): (() => void) => {
     const appWindow = getCurrentWindow();
+    const failed = report('background', 'watchMaximized');
     let active = true;
     const update = () => {
       appWindow.isMaximized().then((maximized) => {
         if (active) onChange(maximized);
-      }, reportError);
+      }, failed);
     };
     update();
-    const release = hold(appWindow.onResized(update));
+    const release = hold(appWindow.onResized(update), failed);
     return () => {
       active = false;
       release();
@@ -56,12 +102,13 @@ export const windowControls = {
     button: HTMLElement,
     onChange: (state: MaximizeButtonChanged) => void,
   ): (() => void) => {
+    const failed = report('background', 'trackMaximizeButton');
     const send = (bounds: ButtonBounds | null) => {
       void commands.setMaximizeButtonBounds(bounds).then((result) => {
-        if (result.status === 'error') reportError(result.error);
+        if (result.status === 'error') failed(result.error);
       });
     };
-    const report = () => {
+    const measure = () => {
       const rect = button.getBoundingClientRect();
       const width = Math.round(rect.width);
       const height = Math.round(rect.height);
@@ -76,10 +123,10 @@ export const windowControls = {
           : null,
       );
     };
-    report();
-    const observer = new ResizeObserver(report);
+    measure();
+    const observer = new ResizeObserver(measure);
     observer.observe(button);
-    const stopListening = subscribe(events.maximizeButtonChanged, onChange);
+    const stopListening = subscribe(events.maximizeButtonChanged, onChange, failed);
     return () => {
       observer.disconnect();
       stopListening();

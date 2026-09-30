@@ -1,0 +1,74 @@
+/*
+ * One palette colour for a component: an element with data-palette="<name>" gets the four roles
+ * of that colour (design/tokens/README.md "Palette usage") as --swatch-*, in the current theme.
+ * Course badges, tag dots and file-type icons read these instead of naming each colour.
+ */
+[data-palette='red'] {
+  --swatch-tint: var(--palette-red-tint);
+  --swatch-text: var(--palette-red-text);
+  --swatch-dot: var(--palette-red-dot);
+  --swatch-solid: var(--palette-red-solid);
+}
+
+[data-palette='orange'] {
+  --swatch-tint: var(--palette-orange-tint);
+  --swatch-text: var(--palette-orange-text);
+  --swatch-dot: var(--palette-orange-dot);
+  --swatch-solid: var(--palette-orange-solid);
+}
+
+[data-palette='amber'] {
+  --swatch-tint: var(--palette-amber-tint);
+  --swatch-text: var(--palette-amber-text);
+  --swatch-dot: var(--palette-amber-dot);
+  --swatch-solid: var(--palette-amber-solid);
+}
+
+[data-palette='green'] {
+  --swatch-tint: var(--palette-green-tint);
+  --swatch-text: var(--palette-green-text);
+  --swatch-dot: var(--palette-green-dot);
+  --swatch-solid: var(--palette-green-solid);
+}
+
+[data-palette='teal'] {
+  --swatch-tint: var(--palette-teal-tint);
+  --swatch-text: var(--palette-teal-text);
+  --swatch-dot: var(--palette-teal-dot);
+  --swatch-solid: var(--palette-teal-solid);
+}
+
+[data-palette='blue'] {
+  --swatch-tint: var(--palette-blue-tint);
+  --swatch-text: var(--palette-blue-text);
+  --swatch-dot: var(--palette-blue-dot);
+  --swatch-solid: var(--palette-blue-solid);
+}
+
+[data-palette='indigo'] {
+  --swatch-tint: var(--palette-indigo-tint);
+  --swatch-text: var(--palette-indigo-text);
+  --swatch-dot: var(--palette-indigo-dot);
+  --swatch-solid: var(--palette-indigo-solid);
+}
+
+[data-palette='violet'] {
+  --swatch-tint: var(--palette-violet-tint);
+  --swatch-text: var(--palette-violet-text);
+  --swatch-dot: var(--palette-violet-dot);
+  --swatch-solid: var(--palette-violet-solid);
+}
+
+[data-palette='pink'] {
+  --swatch-tint: var(--palette-pink-tint);
+  --swatch-text: var(--palette-pink-text);
+  --swatch-dot: var(--palette-pink-dot);
+  --swatch-solid: var(--palette-pink-solid);
+}
+
+[data-palette='stone'] {
+  --swatch-tint: var(--palette-stone-tint);
+  --swatch-text: var(--palette-stone-text);
+  --swatch-dot: var(--palette-stone-dot);
+  --swatch-solid: var(--palette-stone-solid);
+}

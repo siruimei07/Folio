@@ -1,0 +1,4 @@
+.file-type-icon {
+  flex: none;
+  color: var(--swatch-solid, var(--color-text-secondary));
+}

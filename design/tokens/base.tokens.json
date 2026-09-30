@@ -149,6 +149,16 @@
         "$description": "Course badge letters."
       }
     },
+    "letter-spacing": {
+      "badge": {
+        "$type": "dimension",
+        "$value": {
+          "value": -0.1,
+          "unit": "px"
+        },
+        "$description": "Course badge letters, slightly tightened so three fit."
+      }
+    },
     "line-height": {
       "body": {
         "$type": "number",
@@ -410,6 +420,14 @@
         "unit": "px"
       },
       "$description": "Course badge in the narrow window; its letters use font.size.badge-compact."
+    },
+    "badge-mini": {
+      "$type": "dimension",
+      "$value": {
+        "value": 9,
+        "unit": "px"
+      },
+      "$description": "Course badge below 20 px (in a 16 px box): a square in the dot colour, no text (58 %, 23A)."
     },
     "tag-dot": {
       "$type": "dimension",
@@ -698,6 +716,94 @@
         "unit": "px"
       },
       "$description": "Content column of the welcome screen, the first-run steps and full-window states."
+    },
+    "state-block-width": {
+      "$type": "dimension",
+      "$value": {
+        "value": 400,
+        "unit": "px"
+      },
+      "$description": "Width of a state block centred in the preview (library-actions §2.5)."
+    },
+    "state-block-offset": {
+      "$type": "dimension",
+      "$value": {
+        "value": 96,
+        "unit": "px"
+      },
+      "$description": "Distance from the top of the tree area to a state block in the tree (library-actions §2.5)."
+    },
+    "callout-max-width": {
+      "$type": "dimension",
+      "$value": {
+        "value": 300,
+        "unit": "px"
+      },
+      "$description": "Largest width of a callout under a field in a row (library-actions §2.2)."
+    },
+    "title-bar-mark": {
+      "$type": "dimension",
+      "$value": {
+        "value": 44,
+        "unit": "px"
+      },
+      "$description": "Box of the 16 px app mark at the left of the 32 px title bar (app-shell §3)."
+    },
+    "search-button": {
+      "$type": "dimension",
+      "$value": {
+        "value": 250,
+        "unit": "px"
+      },
+      "$description": "The toolbar's search button (app-shell §3)."
+    },
+    "count-pill": {
+      "$type": "dimension",
+      "$value": {
+        "value": 18,
+        "unit": "px"
+      },
+      "$description": "Height of count pills (app-shell §10)."
+    },
+    "key-cap": {
+      "$type": "dimension",
+      "$value": {
+        "value": 18,
+        "unit": "px"
+      },
+      "$description": "Height of key caps such as \"Ctrl K\" in the search button."
+    },
+    "target-min": {
+      "$type": "dimension",
+      "$value": {
+        "value": 24,
+        "unit": "px"
+      },
+      "$description": "Smallest hit target (WCAG 2.5.8): toast buttons, cancel buttons, checkbox and radio hit areas."
+    },
+    "rail-indicator": {
+      "$type": "dimension",
+      "$value": {
+        "value": 20,
+        "unit": "px"
+      },
+      "$description": "Height of the selection bar at the window's left edge beside the active rail button."
+    },
+    "selection-bar-inset": {
+      "$type": "dimension",
+      "$value": {
+        "value": 7,
+        "unit": "px"
+      },
+      "$description": "Top and bottom inset of the selection bar on selected rows and nav items (app-shell §10)."
+    },
+    "status-dot": {
+      "$type": "dimension",
+      "$value": {
+        "value": 6,
+        "unit": "px"
+      },
+      "$description": "The warning dot on the activity button while jobs run and problems remain."
     }
   },
   "radius": {
@@ -741,6 +847,14 @@
       },
       "$description": "Course badges at 22 px."
     },
+    "badge-mini": {
+      "$type": "dimension",
+      "$value": {
+        "value": 3,
+        "unit": "px"
+      },
+      "$description": "The colour square of a course badge below 20 px."
+    },
     "rail-button": {
       "$type": "dimension",
       "$value": {
@@ -764,6 +878,22 @@
         "unit": "px"
       },
       "$description": "Count pills, the \"Not synced\" pill and the \"Your commit goes here\" pill."
+    },
+    "key-cap": {
+      "$type": "dimension",
+      "$value": {
+        "value": 4,
+        "unit": "px"
+      },
+      "$description": "Key caps such as \"Ctrl K\" and \"Esc\"."
+    },
+    "indicator": {
+      "$type": "dimension",
+      "$value": {
+        "value": 3,
+        "unit": "px"
+      },
+      "$description": "Outer corners of selection bars: rows, the rail's edge bar, settings nav items."
     }
   },
   "border": {
@@ -774,6 +904,21 @@
         "unit": "px"
       },
       "$description": "Borders and separators."
+    },
+    "badge": {
+      "$type": "dimension",
+      "$value": {
+        "value": 1.5,
+        "unit": "px"
+      },
+      "$description": "Course badge border, in the badge tint (app-shell §10)."
+    }
+  },
+  "icon": {
+    "stroke-width": {
+      "$type": "number",
+      "$value": 1.75,
+      "$description": "Stroke of the Lucide line icons on their 24-unit grid, as drawn on the canvas."
     }
   },
   "focus-ring": {
@@ -918,6 +1063,11 @@
       "$type": "number",
       "$value": 40,
       "$description": "Toasts, above menus and dialogs."
+    },
+    "tooltip": {
+      "$type": "number",
+      "$value": 50,
+      "$description": "Tooltips, above everything they can describe, toasts included."
     }
   }
 }

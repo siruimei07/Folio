@@ -1,0 +1,16 @@
+.middle-truncate {
+  display: flex;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.middle-truncate__head {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.middle-truncate__tail {
+  flex: none;
+}

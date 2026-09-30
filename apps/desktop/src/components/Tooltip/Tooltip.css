@@ -1,0 +1,40 @@
+/*
+ * Tooltips: the panel look of menus and toasts (library-actions handoff §2.7), small text, and the
+ * shortcut in the tertiary colour. They fade like menus (§13).
+ */
+.tooltip {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-8);
+  max-width: var(--size-menu-max-width);
+  padding: var(--space-4) var(--space-8);
+  border: var(--border-width) solid var(--color-border-default);
+  border-radius: var(--radius-row);
+  background: var(--color-surface-panel);
+  box-shadow: var(--shadow-menu);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-small);
+  line-height: var(--font-line-height-body);
+  z-index: var(--z-index-tooltip);
+  pointer-events: none;
+}
+
+.tooltip[data-entering] {
+  animation: fade-in var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.tooltip[data-exiting] {
+  animation: fade-in var(--motion-duration-fast) var(--motion-easing-exit) reverse;
+}
+
+.tooltip__text {
+  overflow-wrap: anywhere;
+}
+
+.tooltip__shortcut {
+  flex: none;
+  color: var(--color-text-tertiary);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+

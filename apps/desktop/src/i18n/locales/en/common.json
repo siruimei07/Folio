@@ -1,5 +1,25 @@
 {
   "app": {
     "name": "Folio"
+  },
+  "dismiss": "Dismiss",
+  "hide": "Hide",
+  "closeDialog": "Close (Esc)",
+  "loading": "Loading…",
+  "tags": {
+    "remove": "Remove tag"
+  },
+  "changeStatus": {
+    "added": "Added",
+    "modified": "Modified",
+    "deleted": "Deleted",
+    "renamed": "Renamed"
+  },
+  "size": {
+    "bytes": "{{value}} B",
+    "kilobytes": "{{value}} KB",
+    "megabytes": "{{value}} MB",
+    "gigabytes": "{{value}} GB",
+    "terabytes": "{{value}} TB"
   }
 }

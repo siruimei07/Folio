@@ -1,0 +1,59 @@
+/* Progress (library-actions handoff §2.6). */
+.progress-bar {
+  display: block;
+  width: 100%;
+}
+
+.progress-bar__track {
+  position: relative;
+  display: block;
+  height: var(--size-progress-bar);
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--color-progress-track);
+}
+
+.progress-bar__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-progress-fill);
+  transition: width var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+/* Unknown total: a 34 % segment sweeping from left to right; still at the start under reduced motion. */
+.progress-bar__fill[data-indeterminate] {
+  width: 34%;
+  animation: progress-sweep var(--motion-duration-indeterminate) var(--motion-easing-linear) infinite;
+}
+
+@keyframes progress-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(300%);
+  }
+}
+
+.progress-ring {
+  flex: none;
+  fill: none;
+  stroke-width: 2;
+}
+
+.progress-ring__track {
+  stroke: var(--color-progress-track);
+}
+
+.progress-ring__arc {
+  stroke: var(--color-progress-fill);
+  stroke-linecap: round;
+  transition: stroke-dasharray var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.spinner {
+  flex: none;
+  color: var(--color-accent-default);
+}

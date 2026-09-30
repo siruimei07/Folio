@@ -1,0 +1,32 @@
+/* Course label (app-shell handoff §10, 26C): code first, then the name. */
+.course-label {
+  display: inline-flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: var(--space-6);
+}
+
+.course-label__code {
+  flex: none;
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.course-label__code--name {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-variant-numeric: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.course-label__name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-label);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
