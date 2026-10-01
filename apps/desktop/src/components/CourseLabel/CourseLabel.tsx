@@ -1,7 +1,7 @@
 import './CourseLabel.css';
 
 import type { Course } from '../../ipc';
-import { courseCode } from '../../lib/courses';
+import { courseCode, courseNameAfterCode } from '../../lib/courses';
 
 export interface CourseLabelProps {
   course: Pick<Course, 'code' | 'name'>;
@@ -21,7 +21,7 @@ export function CourseLabel({ course }: CourseLabelProps) {
       ) : (
         <>
           <span className="course-label__code">{code}</span>
-          <span className="course-label__name">{course.name}</span>
+          <span className="course-label__name">{courseNameAfterCode(course)}</span>
         </>
       )}
     </span>

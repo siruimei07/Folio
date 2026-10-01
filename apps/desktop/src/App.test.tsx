@@ -1,44 +1,22 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 
 import { App } from './App';
-import errors from './i18n/locales/en/errors.json';
-import { ipc } from './ipc';
-
-vi.mock('./ipc', { spy: true });
+import library from './i18n/locales/en/library.json';
+import { renderApp } from './test/render';
 
 describe('App', () => {
-  it('shows the versions and data directory reported by the shell', async () => {
-    vi.mocked(ipc.appInfo).mockResolvedValue({
-      status: 'ok',
-      data: { appVersion: '0.1.0', coreVersion: '0.1.0', dataDir: 'C:\\Folio' },
-    });
+  it('shows the Library view of the open library, with the semester switcher in the toolbar', async () => {
+    renderApp(<App />);
 
-    render(<App />);
-
-    expect(await screen.findByTestId('app-version')).toHaveTextContent('0.1.0');
-    expect(screen.getByTestId('data-dir')).toHaveTextContent('C:\\Folio');
+    expect(screen.getByRole('region', { name: library.panel.title })).toBeInTheDocument();
+    expect(await screen.findByRole('treeitem', { name: /^MAT232 Calculus of Several Variables, / })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Switch semester, current Fall 2026/ })).toBeInTheDocument();
   });
 
-  it('shows the message for a typed command error', async () => {
-    vi.mocked(ipc.appInfo).mockResolvedValue({
-      status: 'error',
-      error: { code: 'DataDirUnavailable', detail: 'no local app data' },
-    });
+  it('says that no library is open before the first run', async () => {
+    renderApp(<App />, { scenario: 'first-run' });
 
-    render(<App />);
-
-    expect(await screen.findByRole('alert')).toHaveTextContent(errors.DataDirUnavailable);
-  });
-
-  it('shows the message for a failed IPC call', async () => {
-    vi.mocked(ipc.appInfo).mockResolvedValue({
-      status: 'error',
-      error: { code: 'Transport', detail: 'IPC unavailable' },
-    });
-
-    render(<App />);
-
-    expect(await screen.findByRole('alert')).toHaveTextContent(errors.Transport);
+    expect(await screen.findByText(library.noLibrary.title)).toBeInTheDocument();
   });
 });

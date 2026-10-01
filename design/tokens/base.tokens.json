@@ -437,6 +437,14 @@
       },
       "$description": "Tag dots in rows, chips and filters."
     },
+    "tag-dot-gap": {
+      "$type": "dimension",
+      "$value": {
+        "value": 3,
+        "unit": "px"
+      },
+      "$description": "Between the tag dots of a row or tile (app-shell §5)."
+    },
     "selection-bar-width": {
       "$type": "dimension",
       "$value": {
@@ -804,6 +812,70 @@
         "unit": "px"
       },
       "$description": "The warning dot on the activity button while jobs run and problems remain."
+    },
+    "grid-tile-min": {
+      "$type": "dimension",
+      "$value": {
+        "value": 150,
+        "unit": "px"
+      },
+      "$description": "Smallest width of a tile in the grid of a course or folder (app-shell §5)."
+    },
+    "grid-tile": {
+      "$type": "dimension",
+      "$value": {
+        "value": 150,
+        "unit": "px"
+      },
+      "$description": "Height of a grid tile: padding, thumbnail area, name line and border (app-shell §5)."
+    },
+    "grid-thumbnail": {
+      "$type": "dimension",
+      "$value": {
+        "value": 104,
+        "unit": "px"
+      },
+      "$description": "Height of a grid tile's thumbnail area (app-shell §5)."
+    },
+    "icon-thumbnail": {
+      "$type": "dimension",
+      "$value": {
+        "value": 34,
+        "unit": "px"
+      },
+      "$description": "The file-type icon in a tile's thumbnail area when the file has no thumbnail."
+    },
+    "illustration-width": {
+      "$type": "dimension",
+      "$value": {
+        "value": 240,
+        "unit": "px"
+      },
+      "$description": "Width of the desk illustration of the empty preview (app-shell 9C)."
+    },
+    "illustration-height": {
+      "$type": "dimension",
+      "$value": {
+        "value": 170,
+        "unit": "px"
+      },
+      "$description": "Height of the desk illustration of the empty preview (app-shell 9C)."
+    },
+    "folder-picker": {
+      "$type": "dimension",
+      "$value": {
+        "value": 320,
+        "unit": "px"
+      },
+      "$description": "Largest height of the folder picker's tree before it scrolls (library-actions §2.9)."
+    },
+    "tree-separator": {
+      "$type": "dimension",
+      "$value": {
+        "value": 13,
+        "unit": "px"
+      },
+      "$description": "Height of the Library tree's separator row: space.6 above and below a border.width line (app-shell §5)."
     }
   },
   "radius": {
@@ -894,6 +966,14 @@
         "unit": "px"
       },
       "$description": "Outer corners of selection bars: rows, the rail's edge bar, settings nav items."
+    },
+    "row-inset": {
+      "$type": "dimension",
+      "$value": {
+        "value": 5,
+        "unit": "px"
+      },
+      "$description": "What sits 1 px inside a row: the inline name field, a drop target's outline, a tile's thumbnail area (library-actions §3, §7.1)."
     }
   },
   "border": {

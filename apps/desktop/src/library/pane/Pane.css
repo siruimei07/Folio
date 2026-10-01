@@ -1,0 +1,258 @@
+/* The third column of the Library (app-shell handoff §5): the empty preview on the dot grid, and
+   the header and files of a course, folder or quick view. */
+
+.library-pane {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  box-sizing: border-box;
+  overflow: hidden;
+  border: var(--border-width) solid var(--color-border-default);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface-panel);
+}
+
+/* The empty preview and empty states sit on the app surface with a 14 px dot grid. */
+.empty-preview,
+.pane-state {
+  background-color: var(--color-surface-app);
+  background-image: radial-gradient(var(--color-pattern-dots) var(--border-width), transparent var(--border-width));
+  background-size: var(--space-14) var(--space-14);
+}
+
+.pane-state {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* Errors sit on the sunken surface without dots (library-actions §2.5). */
+.pane-state[data-tone='danger'] {
+  background-color: var(--color-surface-sunken);
+  background-image: none;
+}
+
+.empty-preview {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-18);
+  padding: var(--space-16);
+  text-align: center;
+}
+
+.empty-preview__words {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.empty-preview__title {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-body);
+}
+
+.empty-preview__text {
+  margin: 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-small);
+}
+
+.pane-header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-8);
+  box-sizing: border-box;
+  height: var(--size-panel-header);
+  padding: 0 var(--space-8) 0 var(--space-12);
+  border-bottom: var(--border-width) solid var(--color-border-default);
+  background: var(--color-surface-panel);
+}
+
+.pane-header__title {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-8);
+  margin: 0;
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-regular);
+}
+
+.pane-header__icon {
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+.pane-header__names {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: var(--space-8);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.pane-header__path {
+  flex: none;
+  color: var(--color-text-tertiary);
+}
+
+.pane-header__name {
+  flex: none;
+  font-weight: var(--font-weight-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.pane-header__course {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  text-overflow: ellipsis;
+}
+
+.pane-header__count {
+  flex: none;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-small);
+  white-space: nowrap;
+}
+
+.pane-header__actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+/* The grid of a course or folder: tiles of at least 150 px, 12 px apart, 14 px from the edges. */
+.entry-grid,
+.entry-list {
+  flex: 1;
+}
+
+.entry-list {
+  padding: 0 var(--space-6);
+}
+
+.entry-tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  box-sizing: border-box;
+  height: 100%;
+  padding: var(--space-8);
+  border: var(--border-width) solid var(--color-border-default);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-panel);
+  cursor: default;
+  transition: background-color var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.virtual-collection__tile:hover > .entry-tile {
+  background: var(--color-surface-hover);
+}
+
+.virtual-collection__tile > .entry-tile[data-selected] {
+  border-color: var(--color-selection-indicator);
+  background: var(--color-surface-selected);
+}
+
+.entry-tile[data-busy] {
+  background: var(--color-surface-sunken);
+}
+
+.entry-tile__thumbnail {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  height: var(--size-grid-thumbnail);
+  overflow: hidden;
+  border-radius: var(--radius-row-inset);
+  background: var(--color-surface-sunken);
+}
+
+.entry-tile__image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.entry-tile__type {
+  display: flex;
+}
+
+.entry-tile__folder {
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+.entry-tile__caption {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.entry-tile__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--font-size-label);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The list of the third column: rows like the tree's, with where a file is and when it changed. */
+.entry-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  box-sizing: border-box;
+  height: 100%;
+  padding: 0 var(--space-8);
+  border-radius: var(--radius-row);
+  white-space: nowrap;
+  cursor: default;
+}
+
+.virtual-collection__row:hover > .entry-row {
+  background: var(--color-surface-hover);
+}
+
+.virtual-collection__row > .entry-row[data-selected] {
+  background: var(--color-surface-selected);
+}
+
+.entry-row__place {
+  flex: none;
+  max-width: 40%;
+  overflow: hidden;
+  color: var(--color-text-tertiary);
+  text-overflow: ellipsis;
+}
+
+.entry-row__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.entry-row__meta {
+  flex: none;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-small);
+  font-variant-numeric: tabular-nums;
+}

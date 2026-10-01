@@ -1,13 +1,4 @@
 {
-  "appInfo": {
-    "appVersion": "App version",
-    "coreVersion": "Core version",
-    "dataDir": "Data folder"
-  },
-  "placeholder": {
-    "title": "Library",
-    "text": "The Library view arrives with the next update. Until then, this is the version of Folio you're running."
-  },
   "notifications": "Notifications",
   "keys": {
     "ctrl": "Ctrl",

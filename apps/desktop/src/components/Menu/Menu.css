@@ -82,6 +82,11 @@
   color: var(--color-text-tertiary);
 }
 
+.menu-section {
+  display: flex;
+  flex-direction: column;
+}
+
 .menu-separator {
   height: var(--border-width);
   margin: var(--space-4) var(--space-6);

@@ -77,6 +77,13 @@ token: `size.title-bar-mark`, `search-button`, `count-pill`, `key-cap`, `target-
 `border.badge`; `font.letter-spacing.badge`; `icon.stroke-width` (the canvas draws Lucide icons at
 1.75, not Lucide's default 2); and `z-index.tooltip`.
 
+Round 6 (2026-10-01, lane `feat/ui-library-view`) added the Library view's component sizes:
+`size.grid-tile-min`, `grid-tile`, `grid-thumbnail` and `icon-thumbnail` (the course and folder
+grid), `tag-dot-gap`, `illustration-width` and `illustration-height` (the desk illustration), and
+`folder-picker` (library-actions §2.9), `tree-separator` (the tree's separator row, for the
+virtualiser); and `radius.row-inset` for what sits 1 px inside a row (the
+inline name field, a drop target's outline, a tile's thumbnail area).
+
 The generator refuses, naming the file and token: colour files whose paths or types differ, a path
 in both `base` and a colour file, two paths with one CSS name, path segments that are not lower-case
 kebab names, a `$type` or unit outside the tables above, an alias to a missing token, to another

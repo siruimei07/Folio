@@ -1,0 +1,36 @@
+/* The name field of an inline rename or a new folder (library-actions handoff §7.1). */
+.name-field {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+.name-field__input {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  height: var(--size-target-min);
+  margin-right: calc(-1 * var(--space-4));
+  padding: 0 var(--space-6);
+  border: var(--border-width) solid var(--color-input-border);
+  border-bottom-color: var(--color-input-border-bottom);
+  border-radius: var(--radius-row-inset);
+  outline: none;
+  background: var(--color-input-background);
+  box-shadow: 0 0 0 var(--border-width) var(--color-focus-ring);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: var(--font-size-body);
+}
+
+.name-field__input[aria-invalid='true'] {
+  border-bottom-color: var(--color-feedback-danger);
+  box-shadow: 0 0 0 var(--border-width) var(--color-feedback-danger);
+}
+
+/* A row or tile with a field paints above the rows after it, so the callout is not covered. */
+.virtual-collection__row:has(.name-field),
+.virtual-collection__tile:has(.name-field) {
+  z-index: 1;
+}

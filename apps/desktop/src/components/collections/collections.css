@@ -1,0 +1,41 @@
+/* The structure of the virtualised tree, list and grid; the view styles what a row shows. */
+
+.virtual-collection {
+  position: relative;
+  overflow: auto;
+  box-sizing: border-box;
+  min-height: 0;
+  outline: none;
+}
+
+.virtual-collection__sizer {
+  position: relative;
+  width: 100%;
+}
+
+.virtual-collection__row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  box-sizing: border-box;
+  width: 100%;
+  border-radius: var(--radius-row);
+  outline: none;
+}
+
+/* Keyboard focus: the ring 2 px inside the row or tile (app-shell §10). */
+.virtual-collection__row:focus-visible,
+.virtual-collection__tile:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: calc(-1 * var(--focus-ring-width));
+}
+
+.virtual-collection__tiles {
+  display: grid;
+}
+
+.virtual-collection__tile {
+  min-width: 0;
+  border-radius: var(--radius-control);
+  outline: none;
+}

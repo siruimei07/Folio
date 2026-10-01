@@ -523,6 +523,27 @@ Tree keys follow handoff §5: Up/Down move, Right expands or enters, Left collap
 parent, Home/End, Enter opens the preview, type-ahead by name. Each row's accessible name carries
 the full text ("MAT232 Calculus of Several Variables, 10 files"), whatever the truncation.
 
+As built (`feat/ui-library-view`, 2026-10-01): the three hooks became helpers in
+`components/collections/`: `keys.ts` (`handleCollectionKey`: arrows, Home, End, Page Up, Page
+Down, Space, Enter, Ctrl+A, type-ahead), `selection.ts` (what a key or click does: replace,
+toggle, extend, focus), `rows.ts` (one delegated listener per collection, rows found by
+`data-index`), `useTypeahead.ts` and `useVirtualRows.ts` (the virtualiser; the focused row always
+rendered; focus put back when React replaces the focused element, as when a placeholder's page
+arrives; the range reported in steps of 16 rows, so scrolling re-renders the view every few rows;
+`sizesKey` for rows of other heights that move, `itemsPerRow` so a grid reports its range again
+when its columns change). A held key repeats only moving and type-ahead (`ignoreRepeat`): Space,
+Enter, Ctrl+A and a view's own keys such as Delete act once. The selection lives in the view (`library/state.ts`,
+`library/selecting.ts`): selected entries by id, the anchor and the focused row as key and index.
+"All" is not stored as a list key with exceptions: Ctrl+A and Shift ranges load the pages they need
+first (`loadPage` on the lists of `usePagedList` and `useFolderChildren`), then select up to
+`LIMITS.batch` entries, with a message beyond. `VirtualTree` also takes `multiselectable` (the Move
+dialog's folder picker chooses one) and `collapsible` (the filtered tree shows everything open).
+Shared components added on the way: `Select`, `DeskIllustration`, `MenuSection`; `ContextMenu`
+takes a `label` (its popover is a dialog without a trigger) and closes when a menu inside it
+chooses an item, Enter in a submenu included; `Panel` takes a `countLabel`; `FileTypeIcon` has a
+thumbnail size. `app/panes.ts` holds the slot `feat/ui-preview` fills with its preview pane, and
+`HostedDialogs` (`app/navigation.ts`) tells a view which dialogs another lane has registered.
+
 Handoff §11 check:
 
 | Requirement | Covered by |
@@ -578,6 +599,24 @@ children(folder) = for i in 0 ..< total(folder):
   The filtered tree loads up to 5,000 matches (25 pages, the first rendered at once); beyond that
   it offers the flat list with path prefixes. `feat/ui-library-view` tunes the cap on the 50,000
   entry fixture.
+
+As built (`feat/ui-library-view`, 2026-10-01): `library/tree/layout.ts` (`TreeLayout`) keeps the
+quick views, each course with its expanded folders as prefix sums, and the semester's loose files
+after a separator; rows are built when first read and kept for the layout's life, so memoised
+rows do not re-render. `useTreeData` watches page 0 of the semester and of every expanded folder,
+the page that holds each expanded folder's own row, the rows on screen and 50 beyond, the focused
+row's page, and while a reveal waits every page of its folder up to the first missing one, then
+the page that holds it. `useFolderChildren` keeps a folder's list object while its pages and errors
+stay the same, so another folder's page does not lay the tree out again.
+Tree pages use the default `gcTime`, not `Infinity` removed on collapse: totals and the rows of
+expanded folders come from pages the tree always watches, so an evicted page only shows
+placeholders and nothing below it moves. Only rows of a page that failed say so; a failed first
+page of the semester is one row after the courses. The filtered tree (`library/tree/filtered.ts`)
+asks for page 0, then the pages up to the total or the cap, and shows every course and folder open
+(not collapsible); "New folder" turns the filter off, since a folder without files cannot show in
+it, and a narrow window, where the filter bar is hidden, shows the whole tree. §17 item 3: the cap
+stays at 5,000 (`FILTER_CAP`); beyond it an information banner offers the List mode, which pages
+through every match. It was not timed on the 50,000-entry fixture.
 
 ## 9. Search palette
 

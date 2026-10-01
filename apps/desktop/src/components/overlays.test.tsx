@@ -94,6 +94,7 @@ function ContextHost({ onAction }: { onAction: (key: unknown) => void }) {
       </button>
       <ContextMenu
         anchor={anchor}
+        label="ps2.pdf"
         onClose={() => {
           setAnchor(null);
         }}
@@ -107,6 +108,19 @@ function ContextHost({ onAction }: { onAction: (key: unknown) => void }) {
 }
 
 describe('ContextMenu', () => {
+  it('closes when an item is chosen, as a menu with a trigger does', async () => {
+    const onAction = vi.fn();
+    const user = userEvent.setup();
+    render(<ContextHost onAction={onAction} />);
+    fireEvent.contextMenu(screen.getByRole('button', { name: 'ps2.pdf' }), { clientX: 40, clientY: 20 });
+    await user.click(await screen.findByRole('menuitem', { name: 'Rename' }));
+    expect(onAction).toHaveBeenCalledOnce();
+    expect(onAction.mock.lastCall?.[0]).toBe('rename');
+    await waitFor(() => {
+      expect(screen.queryByRole('menu')).toBeNull();
+    });
+  });
+
   it('opens at the pointer on right-click, focuses its first item, and Esc returns focus', async () => {
     render(<ContextHost onAction={vi.fn()} />);
     const row = screen.getByRole('button', { name: 'ps2.pdf' });

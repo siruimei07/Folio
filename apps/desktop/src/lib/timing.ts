@@ -16,3 +16,12 @@ export const ACTIVITY_LINGER_MS = 10_000;
 
 /** How long a region waits for data before it shows skeleton rows (UI architecture §13). */
 export const LOADING_DELAY_MS = 150;
+
+/** Characters typed within this long find a row by its name together (UI architecture §7.2). */
+export const TYPEAHEAD_MS = 500;
+
+/**
+ * Windows' double-click time: a second click on a selected row's name renames it once this long
+ * has passed without a double-click (library-actions §7.1).
+ */
+export const DOUBLE_CLICK_MS = 500;

@@ -266,6 +266,8 @@ Four questions this ADR left open, with the options Sirui was given and his choi
    specified, with a registry through which lanes add views, dialogs and toolbar controls; the
    deviations are marked "As built" in spec §3, §6.2–§6.4, §7.1 and §13. Browser accelerator keys:
    Tauri 2.12 does not expose the setting, handed to a backend lane, spec §17 item 4.)
-7. [ ] `feat/ui-library-view`: the virtual collections and the flattened tree (spec §7.2, §8).
+7. [x] `feat/ui-library-view`: the virtual collections and the flattened tree (spec §7.2, §8).
+   (2026-10-01: built; the deviations are marked "As built" in spec §7.2 and §8.2, which also
+   settles §17 item 3.)
 8. [ ] `feat/ui-preview`: renderers, the frame protocol, Markdown images and the CSP additions with
    `/security-review` (spec §10); record the pdf.js worker and Temml results here.

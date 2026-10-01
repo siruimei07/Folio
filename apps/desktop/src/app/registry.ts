@@ -6,8 +6,9 @@
 import { LibraryBig, type LucideIcon } from 'lucide-react';
 import type { ComponentType } from 'react';
 
+import { LibraryView } from '../library/LibraryView';
+import { SemesterControl } from '../library/SemesterControl';
 import type { DialogKind, DialogParams, ViewId } from './navigation';
-import { PlaceholderLibrary } from './PlaceholderLibrary';
 
 export interface ViewDefinition {
   id: ViewId;
@@ -19,9 +20,9 @@ export interface ViewDefinition {
   component: ComponentType;
 }
 
-/** The rail views, top to bottom. `feat/ui-library-view` replaces the placeholder. */
+/** The rail views, top to bottom. */
 export const VIEWS: readonly ViewDefinition[] = [
-  { id: 'library', icon: LibraryBig, label: 'rail.library', key: '1', component: PlaceholderLibrary },
+  { id: 'library', icon: LibraryBig, label: 'rail.library', key: '1', component: LibraryView },
 ];
 
 export interface DialogComponentProps<K extends DialogKind> {
@@ -54,7 +55,7 @@ export interface ToolbarControls {
   activity?: ComponentType<ToolbarControlProps>;
 }
 
-export const TOOLBAR: ToolbarControls = {};
+export const TOOLBAR: ToolbarControls = { semester: SemesterControl };
 
 /** Everything the shell hosts, passed as one value so tests can host their own. */
 export interface ShellRegistry {

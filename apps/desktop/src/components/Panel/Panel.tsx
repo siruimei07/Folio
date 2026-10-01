@@ -9,6 +9,8 @@ export interface PanelProps {
   title: string;
   /** The count pill after the title. */
   count?: number;
+  /** What the count is, for screen readers: "52 files in Fall 2026". */
+  countLabel?: string;
   /** Controls on the right of the header: toggles, icon buttons. */
   actions?: ReactNode;
   /** Positions and sizes the panel, like `library-panel`. */
@@ -20,7 +22,7 @@ export interface PanelProps {
  * A panel of a view (app-shell handoff §2, §5): the panel surface with a 1 px border and a 44 px
  * header of title, count and controls, then its body.
  */
-export function Panel({ title, count, actions, className, children }: PanelProps) {
+export function Panel({ title, count, countLabel, actions, className, children }: PanelProps) {
   const titleId = useId();
   return (
     <section className={className === undefined ? 'panel' : `panel ${className}`} aria-labelledby={titleId}>
@@ -28,7 +30,7 @@ export function Panel({ title, count, actions, className, children }: PanelProps
         <h2 id={titleId} className="panel__title">
           {title}
         </h2>
-        {count !== undefined && <CountPill count={count} />}
+        {count !== undefined && <CountPill count={count} label={countLabel} />}
         {actions !== undefined && <div className="panel__actions">{actions}</div>}
       </header>
       <div className="panel__body">{children}</div>

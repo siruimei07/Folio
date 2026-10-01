@@ -12,6 +12,7 @@ import {
   useCreateFolder,
   useDeleteEntries,
   useEntry,
+  useFolderChildren,
   useMoveEntries,
   useRenameEntry,
 } from './entries';
@@ -37,6 +38,28 @@ function hold(entry: EntryRef) {
   });
   return held;
 }
+
+describe('useFolderChildren', () => {
+  it("keeps a folder's list while another folder's page arrives, and can load any page", async () => {
+    const eco = smallRef(ECO);
+    let folders = [{ folder: csc, pages: [0] }];
+    const { result, rerender } = renderAppHook(() => useFolderChildren(folders, BY_NAME), { now: NOW });
+    await waitFor(() => {
+      expect(result.current[0]?.total).toBeGreaterThan(0);
+    });
+    const before = result.current[0];
+
+    folders = [...folders, { folder: eco, pages: [0] }];
+    rerender();
+    await waitFor(() => {
+      expect(result.current[1]?.total).toBeGreaterThan(0);
+    });
+    expect(result.current[0]).toBe(before);
+
+    const page = await result.current[0]?.loadPage(0);
+    expect(page?.items.map((row) => row.name)).toContain('hw1.py');
+  });
+});
 
 describe('create_folder', () => {
   it('answers with the new row; the folder shows once its event arrives', async () => {

@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import AxeBuilder from '@axe-core/playwright';
 
+import libraryStrings from '../../apps/desktop/src/i18n/locales/en/library.json' with { type: 'json' };
 import shell from '../../apps/desktop/src/i18n/locales/en/shell.json' with { type: 'json' };
 import titlebar from '../../apps/desktop/src/i18n/locales/en/titlebar.json' with { type: 'json' };
 import { expect, test } from '../fixtures';
@@ -16,7 +17,7 @@ test('shows the Library on the rail and in the content region, and passes axe', 
   const rail = page.getByRole('navigation', { name: shell.rail.label });
   const library = rail.getByRole('button', { name: shell.rail.library });
   await expect(library).toHaveAttribute('aria-current', 'page');
-  await expect(page.getByRole('main').getByRole('region', { name: shell.placeholder.title })).toBeVisible();
+  await expect(page.getByRole('main').getByRole('region', { name: libraryStrings.panel.title })).toBeVisible();
   await expect(page.getByRole('banner').getByRole('button', { name: titlebar.close })).toBeVisible();
   // Until M2 the rail shows the Library only (ADR-0005, product decision 3).
   await expect(rail.getByRole('button')).toHaveCount(1);

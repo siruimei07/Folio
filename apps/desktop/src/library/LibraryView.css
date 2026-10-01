@@ -1,0 +1,22 @@
+/* The Library view (app-shell handoff §2, §5): the panel and the third column, 8 px apart. In a
+   narrow window the panel takes the width, and the third column covers it while it shows a file
+   or a quick view (§2, decision 16A). */
+
+.library-view {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  gap: var(--space-panel-gap);
+}
+
+:root[data-layout='narrow'] .library-view > .library-pane {
+  display: none;
+}
+
+:root[data-layout='narrow'] .library-view[data-covered] > .library-panel {
+  display: none;
+}
+
+:root[data-layout='narrow'] .library-view[data-covered] > .library-pane {
+  display: flex;
+}

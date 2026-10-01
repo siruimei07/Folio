@@ -49,6 +49,25 @@ export function courseCode(course: Pick<Course, 'code'>): string | null {
   return course.code === null || course.code === '' ? null : course.code;
 }
 
+/**
+ * The course's name as it shows after its code (26C): a folder named "MAT232 Calculus of Several
+ * Variables" with the code MAT232 shows "Calculus of Several Variables", not the code twice.
+ * Without a code, or when the name is only the code, the whole name.
+ */
+export function courseNameAfterCode(course: Pick<Course, 'code' | 'name'>): string {
+  const code = courseCode(course);
+  if (code === null || course.name.length <= code.length) return course.name;
+  if (course.name.slice(0, code.length).toLocaleLowerCase('en') !== code.toLocaleLowerCase('en')) return course.name;
+  const rest = course.name.slice(code.length).replace(/^[\s\-–—:_·]+/u, '');
+  return rest === '' || rest.length === course.name.length - code.length ? course.name : rest;
+}
+
+/** The course in full, for accessible names and tooltips: "MAT232 Calculus of Several Variables". */
+export function courseTitle(course: Pick<Course, 'code' | 'name'>): string {
+  const code = courseCode(course);
+  return code === null ? course.name : `${code} ${courseNameAfterCode(course)}`;
+}
+
 /** The course in paths, search locations and commit titles: its code, else its name (27B). */
 export function courseLabel(course: Pick<Course, 'code' | 'name'>): string {
   return courseCode(course) ?? course.name;

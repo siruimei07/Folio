@@ -12,6 +12,16 @@ export function nameOf(path: string): string {
   return path.slice(path.lastIndexOf('/') + 1);
 }
 
+/**
+ * `path` and the folders above it, nearest first, without its top-level folder (a semester): the
+ * folders a tree opens to show what is in `path`.
+ */
+export function openPathsTo(path: string): string[] {
+  const paths: string[] = [];
+  for (let at = path; at.includes('/'); at = parentOf(at)) paths.push(at);
+  return paths;
+}
+
 /** Whether `path` is `scope` or below it. `null` is the whole library. */
 export function isInside(path: string, scope: string | null): boolean {
   return scope === null || path === scope || path.startsWith(`${scope}/`);

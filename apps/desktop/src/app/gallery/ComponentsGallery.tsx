@@ -76,6 +76,7 @@ function ContextArea() {
       </div>
       <ContextMenu
         anchor={anchor}
+        label="File"
         onClose={() => {
           setAnchor(null);
         }}

@@ -1,0 +1,34 @@
+/* The folder picker (library-actions handoff §2.9): a semester select over a tree of at most 320 px. */
+.folder-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+.folder-picker__tree {
+  max-height: var(--size-folder-picker);
+  padding: 0 var(--space-4);
+  border: var(--border-width) solid var(--color-border-default);
+  border-radius: var(--radius-control);
+}
+
+.folder-picker .tree-row[data-disabled] {
+  color: var(--color-text-tertiary);
+}
+
+.folder-picker .tree-row[data-disabled] .course-label__code,
+.folder-picker .tree-row[data-disabled] .course-label__name {
+  color: var(--color-text-tertiary);
+}
+
+.folder-picker__here {
+  flex: none;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-small);
+}
+
+.folder-picker__empty {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-label);
+}

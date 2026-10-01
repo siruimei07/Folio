@@ -35,8 +35,8 @@ const ICONS: Readonly<Record<FileType, LucideIcon>> = {
 export interface FileTypeIconProps {
   /** The file's name; its extension decides the icon and colour. */
   name: string;
-  /** regular 16 px (rows, headers); large 22 px (state tiles). */
-  size?: 'regular' | 'large';
+  /** regular 16 px (rows, headers); large 22 px (state tiles); thumbnail 34 px (grid tiles). */
+  size?: 'regular' | 'large' | 'thumbnail';
 }
 
 /** A file's type as a line icon in the type's palette colour (app-shell handoff 14B). Decorative. */
@@ -48,7 +48,7 @@ export function FileTypeIcon({ name, size = 'regular' }: FileTypeIconProps) {
       aria-hidden
       className="file-type-icon"
       data-palette={FILE_TYPE_COLOR[type] ?? undefined}
-      size={size === 'large' ? SIZE.iconLarge : SIZE.icon}
+      size={size === 'large' ? SIZE.iconLarge : size === 'thumbnail' ? SIZE.iconThumbnail : SIZE.icon}
     />
   );
 }

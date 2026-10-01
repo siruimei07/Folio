@@ -1,0 +1,138 @@
+/* The Library tree (app-shell handoff §5): 32 px rows, 16 px indent per level with guides. */
+
+.library-tree {
+  flex: 1;
+  padding: 0 var(--space-6);
+}
+
+/* --depth (the row's level less one) and --guide (a guide's level) come from the row's style. */
+.tree-row {
+  --depth: 0;
+
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  box-sizing: border-box;
+  height: 100%;
+  padding: 0 var(--space-8) 0 calc(var(--space-8) + var(--depth) * var(--space-16));
+  border-radius: var(--radius-row);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-body);
+  white-space: nowrap;
+  cursor: default;
+  transition: background-color var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.virtual-collection__row:hover > .tree-row:not([data-kind='empty']) {
+  background: var(--color-surface-hover);
+}
+
+.virtual-collection__row > .tree-row[data-selected] {
+  background: var(--color-surface-selected);
+}
+
+/* The selection bar: 3 px at the row's left edge, 7 px inset top and bottom. */
+.tree-row__bar {
+  position: absolute;
+  top: var(--size-selection-bar-inset);
+  bottom: var(--size-selection-bar-inset);
+  left: 0;
+  width: var(--size-selection-bar-width);
+  border-radius: 0 var(--radius-indicator) var(--radius-indicator) 0;
+  background: var(--color-selection-indicator);
+}
+
+/* Indent guides through the chevron column of each level above. */
+.tree-row__guide {
+  --guide: 0;
+
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--space-16) + var(--guide) * var(--space-16));
+  width: var(--border-width);
+  background: var(--color-border-guide);
+}
+
+.tree-row__chevron {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-icon);
+  height: var(--size-icon);
+  color: var(--color-text-tertiary);
+}
+
+.tree-row__icon {
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+.tree-row__icon--danger,
+.tree-row__name--danger {
+  color: var(--color-feedback-danger);
+}
+
+.tree-row__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tree-row__name--course {
+  display: flex;
+}
+
+.tree-row__count {
+  flex: none;
+  min-width: var(--space-16);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-caption);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.tree-row__empty {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-label);
+}
+
+.tree-row__placeholder {
+  width: 60%;
+  height: var(--space-8);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-sunken);
+  box-shadow: inset 0 0 0 var(--border-width) var(--color-border-guide);
+}
+
+.tree-separator {
+  height: var(--border-width);
+  margin: var(--space-6) var(--space-8);
+  background: var(--color-border-default);
+}
+
+/* A drop or move target (library-actions §3, §7.3): tinted, with a dashed outline 1 px inside. */
+.tree-row[data-drop],
+.virtual-collection__row:hover > .tree-row[data-drop] {
+  background: var(--color-drop-row);
+}
+
+.tree-row[data-drop]::after {
+  content: '';
+  position: absolute;
+  inset: var(--border-width);
+  border: var(--focus-ring-width) dashed var(--color-drop-outline);
+  border-radius: var(--radius-row-inset);
+  pointer-events: none;
+}
+
+.tree-row__drop {
+  position: relative;
+  flex: none;
+  color: var(--color-accent-default);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-strong);
+}

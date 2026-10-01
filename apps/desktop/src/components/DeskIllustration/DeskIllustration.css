@@ -1,0 +1,31 @@
+/* The desk illustration's colours (app-shell §5, `color.illustration.*`). */
+.desk-illustration {
+  flex: none;
+}
+
+.desk-illustration__lines {
+  fill: none;
+  stroke: var(--color-illustration-line);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.desk-illustration__fill {
+  fill: var(--color-illustration-fill);
+}
+
+.desk-illustration__soft {
+  fill: var(--color-illustration-soft);
+}
+
+.desk-illustration__bar {
+  stroke: var(--color-illustration-bar);
+}
+
+.desk-illustration__accent {
+  stroke: var(--color-illustration-accent);
+}
+
+.desk-illustration__tip {
+  fill: var(--color-illustration-line);
+}

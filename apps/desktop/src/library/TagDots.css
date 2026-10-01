@@ -1,0 +1,7 @@
+/* A file's tag dots in rows and tiles (app-shell handoff §5): 7 px, 3 px apart. */
+.tag-dots {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--size-tag-dot-gap);
+}

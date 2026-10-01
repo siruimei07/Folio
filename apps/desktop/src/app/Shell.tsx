@@ -1,12 +1,12 @@
 import './Shell.css';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { TitleBar } from '../titlebar/TitleBar';
 import { DialogHost } from './DialogHost';
 import { useLayout } from './layout';
-import { openDialog, showView } from './navigation';
+import { type DialogKind, HostedDialogs, openDialog, showView } from './navigation';
 import { Rail } from './Rail';
 import { REGISTRY, type ShellRegistry } from './registry';
 import { LIBRARY_SETTINGS_KEYS, registerShortcut, SEARCH_KEYS, useShortcut, viewKeys } from './shortcuts';
@@ -29,6 +29,7 @@ export function Shell({ registry = REGISTRY, deviceName = null }: ShellProps) {
   const layout = useLayout();
   const narrow = layout === 'narrow';
   const { views, dialogs } = registry;
+  const hosted = useMemo(() => new Set(Object.keys(dialogs) as DialogKind[]), [dialogs]);
 
   // Ctrl+<key> shows a view; not inside a dialog (UI architecture §6.4).
   useEffect(() => {
@@ -62,20 +63,22 @@ export function Shell({ registry = REGISTRY, deviceName = null }: ShellProps) {
   );
 
   return (
-    <div className="shell">
-      {/* The page's one top heading, for screen readers' heading navigation; the bar shows the name. */}
-      <h1 className="visually-hidden">{t('app.name')}</h1>
-      <TitleBar variant={narrow ? 'narrow' : 'standard'}>
-        {narrow && <Toolbar registry={registry} compact />}
-      </TitleBar>
-      {!narrow && <Toolbar registry={registry} compact={false} />}
-      <div className="shell__body">
-        <Rail views={views} dialogs={dialogs} layout={layout} deviceName={deviceName} />
-        <main className="shell__content">
-          <ViewHost views={views} />
-        </main>
+    <HostedDialogs value={hosted}>
+      <div className="shell">
+        {/* The page's one top heading, for screen readers' heading navigation; the bar shows the name. */}
+        <h1 className="visually-hidden">{t('app.name')}</h1>
+        <TitleBar variant={narrow ? 'narrow' : 'standard'}>
+          {narrow && <Toolbar registry={registry} compact />}
+        </TitleBar>
+        {!narrow && <Toolbar registry={registry} compact={false} />}
+        <div className="shell__body">
+          <Rail views={views} dialogs={dialogs} layout={layout} deviceName={deviceName} />
+          <main className="shell__content">
+            <ViewHost views={views} />
+          </main>
+        </div>
+        <DialogHost dialogs={dialogs} />
       </div>
-      <DialogHost dialogs={dialogs} />
-    </div>
+    </HostedDialogs>
   );
 }

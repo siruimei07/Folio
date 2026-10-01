@@ -52,10 +52,18 @@ export interface PagedList<T> {
   retry: () => void;
 }
 
+/**
+ * A list of `usePagedList`, which can also load any page as the list caches it: a selection over
+ * rows nobody shows (UI architecture §7.2). The page rejects with an `IpcFailure`.
+ */
+export interface LoadingPagedList<T> extends PagedList<T> {
+  loadPage: (page: number) => Promise<Page<T>>;
+}
+
 export interface PagedListOptions {
   /** `false` while the list cannot be asked for, such as before a library is open. */
   enabled?: boolean;
-  /** How long pages nobody shows stay cached; the tree keeps an expanded folder's for good. */
+  /** How long pages nobody shows stay cached. */
   gcTime?: number;
 }
 
@@ -73,7 +81,8 @@ export function pagesOf(range: RowRange, margin: number, total?: number): number
   return pages;
 }
 
-function pageQuery<T>(
+/** The query of one page of a list; lists that show several lists at once build theirs with it. */
+export function pageQuery<T>(
   listKey: QueryKey,
   page: number,
   fetchPage: FetchPage<T>,
@@ -137,7 +146,7 @@ export function combinePages<T extends { id: string }>(
  * `RANGE_SETTLE_MS`, and the last one always lands. Dragging the scroll bar to row 40,000 asks
  * for the pages where the list rests, not for every page it passes (§8.1).
  */
-function useSettledRange(range: RowRange | null): RowRange | null {
+export function useSettledRange(range: RowRange | null): RowRange | null {
   const [settled, setSettled] = useState(range);
   const changedAt = useRef(0);
   const settle = useEffectEvent(() => {
@@ -164,7 +173,7 @@ export function usePagedList<T extends { id: string }>(
   fetchPage: FetchPage<T>,
   visibleRange: RowRange | null,
   options: PagedListOptions = {},
-): PagedList<T> {
+): LoadingPagedList<T> {
   const client = useQueryClient();
   const libraryId = useLibraryId();
   const enabled = libraryId !== null && options.enabled !== false;
@@ -198,7 +207,31 @@ export function usePagedList<T extends { id: string }>(
     prefetch();
   }, [listHash, aheadHash]);
 
-  return list;
+  // The list keeps its identity while its pages do, so what is built from it stays memoised.
+  const source = useRef({ key, fetchPage, enabled, gcTime: options.gcTime });
+  useEffect(() => {
+    source.current = { key, fetchPage, enabled, gcTime: options.gcTime };
+  });
+  const loadPage = useCallback(
+    (page: number) => {
+      const { key: latest, fetchPage: fetch, enabled: on, gcTime } = source.current;
+      return client.query(pageQuery(latest, page, fetch, on, gcTime));
+    },
+    [client],
+  );
+  return useMemo(
+    () => ({
+      total: list.total,
+      rowAt: list.rowAt,
+      rowKey: list.rowKey,
+      status: list.status,
+      error: list.error,
+      revision: list.revision,
+      retry: list.retry,
+      loadPage,
+    }),
+    [list, loadPage],
+  );
 }
 
 const COUNT_SORT: EntrySort = { key: 'name', descending: false };

@@ -3,9 +3,10 @@
 // Features never import each other; cross-feature actions ("reveal this file in the Library",
 // "open Library settings on Tags") go through this store.
 
+import { createContext, useContext } from 'react';
 import { create } from 'zustand';
 
-import type { EntryRef } from '../ipc';
+import type { EntryRef, ImportSource } from '../ipc';
 
 /** The rail views. Until M2 only the Library is registered (ADR-0005, product decision 3). */
 export type ViewId = 'library' | 'changes' | 'history';
@@ -19,6 +20,12 @@ export interface DialogParams {
   librarySettings: { page?: string } | undefined;
   appSettings: { page?: string } | undefined;
   problems: undefined;
+  /** Adding files from "Add files" or a drop (`feat/ui-import`), to `target` or a place it asks for. */
+  import: { source: ImportSource; target: EntryRef | null };
+  /** A semester with its courses (first-run handoff §5.1, library-actions §8). */
+  newSemester: undefined;
+  /** More courses in a semester (library-actions §8). */
+  addCourses: { semester: EntryRef };
 }
 
 export type DialogKind = keyof DialogParams;
@@ -36,6 +43,17 @@ interface NavigationState {
 const INITIAL: NavigationState = { view: 'library', dialog: null, revealTarget: null };
 
 export const useNavigation = create<NavigationState>()(() => INITIAL);
+
+/**
+ * The dialogs the shell hosts (`registry.ts`). A view offers an action that opens a dialog only
+ * while one is registered for it, as the toolbar does for search.
+ */
+export const HostedDialogs = createContext<ReadonlySet<DialogKind>>(new Set());
+
+/** Whether a dialog of `kind` can open, so the button or menu item that opens it can show. */
+export function useCanOpenDialog(kind: DialogKind): boolean {
+  return useContext(HostedDialogs).has(kind);
+}
 
 export function showView(view: ViewId): void {
   useNavigation.setState({ view });

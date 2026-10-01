@@ -63,6 +63,7 @@
   --size-badge-compact: 20px;
   --size-badge-mini: 9px;
   --size-tag-dot: 7px;
+  --size-tag-dot-gap: 3px;
   --size-selection-bar-width: 3px;
   --size-rail: 60px;
   --size-rail-compact: 48px;
@@ -109,6 +110,14 @@
   --size-rail-indicator: 20px;
   --size-selection-bar-inset: 7px;
   --size-status-dot: 6px;
+  --size-grid-tile-min: 150px;
+  --size-grid-tile: 150px;
+  --size-grid-thumbnail: 104px;
+  --size-icon-thumbnail: 34px;
+  --size-illustration-width: 240px;
+  --size-illustration-height: 170px;
+  --size-folder-picker: 320px;
+  --size-tree-separator: 13px;
   --radius-panel: 10px;
   --radius-control: 7px;
   --radius-row: 6px;
@@ -120,6 +129,7 @@
   --radius-pill: 999px;
   --radius-key-cap: 4px;
   --radius-indicator: 3px;
+  --radius-row-inset: 5px;
   --border-width: 1px;
   --border-badge: 1.5px;
   --icon-stroke-width: 1.75;

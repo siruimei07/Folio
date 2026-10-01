@@ -1,0 +1,62 @@
+/* The Library panel (app-shell handoff §5): 340 px, the tree area below the filter bar. */
+
+.library-panel {
+  flex: none;
+  width: var(--size-library-panel);
+}
+
+:root[data-layout='narrow'] .library-panel {
+  flex: 1;
+  width: auto;
+}
+
+.library-panel .banner {
+  margin: var(--space-8) var(--space-8) 0;
+}
+
+/* The tag filter bar (13A): chips that wrap, under the header. */
+.tag-filter {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: var(--space-4);
+  padding: var(--space-8) var(--space-12);
+  border-bottom: var(--border-width) solid var(--color-border-default);
+}
+
+/* Why the other chips are off once the filter holds as many tags as it can. */
+.tag-filter__note {
+  align-self: center;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-small);
+}
+
+.tag-filter__failed {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-small);
+}
+
+.tree-area {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+/* A state block in the tree area: 96 px below its top, under the quick views when they show. */
+.tree-area__overlay {
+  position: absolute;
+  inset: var(--size-state-block-offset) 0 0;
+  overflow: auto;
+  pointer-events: none;
+}
+
+.tree-area__overlay > .state-block {
+  padding-top: 0;
+  pointer-events: auto;
+}

@@ -20,6 +20,7 @@ export const SIZE = {
   badgeCompact: 20,
   badgeMini: 9,
   tagDot: 7,
+  tagDotGap: 3,
   selectionBarWidth: 3,
   rail: 60,
   railCompact: 48,
@@ -66,6 +67,14 @@ export const SIZE = {
   railIndicator: 20,
   selectionBarInset: 7,
   statusDot: 6,
+  gridTileMin: 150,
+  gridTile: 150,
+  gridThumbnail: 104,
+  iconThumbnail: 34,
+  illustrationWidth: 240,
+  illustrationHeight: 170,
+  folderPicker: 320,
+  treeSeparator: 13,
 } as const;
 
 /** The `space.*` tokens in CSS pixels, for overlay offsets and other code. */

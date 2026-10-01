@@ -1,0 +1,32 @@
+/* The chip next to the pointer while rows are dragged (library-actions handoff §7.3). */
+.drag-chip {
+  position: fixed;
+  z-index: var(--z-index-menu);
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  box-sizing: border-box;
+  max-width: var(--size-menu-max-width);
+  height: var(--size-menu-item);
+  padding: 0 var(--space-8);
+  border: var(--border-width) solid var(--color-border-default);
+  border-radius: var(--radius-row);
+  background: var(--color-surface-panel);
+  box-shadow: var(--shadow-menu);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-body);
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translate(var(--space-12), var(--space-12));
+}
+
+.drag-chip__icon {
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+.drag-chip__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

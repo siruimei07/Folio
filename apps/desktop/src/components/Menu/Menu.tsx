@@ -1,7 +1,7 @@
 import './Menu.css';
 
 import { Check, ChevronRight, type LucideIcon, Minus } from 'lucide-react';
-import { isValidElement, type ReactElement, type ReactNode, useRef } from 'react';
+import { createContext, isValidElement, type ReactElement, type ReactNode, useContext, useRef } from 'react';
 import { useContextMenu } from 'react-aria';
 import {
   Keyboard,
@@ -9,6 +9,8 @@ import {
   MenuItem as AriaMenuItem,
   type MenuItemProps as AriaMenuItemProps,
   type MenuProps as AriaMenuProps,
+  MenuSection as AriaMenuSection,
+  type MenuSectionProps as AriaMenuSectionProps,
   MenuTrigger,
   Separator,
   SubmenuTrigger,
@@ -21,9 +23,17 @@ import { Popover } from '../Popover/Popover';
 
 export type MenuProps<T extends object> = Omit<AriaMenuProps<T>, 'className' | 'style'>;
 
+/**
+ * Closes the `ContextMenu` a menu is in. Outside a `MenuTrigger`, React Aria gives each menu a
+ * trigger state of its own that closes nothing, so a chosen item (or Enter in a submenu, which
+ * React Aria chains with this) would leave the popover open.
+ */
+const CloseContextMenu = createContext<(() => void) | undefined>(undefined);
+
 /** The list of a menu (library-actions handoff §2.7). Put it inside `MenuButton` or `ContextMenu`. */
 export function Menu<T extends object>(props: MenuProps<T>) {
-  return <AriaMenu {...props} className="menu" />;
+  const close = useContext(CloseContextMenu);
+  return <AriaMenu onClose={close} {...props} className="menu" />;
 }
 
 export interface MenuItemProps extends Omit<AriaMenuItemProps, 'className' | 'style' | 'children'> {
@@ -79,6 +89,11 @@ export function MenuItem({ icon, children, shortcut, note, destructive, mixed, .
 /** Lucide icons are forwardRef objects, not functions, so React tells them from elements. */
 function MenuIcon({ icon: Icon }: { icon: LucideIcon | ReactElement }) {
   return isValidElement(Icon) ? Icon : <Icon size={SIZE.icon} />;
+}
+
+/** A group of items with a selection of its own, such as the checkable tags of a Tags submenu. */
+export function MenuSection<T extends object>(props: Omit<AriaMenuSectionProps<T>, 'className' | 'style'>) {
+  return <AriaMenuSection {...props} className="menu-section" />;
 }
 
 export function MenuSeparator() {
@@ -149,6 +164,11 @@ export interface ContextMenuProps {
   /** Where it is open, or `null` when closed. */
   anchor: MenuAnchor | null;
   onClose: () => void;
+  /**
+   * Names the popover, which React Aria makes a dialog when no trigger button opened it; the
+   * menu's own label, such as "Actions for ps2.pdf".
+   */
+  label: string;
   /** The `Menu`. Give it `aria-label`. */
   children: ReactNode;
 }
@@ -156,13 +176,13 @@ export interface ContextMenuProps {
 /**
  * A menu at a point (library-actions handoff §2.7): its top-left corner 4 px below and right of
  * the anchor, flipped to stay 8 px inside the window. React Aria has no context-menu component,
- * so a controlled popover anchors to an invisible element at the point. Closing returns focus to
- * where it was.
+ * so a controlled popover anchors to an invisible element at the point. Its menus close it when
+ * an item is chosen, as in any menu. Closing returns focus to where it was.
  */
-export function ContextMenu({ anchor, onClose, children }: ContextMenuProps) {
+export function ContextMenu({ anchor, onClose, label, children }: ContextMenuProps) {
   const anchorRef = useRef<HTMLSpanElement>(null);
   return (
-    <>
+    <CloseContextMenu value={onClose}>
       <span
         ref={anchorRef}
         className="context-menu-anchor"
@@ -173,6 +193,7 @@ export function ContextMenu({ anchor, onClose, children }: ContextMenuProps) {
         className="menu-popover"
         triggerRef={anchorRef}
         isOpen={anchor !== null}
+        aria-label={label}
         onOpenChange={(isOpen) => {
           if (!isOpen) onClose();
         }}
@@ -181,6 +202,6 @@ export function ContextMenu({ anchor, onClose, children }: ContextMenuProps) {
       >
         {children}
       </Popover>
-    </>
+    </CloseContextMenu>
   );
 }

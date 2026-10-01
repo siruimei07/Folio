@@ -2,7 +2,7 @@
 // each JobChanged replaces its job there. JobChanged carries the whole job, so nothing refetches.
 import { type QueryClient, useQuery } from '@tanstack/react-query';
 
-import { ipc, type Job } from '../ipc';
+import { ipc, type Job, type JobKind } from '../ipc';
 import { isActiveJob } from '../lib/jobs';
 import { unwrap } from './errors';
 import { keys, libraryQuery } from './keys';
@@ -78,6 +78,15 @@ function jobsQuery(libraryId: string | null) {
 /** The open library's jobs: active ones first, then the last 20 finished. */
 export function useJobs() {
   return useQuery(jobsQuery(useLibraryId()));
+}
+
+/** Whether a job of `kind` is queued or running; its progress re-renders nothing. */
+export function useJobActive(kind: JobKind): boolean {
+  const { data } = useQuery({
+    ...jobsQuery(useLibraryId()),
+    select: (jobs) => jobs.some((job) => job.kind === kind && isActiveJob(job)),
+  });
+  return data ?? false;
 }
 
 /** One job, while the list holds it. */

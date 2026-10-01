@@ -1,0 +1,99 @@
+/* Select (app-shell handoff §9; library-actions §2.9): label, then a 32 px field-like button. */
+.select {
+  display: flex;
+  align-items: center;
+  gap: var(--space-10);
+}
+
+.select__label {
+  flex: none;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-label);
+}
+
+.select__button {
+  display: flex;
+  flex: 1;
+  min-width: var(--size-menu-min-width);
+  align-items: center;
+  gap: var(--space-8);
+  box-sizing: border-box;
+  height: var(--size-select);
+  padding: 0 var(--space-8) 0 var(--space-10);
+  border: var(--border-width) solid var(--color-input-border);
+  border-bottom-color: var(--color-input-border-bottom);
+  border-radius: var(--radius-control);
+  background: var(--color-input-background);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: var(--font-size-body);
+  text-align: left;
+  cursor: default;
+  outline: none;
+}
+
+.select__button[data-focus-visible] {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.select__button[data-disabled] {
+  background: var(--color-input-background-readonly);
+  color: var(--color-text-tertiary);
+}
+
+.select__value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.select__chevron {
+  flex: none;
+  color: var(--color-text-tertiary);
+}
+
+/* React Aria sets --trigger-width on the popover: as wide as the button at least. */
+.select-popover {
+  --trigger-width: auto;
+
+  min-width: var(--trigger-width);
+}
+
+.select__list {
+  display: flex;
+  flex-direction: column;
+  max-height: var(--size-folder-picker);
+  padding: var(--space-4);
+  overflow: auto;
+  outline: none;
+}
+
+.select__option {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: var(--size-menu-item);
+  padding: 0 var(--space-8);
+  border-radius: var(--radius-row);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-body);
+  cursor: default;
+  outline: none;
+}
+
+.select__option[data-hovered],
+.select__option[data-focused] {
+  background: var(--color-surface-hover);
+}
+
+.select__option[data-focus-visible] {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: calc(-1 * var(--focus-ring-width));
+}
+
+.select__option[data-selected] {
+  font-weight: var(--font-weight-strong);
+}

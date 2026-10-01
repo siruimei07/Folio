@@ -1,0 +1,44 @@
+/* Text and lists in the Library's dialogs (library-actions handoff §2.8, §5, §7.4). */
+.dialog-text {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-label);
+}
+
+.dialog-text--secondary {
+  color: var(--color-text-secondary);
+}
+
+/* The result dialog: a row per failed item, the place above the reason. */
+.failure-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  border: var(--border-width) solid var(--color-border-default);
+  border-radius: var(--radius-control);
+  list-style: none;
+}
+
+.failure-list__item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-10) var(--space-12);
+  border-bottom: var(--border-width) solid var(--color-border-guide);
+}
+
+.failure-list__item:last-child {
+  border-bottom: 0;
+}
+
+.failure-list__place {
+  min-width: 0;
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-strong);
+}
+
+.failure-list__reason {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-small);
+}

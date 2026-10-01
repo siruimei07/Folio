@@ -65,8 +65,13 @@ export const FILE_TYPE_COLOR: Readonly<Record<FileType, PaletteColor | null>> = 
 
 /** The extension after the last dot, lower case; `''` for none. A leading dot is no extension. */
 export function extensionOf(name: string): string {
+  return writtenExtensionOf(name).toLowerCase();
+}
+
+/** The extension as written, after the last dot ("PDF" of "Report.PDF"); `''` for none. */
+export function writtenExtensionOf(name: string): string {
   const dot = name.lastIndexOf('.');
-  return dot > 0 ? name.slice(dot + 1).toLowerCase() : '';
+  return dot > 0 ? name.slice(dot + 1) : '';
 }
 
 /** The type of a file by its name. Names without an extension, like `Makefile`, match whole. */

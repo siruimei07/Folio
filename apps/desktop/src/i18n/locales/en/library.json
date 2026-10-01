@@ -1,1 +1,278 @@
-{}
+{
+  "panel": {
+    "title": "Library",
+    "count_one": "{{count, number}} file in {{semester}}",
+    "count_other": "{{count, number}} files in {{semester}}",
+    "mode": "Show the library as",
+    "tree": "Tree",
+    "list": "List",
+    "addFiles": "Add files"
+  },
+  "noLibrary": {
+    "failed": "Couldn't check which library is open",
+    "title": "No library is open",
+    "text": "Open or create a library to see your courses and files here."
+  },
+  "tree": {
+    "label": "Courses and files in {{semester}}",
+    "quick": {
+      "recent": "Recently added",
+      "untagged": "Untagged"
+    },
+    "quickCount_one": "{{name}}, {{count, number}} file",
+    "quickCount_other": "{{name}}, {{count, number}} files",
+    "course_one": "{{label}}, {{count, number}} file",
+    "course_other": "{{label}}, {{count, number}} files",
+    "tags": "Tags: {{names}}",
+    "withTags": "{{name}}, tags {{names}}",
+    "unknownTag": "Unknown tag",
+    "empty": "Empty",
+    "loading": "Loading…",
+    "failed": "Couldn't load these files. Press Enter to try again.",
+    "addHere": "Add here",
+    "moveHere": "Move here",
+    "newFolder": "Name of the new folder"
+  },
+  "filter": {
+    "label": "Filter by tag",
+    "all": "All",
+    "full": "A filter can have up to {{count, number}} tags.",
+    "capped": "Showing the first {{count, number}} matching files.",
+    "showList": "Show all in the list"
+  },
+  "list": {
+    "label": "Files in {{semester}}",
+    "labelFiltered": "Files in {{semester}} with the selected tags"
+  },
+  "states": {
+    "noSemesters": {
+      "title": "No semesters yet",
+      "text": "Add a semester to hold your courses. Folio makes a folder for it in your library.",
+      "action": "New semester"
+    },
+    "noCourses": {
+      "title": "No courses in {{semester}}",
+      "text": "Add the courses you're taking. Folio makes a folder for each one inside {{semester}}.",
+      "action": "Add courses",
+      "hint": "Or switch semesters in the menu above."
+    },
+    "noMatch": {
+      "title": "No files match",
+      "textOne": "No file in {{semester}} has the tag {{tag}}.",
+      "textMany": "No file in {{semester}} has {{tags}}. A filter with several tags shows files that have all of them.",
+      "action": "Clear filters"
+    },
+    "noFiles": {
+      "title": "No files in {{semester}} yet",
+      "text": "Files you add to its courses show up here."
+    },
+    "reading": {
+      "title": "Reading your library…",
+      "text": "Courses show up here as Folio finds them."
+    },
+    "loadCourses": "Couldn't load your courses",
+    "loadFiles": "Couldn't load the files in {{semester}}",
+    "loadFolder": "Couldn't load {{name}}",
+    "loadTags": "Couldn't load your tags.",
+    "tryAgain": "Try again"
+  },
+  "banners": {
+    "readOnly": {
+      "title": "Read-only for now.",
+      "text": "A newer version of Folio changed this library's settings. You can browse and search; update Folio to change tags and courses."
+    },
+    "rebuild": {
+      "title": "Rebuilding the search index.",
+      "text": "Some files may be missing from search until it finishes. Changes are paused."
+    },
+    "recovered": {
+      "title": "Folio rebuilt its index for this library.",
+      "text": "Your files and tags are safe. Search may miss some files until the scan finishes."
+    }
+  },
+  "pane": {
+    "label": "Preview",
+    "back": "Back",
+    "empty": {
+      "title": "Select a file to preview",
+      "text": "Or drop files here to add them to the current course"
+    },
+    "start": {
+      "title": "Add courses to get started",
+      "text": "Then drop files here to add them to a course."
+    },
+    "files_one": "· {{count, number}} file",
+    "files_other": "· {{count, number}} files",
+    "grid": "Files in {{name}}",
+    "view": "Show files as",
+    "asGrid": "Grid",
+    "asList": "List",
+    "sort": "Sort by {{key}}",
+    "sortMenu": "Sort",
+    "sortKey": {
+      "name": "Name",
+      "modified": "Date modified",
+      "size": "Size",
+      "type": "Type",
+      "added": "Date added"
+    },
+    "ascending": "Ascending",
+    "descending": "Descending",
+    "emptyCourse": {
+      "title": "{{name}} has no files yet",
+      "text": "Drop files here to add them, or choose Add files. They're copied into {{name}}; the originals stay where they are.",
+      "action": "Add files"
+    },
+    "emptyFolder": {
+      "title": "{{name}} is empty",
+      "text": "Drop files here to add them, or choose Add files. They're copied into {{name}}; the originals stay where they are."
+    },
+    "recentEmpty": {
+      "title": "Nothing added in the last 7 days",
+      "text": "Files you add or save into the library show up here for a week."
+    },
+    "untaggedEmpty": {
+      "title": "Every file has a tag",
+      "text": "Files without tags show up here."
+    }
+  },
+  "menu": {
+    "label": "Actions for {{name}}",
+    "labelSeveral": "Actions for {{count, number}} items",
+    "labelBackground": "Library actions",
+    "open": "Open with default app",
+    "reveal": "Show in File Explorer",
+    "openFolder": "Open in File Explorer",
+    "tags": "Tags",
+    "rename": "Rename",
+    "moveTo": "Move to…",
+    "moveSeveral": "Move {{count, number}} items to…",
+    "copyPath": "Copy path",
+    "copyPaths": "Copy paths",
+    "delete": "Delete",
+    "deleteSeveral": "Delete {{count, number}} items",
+    "deleteCourse": "Delete course…",
+    "addFiles": "Add files…",
+    "addFilesFailed": "Couldn't open the file picker",
+    "newFolder": "New folder",
+    "courseSettings": "Course settings…",
+    "newCourse": "New course…",
+    "editTags": "Edit tags…",
+    "fromFolder": "From folder",
+    "readOnlyTags": "Tags can't change until you update Folio"
+  },
+  "semester": {
+    "menu": "Semesters",
+    "archived": "Archived semesters",
+    "new": "New semester…",
+    "delete": "Delete {{name}}…",
+    "none": "No semester"
+  },
+  "rename": {
+    "label": "New name for {{name}}",
+    "errors": {
+      "NameInvalidCharacter": "A name can't contain \\ / : * ? \" < > |",
+      "NameTrailingDotOrSpace": "A name can't end with a dot or a space.",
+      "NameReserved": "Windows reserves this name, like CON or NUL. Choose another.",
+      "NameTooLong": "This name is too long. Use 255 characters or fewer.",
+      "PathTooLong": "The full path would be too long for Windows. Use a shorter name.",
+      "NameEmpty": "Enter a name.",
+      "AlreadyExists": "There's already an item called “{{name}}” in {{folder}}.",
+      "InUse": "Another app is using this file. Close it there, then try again.",
+      "ReadOnly": "A newer version of Folio made this library's settings read-only, and this item's tags would have to move. Update Folio to rename it.",
+      "AccessDenied": "Windows didn't allow renaming it.",
+      "NotFound": "This item isn't here anymore."
+    },
+    "failed": "Couldn't rename {{name}}",
+    "newFolder": "New folder",
+    "newFolderNumbered": "New folder ({{number}})",
+    "extension": {
+      "title": "Change the extension to .{{extension}}?",
+      "titleRemove": "Remove the extension .{{previous}}?",
+      "text": "{{name}} might open in a different app, or not at all.",
+      "keep": "Keep .{{previous}}",
+      "change": "Change"
+    }
+  },
+  "move": {
+    "title": "Move {{name}}",
+    "titleSeveral": "Move {{count, number}} items",
+    "semester": "Semester",
+    "places": "Folders in {{semester}}",
+    "alreadyHere": "Already here",
+    "confirm": "Move here",
+    "cancel": "Cancel",
+    "noCourses": "{{semester}} has no courses yet.",
+    "done": "Moved {{name}} to {{place}}",
+    "doneSeveral": "Moved {{count, number}} items to {{place}}",
+    "partial": "Moved {{done, number}} of {{total, number}} items",
+    "failedOne": "Couldn't move {{name}}",
+    "failedSeveral": "Couldn't move {{count, number}} items",
+    "invalid": "A folder can't go inside itself or one of its folders.",
+    "dragSeveral": "{{count, number}} items"
+  },
+  "delete": {
+    "done": "Moved {{name}} to the Recycle Bin",
+    "doneSeveral": "Moved {{count, number}} items to the Recycle Bin",
+    "partial": "Deleted {{done, number}} of {{total, number}} items",
+    "failedOne": "Couldn't delete {{name}}",
+    "failedSeveral": "Couldn't delete {{count, number}} items",
+    "course": {
+      "title": "Delete {{name}}?",
+      "text_one": "The course folder “{{folder}}” and its {{count, number}} file go to the Recycle Bin. You can restore them from there.",
+      "text_other": "The course folder “{{folder}}” and its {{count, number}} files go to the Recycle Bin. You can restore them from there.",
+      "kept": "Its code, colour and tags stay in Folio, so they come back if you restore the folder.",
+      "confirm": "Delete course"
+    },
+    "semester": {
+      "title": "Delete {{name}}?",
+      "text_one": "The semester folder and its {{courses}} with {{count, number}} file go to the Recycle Bin. You can restore them from there.",
+      "text_other": "The semester folder and its {{courses}} with {{count, number}} files go to the Recycle Bin. You can restore them from there.",
+      "courses_one": "{{count, number}} course",
+      "courses_other": "{{count, number}} courses",
+      "kept": "Course codes, colours and tags stay in Folio, so they come back if you restore the folder.",
+      "confirm": "Delete semester"
+    },
+    "items": {
+      "title": "Delete {{count, number}} items?",
+      "text": "They go to the Recycle Bin, course folders with everything in them. You can restore them from there.",
+      "kept": "Course codes, colours and tags stay in Folio, so they come back if you restore the folders.",
+      "confirm": "Delete"
+    },
+    "cancel": "Cancel",
+    "reasons": {
+      "InUse": "Another app is using it or something in it.",
+      "NotFound": "It was already gone.",
+      "NotRecyclable": "Folio couldn't move it to the Recycle Bin. The drive may not have one, or the path is too long for it. Folio never deletes files for good."
+    }
+  },
+  "tags": {
+    "failedOne": "Couldn't change the tags of {{name}}",
+    "partial": "Changed the tags of {{done, number}} of {{total, number}} items"
+  },
+  "open": {
+    "editor": "Opened {{name}} in an editor",
+    "editorText": "Folio doesn't run programs or scripts, so it opened this one for editing.",
+    "blocked": "Folio doesn't open programs",
+    "blockedText": "To keep you safe, it won't run {{name}}. Show it in File Explorer if you want to open it yourself.",
+    "failed": "Couldn't open {{name}}",
+    "revealFailed": "Couldn't show {{name}} in File Explorer"
+  },
+  "copy": {
+    "one": "Copied the path",
+    "several": "Copied {{count, number}} paths",
+    "failed": "Couldn't copy the path"
+  },
+  "results": {
+    "title_one": "{{count, number}} item wasn't changed",
+    "title_other": "{{count, number}} items weren't changed",
+    "details": "Details",
+    "copy": "Copy details",
+    "close": "Close",
+    "list": "Items that failed"
+  },
+  "selection": {
+    "tooMany": "Folio can change up to {{count, number}} items at once. Select fewer and try again.",
+    "failed": "Couldn't select all of them"
+  }
+}
