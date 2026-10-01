@@ -817,6 +817,9 @@ type LogUiError = {
 - At most 30 reports a minute are written. The shell drops the rest and writes how many it
   dropped with the next record it keeps; a dropped report is not an error, because the UI can do
   nothing about it.
+- One UTC date's file holds at most 8 MiB, whoever writes to it (failed file requests come from
+  the page too). The record that reaches the budget is followed by a note, and later records that
+  date are dropped; a UI report dropped this way counts as dropped above.
 - When the log cannot be written, the command fails with the file-system code. The UI then writes
   to the console only and never shows an error about logging.
 
@@ -836,7 +839,7 @@ Every implementation lane checks these; `/security-review` checks them again.
    action; disk operations follow the catalog check without yielding to other writers.
 4. **Bounded work.** Page sizes, search windows, batch sizes, filter sizes, query lengths, path
    lists and log reports (§4.1) are checked before any query or write runs. Events carry at most
-   `eventEntries` changes. The log takes at most 30 reports a minute (§16.4).
+   `eventEntries` changes. The log takes at most 30 reports a minute and 8 MiB a day (§16.4).
 5. **Nothing runs.** `open_entry` follows §11.1. Import copies files and never opens them.
 6. **Scheme headers.** Every `folio-file` response follows §11.2, errors included. A failure
    sends its code only, never its detail.

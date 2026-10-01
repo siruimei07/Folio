@@ -23,6 +23,7 @@ specta = { workspace = true }
 tauri = { workspace = true }
 tauri-specta = { workspace = true }
 thiserror = { workspace = true }
+time = { workspace = true, features = ["formatting", "parsing", "macros"] }
 unicode-normalization = { workspace = true }
 # Native shell integration: the snap overlay, folder picker and registered cloud sync roots.
 # `IRawElementProviderSimple` needs the Com, Ole and Variant features.

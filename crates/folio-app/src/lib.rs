@@ -78,6 +78,7 @@ pub fn run() {
                     .map_err(|error| error.to_string())
             });
             app.manage(paths::DataDir::new(data_dir.clone()));
+            app.manage(Arc::new(diagnostics::Logger::new(data_dir.clone())));
             // Tests redirect caches with the same existing data override, so no e2e run
             // reads or evicts Sirui's real thumbnail cache.
             let cache = if std::env::var_os(paths::DATA_DIR_ENV).is_some() {

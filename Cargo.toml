@@ -22,6 +22,8 @@ tempfile = "3.27.0"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
 thiserror = "2.0.21"
+# UTC timestamps and daily log dates; Tauri's own dependencies already use it.
+time = "0.3.55"
 # Ids for libraries and tags (ADR-0002 §3).
 getrandom = "0.4.3"
 # Content hashes (ADR-0003 §2).

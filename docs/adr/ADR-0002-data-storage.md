@@ -72,7 +72,7 @@ reconciles itself from the files, so a crash between the two steps loses nothing
 | Thumbnails | `%LOCALAPPDATA%\<app-id>\cache\` | Image files keyed by content hash; LRU cap 2 GB by default | No | Yes |
 | Settings (per machine) | `%LOCALAPPDATA%\<app-id>\settings.json` | JSON | No | No (small; re-enter) |
 | DeepSeek API key | Windows Credential Manager | — | No | Re-enter |
-| Logs | `%LOCALAPPDATA%\<app-id>\logs\` | Text; daily rotation; 7 days kept | No | n/a |
+| Logs | `%LOCALAPPDATA%\<app-id>\logs\` | Text; daily rotation; 7 days kept; at most 8 MiB a day | No | n/a |
 
 A semester or course name that starts with `_` gets one more `_` inside `.folio/meta/`
 (`_misc` → `__misc.json`), so it never collides with `_group.json` or `_root.json`.
