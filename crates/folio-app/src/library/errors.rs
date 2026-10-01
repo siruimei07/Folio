@@ -29,7 +29,7 @@ pub(super) fn meta(error: MetaError) -> AppError {
     }
 }
 
-pub(super) fn catalog(error: CatalogError) -> AppError {
+pub(crate) fn catalog(error: CatalogError) -> AppError {
     match error {
         CatalogError::Io { source, .. } => io(source),
         CatalogError::NoEntry(_) | CatalogError::MissingParent(_) => {

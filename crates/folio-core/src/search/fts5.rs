@@ -63,7 +63,7 @@ pub fn register_tokenizer(conn: &Connection) -> rusqlite::Result<()> {
 }
 
 /// The FTS5 API of `conn`, obtained with `SELECT fts5(?1)` and valid until `conn` closes.
-fn fts5_api(conn: &Connection) -> rusqlite::Result<*mut ffi::fts5_api> {
+pub(crate) fn fts5_api(conn: &Connection) -> rusqlite::Result<*mut ffi::fts5_api> {
     let mut api: *mut ffi::fts5_api = null_mut();
     // SAFETY: SQLite writes the API pointer into `api` during this synchronous query; `api`
     // outlives the statement, the pointer type is static, and no destructor owns the stack value.

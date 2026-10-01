@@ -27,8 +27,11 @@ use crate::ipc::library::{
 use crate::ipc::problems::{ListProblems, ProblemItem};
 use crate::ipc::types::{LIMITS, Page};
 use errors::Failure;
-// ipc-m1 §16.2: one mapping of I/O errors for the whole shell.
+// ipc-m1 §16.2: one mapping of catalog and I/O errors for the whole shell.
+pub(crate) use errors::catalog as catalog_error;
 pub(crate) use errors::io as io_error;
+// One check of the page's entry references (ids, paths, `.folio/`) for every command.
+pub(crate) use operations::reference as entry_reference;
 use worker::Session;
 
 pub(crate) enum Event {
@@ -370,6 +373,14 @@ impl LibraryState {
             return Err(AppError::NoLibrary("the library is unavailable".to_owned()));
         }
         Ok(session)
+    }
+
+    /// A catalog read with the same switch/shutdown boundary as the list reads (`with_reads`).
+    pub(crate) fn read_catalog<T>(
+        &self,
+        query: impl FnOnce(&folio_core::catalog::Catalog) -> Result<T, AppError>,
+    ) -> Result<T, AppError> {
+        self.with_reads(|session| query(session.catalog()))
     }
 
     pub fn list_jobs(&self) -> Result<Vec<Job>, AppError> {

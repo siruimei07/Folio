@@ -248,8 +248,8 @@ impl LibraryState {
 }
 
 /// Checks an entry reference from the page: a positive decimal id and a library path outside
-/// `.folio/`. File actions check theirs here too.
-pub(super) fn reference(input: &EntryRef) -> Result<core::EntryRef, AppError> {
+/// `.folio/`. File actions and browse commands check theirs here too.
+pub(crate) fn reference(input: &EntryRef) -> Result<core::EntryRef, AppError> {
     let id = input
         .id
         .parse::<i64>()

@@ -6,11 +6,16 @@
 //! cargo test -p folio-core --release --test search_benchmark -- --ignored --nocapture
 //! ```
 
+use std::collections::BTreeSet;
 use std::fmt::Write as _;
 use std::ops::ControlFlow;
 use std::path::Path;
 use std::time::{Duration, Instant};
 
+use folio_core::catalog::{self, Catalog, EntryChanges, EntryRecord, queries as browse};
+use folio_core::meta::{DisplayName, EntryKind, FileClass, LibraryId, PresetTag, TagDefinitions};
+use folio_core::paths::RelPath;
+use folio_core::search::SearchQuery;
 use folio_core::search::{Mode, TOKENIZER_NAME, phrase, register_tokenizer, tokenize};
 use rusqlite::{Connection, OpenFlags, TransactionBehavior, params};
 
@@ -567,4 +572,388 @@ fn index_size_and_query_latency() {
             mb(used_bytes(&conn)),
         );
     }
+}
+
+/// Exercise the production queries on the same corpus and timing harness as the FTS benchmark.
+/// Includes row hydration, effective tags, a pinned snapshot, ranking and visible highlights.
+#[test]
+#[ignore = "benchmark; run it in release mode with --ignored --nocapture"]
+fn browse_and_search_pages() {
+    let mut rng = Rng(0x466F_6C69_6F21);
+    let vocabulary = Vocabulary::new(&mut rng);
+    let entries = library(&mut rng, &vocabulary);
+    let mut folders = BTreeSet::new();
+    for entry in &entries {
+        let path = RelPath::parse(&entry.path).unwrap();
+        folders.extend(path.parent().unwrap().ancestors());
+    }
+    let mut folders: Vec<_> = folders.into_iter().collect();
+    folders.sort_by_key(RelPath::depth);
+    let folder_count = folders.len();
+    let now = 1_700_000_000;
+    let record = |path, kind, index: usize| EntryRecord {
+        path,
+        kind,
+        class: FileClass::Other,
+        size: index as u64 * 1_024,
+        mtime_ns: Some((now - (index as i64 % 90) * 86_400) * 1_000_000_000),
+        file_id: None,
+        hash: None,
+    };
+    let dir = tempfile::tempdir().unwrap();
+    // Reuse only an explicitly named benchmark fixture when iterating on measured queries.
+    let fixture = std::env::var_os("FOLIO_BROWSE_BENCHMARK_CATALOG")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| dir.path().join("browse-benchmark.sqlite"));
+    assert_eq!(fixture.file_name().unwrap(), "browse-benchmark.sqlite");
+    let fresh = !fixture.exists();
+    let catalog = Catalog::open(
+        &fixture,
+        &LibraryId::parse("0123456789abcdef0123456789abcdef").unwrap(),
+    )
+    .unwrap()
+    .catalog;
+    let start = Instant::now();
+    let definitions = TagDefinitions::with_presets(|tag| {
+        DisplayName::parse(match tag {
+            PresetTag::Notes => TAGS[0],
+            PresetTag::Slides => TAGS[1],
+            PresetTag::Homework => TAGS[2],
+            PresetTag::Exam => TAGS[3],
+            PresetTag::Reference => TAGS[4],
+        })
+        .unwrap()
+    });
+    let mut ordered_tags: Vec<_> = definitions.tags.iter().collect();
+    ordered_tags.sort_by(|(a, a_def), (b, b_def)| a_def.order.cmp(&b_def.order).then(a.cmp(b)));
+    if fresh {
+        catalog
+            .write(|tx| {
+                catalog::replace_tag_definitions(tx, &definitions)?;
+                let ids = catalog::apply_changes(
+                    tx,
+                    &EntryChanges {
+                        added: folders
+                            .iter()
+                            .cloned()
+                            .map(|path| (record(path, EntryKind::Folder, 0), now * 1_000_000_000))
+                            .collect(),
+                        ..EntryChanges::default()
+                    },
+                )?;
+                for (path, id) in folders.iter().zip(ids) {
+                    if path.name() == "笔记" {
+                        catalog::set_entry_tags(tx, id, &BTreeSet::from([PresetTag::Notes.id()]))?;
+                    }
+                }
+                Ok(())
+            })
+            .unwrap();
+        for (batch_index, batch) in entries[..ENTRIES - folder_count].chunks(BATCH).enumerate() {
+            catalog
+            .write(|tx| {
+                let added = batch
+                    .iter()
+                    .enumerate()
+                    .map(|(offset, entry)| {
+                        let index = batch_index * BATCH + offset;
+                        // Unique names keep the corpus valid under the catalog's path constraint.
+                        let name = format!("{index}-{}", entry.name);
+                        let parent = if index < 400 {
+                            // The semester also contains loose files, and has >200 direct children.
+                            SEMESTERS[5]
+                        } else {
+                            entry.path.rsplit_once('/').unwrap().0
+                        };
+                        (
+                            record(
+                                RelPath::parse(&format!("{parent}/{name}")).unwrap(),
+                                EntryKind::File,
+                                index,
+                            ),
+                            (now - (index as i64 % 90) * 86_400) * 1_000_000_000,
+                        )
+                    })
+                    .collect();
+                let changes = EntryChanges {
+                    added,
+                    ..EntryChanges::default()
+                };
+                let ids = catalog::apply_changes(tx, &changes)?;
+                // Finalize this trusted fixture with one FTS insert per row. Updating tags and
+                // body separately flushes/re-indexes each row and dominates setup time.
+                tx.execute(
+                    "DELETE FROM search WHERE rowid IN (SELECT value FROM json_each(?1))",
+                    [serde_json::to_string(&ids.iter().map(|id| id.0).collect::<Vec<_>>())
+                        .unwrap()],
+                )?;
+                let mut assignment = tx.prepare_cached(
+                    "INSERT INTO entry_tags (entry_id, tag_id) VALUES (?1, ?2)",
+                )?;
+                for (entry, id) in batch.iter().zip(&ids) {
+                    let tags = [
+                        PresetTag::Notes,
+                        PresetTag::Slides,
+                        PresetTag::Homework,
+                        PresetTag::Exam,
+                        PresetTag::Reference,
+                    ]
+                    .into_iter()
+                    .zip(TAGS)
+                    .filter(|(_, name)| entry.tags.split_whitespace().any(|tag| tag == *name))
+                    .map(|(tag, _)| tag.id())
+                    .collect::<BTreeSet<_>>();
+                    for tag in tags {
+                        assignment.execute(params![id.0, tag])?;
+                    }
+                }
+                let mut search_row = tx.prepare_cached(
+                    "INSERT INTO search (rowid, name, path, tags, body) VALUES (?1, ?2, ?3, ?4, ?5)",
+                )?;
+                for ((entry, id), (record, _)) in batch.iter().zip(ids).zip(&changes.added) {
+                    let tags = ordered_tags.iter()
+                        .filter(|(_, definition)| entry.tags.split_whitespace().any(|tag| tag == definition.name.as_str()))
+                        .map(|(_, definition)| definition.name.as_str())
+                        .collect::<Vec<_>>().join(" ");
+                    let parent = record.path.parent();
+                    search_row.execute(params![
+                        id.0,
+                        record.path.name(),
+                        parent.as_ref().map_or("", RelPath::as_str),
+                        tags,
+                        entry.body,
+                    ])?;
+                }
+                Ok(())
+            })
+            .unwrap();
+        }
+        catalog.optimize().unwrap();
+    }
+    catalog
+        .read(|tx| {
+            let different: u32 = tx.query_row(
+                "SELECT count(*) FROM search WHERE tags != (
+             SELECT coalesce(group_concat(t.name, ' ' ORDER BY t.sort_order, t.id), '')
+             FROM entry_tags et JOIN tags t ON t.id = et.tag_id WHERE et.entry_id = search.rowid)",
+                [],
+                |row| row.get(0),
+            )?;
+            assert_eq!(
+                different, 0,
+                "fixture FTS tags must match production assignments"
+            );
+            Ok(())
+        })
+        .unwrap();
+    let scope_path = RelPath::parse(SEMESTERS[5]).unwrap();
+    let scope = catalog
+        .read(|tx| catalog::entry(tx, &scope_path))
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        catalog.read(|tx| catalog::count_entries(tx)).unwrap(),
+        ENTRIES as u64
+    );
+    println!(
+        "production corpus: {ENTRIES} entries ({folder_count} folders), 400 loose semester files; fresh={fresh}, ready in {:.1}s",
+        start.elapsed().as_secs_f64(),
+    );
+    let page = browse::PageRequest {
+        offset: 0,
+        limit: 200,
+    };
+    let sort = browse::EntrySort {
+        key: browse::SortKey::Name,
+        descending: false,
+    };
+    let mut worst_list = Duration::ZERO;
+    for key in [
+        browse::SortKey::Name,
+        browse::SortKey::Path,
+        browse::SortKey::Modified,
+        browse::SortKey::Size,
+        browse::SortKey::FileType,
+        browse::SortKey::Added,
+    ] {
+        for descending in [false, true] {
+            let sort = browse::EntrySort { key, descending };
+            let timing = time(|| {
+                let result = catalog
+                    .read_stamped::<_, browse::QueryError>(|tx, _| {
+                        browse::list_files(tx, None, &browse::FileFilter::default(), sort, page)
+                    })
+                    .unwrap();
+                assert_eq!(result.items.len(), 200);
+                assert_eq!(result.total as usize, ENTRIES - folder_count);
+            });
+            worst_list = worst_list.max(timing.1);
+            println!("files {key:?} descending={descending}: {} ms", ms(timing));
+        }
+    }
+    for (label, filter) in [
+        (
+            "all-tags inherited",
+            browse::FileFilter {
+                tags: Some(browse::TagFilter::WithAll(vec![
+                    PresetTag::Notes.id(),
+                    PresetTag::Homework.id(),
+                ])),
+                added_after_ms: None,
+            },
+        ),
+        (
+            "untagged",
+            browse::FileFilter {
+                tags: Some(browse::TagFilter::Untagged),
+                added_after_ms: None,
+            },
+        ),
+        (
+            "recent",
+            browse::FileFilter {
+                tags: None,
+                added_after_ms: Some((now - 30 * 86_400) * 1_000),
+            },
+        ),
+    ] {
+        let timing = time(|| {
+            let result = catalog
+                .read_stamped::<_, browse::QueryError>(|tx, _| {
+                    browse::list_files(tx, None, &filter, sort, page)
+                })
+                .unwrap();
+            assert_eq!(result.items.len(), 200);
+        });
+        worst_list = worst_list.max(timing.1);
+        println!("files {label}: {} ms", ms(timing));
+    }
+    let timing = time(|| {
+        let result = catalog
+            .read_stamped::<_, browse::QueryError>(|tx, _| {
+                browse::list_children(tx, Some((scope.id, &scope_path)), sort, page)
+            })
+            .unwrap();
+        assert_eq!(result.items.len(), 200);
+    });
+    worst_list = worst_list.max(timing.1);
+    println!("semester children: {} ms", ms(timing));
+    let timing = time(|| {
+        let result = catalog
+            .read_stamped::<_, browse::QueryError>(|tx, _| {
+                browse::list_files(
+                    tx,
+                    None,
+                    &browse::FileFilter::default(),
+                    sort,
+                    browse::PageRequest {
+                        offset: 40_000,
+                        ..page
+                    },
+                )
+            })
+            .unwrap();
+        assert_eq!(result.items.len(), 200);
+    });
+    worst_list = worst_list.max(timing.1);
+    println!("files deep offset 40000: {} ms", ms(timing));
+    let common = vocabulary.chars[0].to_string();
+    let latin = vocabulary.latin.iter().find(|word| word.len() > 3).unwrap();
+    let mut worst_search = Duration::ZERO;
+    for (label, text) in [
+        ("common CJK", common.clone()),
+        ("rare CJK", vocabulary.chars[1000].to_string()),
+        (
+            "CJK phrase",
+            chinese_run(entries[35].body.as_deref().unwrap(), 4),
+        ),
+        ("Latin word", latin.clone()),
+        ("Latin prefix 2", latin[..2].to_owned()),
+    ] {
+        let query = SearchQuery::parse(&text).unwrap().unwrap();
+        for scope in [None, Some((scope.id, &scope_path))] {
+            let first = catalog
+                .read_stamped::<_, browse::QueryError>(|tx, _| {
+                    browse::search_page(
+                        tx,
+                        &query,
+                        scope,
+                        browse::PageRequest {
+                            offset: 0,
+                            limit: TOP as u32,
+                        },
+                        now,
+                    )
+                })
+                .unwrap();
+            if label == "common CJK" {
+                assert_eq!(first.items.len(), TOP);
+            }
+            let timing = time(|| {
+                catalog
+                    .read_stamped::<_, browse::QueryError>(|tx, _| {
+                        let hits = browse::search_page(
+                            tx,
+                            &query,
+                            scope,
+                            browse::PageRequest {
+                                offset: 0,
+                                limit: TOP as u32,
+                            },
+                            now,
+                        )?;
+                        assert!(!hits.items.is_empty());
+                        assert!(hits.items.len() <= TOP);
+                        Ok(())
+                    })
+                    .unwrap();
+            });
+            worst_search = worst_search.max(timing.1);
+            println!(
+                "search {label} scoped={} hits={}: {} ms",
+                scope.is_some(),
+                first.items.len(),
+                ms(timing)
+            );
+            if label == "common CJK" {
+                let timing = time(|| {
+                    let hits = catalog
+                        .read_stamped::<_, browse::QueryError>(|tx, _| {
+                            browse::search_page(
+                                tx,
+                                &query,
+                                scope,
+                                browse::PageRequest {
+                                    offset: 450,
+                                    limit: TOP as u32,
+                                },
+                                now,
+                            )
+                        })
+                        .unwrap();
+                    assert_eq!(hits.items.len(), TOP);
+                    assert!(!hits.more);
+                });
+                worst_search = worst_search.max(timing.1);
+                println!(
+                    "search common CJK offset=450 scoped={} hits={TOP}: {} ms",
+                    scope.is_some(),
+                    ms(timing)
+                );
+            }
+        }
+    }
+    println!(
+        "worst measured list {:.1} ms, search {:.1} ms",
+        worst_list.as_secs_f64() * 1e3,
+        worst_search.as_secs_f64() * 1e3
+    );
+    assert!(
+        worst_list < Duration::from_millis(50),
+        "200-row page exceeds 50ms"
+    );
+    assert!(
+        worst_search < Duration::from_millis(100),
+        "highlighted search page exceeds 100ms"
+    );
 }

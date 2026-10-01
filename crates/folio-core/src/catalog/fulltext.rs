@@ -1,5 +1,7 @@
 //! Full-text search over the catalog (ADR-0002 §5, docs/specs/library-core.md §6).
 
+use std::cmp::Ordering;
+
 use rusqlite::{Connection, OptionalExtension, params};
 
 use super::entries::{self, COLUMNS};
@@ -10,11 +12,11 @@ use crate::search::SearchQuery;
 pub const MAX_BODY_BYTES: usize = 1 << 20;
 
 /// Highlight markers: no Windows name contains them, and they are removed from body text.
-const OPEN: char = '\u{1}';
-const CLOSE: char = '\u{2}';
+pub(super) const OPEN: char = '\u{1}';
+pub(super) const CLOSE: char = '\u{2}';
 
 /// Column weights in column order (name, path, tags, body): name > tags > path > body.
-const RANK: &str = "bm25(search, 10.0, 3.0, 5.0, 1.0)";
+pub(super) const RANK: &str = "bm25(search, 10.0, 3.0, 5.0, 1.0)";
 
 /// A match and its score; higher is better.
 #[derive(Debug, Clone, PartialEq)]
@@ -80,21 +82,29 @@ pub fn search(
         })?
         .collect::<Result<Vec<_>, _>>()?;
     hits.sort_by(|a, b| {
-        let (a_path, b_path) = (a.entry.record.path.as_str(), b.entry.record.path.as_str());
-        b.score
-            .total_cmp(&a.score)
-            .then(a_path.len().cmp(&b_path.len()))
-            .then(a_path.cmp(b_path))
+        by_rank(
+            (a.score, a.entry.record.path.as_str()),
+            (b.score, b.entry.record.path.as_str()),
+        )
     });
     hits.truncate(limit as usize);
     Ok(hits)
 }
 
-fn recency_boost(mtime_ns: Option<i64>, now: i64) -> f64 {
+/// The higher score first; ties go to the shorter path, then to byte order.
+pub(super) fn by_rank(a: (f64, &str), b: (f64, &str)) -> Ordering {
+    b.0.total_cmp(&a.0)
+        .then(a.1.len().cmp(&b.1.len()))
+        .then(a.1.cmp(b.1))
+}
+
+/// In i128, so no clock or modification time overflows the age.
+pub(super) fn recency_boost(mtime_ns: Option<i64>, now: i64) -> f64 {
     let Some(mtime_ns) = mtime_ns else {
         return 1.0;
     };
-    let age_days = (now - mtime_ns.div_euclid(1_000_000_000)).max(0) as f64 / 86_400.0;
+    let age_secs = (i128::from(now) - i128::from(mtime_ns.div_euclid(1_000_000_000))).max(0);
+    let age_days = age_secs as f64 / 86_400.0;
     1.0 + 0.5 * 0.5_f64.powf(age_days / 30.0)
 }
 
@@ -124,7 +134,7 @@ pub fn hit_text(
     }))
 }
 
-fn spans(marked: &str) -> Vec<Span> {
+pub(super) fn spans(marked: &str) -> Vec<Span> {
     let mut spans = Vec::new();
     let mut text = String::new();
     let mut matched = false;

@@ -200,6 +200,11 @@ pages of one revision consistent.
      commands in their own group (`commands/operations/manifest.rs`,
      `capabilities/operations.json`, main window only) and the `library_status` retry; contract
      tests, `/code-review` and `/security-review` passed, bindings unchanged.
+   - 2026-10-01, `feat/data-browse-queries` (§21 item 2): `list_children`, `list_files`,
+     `get_entry`, `search` and `resolve_paths` in the browse group (`commands/browse/manifest.rs`,
+     `capabilities/browse.json`, main window only). Pages and events carry the catalog's commit
+     stamp (§15.2); search snippets come from a browse-local FTS5 function. Contract tests,
+     `/code-review` and `/security-review` passed, bindings unchanged. Remaining: items 4–6.
 4. [x] Operations lane: amend ADR-0002 and library core §4.2 for the course code, optional badge
    text and colour, 1–3 character badges, and palette keys for preset tags (spec §20).
 5. [ ] Preview lane: the `folio-file` scheme, the main window's CSP sources, and an e2e test that

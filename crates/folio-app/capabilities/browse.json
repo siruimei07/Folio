@@ -1,0 +1,13 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "browse",
+  "description": "Read catalog pages, search highlights and note-relative catalogued files.",
+  "windows": ["main"],
+  "permissions": [
+    "allow-list-children",
+    "allow-list-files",
+    "allow-get-entry",
+    "allow-search",
+    "allow-resolve-paths"
+  ]
+}

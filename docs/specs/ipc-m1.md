@@ -705,10 +705,11 @@ type EntryChange =
 
 ### 15.2 Revisions
 
-The shell counts committed catalog changes for the open library: `revision` starts at 0 when the
-library opens and grows with every change (wrapping at 2³²). Every page carries the revision it
-was read at, and every `CatalogChanged` the revision after the changes it reports. Pages of one
-revision agree with each other; a page older than the last event is stale.
+The catalog counts committed changes for the open library: `revision` starts at 0 when the
+library opens and grows by one with every transaction that changed it (wrapping at 2³²), so
+events may skip revisions. Every page carries the revision of the snapshot it was read in, and
+every `CatalogChanged` the revision after the changes it reports. Pages of one revision agree
+with each other; a page older than the last event is stale.
 
 ### 15.3 How the UI uses them
 
@@ -862,18 +863,19 @@ Every implementation lane checks these; `/security-review` checks them again.
 UI  --invoke-->  command handler  --spawn_blocking-->  folio-core (Library, Catalog)
  ^                  |  validate: structure (serde) -> values -> references (catalog)
  |                  v
- +---events-----  LibraryState: Library, Arc<Catalog>, revision, jobs, choices, problems
+ +---events-----  LibraryState: Library, Arc<Catalog>, jobs, choices, problems
 ```
 
 - Tauri state holds one `LibraryState` behind a lock that is held only to clone the handles: the
-  core `Library`, an `Arc<Catalog>`, the revision counter, the job registry, the choice tokens
-  and the latest problems. Opening, creating or rebuilding a library swaps it and emits
-  `LibraryStateChanged`.
+  core `Library`, an `Arc<Catalog>`, the job registry, the choice tokens and the latest problems.
+  Opening, creating or rebuilding a library swaps it and emits `LibraryStateChanged`.
 - A handler validates in order: the request's values (limits, names, tokens), the library, then
   its references inside the catalog transaction of the operation. Writes go through
   `Catalog::write_with`, which also serializes the metadata files (library scan §7.4).
-- After a commit, the handler bumps the revision and hands the changes to one emitter task, which
-  merges bursts into at most ten `CatalogChanged` per second.
+- `Catalog::write_with` advances the revision when a transaction that changed data commits, and
+  a stamped read pins its snapshot and that revision together. After a commit, the handler hands
+  the changes to one emitter task, which merges bursts into at most ten `CatalogChanged` per
+  second.
 - Jobs run on a blocking thread each, with an `AtomicBool` for cancelling (library scan §8), and
   report progress through the registry, which throttles `JobChanged`.
 
@@ -937,9 +939,9 @@ Other documents: first-run handoff §4.2, §7 and §12; library-actions handoff 
    file, `LibraryState`, the job registry and events, `library_status`, `pick_library_folder`,
    `create_library`, `open_library`, the start-up scan and hashing, `list_jobs`, `cancel_job`,
    `rebuild_catalog`, `list_problems` ([library-state.md](library-state.md)).
-2. **Browse and search** (`feat/data-browse-queries`): the core queries for §9.1 and §10 (natural
-   name order, effective tags, filters, scopes, the fixed search window) and their commands,
-   and `resolve_paths`.
+2. **Done (2026-10-01).** **Browse and search** (`feat/data-browse-queries`): the core queries
+   for §9.1 and §10 (natural name order, effective tags, filters, scopes, the fixed search
+   window) and their commands, and `resolve_paths`.
 3. **Done (2026-09-30).** **Library operations** (`feat/core-library-ops`): §7, §8 and §9.2 with
    the metadata changes of §20.1, the Recycle Bin adapter with `NotRecyclable`, `CatalogChanged`,
    and the `library_status` retry (§6).

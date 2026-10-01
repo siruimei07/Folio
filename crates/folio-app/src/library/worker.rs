@@ -52,17 +52,19 @@ struct Snapshot {
 }
 
 impl Snapshot {
-    /// Counts one commit and merges its changes into the pending event. Converts entries only
-    /// while the event has room: a first scan reports every file, an event at most 200.
+    /// Takes the catalog's revision after a commit (`Catalog::stamp`, read after the commit, so
+    /// pages at that revision hold the change) and merges the commit's changes into the pending
+    /// event. Converts entries only while the event has room: a first scan reports every file,
+    /// an event at most 200.
     fn changed(
         &mut self,
+        revision: u32,
         entries: impl IntoIterator<Item = EntryChange>,
         complete: bool,
         tags: bool,
         groups: bool,
     ) {
-        self.revision = self.revision.wrapping_add(1);
-        let revision = self.revision;
+        self.revision = revision;
         let event = self.event.get_or_insert_with(|| CatalogChanged {
             revision,
             entries: Vec::new(),
@@ -194,6 +196,10 @@ impl Session {
     /// The canonical library root.
     pub fn root(&self) -> &Path {
         self.library.root()
+    }
+
+    pub(super) fn catalog(&self) -> &Catalog {
+        &self.catalog
     }
 
     pub(super) fn with_entry<T>(
@@ -685,6 +691,7 @@ impl Session {
             };
             if changed {
                 snapshot.changed(
+                    self.catalog.stamp().revision,
                     report.entries.into_iter().map(entry_change),
                     true,
                     report.tags,
@@ -702,9 +709,9 @@ impl Session {
         }
     }
 
-    /// Counts a commit whose entries the UI need not refetch one by one.
+    /// Reports a commit whose entries the UI need not refetch one by one.
     fn bump(&self, complete: bool, tags: bool, groups: bool) {
-        lock(&self.snapshot).changed([], complete, tags, groups);
+        lock(&self.snapshot).changed(self.catalog.stamp().revision, [], complete, tags, groups);
         self.flush();
     }
 

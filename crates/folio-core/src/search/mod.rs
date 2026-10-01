@@ -12,6 +12,7 @@ mod fts5;
 mod query;
 mod tokenizer;
 
+pub(crate) use fts5::fts5_api;
 pub use fts5::{TOKENIZER_NAME, register_tokenizer};
 pub use query::{MAX_QUERY_CHARS, QueryError, SearchQuery};
 pub use tokenizer::{Mode, Token, tokenize};

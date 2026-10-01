@@ -8,6 +8,7 @@
 mod entries;
 mod fulltext;
 mod groups;
+pub mod queries;
 mod schema;
 mod sql;
 mod tags;
@@ -16,7 +17,8 @@ use std::ffi::OsString;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::sync::{Mutex, MutexGuard, PoisonError};
+use std::sync::{Mutex, MutexGuard, PoisonError, RwLock};
+use std::time::SystemTime;
 
 use rusqlite::{
     Connection, ErrorCode, OpenFlags, OptionalExtension, Transaction, TransactionBehavior,
@@ -95,6 +97,19 @@ pub struct Catalog {
     path: PathBuf,
     writer: Mutex<Connection>,
     readers: Mutex<Vec<Connection>>,
+    committed: RwLock<ReadStamp>,
+}
+
+/// A session-local revision and the fixed search ranking time of its committed snapshot.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ReadStamp {
+    pub revision: u32,
+    pub ranked_at_secs: i64,
+}
+
+/// Seconds since the Unix epoch; a clock beyond the nanosecond range ranks as the far future.
+fn rank_time() -> i64 {
+    crate::fs::unix_ns(SystemTime::now()).map_or(i64::MAX, |ns| ns.div_euclid(1_000_000_000))
 }
 
 impl Catalog {
@@ -123,6 +138,10 @@ impl Catalog {
                 path: path.to_owned(),
                 writer: Mutex::new(writer),
                 readers: Mutex::default(),
+                committed: RwLock::new(ReadStamp {
+                    revision: 0,
+                    ranked_at_secs: rank_time(),
+                }),
             },
             recovered,
         })
@@ -145,12 +164,55 @@ impl Catalog {
         change: impl FnOnce(&Transaction<'_>) -> Result<T, E>,
     ) -> Result<T, E> {
         let mut writer = lock(&self.writer);
+        let before = writer.total_changes();
         let transaction = writer
             .transaction_with_behavior(TransactionBehavior::Immediate)
             .map_err(CatalogError::from)?;
         let value = change(&transaction)?;
+        let changed = transaction.total_changes() != before;
+        // Readers pin their WAL snapshot under the same gate. Metadata I/O and the rest of
+        // the writer transaction stay outside it, so readers can still use the old snapshot.
+        let mut committed = self
+            .committed
+            .write()
+            .unwrap_or_else(PoisonError::into_inner);
         transaction.commit().map_err(CatalogError::from)?;
+        if changed {
+            committed.revision = committed.revision.wrapping_add(1);
+            committed.ranked_at_secs = rank_time();
+        }
         Ok(value)
+    }
+
+    /// The latest published commit stamp. Event emitters use this after committing; pages
+    /// must use the stamp supplied by `read_stamped`, never relabel an older read snapshot.
+    pub fn stamp(&self) -> ReadStamp {
+        *self
+            .committed
+            .read()
+            .unwrap_or_else(PoisonError::into_inner)
+    }
+
+    /// Like `read`, with the revision/time belonging to exactly that WAL snapshot and an
+    /// error type owned by the caller. The commit gate is released before `query` runs.
+    pub fn read_stamped<T, E: From<CatalogError>>(
+        &self,
+        query: impl FnOnce(&Transaction<'_>, ReadStamp) -> Result<T, E>,
+    ) -> Result<T, E> {
+        self.with_reader(|reader| {
+            let committed = self
+                .committed
+                .read()
+                .unwrap_or_else(PoisonError::into_inner);
+            let transaction = reader.transaction().map_err(CatalogError::from)?;
+            // A deferred BEGIN (or SELECT 1) does not establish a database snapshot.
+            info(&transaction, LIBRARY_ID).map_err(CatalogError::from)?;
+            let stamp = *committed;
+            drop(committed);
+            let value = query(&transaction, stamp)?;
+            transaction.commit().map_err(CatalogError::from)?;
+            Ok(value)
+        })
     }
 
     /// Runs `query` on a read-only connection, in one transaction, so it sees one snapshot.
@@ -158,17 +220,25 @@ impl Catalog {
         &self,
         query: impl FnOnce(&Transaction<'_>) -> Result<T, CatalogError>,
     ) -> Result<T, CatalogError> {
+        self.with_reader(|reader| {
+            let transaction = reader.transaction()?;
+            let value = query(&transaction)?;
+            transaction.commit()?;
+            Ok(value)
+        })
+    }
+
+    /// Lends an idle read-only connection, or a new one, and keeps it for the next read.
+    fn with_reader<T, E: From<CatalogError>>(
+        &self,
+        read: impl FnOnce(&mut Connection) -> Result<T, E>,
+    ) -> Result<T, E> {
         let idle = lock(&self.readers).pop();
         let mut reader = match idle {
             Some(reader) => reader,
             None => open_reader(&self.path)?,
         };
-        let result = (|| {
-            let transaction = reader.transaction()?;
-            let value = query(&transaction)?;
-            transaction.commit()?;
-            Ok(value)
-        })();
+        let result = read(&mut reader);
         let mut readers = lock(&self.readers);
         if readers.len() < MAX_IDLE_READERS {
             readers.push(reader);
@@ -367,6 +437,7 @@ fn open_reader(path: &Path) -> Result<Connection, CatalogError> {
 /// without it.
 fn configure(conn: &Connection) -> rusqlite::Result<()> {
     register_tokenizer(conn)?;
+    queries::register_snippet(conn)?;
     // Room for every statement the repositories cache.
     conn.set_prepared_statement_cache_capacity(64);
     conn.execute_batch(
