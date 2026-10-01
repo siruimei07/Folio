@@ -7,7 +7,7 @@ import { LIMITS, type SearchHit, type Span } from '../../bindings';
 import type { GroupHandlers } from '../contract';
 import { fail } from '../failure';
 import { checkPage, type FakeLibrary, type FakeNode } from '../library';
-import { charCount } from '../names';
+import { charCount } from '../../../lib/text';
 import type { FakeShell } from '../shell';
 
 /** Body text around a match: this many UTF-16 units before and after it. */

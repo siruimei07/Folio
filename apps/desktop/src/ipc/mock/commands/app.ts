@@ -2,7 +2,7 @@
 import { LIMITS } from '../../bindings';
 import type { GroupHandlers } from '../contract';
 import { fail } from '../failure';
-import { charCount } from '../names';
+import { charCount } from '../../../lib/text';
 import type { FakeShell } from '../shell';
 
 const SOURCE = /^[A-Za-z0-9._-]{1,64}$/;

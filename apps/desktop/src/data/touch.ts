@@ -84,6 +84,13 @@ export function touches(query: LibraryQuery, change: EntryChange): boolean {
     case 'tags':
       // Tag usage counts follow assignments.
       return change.kind === 'tagged';
+    case 'resolve':
+      // A note names paths anywhere in the library, matched without case: any change may answer
+      // one of them, or change the row it answers with.
+      return true;
+    case 'importCheck':
+      // Name clashes are with the names the target folder holds; tags and content do not count.
+      return change.kind !== 'tagged' && change.kind !== 'modified' && touchesScope(query.target, change);
     case 'jobs':
     case 'problems':
       // JobChanged and ProblemsChanged keep these current (§5.6).
@@ -93,13 +100,49 @@ export function touches(query: LibraryQuery, change: EntryChange): boolean {
   }
 }
 
+/** The reference a query's key holds, if any. */
+function keyRef(query: LibraryQuery): EntryRef | null {
+  switch (query.kind) {
+    case 'children':
+      return query.folder;
+    case 'files':
+    case 'search':
+      return query.scope;
+    case 'count':
+      return query.request.of === 'children'
+        ? query.request.folder
+        : query.request.of === 'files'
+          ? query.request.scope
+          : null;
+    case 'entry':
+      return query.entry;
+    case 'resolve':
+      return query.base;
+    case 'importCheck':
+      return query.target;
+    default:
+      return null;
+  }
+}
+
+/**
+ * Whether a query shows `entry`, for which the shell answered `NotFound`: what its removal would
+ * touch, except queries keyed by it or by something below it. Those would only answer `NotFound`
+ * until the event's reference followers give their holders the new path.
+ */
+export function touchesGone(query: LibraryQuery, entry: EntryRef): boolean {
+  const change: EntryChange = { kind: 'removed', entry };
+  return !isStale(keyRef(query), change) && touches(query, change);
+}
+
 /**
  * Whether an event touches a query. `complete: false` touches everything (the event lists only
  * part of what changed, or the catalog was rebuilt).
  */
 export function isTouched(query: LibraryQuery, event: CatalogChanged): boolean {
   if (!event.complete) return true;
-  if (event.tags && query.kind === 'tags') return true;
+  // Search ranks by tag names too (library core §5.2), so a renamed tag changes its results.
+  if (event.tags && (query.kind === 'tags' || query.kind === 'search')) return true;
   if (event.groups && (query.kind === 'semesters' || query.kind === 'courses')) return true;
   return event.entries.some((change) => touches(query, change));
 }

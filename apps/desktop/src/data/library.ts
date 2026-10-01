@@ -1,11 +1,19 @@
 // The library status (docs/specs/ipc-m1.md §6) and what follows from it: which library's queries
 // the cache holds. `library_status` answers once the shell has opened the configured library;
-// later changes arrive as LibraryStateChanged (`events.ts`), which lands here too.
+// later changes arrive as LibraryStateChanged (`events.ts`), which lands here too. Choosing,
+// creating and opening a library are here as well.
 import { type QueryClient, queryOptions, useQuery } from '@tanstack/react-query';
 
-import { ipc, type LibraryInfo, type LibraryStatus } from '../ipc';
+import {
+  type CreateLibrary,
+  ipc,
+  type LibraryInfo,
+  type LibraryStatus,
+  type OpenLibrary,
+} from '../ipc';
 import { unwrap } from './errors';
 import { keys } from './keys';
+import { useCommandMutation } from './mutations';
 import { publishReferences } from './references';
 import { openSession, useSession } from './session';
 
@@ -48,4 +56,27 @@ export function useLibrary(): LibraryInfo | null {
     select: (status) => (status.state === 'open' ? status.library : null),
   });
   return data ?? null;
+}
+
+/**
+ * The folder dialog for a library; resolves to the chosen folder with its choice token and what
+ * it holds, or `null` when cancelled.
+ */
+export function usePickLibraryFolder() {
+  return useCommandMutation(() => ipc.pickLibraryFolder());
+}
+
+/**
+ * Makes the chosen folder (a choice token) this machine's library: a new one, the content taken
+ * over, or an incomplete one finished. Resolves to the library and the id of the scan it started.
+ * The cache follows when LibraryStateChanged arrives (`changeLibrary`), which may be after this
+ * answer: until then `useLibrary()` is still the previous status.
+ */
+export function useCreateLibrary() {
+  return useCommandMutation((request: CreateLibrary) => ipc.createLibrary(request));
+}
+
+/** Opens the chosen folder that already holds a library, as `useCreateLibrary` does. */
+export function useOpenLibrary() {
+  return useCommandMutation((request: OpenLibrary) => ipc.openLibrary(request));
 }

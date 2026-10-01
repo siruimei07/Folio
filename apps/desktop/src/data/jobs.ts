@@ -1,11 +1,12 @@
 // Jobs (docs/specs/ipc-m1.md §13; ui-architecture §5.6): `list_jobs` fills the cache once, then
 // each JobChanged replaces its job there. JobChanged carries the whole job, so nothing refetches.
-import { type QueryClient, useMutation, useQuery } from '@tanstack/react-query';
+import { type QueryClient, useQuery } from '@tanstack/react-query';
 
 import { ipc, type Job } from '../ipc';
 import { isActiveJob } from '../lib/jobs';
 import { unwrap } from './errors';
 import { keys, libraryQuery } from './keys';
+import { useCommandMutation } from './mutations';
 import { useLibraryId } from './session';
 
 /** Finished jobs `list_jobs` keeps after the active ones. */
@@ -90,14 +91,10 @@ export function useJob(id: string | null): Job | undefined {
 
 /** Cancels a queued or running job; its JobChanged updates the list. */
 export function useCancelJob() {
-  return useMutation({
-    mutationFn: (job: string) => unwrap(ipc.cancelJob({ job })),
-  });
+  return useCommandMutation((job: string) => ipc.cancelJob({ job }));
 }
 
 /** "Rebuild search index": starts the rebuild job and resolves to its id. */
 export function useRebuildCatalog() {
-  return useMutation({
-    mutationFn: () => unwrap(ipc.rebuildCatalog()),
-  });
+  return useCommandMutation(() => ipc.rebuildCatalog());
 }

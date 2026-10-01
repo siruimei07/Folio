@@ -27,7 +27,6 @@ import type {
   SeedEntry,
 } from './fixtures/types';
 import { FakeLibrary } from './library';
-import { isWellFormed } from './names';
 import { randomHex } from './random';
 
 export interface Failure {
@@ -96,7 +95,7 @@ function overIpc<T>(value: T): T {
 }
 
 function hasIllFormedText(value: unknown): boolean {
-  if (typeof value === 'string') return !isWellFormed(value);
+  if (typeof value === 'string') return !value.isWellFormed();
   if (typeof value !== 'object' || value === null) return false;
   return Object.values(value).some(hasIllFormedText);
 }

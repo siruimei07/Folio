@@ -3,13 +3,12 @@ import { waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { EntryRow, Page } from '../ipc';
+import { BY_NAME, NOW } from '../test/data';
 import { renderAppHook } from '../test/render';
 import { useChildren, useFiles } from './entries';
 import { combinePages, LIST_PAGE, pagesOf, type RowRange, useCount } from './paged';
 
-const NAME = { key: 'name', descending: false } as const;
 const NO_FILTER = { tags: null, addedAfterMs: null };
-const NOW = Date.UTC(2026, 8, 30, 12);
 
 describe('pagesOf', () => {
   it('names the pages that hold a range of rows, widened by a margin', () => {
@@ -99,7 +98,7 @@ describe('usePagedList', () => {
   it('fetches page 0 and the visible pages, and fetches ahead without watching', async () => {
     const { shell, result, rerender } = renderAppHook(
       (range: RowRange) => {
-        const list = useFiles(null, NO_FILTER, NAME, range);
+        const list = useFiles(null, NO_FILTER, BY_NAME, range);
         return { total: list.total, row: list.rowAt(range.start), before: list.rowAt(range.start - 1), list };
       },
       { scenario: 'large', now: NOW, initialProps: { start: 0, end: 20 } },
@@ -136,7 +135,7 @@ describe('usePagedList', () => {
 
   it('asks only for the pages where a dragged scroll bar rests', async () => {
     const { shell, result, rerender } = renderAppHook(
-      (range: RowRange) => useFiles(null, NO_FILTER, NAME, range).rowAt(range.start),
+      (range: RowRange) => useFiles(null, NO_FILTER, BY_NAME, range).rowAt(range.start),
       { scenario: 'large', now: NOW, initialProps: { start: 0, end: 20 } },
     );
     await waitFor(() => {
@@ -157,7 +156,7 @@ describe('usePagedList', () => {
   it('shows the error of a page, and fetches it again on retry', async () => {
     const { shell, result } = renderAppHook(
       () => {
-        const { status, error, retry, total } = useChildren(null, NAME, { start: 0, end: 20 });
+        const { status, error, retry, total } = useChildren(null, BY_NAME, { start: 0, end: 20 });
         return { status, error, retry, total };
       },
       { now: NOW, fail: [{ command: 'list_children', code: 'Internal' }] },

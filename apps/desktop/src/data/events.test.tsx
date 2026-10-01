@@ -1,10 +1,10 @@
 // The data layer against the fake shell: CatalogChanged and revisions (ui-architecture §5.4),
 // LibraryStateChanged, JobChanged and ProblemsChanged (§5.6).
 import { act, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { type EntryRef, ipc } from '../ipc';
-import { smallLibrary } from '../ipc/mock/fixtures/small';
+import { BY_NAME, FIRST_ROWS, followUntilTestEnds, NOW, smallRef } from '../test/data';
 import { renderAppHook } from '../test/render';
 import { useChildren, useEntry } from './entries';
 import { unwrap } from './errors';
@@ -14,7 +14,7 @@ import { keys } from './keys';
 import { useCount } from './paged';
 import { useLibrary } from './library';
 import { useProblems, useProblemsTotal } from './problems';
-import { followReferences, type ReferenceUpdate } from './references';
+import type { ReferenceUpdate } from './references';
 import {
   latestRevision,
   openSession,
@@ -24,22 +24,11 @@ import {
   useSession,
 } from './session';
 
-const NOW = Date.UTC(2026, 8, 30, 12);
-const NAME = { key: 'name', descending: false } as const;
-const ALL = { start: 0, end: 50 };
-
-/** The fake numbers the fixture's entries 1, 2, … in order, the root being 0. */
-function refOf(path: string): EntryRef {
-  const index = smallLibrary(NOW).entries.findIndex((entry) => entry.path === path);
-  if (index === -1) throw new Error(`no ${path} in the small fixture`);
-  return { id: String(index + 1), path };
-}
-
 const CSC = 'Fall 2026/CSC148 Introduction to Computer Science';
-const csc = refOf(CSC);
-const hw1 = refOf(`${CSC}/hw1.py`);
-const labs = refOf(`${CSC}/labs`);
-const personal = refOf('Personal');
+const csc = smallRef(CSC);
+const hw1 = smallRef(`${CSC}/hw1.py`);
+const labs = smallRef(`${CSC}/labs`);
+const personal = smallRef('Personal');
 
 function libraryKey() {
   return keys.library(useSession.getState().libraryId ?? '');
@@ -47,25 +36,21 @@ function libraryKey() {
 
 function childrenPage(folder: EntryRef) {
   return {
-    queryKey: [...keys.children(useSession.getState().libraryId ?? '', { folder, sort: NAME }), 0],
-    queryFn: () => unwrap(ipc.listChildren({ folder, sort: NAME, page: { offset: 0, limit: 200 } })),
+    queryKey: [...keys.children(useSession.getState().libraryId ?? '', { folder, sort: BY_NAME }), 0],
+    queryFn: () => unwrap(ipc.listChildren({ folder, sort: BY_NAME, page: { offset: 0, limit: 200 } })),
   };
 }
 
+/** The reference updates published from now until the test ends. */
 function follow() {
   const updates: ReferenceUpdate[] = [];
-  const stop = followReferences((update) => updates.push(update));
-  return { updates, stop };
+  followUntilTestEnds((update) => updates.push(update));
+  return { updates };
 }
-
-let stopFollowing: (() => void) | undefined;
-afterEach(() => {
-  stopFollowing?.();
-});
 
 describe('CatalogChanged', () => {
   it('refetches a list a change touches, and records the revision', async () => {
-    const { result } = renderAppHook(() => useChildren(csc, NAME, ALL), { now: NOW });
+    const { result } = renderAppHook(() => useChildren(csc, BY_NAME, FIRST_ROWS), { now: NOW });
     await waitFor(() => {
       expect(result.current.rowAt(2)?.name).toBe('hw1.py');
     });
@@ -82,7 +67,7 @@ describe('CatalogChanged', () => {
   });
 
   it('removes touched queries nobody shows, and leaves untouched ones alone', async () => {
-    const { client, shell, result } = renderAppHook(() => useChildren(labs, NAME, ALL), {
+    const { client, shell, result } = renderAppHook(() => useChildren(labs, BY_NAME, FIRST_ROWS), {
       now: NOW,
     });
     await waitFor(() => {
@@ -101,7 +86,7 @@ describe('CatalogChanged', () => {
   });
 
   it('does not refetch data already read at the event’s revision', async () => {
-    const { client, shell, result } = renderAppHook(() => useChildren(labs, NAME, ALL), {
+    const { client, shell, result } = renderAppHook(() => useChildren(labs, BY_NAME, FIRST_ROWS), {
       now: NOW,
       eventDelayMs: 1_000,
     });
@@ -150,7 +135,6 @@ describe('CatalogChanged', () => {
       expect(result.current.data?.name).toBe('hw1.py');
     });
     const followed = follow();
-    stopFollowing = followed.stop;
 
     const renamed = await unwrap(ipc.renameEntry({ entry: hw1, name: 'hw01.py' }));
     await shell.flush();
@@ -165,13 +149,12 @@ describe('CatalogChanged', () => {
   });
 
   it('refreshes everything after a rebuild, and asks followers to recheck', async () => {
-    const fall = refOf('Fall 2026');
-    const { shell, result } = renderAppHook(() => useChildren(null, NAME, ALL), { now: NOW });
+    const fall = smallRef('Fall 2026');
+    const { shell, result } = renderAppHook(() => useChildren(null, BY_NAME, FIRST_ROWS), { now: NOW });
     await waitFor(() => {
       expect(result.current.rowKey(1)).toBe(fall.id);
     });
     const followed = follow();
-    stopFollowing = followed.stop;
 
     await unwrap(ipc.rebuildCatalog());
     shell.finishJobs();
@@ -187,7 +170,7 @@ describe('CatalogChanged', () => {
 describe('LibraryStateChanged', () => {
   it('drops every query of the library, the session and every reference', async () => {
     const { client, shell, result } = renderAppHook(
-      () => ({ library: useLibrary(), children: useChildren(csc, NAME, ALL) }),
+      () => ({ library: useLibrary(), children: useChildren(csc, BY_NAME, FIRST_ROWS) }),
       { now: NOW },
     );
     await waitFor(() => {
@@ -196,7 +179,6 @@ describe('LibraryStateChanged', () => {
     sawRevision(3);
     const libraryId = useSession.getState().libraryId ?? '';
     const followed = follow();
-    stopFollowing = followed.stop;
 
     shell.makeUnavailable('missing');
 
@@ -288,7 +270,7 @@ describe('the current semester', () => {
     expect(result.current).toBe('Fall 2026');
     expect(localStorage.getItem('folio.session')).toContain('Fall 2026');
 
-    await unwrap(ipc.renameEntry({ entry: refOf('Fall 2026'), name: 'Autumn 2026' }));
+    await unwrap(ipc.renameEntry({ entry: smallRef('Fall 2026'), name: 'Autumn 2026' }));
     await waitFor(() => {
       expect(result.current).toBe('Autumn 2026');
     });

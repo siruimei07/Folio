@@ -34,6 +34,18 @@ export type CountRequest =
   | { of: 'files'; scope: EntryRef | null; filter: EntryFilter }
   | { of: 'problems' };
 
+/** Paths a note names, each resolved against the note's folder: `resolve_paths`. */
+interface ResolveRequest {
+  base: EntryRef;
+  paths: readonly string[];
+}
+
+/** What adding a chosen source to a folder would do: `check_import`. */
+interface ImportCheckRequest {
+  source: string;
+  target: EntryRef;
+}
+
 export const keys = {
   /** `library_status`; the only key outside a library. */
   libraryStatus: () => ['app', 'libraryStatus'] as const,
@@ -56,14 +68,20 @@ export const keys = {
    */
   entry: (libraryId: string, entry: EntryRef) => ['lib', libraryId, 'entry', entry] as const,
   semesters: (libraryId: string) => ['lib', libraryId, 'semesters'] as const,
-  /** `null`: the courses of every semester. */
-  courses: (libraryId: string, semesterPath: string | null) =>
-    ['lib', libraryId, 'courses', semesterPath] as const,
+  /** The courses of every semester; one semester's are a selection of them (`groups.ts`). */
+  courses: (libraryId: string) => ['lib', libraryId, 'courses'] as const,
   tags: (libraryId: string) => ['lib', libraryId, 'tags'] as const,
+  resolve: (libraryId: string, request: ResolveRequest) =>
+    ['lib', libraryId, 'resolve', request] as const,
+  importCheck: (libraryId: string, request: ImportCheckRequest) =>
+    ['lib', libraryId, 'importCheck', request] as const,
   jobs: (libraryId: string) => ['lib', libraryId, 'jobs'] as const,
   /** Pages of problems; `usePagedList` appends the page index. */
   problems: (libraryId: string) => ['lib', libraryId, 'problems'] as const,
 };
+
+/** The reference in the key of a query that asks for nothing (it has no entry yet). */
+export const NO_ENTRY: EntryRef = { id: '', path: '' };
 
 /**
  * A query of the open library (`libraryId`): keyed under it, and asking nothing while none is
@@ -91,6 +109,8 @@ export type LibraryQuery =
   | { kind: 'semesters' }
   | { kind: 'courses' }
   | { kind: 'tags' }
+  | { kind: 'resolve'; base: EntryRef }
+  | { kind: 'importCheck'; target: EntryRef }
   | { kind: 'jobs' }
   | { kind: 'problems' }
   | { kind: 'unknown' };
@@ -110,6 +130,10 @@ export function readKey(queryKey: QueryKey): LibraryQuery {
       return { kind, scope: (detail as SearchList).scope };
     case 'entry':
       return { kind, entry: detail as EntryRef };
+    case 'resolve':
+      return { kind, base: (detail as ResolveRequest).base };
+    case 'importCheck':
+      return { kind, target: (detail as ImportCheckRequest).target };
     case 'semesters':
     case 'courses':
     case 'tags':

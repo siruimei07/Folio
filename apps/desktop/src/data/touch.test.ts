@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { CatalogChanged, EntryChange, EntryRef } from '../ipc';
 import type { LibraryQuery } from './keys';
-import { isTouched, touches } from './touch';
+import { isTouched, touches, touchesGone } from './touch';
 
 const ref = (id: string, path: string): EntryRef => ({ id, path });
 const noTags = { tags: null, addedAfterMs: null };
@@ -141,6 +141,26 @@ describe('touches: groups, tags, jobs, problems', () => {
     expect(touches({ kind: 'tags' }, added(lecture))).toBe(false);
   });
 
+  it('paths a note names follow every change: they may name anything, without case', () => {
+    const resolve: LibraryQuery = { kind: 'resolve', base: lecture };
+    for (const change of [added(ref('60', 'Personal/a.png')), modified(lecture), tagged(other)]) {
+      expect(touches(resolve, change)).toBe(true);
+    }
+  });
+
+  it('an import check follows what its target folder holds', () => {
+    const check: LibraryQuery = { kind: 'importCheck', target: lectures };
+    expect(touches(check, added(lecture))).toBe(true);
+    expect(touches(check, moved(ref('12', 'Fall 2026/CSC148/Lecture 01.pdf'), lecture.path))).toBe(true);
+    expect(touches(check, added(ref('61', 'Fall 2026/CSC148/a.py')))).toBe(false);
+    // Names clash, not tags or content.
+    expect(touches(check, tagged(lecture))).toBe(false);
+    expect(touches(check, tagged(course))).toBe(false);
+    expect(touches(check, modified(lecture))).toBe(false);
+    // The target itself moved: its reference is stale.
+    expect(touches(check, moved(ref('11', 'Fall 2026/MAT232/Slides'), lectures.path))).toBe(true);
+  });
+
   it('jobs and problems never: their own events keep them current', () => {
     for (const change of [added(lecture), removed(lecture), tagged(course)]) {
       expect(touches({ kind: 'jobs' }, change)).toBe(false);
@@ -150,6 +170,28 @@ describe('touches: groups, tags, jobs, problems', () => {
 
   it('a query kind this file does not know is touched by every change', () => {
     expect(touches({ kind: 'unknown' }, modified(lecture))).toBe(true);
+  });
+});
+
+describe('touchesGone', () => {
+  it('picks what shows an entry the shell no longer has where the UI saw it', () => {
+    expect(touchesGone(children(lectures), lecture)).toBe(true);
+    expect(touchesGone(files(course), lecture)).toBe(true);
+    expect(touchesGone(search(null), lecture)).toBe(true);
+    expect(touchesGone({ kind: 'courses' }, lecture)).toBe(true);
+    expect(touchesGone({ kind: 'resolve', base: ref('70', 'Fall 2026/MAT232/notes.md') }, lecture)).toBe(true);
+    expect(touchesGone(children(other), lecture)).toBe(false);
+    expect(touchesGone({ kind: 'tags' }, lecture)).toBe(false);
+  });
+
+  it('leaves out queries keyed by it or by something below it: they would answer NotFound', () => {
+    expect(touchesGone(entry(lecture), lecture)).toBe(false);
+    expect(touchesGone(children(lectures), lectures)).toBe(false);
+    expect(touchesGone(files(lectures), course)).toBe(false);
+    expect(touchesGone({ kind: 'resolve', base: lecture }, lecture)).toBe(false);
+    expect(touchesGone({ kind: 'importCheck', target: lectures }, course)).toBe(false);
+    // The list that showed the folder is refreshed.
+    expect(touchesGone(children(course), lectures)).toBe(true);
   });
 });
 
@@ -175,6 +217,11 @@ describe('isTouched', () => {
     expect(isTouched({ kind: 'courses' }, event({ groups: true }))).toBe(true);
     expect(isTouched({ kind: 'tags' }, event({ groups: true }))).toBe(false);
     expect(isTouched(children(null), event({ tags: true, groups: true }))).toBe(false);
+  });
+
+  it('`tags` touches every search too, since tag names are searched', () => {
+    expect(isTouched(search(course), event({ tags: true }))).toBe(true);
+    expect(isTouched(search(null), event({ groups: true }))).toBe(false);
   });
 
   it('otherwise any listed change decides', () => {

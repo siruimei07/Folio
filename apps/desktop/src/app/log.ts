@@ -5,15 +5,12 @@ import { formatIpcError, ipc, isIpcError, LIMITS, type UiErrorKind } from '../ip
 
 const SOURCE = /^[A-Za-z0-9._-]{1,64}$/;
 
-/** A surrogate without its partner, which the shell's JSON parser refuses. */
-const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g;
-
 /**
  * Well-formed text (lone surrogates become U+FFFD, as `toWellFormed` does) of at most
  * `LIMITS.logChars` characters, never cut inside a surrogate pair.
  */
 export function logText(text: string): string {
-  return Array.from(text.replace(LONE_SURROGATE, '�')).slice(0, LIMITS.logChars).join('');
+  return Array.from(text.toWellFormed()).slice(0, LIMITS.logChars).join('');
 }
 
 /** The message and stack of anything thrown. */

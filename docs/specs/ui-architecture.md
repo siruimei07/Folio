@@ -204,6 +204,14 @@ answers `NotFound` if anyone still shows it. `data/touch.ts` holds the predicate
 does not know is touched by every change, so a lane that adds one refreshes too often rather than
 too rarely until it adds its rule.
 
+As built (`feat/ui-data-m1-hooks`, 2026-09-30): `courses` has no semester path. Every view needs
+the courses of every semester (course codes in paths), so `list_courses` with `semester: null` is
+cached once and `useCourses(semesterPath)` and `useCourseOf(path)` select from it. Two kinds were
+added: `['lib', id, 'resolve', { base, paths }]` (`resolve_paths`), touched by every entry change,
+since a note may name any path and names match without case; and `['lib', id, 'importCheck',
+{ source, target }]` (`check_import`), touched by entries coming, going and moving in its target
+(not by tags or content), so name clashes stay current. `tags` touches `search` too: the search index holds tag names (library core §5.2).
+
 ### 5.3 Paged lists
 
 A virtualised list asks for the pages its visible range needs (§8). `data/paged.ts` provides
@@ -286,6 +294,19 @@ refreshes what it touched; a second, optimistic path would have to agree with th
 and filtering (ADR-0004 §3). A mutation's result is used for focus and selection only (for
 example, select and focus the renamed row by id). Settings mutations that raise no catalog event
 (from `feat/core-app-settings`) invalidate their own keys.
+
+As built (`feat/ui-data-m1-hooks`): `data/mutations.ts` wraps every command mutation.
+`useCommandMutation` rejects with the typed `IpcFailure`; `useBatchMutation` resolves with
+`BatchResult` as the shell sent it, every failed item with its `AppError`, and rejects only when the
+whole request fails. A `NotFound` for an entry the request named (or, for a batch, a failed item's
+`NotFound`) refreshes at once what shows that entry (`touchesGone` in `data/touch.ts`: what its
+removal would touch), which is library-actions §9.4 "refetches the view"; a `NotFound` for a tag
+refreshes `tags`. Queries keyed by the stale reference or something below it are left to the
+reference followers, since asked again they would only answer `NotFound` until the event moves
+their holders; the refresh goes to the library the request was sent for. `check_import` does not
+use up its token and `import_files` does, so the import dialog stops the check (passes `null`, or
+closes) once it sends the import. Creating or opening a library resolves before or after its
+LibraryStateChanged; the cache switches on the event only.
 
 **On `LibraryStateChanged`:** remove every `['lib', …]` query, reset `session`, and reset the
 stores that hold references (§5.5, §6). A new library id makes every old key unreachable anyway.
@@ -574,6 +595,16 @@ children(folder) = for i in 0 ..< total(folder):
   children, styled with `color.search.highlight`. Never HTML (§14).
 - Enter: close the dialog, set the reveal target in the navigation store, switch to Library (§8.2).
   Esc or the scrim closes it; focus returns to where it was.
+
+As built (`feat/ui-data-m1-hooks`): `useSearch(text, scope)` in `data/search.ts` returns hits, a
+status (`idle` without text), `isPrevious`, `hasMore` and `loadMore`. It trims the text, answers
+`QueryTooLong` without calling the shell, and asks for no page past `LIMITS.searchResults`. The
+shell ranks its window once per revision, so a page read at another revision than the first page
+could overlap or skip: it is dropped with the pages after it, and the first page is asked again
+(one call; the list asks for the rest as it scrolls). Text is sent well formed
+(`toWellFormed`), since a lone surrogate would fail the call as `Transport`. `keepPreviousData`
+never keeps another library's hits. The 120 ms pause and IME handling stay in
+the palette.
 
 ## 10. Previews
 

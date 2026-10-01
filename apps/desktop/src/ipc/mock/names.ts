@@ -1,5 +1,6 @@
 // Names the user types (docs/specs/ipc-m1.md §16.3; library core §3). The shell trims both ends
 // and converts to NFC, then checks; the fake applies the same rules and codes.
+import { charCount } from '../../lib/text';
 import { LIMITS } from '../bindings';
 import { fail } from './failure';
 
@@ -12,11 +13,6 @@ function hasControl(text: string): boolean {
     if (code < 0x20 || (code >= 0x7f && code < 0xa0)) return true;
   }
   return false;
-}
-
-/** Characters as the shell counts them: Unicode scalar values. */
-export function charCount(text: string): number {
-  return Array.from(text).length;
 }
 
 function typed(raw: string): string {
@@ -75,9 +71,4 @@ export function courseCode(raw: string | null): string | null {
 export function paletteKey(raw: string): string {
   if (!/^[a-z][a-z0-9-]{0,31}$/.test(raw)) fail('InvalidArgument', `"${raw}" is not a palette key`);
   return raw;
-}
-
-/** Whether a string can cross IPC: the shell's JSON parser refuses lone surrogates. */
-export function isWellFormed(text: string): boolean {
-  return !/\p{Cs}/u.test(text);
 }

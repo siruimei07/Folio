@@ -5,7 +5,8 @@ import { type EntryChange, type EntryRow, LIMITS } from '../../bindings';
 import type { GroupHandlers } from '../contract';
 import { eachItem, fail } from '../failure';
 import { checkPage, type FakeLibrary, type FakeNode, freshFields } from '../library';
-import { charCount, fileName } from '../names';
+import { charCount } from '../../../lib/text';
+import { fileName } from '../names';
 import type { FakeShell } from '../shell';
 
 function checkUnblocked(node: FakeNode): void {

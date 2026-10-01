@@ -40,7 +40,11 @@ export function revisionOf(data: unknown): number | undefined {
  * answer), so it is cancelled and asked again. Query cancels a running refetch by itself, but
  * joins a running first load, which would then keep the older answer.
  */
-function refresh(client: QueryClient, libraryId: string, predicate: (query: Query) => boolean) {
+export function refresh(
+  client: QueryClient,
+  libraryId: string,
+  predicate: (query: Query) => boolean,
+): void {
   const cache = client.getQueryCache();
   const shown = new Set<Query>();
   for (const query of cache.findAll({ queryKey: keys.library(libraryId), predicate })) {
