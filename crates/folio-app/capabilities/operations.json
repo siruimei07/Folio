@@ -1,0 +1,28 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "operations",
+  "description": "Validated library grouping, tagging, and recoverable file operations.",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "allow-list-semesters",
+    "allow-create-semester",
+    "allow-update-semester",
+    "allow-reorder-semesters",
+    "allow-list-courses",
+    "allow-create-course",
+    "allow-update-course",
+    "allow-reorder-courses",
+    "allow-list-tags",
+    "allow-create-tag",
+    "allow-update-tag",
+    "allow-reorder-tags",
+    "allow-delete-tag",
+    "allow-set-entry-tags",
+    "allow-create-folder",
+    "allow-rename-entry",
+    "allow-move-entries",
+    "allow-delete-entries"
+  ]
+}

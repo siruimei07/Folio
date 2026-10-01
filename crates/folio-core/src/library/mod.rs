@@ -3,6 +3,7 @@
 
 mod hashing;
 mod mirror;
+pub mod operations;
 mod plan;
 mod rules;
 pub mod state;
@@ -286,9 +287,11 @@ impl Library {
             .map_or_else(ScanReport::default, |committed| committed.report))
     }
 
-    /// Returns `None` when cancelled before writing. Progress counts visited entries; the
-    /// total is unknown while walking. Once the write starts, journal and catalog work finish
-    /// without cancellation. Callers serialize scans so snapshots cannot commit out of order.
+    /// Returns `None` when cancelled before writing, or a recovery-only report if recovery
+    /// already committed. Publish recovery separately before work that might fail; `rescan`
+    /// does this through its callback. Progress counts visited entries; the total is unknown
+    /// while walking. Once writing starts, journal and catalog work finish without cancellation.
+    /// Callers serialize scans so snapshots cannot commit out of order.
     pub fn scan_with_control(
         &self,
         catalog: &Catalog,
@@ -300,6 +303,7 @@ impl Library {
         if cancel.load(Ordering::Relaxed) {
             return Ok(None);
         }
+        let mut recovered = self.recover_pending(catalog)?;
         state::validate_metadata(self.root())?;
         let config = self
             .layout
@@ -308,7 +312,7 @@ impl Library {
                 path: self.layout.library_file(),
             })?;
         let scope = match scope {
-            Some(scope) if is_folio_owned(scope) => return Ok(Some(CommittedScan::default())),
+            Some(scope) if is_folio_owned(scope) => return Ok(Some(recovered)),
             // A rules file decides what its folder keeps.
             Some(scope) if rules::is_rules_file(scope.name()) => match scope.parent() {
                 Some(folder) => self.widen(catalog, &folder)?,
@@ -329,7 +333,7 @@ impl Library {
             progress,
         )?
         else {
-            return Ok(None);
+            return Ok(recovered.completed_recovery());
         };
         let Some((mut committed, journal)) =
             catalog.write_with(|tx| -> Result<_, LibraryError> {
@@ -425,24 +429,52 @@ impl Library {
                 Ok(Some((committed, journal)))
             })?
         else {
-            return Ok(None);
+            return Ok(recovered.completed_recovery());
         };
         if journal.is_some()
             && let Err(error) = self.finish_journal(catalog)
         {
             // Another scan may have run since this commit. Settle its journal under the writer
             // mutex too; never delete an uncommitted writer's journal after releasing that lock.
-            let problem = match error {
-                LibraryError::Meta(error) => Problem::metadata(self.root(), &error),
-                error => Problem::Metadata {
-                    file: ".folio/local/journal/scan.json".to_owned(),
-                    failure: MetadataFailure::Unreadable(ReadFailure::Other),
-                    detail: error.to_string(),
-                },
-            };
-            committed.report.problems.push(problem);
+            committed.report.problems.push(self.journal_problem(error));
         }
-        Ok(Some(committed))
+        recovered.merge(committed);
+        Ok(Some(recovered))
+    }
+
+    /// The problem to report when a committed change could not remove its journal.
+    fn journal_problem(&self, error: LibraryError) -> Problem {
+        match error {
+            LibraryError::Meta(error) => Problem::metadata(self.root(), &error),
+            error => Problem::Metadata {
+                file: ".folio/local/journal/scan.json".to_owned(),
+                failure: MetadataFailure::Unreadable(ReadFailure::Other),
+                detail: error.to_string(),
+            },
+        }
+    }
+
+    /// Mirrors `tree` into the catalog as a metadata commit that reports `problems` too.
+    fn mirror_commit(
+        &self,
+        tx: &rusqlite::Connection,
+        tree: &MetaTree,
+        mut problems: Vec<Problem>,
+    ) -> Result<CommittedScan, CatalogError> {
+        let mirrored = mirror::mirror(tx, tree, self.root(), &mut problems)?;
+        let mut committed = CommittedScan {
+            coverage: ScanCoverage::Metadata,
+            report: ScanReport {
+                changes: Vec::new(),
+                problems,
+            },
+            tags: mirrored.tags,
+            groups: mirrored.groups,
+            read_only: tree.is_read_only(),
+            ..CommittedScan::default()
+        };
+        committed.add_tagged(tx, mirrored.tagged)?;
+        Ok(committed)
     }
 
     fn finish_journal(&self, catalog: &Catalog) -> Result<(), LibraryError> {
@@ -461,20 +493,244 @@ impl Library {
     /// next starts from the state the catalog knows (docs/specs/library-scan.md §7.1).
     fn settle_journal(&self, tx: &rusqlite::Connection) -> Result<(), LibraryError> {
         state::validate_metadata(self.root())?;
-        // A new catalog knows no paths to go back to: the files stay as the scan left them,
-        // and a journal that cannot be read does not stand in the way of a rebuild.
-        if catalog::has_no_entries(tx)? {
-            return Ok(ScanJournal::remove(&self.layout)?);
-        }
         let Some(journal) = ScanJournal::read(&self.layout)? else {
             return Ok(());
         };
         if catalog::committed_scan_journal(tx)?.as_deref() == Some(journal.id()) {
             ScanJournal::remove(&self.layout)?;
+        } else if journal.moved().is_some() {
+            // Operations must reconcile in their own transaction before another writer can
+            // publish a new journal. Never erase an intent inside an uncommitted writer.
+            return Err(self.recovery_error("a pending explicit move needs reconciliation"));
+        } else if catalog::has_no_entries(tx)? {
+            ScanJournal::remove(&self.layout)?;
         } else {
             journal.undo(&self.layout)?;
         }
         Ok(())
+    }
+
+    fn recovery_error(&self, reason: impl Into<String>) -> LibraryError {
+        MetaError::Invalid {
+            path: self.layout.scan_journal_file(),
+            reason: reason.into(),
+        }
+        .into()
+    }
+
+    fn recovery_metadata_error(&self, error: MetaError) -> LibraryError {
+        if matches!(error, MetaError::Invalid { .. }) {
+            self.recovery_error(error.to_string())
+        } else {
+            error.into()
+        }
+    }
+
+    /// Reconciles a durable in-app move before a scan's disk walk or another operation.
+    /// The caller serializes the whole call with scans/operations and publishes this report
+    /// immediately, even if its subsequent scan or operation fails or is cancelled.
+    pub fn recover_pending(&self, catalog: &Catalog) -> Result<CommittedScan, LibraryError> {
+        // Most calls find no journal: skip the writer transaction and the metadata checks. Only
+        // writers serialized with this call publish one, and anything else gets the full path.
+        if std::fs::symlink_metadata(self.layout.scan_journal_file())
+            .is_err_and(|error| error.kind() == io::ErrorKind::NotFound)
+        {
+            return Ok(CommittedScan::default());
+        }
+        let mut report = catalog.write_with(|tx| -> Result<_, LibraryError> {
+            state::validate_metadata(self.root())?;
+            let Some(journal) = ScanJournal::read(&self.layout)? else {
+                return Ok(CommittedScan::default());
+            };
+            if catalog::committed_scan_journal(tx)?.as_deref() == Some(journal.id()) {
+                return Ok(CommittedScan::default());
+            }
+            let Some((from, to)) = journal.moved() else {
+                self.settle_journal(tx)?;
+                return Ok(CommittedScan::default());
+            };
+            let source = self.exact_disk_entry(from)?;
+            let destination = self.exact_disk_entry(to)?;
+            let completed = match (source.is_some(), destination.is_some()) {
+                (true, false) => false,
+                (false, true) => true,
+                _ => {
+                    return Err(
+                        self.recovery_error("move source/destination are conflicting or absent")
+                    );
+                }
+            };
+            let explicit = journal.move_entries();
+            let legacy = explicit.is_none();
+            let snapshots = match explicit {
+                Some(entries) => entries,
+                None => {
+                    // Legacy v2 stored only the pair. Existing catalog identities and their
+                    // metadata still provide a guarded migration path; never guess missing IDs.
+                    let entries = catalog::entries_in(tx, Some(from))?;
+                    if entries.is_empty() {
+                        return Err(self.recovery_error("legacy move has no catalog identity"));
+                    }
+                    let mut snapshots = Vec::new();
+                    for entry in entries {
+                        let target = match entry.record.path.strip_prefix(from) {
+                            Some(tail) => to
+                                .join(&tail)
+                                .map_err(|error| self.recovery_error(error.to_string()))?,
+                            None => to.clone(),
+                        };
+                        let disk = Metadata {
+                            kind: if entry.record.kind == EntryKind::File {
+                                crate::fs::FileKind::File
+                            } else {
+                                crate::fs::FileKind::Folder
+                            },
+                            size: entry.record.size,
+                            modified_ns: entry.record.mtime_ns,
+                            created_ns: None,
+                            file_id: entry.record.file_id.clone(),
+                            presence: crate::fs::Presence::Local,
+                        };
+                        snapshots.push((entry, target, disk));
+                    }
+                    snapshots
+                }
+            };
+            let allowed: std::collections::HashSet<_> =
+                snapshots.iter().map(|(entry, _, _)| entry.id).collect();
+            let current_subtree = catalog::entries_in(tx, Some(from))?;
+            if current_subtree.len() != snapshots.len()
+                || current_subtree
+                    .iter()
+                    .any(|entry| !allowed.contains(&entry.id))
+            {
+                return Err(self.recovery_error("move catalog subtree conflicts with the journal"));
+            }
+            for (entry, target, expected) in &snapshots {
+                if entry.record.kind == EntryKind::Folder
+                    && entry.record.path.depth() == 1
+                    && target.depth() != 1
+                {
+                    return Err(self.recovery_error("a semester move changes its hierarchy"));
+                }
+                let path = if completed {
+                    target
+                } else {
+                    &entry.record.path
+                };
+                let actual = self
+                    .exact_disk_entry(path)?
+                    .ok_or_else(|| self.recovery_error("move subtree is incomplete"))?;
+                if actual.kind != expected.kind
+                    || actual.size != expected.size
+                    || actual.modified_ns != expected.modified_ns
+                    || (!legacy && actual.created_ns != expected.created_ns)
+                    || expected
+                        .file_id
+                        .as_ref()
+                        .is_some_and(|id| actual.file_id.as_ref() != Some(id))
+                {
+                    return Err(self.recovery_error("move subtree identity no longer matches"));
+                }
+                let current = catalog::entry_by_id(tx, entry.id)?
+                    .ok_or_else(|| self.recovery_error("move catalog identity is missing"))?;
+                if current != *entry {
+                    return Err(
+                        self.recovery_error("move catalog identity conflicts with the journal")
+                    );
+                }
+            }
+            let mut report = CommittedScan {
+                coverage: ScanCoverage::Metadata,
+                ..CommittedScan::default()
+            };
+            if completed {
+                // Prior v2 journals lack after-images. They can reconnect a completed move
+                // from existing catalog/disk identities, without modifying authored bytes.
+                if !legacy || journal.has_after_images() {
+                    journal
+                        .validate_images(true)
+                        .map_err(|error| self.recovery_metadata_error(error))?;
+                }
+                for (_, target, _) in &snapshots {
+                    if catalog::entries_with_key(tx, &target.key())?
+                        .iter()
+                        .any(|entry| !allowed.contains(&entry.id))
+                    {
+                        return Err(
+                            self.recovery_error("move destination catalog identity is occupied")
+                        );
+                    }
+                }
+                let config = self
+                    .layout
+                    .read_library()?
+                    .ok_or_else(|| self.recovery_error("library settings are missing"))?;
+                let mut changes = catalog::EntryChanges::default();
+                for (entry, target, _) in &snapshots {
+                    changes.moved.push((entry.id, target.clone()));
+                    let mut record = entry.record.clone();
+                    record.path = target.clone();
+                    if entry.record.path == *from && record.kind == EntryKind::File {
+                        record.class = config.versioning.class_of(target);
+                    }
+                    changes.updated.push((entry.id, record));
+                    report.push_moved(entry.id, &entry.record.path, target, entry.record.kind);
+                }
+                catalog::apply_changes(tx, &changes)?;
+            } else {
+                journal
+                    .validate_images(false)
+                    .map_err(|error| self.recovery_metadata_error(error))?;
+                journal
+                    .restore(&self.layout)
+                    .map_err(|error| self.recovery_metadata_error(error))?;
+            }
+            // The journal remains durable until the marker and all derived rows COMMIT.
+            let tree = MetaTree::read(&self.layout)?;
+            report.merge(self.mirror_commit(tx, &tree, Vec::new())?);
+            catalog::set_committed_scan_journal(tx, journal.id())?;
+            Ok(report)
+        })?;
+        // Cleanup failure does not invalidate a committed recovery or discard its report.
+        if let Err(error) = self.finish_journal(catalog) {
+            if report.coverage == ScanCoverage::None {
+                report.read_only = MetaTree::read(&self.layout)?.is_read_only();
+                report.coverage = ScanCoverage::Metadata;
+            }
+            report.report.problems.push(self.journal_problem(error));
+        }
+        Ok(report)
+    }
+
+    fn exact_disk_entry(&self, path: &RelPath) -> Result<Option<Metadata>, LibraryError> {
+        let mut parent = self.root().to_owned();
+        let names: Vec<_> = path.names().collect();
+        for (index, name) in names.iter().enumerate() {
+            let entries = self.fs.read_dir(&parent).map_err(|error| {
+                self.recovery_error(format!("cannot inspect move path: {error}"))
+            })?;
+            let Some(entry) = entries
+                .into_iter()
+                .find(|entry| entry.name.to_str() == Some(*name))
+            else {
+                return Ok(None);
+            };
+            parent.push(name);
+            let metadata = self.fs.metadata(&parent).map_err(|error| {
+                self.recovery_error(format!("cannot inspect move identity: {error}"))
+            })?;
+            if metadata.kind != entry.metadata.kind {
+                return Err(self.recovery_error("move path changed during inspection"));
+            }
+            if index + 1 == names.len() {
+                return Ok(Some(metadata));
+            }
+            if metadata.kind != crate::fs::FileKind::Folder {
+                return Err(self.recovery_error("move path contains a link or special entry"));
+            }
+        }
+        Err(self.recovery_error("empty move path"))
     }
 
     /// Carries out a watcher's rescan (docs/specs/windows-adapter.md §5.4): a scan of the whole
@@ -516,6 +772,9 @@ impl Library {
         progress: &mut dyn FnMut(u64),
         on_report: &mut dyn FnMut(CommittedScan),
     ) -> Result<bool, LibraryError> {
+        if let Some(recovered) = self.recover_pending(catalog)?.completed_recovery() {
+            on_report(recovered);
+        }
         match rescan {
             Rescan::Full => {
                 let Some(report) =
@@ -558,32 +817,30 @@ impl Library {
         catalog: &Catalog,
         cancel: &AtomicBool,
     ) -> Result<Option<CommittedScan>, LibraryError> {
-        catalog.write_with(|tx| {
+        if cancel.load(Ordering::Relaxed) {
+            return Ok(None);
+        }
+        let mut recovered = self.recover_pending(catalog)?;
+        let report = catalog.write_with(|tx| -> Result<_, LibraryError> {
             if cancel.load(Ordering::Relaxed) {
                 return Ok(None);
             }
             let tree = self.read_meta(tx)?;
-            let mut problems = Vec::new();
-            let mirrored = mirror::mirror(tx, &tree, self.root(), &mut problems)?;
-            let mut committed = CommittedScan {
-                coverage: ScanCoverage::Metadata,
-                report: ScanReport {
-                    changes: Vec::new(),
-                    problems,
-                },
-                tags: mirrored.tags,
-                groups: mirrored.groups,
-                read_only: tree.is_read_only(),
-                ..CommittedScan::default()
-            };
-            committed.add_tagged(tx, mirrored.tagged)?;
-            Ok(Some(committed))
-        })
+            Ok(Some(self.mirror_commit(tx, &tree, Vec::new())?))
+        })?;
+        match report {
+            Some(report) => {
+                recovered.merge(report);
+                Ok(Some(recovered))
+            }
+            None => Ok(recovered.completed_recovery()),
+        }
     }
 
     /// Settles recoverable metadata writes before clearing derived rows. The same catalog
     /// remains usable by readers, and the next scan rebuilds it with fresh entry identities.
     pub fn reset_catalog(&self, catalog: &Catalog) -> Result<(), LibraryError> {
+        self.recover_pending(catalog)?;
         catalog.write_with(|tx| {
             self.settle_journal(tx)?;
             catalog::reset_for_rebuild(tx)?;
@@ -608,6 +865,36 @@ impl Library {
 }
 
 impl CommittedScan {
+    fn completed_recovery(self) -> Option<Self> {
+        (self.coverage != ScanCoverage::None || !self.report.problems.is_empty()).then_some(self)
+    }
+
+    fn merge(&mut self, report: Self) {
+        if report.coverage != ScanCoverage::None {
+            self.coverage = report.coverage;
+        }
+        self.entries.extend(report.entries);
+        self.tags |= report.tags;
+        self.groups |= report.groups;
+        self.read_only |= report.read_only;
+        self.report.changes.extend(report.report.changes);
+        self.report.problems.extend(report.report.problems);
+    }
+
+    /// Reports that entry `id`, a `kind`, moved from `from` to `to`.
+    fn push_moved(&mut self, id: EntryId, from: &RelPath, to: &RelPath, kind: EntryKind) {
+        self.groups |= is_group(from, kind) || is_group(to, kind);
+        self.entries.push(EntryChange {
+            id,
+            path: to.clone(),
+            kind: EntryChangeKind::Moved { from: from.clone() },
+        });
+        self.report.changes.push(Change::Moved {
+            from: from.clone(),
+            to: to.clone(),
+        });
+    }
+
     fn add_tagged(
         &mut self,
         tx: &rusqlite::Connection,

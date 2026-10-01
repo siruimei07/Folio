@@ -940,9 +940,9 @@ Other documents: first-run handoff §4.2, §7 and §12; library-actions handoff 
 2. **Browse and search** (`feat/data-browse-queries`): the core queries for §9.1 and §10 (natural
    name order, effective tags, filters, scopes, the fixed search window) and their commands,
    and `resolve_paths`.
-3. **Library operations** (`feat/core-library-ops`): §7, §8 and §9.2 with the metadata changes of
-   §20.1, the Recycle Bin adapter with `NotRecyclable`, `CatalogChanged`, and the `library_status`
-   retry (§6).
+3. **Done (2026-09-30).** **Library operations** (`feat/core-library-ops`): §7, §8 and §9.2 with
+   the metadata changes of §20.1, the Recycle Bin adapter with `NotRecyclable`, `CatalogChanged`,
+   and the `library_status` retry (§6).
 4. **Import** (`feat/core-import`): dialogs, drops, `check_import` with `ImportName`, the import
    job.
 5. **Preview** (`feat/core-file-scheme`): the `folio-file` scheme with its failure codes (§11.2),

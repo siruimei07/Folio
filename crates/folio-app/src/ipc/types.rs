@@ -41,16 +41,12 @@ pub const LIMITS: Limits = Limits {
     page_size: 500,
     search_results: 500,
     query_chars: to_u32(folio_core::search::MAX_QUERY_CHARS),
-    batch: 10_000,
+    batch: to_u32(folio_core::library::operations::MAX_BATCH),
     filter_tags: 16,
     name_units: to_u32(folio_core::paths::MAX_NAME_UNITS),
-    // The next three are rules of the core's `meta` values, which has no constants for them yet:
-    // `DisplayName` allows 128 characters; `Abbr` allows only 2 grapheme clusters until the lane
-    // that implements course settings widens it and adds the course code (spec §20). That lane
-    // turns these rules into core constants and takes them from there, like the two above.
-    display_name_chars: 128,
-    abbr_graphemes: 3,
-    course_code_chars: 32,
+    display_name_chars: to_u32(folio_core::meta::MAX_DISPLAY_NAME_CHARS),
+    abbr_graphemes: to_u32(folio_core::meta::MAX_ABBR_GRAPHEMES),
+    course_code_chars: to_u32(folio_core::meta::MAX_COURSE_CODE_CHARS),
     event_entries: 200,
     resolve_paths: 64,
     relative_path_chars: 1_024,

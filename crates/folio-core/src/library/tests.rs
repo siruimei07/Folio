@@ -257,7 +257,7 @@ fn metadata_report_distinguishes_tags_groups_and_read_only_state() {
         .unwrap();
     assert!(!repeated.changed());
 
-    std_fs::write(course_file(f.layout(), "s/c"), "{\"format_version\":2}").unwrap();
+    std_fs::write(course_file(f.layout(), "s/c"), "{\"format_version\":3}").unwrap();
     let report = f
         .library
         .sync_metadata_with_control(&f.catalog, &cancel)
@@ -458,9 +458,10 @@ fn sorted(paths: &[&str]) -> Vec<String> {
 
 fn settings(abbr: &str, order: u32) -> CourseSettings {
     CourseSettings {
-        abbr: Abbr::parse(abbr).unwrap(),
+        abbr: Some(Abbr::parse(abbr).unwrap()),
         archived: false,
-        color: Color::parse("blue").unwrap(),
+        code: None,
+        color: Some(Color::parse("blue").unwrap()),
         order,
     }
 }
@@ -1236,7 +1237,7 @@ fn a_newer_metadata_file_makes_all_of_them_read_only() {
     );
     std_fs::write(
         f.layout().tags_file(),
-        r#"{"format_version": 2, "tags": {}}"#,
+        r#"{"format_version": 3, "tags": {}}"#,
     )
     .unwrap();
     let before = std_fs::read(course_file(f.layout(), "s/c")).unwrap();
@@ -1498,11 +1499,20 @@ fn a_journal_that_names_other_files_stops_the_scan_and_touches_nothing() {
         }
     }
 
-    // A rebuild starts from a new catalog, which the journal does not stand in the way of.
+    // An empty catalog cannot prove what an invalid journal intended. Retain it and stop.
     let dir = tempfile::tempdir().unwrap();
-    assert_eq!(f.scan_into(&open_catalog(dir.path())).problems, []);
-    assert!(!f.layout().scan_journal_file().exists());
+    assert!(matches!(
+        f.library
+            .scan(&open_catalog(dir.path()), None, f.fs.now_ns()),
+        Err(LibraryError::Meta(MetaError::Invalid { .. }))
+    ));
+    assert!(f.layout().scan_journal_file().exists());
     assert_eq!(std_fs::read_to_string(&outside).unwrap(), "keep");
+    assert!(matches!(
+        f.library.reset_catalog(&f.catalog),
+        Err(LibraryError::Meta(MetaError::Invalid { .. }))
+    ));
+    assert!(f.layout().scan_journal_file().exists());
 }
 
 #[test]

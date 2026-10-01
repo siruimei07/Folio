@@ -8,13 +8,14 @@
 
 use std::cell::RefCell;
 use std::io::{self, Read};
+use std::os::windows::ffi::OsStrExt;
 use std::os::windows::io::{AsRawHandle, OwnedHandle};
-use std::path::Path;
+use std::path::{Component, Path, Prefix};
 
 use windows_sys::Win32::Foundation::{ERROR_FILE_NOT_FOUND, ERROR_NO_MORE_FILES, FILETIME};
 use windows_sys::Win32::Storage::FileSystem::{
     FILE_ATTRIBUTE_REPARSE_POINT, FILE_ATTRIBUTE_TAG_INFO, FILE_ID_INFO, FileIdExtdDirectoryInfo,
-    FileIdExtdDirectoryRestartInfo, GetFileInformationByHandleEx,
+    FileIdExtdDirectoryRestartInfo, GetFileInformationByHandleEx, MoveFileExW,
 };
 
 use super::dir_info;
@@ -124,6 +125,61 @@ impl FileSystem for WindowsFileSystem {
     fn open(&self, path: &Path) -> io::Result<Box<dyn Read + '_>> {
         StdFileSystem.open(path)
     }
+}
+
+/// Renames `from` to `to` on one volume, a folder with everything in it, and never replaces
+/// what is at `to`. Both paths are absolute.
+pub fn rename_no_replace(from: &Path, to: &Path) -> io::Result<()> {
+    let from = verbatim(from)?;
+    let to = verbatim(to)?;
+    // SAFETY: both buffers are NUL-terminated UTF-16 and live through this synchronous call.
+    // Flags 0: no replacing and no copying to another volume.
+    if unsafe { MoveFileExW(from.as_ptr(), to.as_ptr(), 0) } == 0 {
+        Err(io::Error::last_os_error())
+    } else {
+        Ok(())
+    }
+}
+
+/// `path` as NUL-terminated UTF-16 in verbatim form (`\\?\C:\…`, `\\?\UNC\server\share\…`), so
+/// that long paths work. A verbatim path means exactly what it says, so only a drive or share
+/// path of plain names is converted; a verbatim path is passed on as it is.
+fn verbatim(path: &Path) -> io::Result<Vec<u16>> {
+    let invalid = || io::Error::new(io::ErrorKind::InvalidInput, "not an absolute path");
+    let mut components = path.components();
+    let Some(Component::Prefix(prefix)) = components.next() else {
+        return Err(invalid());
+    };
+    let mut wide: Vec<u16> = match prefix.kind() {
+        Prefix::Verbatim(_) | Prefix::VerbatimDisk(_) | Prefix::VerbatimUNC(..) => {
+            path.as_os_str().encode_wide().collect()
+        }
+        kind @ (Prefix::Disk(_) | Prefix::UNC(..)) => {
+            if components.next() != Some(Component::RootDir) {
+                return Err(invalid());
+            }
+            let prefix = prefix.as_os_str().encode_wide();
+            let mut wide: Vec<u16> = match kind {
+                Prefix::Disk(_) => r"\\?\".encode_utf16().chain(prefix).collect(),
+                // `\\server\share` becomes `\\?\UNC\server\share`.
+                _ => r"\\?\UNC".encode_utf16().chain(prefix.skip(1)).collect(),
+            };
+            for component in components {
+                let Component::Normal(name) = component else {
+                    return Err(invalid());
+                };
+                wide.push(u16::from(b'\\'));
+                wide.extend(name.encode_wide());
+            }
+            wide
+        }
+        _ => return Err(invalid()),
+    };
+    if wide.contains(&0) {
+        return Err(invalid());
+    }
+    wide.push(0);
+    Ok(wide)
 }
 
 /// The folder's entries with their file ids.
@@ -383,5 +439,49 @@ mod tests {
             adapter.metadata(&file).unwrap(),
             StdFileSystem.metadata(&file).unwrap()
         );
+    }
+
+    #[test]
+    fn no_replace_rename_moves_long_paths_and_leaves_competing_files_intact() {
+        let temp = tempfile::tempdir().unwrap();
+        let from = temp.path().join("from");
+        let to = temp.path().join("to");
+        fs::write(&from, b"source").unwrap();
+        fs::write(&to, b"destination").unwrap();
+        assert!(rename_no_replace(&from, &to).is_err());
+        assert_eq!(fs::read(&from).unwrap(), b"source");
+        assert_eq!(fs::read(&to).unwrap(), b"destination");
+
+        let deep: PathBuf = (0..60).fold(temp.path().to_owned(), |path, _| path.join("课程资料"));
+        fs::create_dir_all(&deep).unwrap();
+        let moved = deep.join("moved");
+        assert!(moved.as_os_str().encode_wide().count() > 260);
+        rename_no_replace(&from, &moved).unwrap();
+        assert_eq!(fs::read(&moved).unwrap(), b"source");
+        assert!(!from.exists());
+    }
+
+    #[test]
+    fn verbatim_paths_pass_through_and_drive_and_share_paths_are_qualified() {
+        let text = |path: &str| {
+            verbatim(Path::new(path))
+                .map(|wide| String::from_utf16(&wide[..wide.len() - 1]).unwrap())
+        };
+        assert_eq!(text(r"\\?\C:\资料\a.md").unwrap(), r"\\?\C:\资料\a.md");
+        assert_eq!(text(r"C:\资料/课\a.md").unwrap(), r"\\?\C:\资料\课\a.md");
+        assert_eq!(text(r"\\nas\home\资料").unwrap(), r"\\?\UNC\nas\home\资料");
+        assert_eq!(
+            text(r"\\?\UNC\nas\home\资料").unwrap(),
+            r"\\?\UNC\nas\home\资料"
+        );
+        for path in [
+            r"资料\a.md",
+            r"C:资料",
+            r"C:\资料\..\a.md",
+            r"\\.\C:\a",
+            r"\a.md",
+        ] {
+            assert!(text(path).is_err(), "{path}");
+        }
     }
 }

@@ -1,6 +1,7 @@
 //! Machine-local library selection and the lifetime of its background worker.
 
 mod errors;
+mod operations;
 mod problems;
 mod worker;
 
@@ -56,6 +57,7 @@ struct Inner {
 
 struct State {
     ready: bool,
+    attempt: u64,
     status: Result<LibraryStatus, AppError>,
     session: Option<Arc<Session>>,
 }
@@ -74,6 +76,7 @@ impl LibraryState {
             transition: Mutex::new(()),
             state: Mutex::new(State {
                 ready: false,
+                attempt: 0,
                 status: Ok(LibraryStatus::None),
                 session: None,
             }),
@@ -133,6 +136,53 @@ impl LibraryState {
             Some(session) => Ok(session.status()),
             None => state.status.clone(),
         }
+    }
+
+    /// Only an unavailable status observed at call entry may retry. Calls waiting behind
+    /// startup or the same attempt return that attempt's result, including identical failures.
+    pub fn retry_status(&self) -> Result<LibraryStatus, AppError> {
+        let observed = {
+            let state = lock(&self.0.state);
+            let status = state
+                .session
+                .as_ref()
+                .map_or_else(|| state.status.clone(), |session| Ok(session.status()));
+            (state.ready && matches!(status, Ok(LibraryStatus::Unavailable { .. })))
+                .then_some(state.attempt)
+        };
+        self.retry_observed(observed)
+    }
+
+    fn retry_observed(&self, observed: Option<u64>) -> Result<LibraryStatus, AppError> {
+        self.status()?;
+        let Some(observed) = observed else {
+            return self.status();
+        };
+        let _transition = lock(&self.0.transition);
+        self.accepting()?;
+        if lock(&self.0.state).attempt != observed
+            || !matches!(self.status()?, LibraryStatus::Unavailable { .. })
+        {
+            return self.status();
+        }
+        let settings = self.settings()?;
+        let old = lock(&self.0.state).session.take();
+        if let Some(old) = old {
+            self.drain(&old, "closing the unavailable library failed");
+        }
+        match settings.library_root {
+            Some(root) => {
+                self.reopen(&root);
+            }
+            None => {
+                lock(&self.0.state).status = Ok(LibraryStatus::None);
+            }
+        }
+        let mut state = lock(&self.0.state);
+        // Increment on completion so calls arriving during a failed retry also coalesce.
+        state.attempt = state.attempt.wrapping_add(1);
+        drop(state);
+        self.status()
     }
 
     fn data_dir(&self) -> Result<&Path, AppError> {
@@ -299,6 +349,7 @@ impl LibraryState {
         };
         {
             let mut state = lock(&self.0.state);
+            state.attempt = state.attempt.wrapping_add(1);
             state.status = Ok(status.clone());
             state.session = Some(session.clone());
         }
@@ -325,6 +376,34 @@ impl LibraryState {
         Ok(self.session()?.jobs.list())
     }
 
+    /// Runs a list read under the transition, like `with_entry`, so it never reads a library
+    /// that a switch has already drained. Reads use WAL snapshots and never wait for the worker.
+    fn with_reads<T>(
+        &self,
+        action: impl FnOnce(&Session) -> Result<T, AppError>,
+    ) -> Result<T, AppError> {
+        self.status()?;
+        let _transition = lock(&self.0.transition);
+        let session = self.session()?;
+        action(&session)
+    }
+
+    /// Takes the session under the transition, then releases it: a write waits for the worker's
+    /// operation mutex through a whole walk or hash job, and must not hold up reads, file
+    /// actions, switching or closing meanwhile. `Session::shutdown` waits for a write that is
+    /// running; one that starts later finds the session stopped and changes nothing.
+    fn with_operations<T>(
+        &self,
+        action: impl FnOnce(&Session) -> Result<T, AppError>,
+    ) -> Result<T, AppError> {
+        self.status()?;
+        let session = {
+            let _transition = lock(&self.0.transition);
+            self.session()?
+        };
+        action(&session)
+    }
+
     /// Checks a reference against the live catalog and runs `action` on the entry while the
     /// library transition and the catalog writer are held, so no library switch and no Folio
     /// change lands between the check and the action. Everything else waits meanwhile: keep
@@ -335,23 +414,11 @@ impl LibraryState {
         reference: &crate::ipc::types::EntryRef,
         action: impl FnOnce(&Path, &folio_core::catalog::Entry) -> Result<T, AppError>,
     ) -> Result<T, AppError> {
-        use folio_core::paths::RelPath;
-        let id = reference
-            .id
-            .parse::<i64>()
-            .ok()
-            .filter(|id| *id > 0 && reference.id.bytes().all(|byte| byte.is_ascii_digit()))
-            .ok_or_else(|| AppError::InvalidArgument("invalid entry id".to_owned()))?;
-        let path = RelPath::parse(&reference.path)
-            .map_err(|error| AppError::InvalidArgument(error.to_string()))?;
-        if folio_core::meta::is_folio_owned(&path) {
-            return Err(AppError::NotFound(
-                "Folio metadata is not an entry".to_owned(),
-            ));
-        }
+        let reference = operations::reference(reference)?;
         self.status()?;
         let _transition = lock(&self.0.transition);
-        self.session()?.with_entry(id, &path, action)
+        self.session()?
+            .with_entry(reference.id.0, &reference.path, action)
     }
     pub fn cancel(&self, request: CancelJob) -> Result<(), AppError> {
         match self.session() {

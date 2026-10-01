@@ -234,20 +234,44 @@ changes, through a journal, `.folio/local/journal/scan.json`:
 3. The files, then the catalog, whose transaction records the journal's id; then the journal is
    removed.
 
-A scan that finds a journal first settles it. If the catalog holds its id, the scan committed
-and the journal only goes. Otherwise the catalog still has the old paths, so the journal puts
-every file back, and the scan starts over from that state. Applying the same moves twice would
-be wrong: a swap would swap back. A new catalog knows no old paths, so its first scan removes
-the journal, unread, and leaves the files. Everything that reads `.folio/meta/` into the catalog
-settles the journal first: the scan and `Library::sync_metadata` share one function for it, and
-the operations lane's writers will too.
+A normal scan journal is settled before metadata is read. If the catalog holds its id, the
+scan committed and the journal only goes. Otherwise its files are restored before the scan
+starts over. Applying the same moves twice would be wrong: a swap would swap back. A new
+catalog knows no old paths, so it removes a plain scan journal and leaves the authored files.
+Ordinary scans retain the case-rename ordering above; explicit operations use the protocol below.
+
+An in-app rename or move writes local journal format 3 before metadata or the Windows rename,
+including when no tags change. It records the validated source/destination, complete catalogued
+subtree identities and disk fingerprints, metadata before/after images and physical metadata
+case renames. This local format is separate from synced metadata format 2. Readers accept prior
+scan journal versions 1 and 2; legacy move pairs are recovered only when the catalog and disk
+still provide enough identity evidence. An existing unsettled journal cannot be overwritten.
+Publication is capped at the existing 32 MiB metadata read limit and fails before changing files
+if the record would exceed it.
+
+`Library::recover_pending` runs a separate writer transaction before walking or starting another
+operation. A matching source with no destination means the OS rename was not performed: restore
+the before state. A matching destination with no source means it completed: keep the authored
+after state and apply the explicit catalog moves, preserving entry ids, hashes, bodies and added
+times even without file ids. Exact directory spelling distinguishes case-only renames on both
+case-insensitive and case-sensitive directories. Conflicting/missing paths, replaced identities,
+unreadable evidence or externally changed metadata stop with a typed error and retain the files
+and journal. Recovery never overwrites a competing authored edit. It commits the reconciled
+catalog and journal marker before cleanup, so another crash is safe to retry. A rebuild cannot
+bypass an unresolved operation intent.
+
+The shell serializes recovery with the full worker walk and operations, and publishes its
+committed report before dependent work; a later failed or cancelled scan cannot hide it. Direct
+core callers likewise publish `recover_pending` before work that may fail. These recovery
+guarantees and the narrow startup/journal extension were approved by Sirui on 2026-09-30.
 
 The journal is input like any other file in the library folder. Each path in it must name a
 metadata file as the layout spells it (`_root.json`, `<semester>/_group.json` or
 `<semester>/<course>.json`, names escaped), and undoing writes to the path the layout builds from
 it, never to the text itself. A journal that cannot be read, or names anything else, stops the
 scan with a typed error (`MetaError::Invalid`): Folio writes it atomically and only with paths
-it built, so it was damaged or put there. Rebuilding the catalog removes it.
+it built, so it was damaged or put there. Recovery records are retained while their operation
+cannot be safely reconciled.
 
 ### 7.2 The mirror
 
@@ -306,7 +330,7 @@ Scans never hash, so a new library is browsable before its hashes are done (syst
 
 | Type | Meaning |
 |---|---|
-| `library::LibraryError` | The scan stopped and changed nothing: the root cannot be listed, `library.json` is missing, invalid or newer, a metadata file cannot be written, or the catalog failed |
+| `library::LibraryError` | The current scan stopped: the root cannot be listed, `library.json` is missing, invalid or newer, a metadata file cannot be written, recovery evidence conflicts, or the catalog failed. A recovery committed before the scan remains committed and is published separately |
 | `library::Problem` | Something the user should see, the scan went on: `NotUnicode`, `InvalidName`, `NotNfc`, `CaseTwins`, `Link`, `Special`, `Unreadable`, `InvalidIgnoreRule`, `Metadata`, `OrphanedMetadata`, `NotRelocated` |
 | `library::ReadFailure` | Why something could not be read: `Denied`, `InUse` (another program holds it; Windows sharing and lock violations), `TooLarge`, `Other` |
 | `library::MetadataFailure` | `Newer`, `Invalid`, `Unreadable(ReadFailure)` |
@@ -324,7 +348,7 @@ core §7). Problems are recomputed by every scan; the shell keeps the latest lis
 | Ignore rules | Precedence of §5 row by row; case and NFC; invalid lines; `.gitignore` in scopes; a scope that is a `.gitignore` covers its folder, or the library at the root (it fails without that: checked once by hand) |
 | Reconcile | Add, modify, remove, kind change; moves by id of files and folders, case-only moves, swaps; id-less entries following a moved folder; entry ids survive moves; entries that stay while their folder entry moves or goes, below a folder that cannot be listed too, get the folder entry at their parent path; `added_ns` of a first scan, a later one and a library that started empty |
 | Metadata | Tags and settings follow every kind of move, also where names in `.folio/meta/` differ in case; case-only renames of files and semester folders; broken and newer files are never written; paths that would be too long |
-| Journal | A swap interrupted between the metadata and the catalog is undone and redone, not swapped back; a half-written move is finished; the journal of a committed scan is removed, not undone; a journal that names other files (`..`, `\`, absolute, drive or UNC paths, unescaped names) stops the scan before touching anything and does not block a rebuild; `sync_metadata` settles an interrupted scan first. Mutation checks: undoing nothing, undoing committed journals, or joining the journal's paths as written, fails a test |
+| Journal | A swap interrupted between the metadata and the catalog is undone and redone, not swapped back; a half-written move is finished; the journal of a committed scan is removed, not undone; a journal that names other files (`..`, `\`, absolute, drive or UNC paths, unescaped names) stops before touching anything and is retained through a failed rebuild; `sync_metadata` settles an interrupted scan first. Explicit operation tests cover no-id and case-only moves, second recovery crashes, conflicting/unreadable evidence, legacy journals, the size cap and cleanup failure. Mutation checks: undoing nothing, undoing committed journals, or joining the journal's paths as written, fails a test |
 | Mirror | Definitions, settings and entry tags; orphaned files; tag files of unconfigured folders; a file that cannot be read keeps what it gave; of two files that name one folder, the one spelled like it holds moved tags |
 | Hashing | Deferral, verification, locked files, cancellation, resume |
 | Property | ADR-0002: after random creations, edits, saves through temporary files, deletions, renames (case-only ones included), tagging, settings and hashing, the incrementally maintained catalog equals one rebuilt from scratch, apart from when entries were added (§6.3); entries keep their ids and times, files their tags, and semesters and courses their settings while their file ids survive. Mutation checks: each of eight deliberate bugs in matching, relocation, catalog updates and hashing fails it or a unit test |

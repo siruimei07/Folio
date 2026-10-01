@@ -8,6 +8,13 @@ use unicode_segmentation::UnicodeSegmentation;
 use super::{MetaError, MetaFile};
 use crate::paths::{RelPath, same_name};
 
+/// A library or tag name, in Unicode scalar values.
+pub const MAX_DISPLAY_NAME_CHARS: usize = 128;
+/// A course badge, in grapheme clusters.
+pub const MAX_ABBR_GRAPHEMES: usize = 3;
+/// A course code, in Unicode scalar values.
+pub const MAX_COURSE_CODE_CHARS: usize = 32;
+
 /// A value that breaks a rule of the metadata format.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 #[error("{what} {rule}")]
@@ -72,7 +79,7 @@ text_value!(
     "a name",
     "must be 1–128 characters without surrounding spaces or control characters",
     |text| {
-        (1..=128).contains(&text.chars().count())
+        (1..=MAX_DISPLAY_NAME_CHARS).contains(&text.chars().count())
             && text.trim() == text
             && !text.chars().any(char::is_control)
     }
@@ -82,10 +89,22 @@ text_value!(
     /// A course's abbreviation, shown in its coloured square (brief §5.1).
     Abbr,
     "an abbreviation",
-    "must be one or two characters without spaces",
+    "must be one to three grapheme clusters without whitespace or control characters",
     |text| {
-        (1..=2).contains(&text.graphemes(true).count())
+        (1..=MAX_ABBR_GRAPHEMES).contains(&text.graphemes(true).count())
             && !text.chars().any(|ch| ch.is_whitespace() || ch.is_control())
+    }
+);
+
+text_value!(
+    /// A course's optional user-entered code, such as `MAT232`.
+    CourseCode,
+    "a course code",
+    "must be 1–32 characters without surrounding whitespace or control characters",
+    |text| {
+        (1..=MAX_COURSE_CODE_CHARS).contains(&text.chars().count())
+            && text.trim() == text
+            && !text.chars().any(char::is_control)
     }
 );
 
@@ -193,14 +212,16 @@ impl Default for VersioningRules {
 }
 
 /// A file or a folder.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum EntryKind {
     File,
     Folder,
 }
 
 /// What a file is, from its extension alone.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum FileClass {
     Text,
     Word,
@@ -275,14 +296,14 @@ impl PresetTag {
         TagId(id.to_owned())
     }
 
-    /// Placeholder palette keys until the design system defines the tag palette (milestone 6).
+    /// Palette keys for new libraries; stored tag definitions keep their own colours.
     fn color(self) -> Color {
         let color = match self {
             Self::Notes => "blue",
             Self::Slides => "green",
             Self::Homework => "orange",
             Self::Exam => "red",
-            Self::Reference => "gray",
+            Self::Reference => "stone",
         };
         Color(color.to_owned())
     }
@@ -432,9 +453,13 @@ impl MetaFile for CourseMeta {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct CourseSettings {
-    pub abbr: Abbr,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub abbr: Option<Abbr>,
     pub archived: bool,
-    pub color: Color,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub code: Option<CourseCode>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color: Option<Color>,
     pub order: u32,
 }
 
@@ -466,11 +491,18 @@ mod tests {
             assert!(DisplayName::parse(text).is_err(), "{text:?}");
         }
 
-        for text in ["线代", "LA", "C", "👩‍💻"] {
+        for text in ["线代", "LA", "C", "CSC", "线性代", "👩‍💻👨‍💻👩‍🔬"] {
             assert!(Abbr::parse(text).is_ok(), "{text:?}");
         }
-        for text in ["", "线性代", "L A", "\t"] {
+        for text in ["", "线性代数", "L A", "\t"] {
             assert!(Abbr::parse(text).is_err(), "{text:?}");
+        }
+
+        for text in ["MAT232", "CSC 148", "字", &"字".repeat(32)] {
+            assert!(CourseCode::parse(text).is_ok(), "{text:?}");
+        }
+        for text in ["", " MAT232", "MAT232 ", "MAT\n232", &"字".repeat(33)] {
+            assert!(CourseCode::parse(text).is_err(), "{text:?}");
         }
 
         for text in ["md", "c++", "tar-gz", "ñ"] {
@@ -537,6 +569,10 @@ mod tests {
                 ("reference", "Reference", 5),
                 ("slides", "Slides", 2),
             ]
+        );
+        assert_eq!(
+            tags.tags[&PresetTag::Reference.id()].color.as_str(),
+            "stone"
         );
     }
 }

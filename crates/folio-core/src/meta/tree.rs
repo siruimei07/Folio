@@ -8,12 +8,16 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
+use crate::catalog::{Entry, EntryId, EntryRecord};
+use crate::fs::Metadata;
+use crate::hash::ContentHash;
+
 use super::layout::{GROUP_FILE, ROOT_FILE, course_named, semester_named};
 use super::model::random_hex;
 use super::{
     Assignments, CourseMeta, CourseSettings, EntryKind, GroupMeta, GroupSettings, Layout,
-    MetaError, MetaFile, RootMeta, TagDefinitions, TagFile, TagFileKey, TagId, io_error, read,
-    read_bytes, tag_location, write,
+    MetaError, MetaFile, RootMeta, TagDefinitions, TagFile, TagFileKey, TagId, io_error,
+    is_folio_owned, read, read_bytes, tag_location,
 };
 use crate::files;
 use crate::paths::{CoursePath, PathKey, RelPath, SemesterPath};
@@ -420,46 +424,136 @@ impl MetaTree {
     /// in the catalog in the same transaction as its own changes, and removes the journal once
     /// they committed.
     pub fn save(&mut self, layout: &Layout) -> Result<Option<String>, MetaError> {
-        for (from, to) in std::mem::take(&mut self.renames) {
-            match (from, to) {
-                (TagFile::Group(from), TagFile::Group(to)) => {
-                    rename(&layout.semester_dir(&from)?, &layout.semester_dir(&to)?)?;
-                }
-                (from, to) => {
-                    rename(&layout.tag_file_path(&from)?, &layout.tag_file_path(&to)?)?;
+        self.save_with(layout, None)
+    }
+
+    /// Publishes a complete explicit move intent before changing metadata or the user's item.
+    pub fn save_operation(
+        &mut self,
+        layout: &Layout,
+        from: &RelPath,
+        to: &RelPath,
+        entries: &[(Entry, RelPath, Metadata)],
+    ) -> Result<Option<String>, MetaError> {
+        let intent = MoveIntent {
+            from: from.clone(),
+            to: to.clone(),
+            entries: entries
+                .iter()
+                .map(|(entry, to, disk)| MoveRecord {
+                    id: entry.id.0,
+                    from: entry.record.path.clone(),
+                    to: to.clone(),
+                    kind: entry.record.kind,
+                    class: entry.record.class,
+                    size: entry.record.size,
+                    mtime_ns: entry.record.mtime_ns,
+                    file_id: entry.record.file_id.clone(),
+                    hash: entry.record.hash.clone(),
+                    added_ns: entry.added_ns,
+                    disk: DiskIdentity {
+                        size: disk.size,
+                        modified_ns: disk.modified_ns,
+                        created_ns: disk.created_ns,
+                        file_id: disk.file_id.clone(),
+                    },
+                })
+                .collect(),
+        };
+        self.save_with(layout, Some(intent))
+    }
+
+    fn save_with(
+        &mut self,
+        layout: &Layout,
+        intent: Option<MoveIntent>,
+    ) -> Result<Option<String>, MetaError> {
+        let ops = std::mem::take(&mut self.ops);
+        let renames = if intent.is_none() {
+            // Ordinary scans keep their idempotent case renames before the journal.
+            save_renames(layout, std::mem::take(&mut self.renames))?;
+            if ops.is_empty() {
+                return Ok(None);
+            }
+            Vec::new()
+        } else {
+            std::mem::take(&mut self.renames)
+        };
+
+        let mut images = BTreeMap::new();
+        if intent.is_some() {
+            // Renaming a semester's metadata directory also carries unchanged course files.
+            // Keep their images so recovery cannot rename externally edited files blindly.
+            for file in self.loaded.keys().chain(self.broken.keys()) {
+                let original = before_rename(file.clone(), &renames);
+                if original != *file {
+                    let content = read_text(&layout.tag_file_path(&original)?)?;
+                    images.insert(
+                        file.meta_path()?,
+                        (original.meta_path()?, content.clone(), content),
+                    );
                 }
             }
         }
-        let ops = std::mem::take(&mut self.ops);
-        if ops.is_empty() {
-            return Ok(None);
-        }
-
-        let mut before = Vec::new();
         for op in &ops {
             let (Op::Write(file) | Op::Delete(file)) = op;
-            let path = layout.tag_file_path(file)?;
-            let content = match files::retry_transient(|| fs::read_to_string(&path)) {
-                Ok(content) => Some(content),
-                Err(error) if error.kind() == io::ErrorKind::NotFound => None,
-                Err(error) => return Err(io_error(&path)(error)),
+            let original = before_rename(file.clone(), &renames);
+            let path = layout.tag_file_path(&original)?;
+            let content = read_text(&path)?;
+            let after = match op {
+                Op::Write(file) => Some(
+                    String::from_utf8(content_bytes(file, &self.loaded[file], &path)?)
+                        .expect("JSON is UTF-8"),
+                ),
+                Op::Delete(_) => None,
             };
-            before.push((file.meta_path()?, content));
+            images.insert(file.meta_path()?, (original.meta_path()?, content, after));
         }
+        let before = images
+            .values()
+            .map(|(file, before, _)| (file.clone(), before.clone()))
+            .collect();
+        let after = images
+            .into_iter()
+            .map(|(file, (_, _, after))| (file, after))
+            .collect();
+        let journal_renames = renames
+            .iter()
+            .map(|(from, to)| Ok((from.meta_path()?, to.meta_path()?)))
+            .collect::<Result<_, MetaError>>()?;
         let journal = JournalFile {
             format_version: JOURNAL_VERSION,
             id: random_hex(8)?,
             before,
+            after,
+            moved: None,
+            intent,
+            renames: journal_renames,
         };
         let bytes = serde_json::to_vec_pretty(&journal).expect("a journal always serializes");
         let journal_path = layout.scan_journal_file();
+        match fs::symlink_metadata(&journal_path) {
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+            Err(error) => return Err(io_error(&journal_path)(error)),
+            Ok(_) => {
+                return Err(MetaError::Invalid {
+                    path: journal_path,
+                    reason: "an unsettled journal cannot be replaced".to_owned(),
+                });
+            }
+        }
+        if bytes.len() as u64 > super::MAX_FILE_BYTES {
+            return Err(MetaError::TooLarge { path: journal_path });
+        }
         files::write_atomically(&layout.staging_dir(), &journal_path, &bytes)
             .map_err(io_error(&journal_path))?;
+
+        save_renames(layout, renames)?;
 
         let mut emptied = BTreeSet::new();
         for op in ops {
             match op {
-                Op::Write(file) => write_file(layout, &file, &self.loaded[&file])?,
+                Op::Write(file) => write_content(layout, &file, &self.loaded[&file])?,
                 Op::Delete(file) => {
                     remove(&layout.tag_file_path(&file)?)?;
                     emptied.extend(semester_of(&file));
@@ -473,8 +567,8 @@ impl MetaTree {
     }
 }
 
-/// The version of the scan journal's format.
-const JOURNAL_VERSION: u32 = 1;
+/// Version 2 added the move pair; version 3 records explicit catalog and disk identities.
+const JOURNAL_VERSION: u32 = 3;
 
 /// `.folio/local/journal/scan.json`: local to this machine and never synced, but versioned all
 /// the same.
@@ -486,6 +580,48 @@ struct JournalFile {
     /// What each file held before the scan changed it, `None` if it did not exist. Paths are
     /// below `.folio/meta/`, with `/`.
     before: Vec<(String, Option<String>)>,
+    #[serde(default)]
+    after: Vec<(String, Option<String>)>,
+    /// The in-app move the changes follow, from and to, as library paths.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    moved: Option<(String, String)>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    intent: Option<MoveIntent>,
+    #[serde(default)]
+    renames: Vec<(String, String)>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct MoveIntent {
+    from: RelPath,
+    to: RelPath,
+    entries: Vec<MoveRecord>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct MoveRecord {
+    id: i64,
+    from: RelPath,
+    to: RelPath,
+    kind: EntryKind,
+    class: super::FileClass,
+    size: u64,
+    mtime_ns: Option<i64>,
+    file_id: Option<String>,
+    hash: Option<ContentHash>,
+    added_ns: i64,
+    disk: DiskIdentity,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct DiskIdentity {
+    size: u64,
+    modified_ns: Option<i64>,
+    created_ns: Option<i64>,
+    file_id: Option<String>,
 }
 
 /// The journal of a scan that changed metadata files (docs/specs/library-scan.md §7.1).
@@ -494,6 +630,11 @@ pub struct ScanJournal {
     id: String,
     /// What each file held before the scan, `None` if it did not exist.
     before: Vec<(PathBuf, Option<String>)>,
+    after: Vec<(PathBuf, Option<String>)>,
+    moved: Option<(RelPath, RelPath)>,
+    intent: Option<MoveIntent>,
+    renames: Vec<(TagFile, TagFile)>,
+    meta_root: PathBuf,
 }
 
 impl ScanJournal {
@@ -516,7 +657,21 @@ impl ScanJournal {
                 found: journal.format_version.into(),
             });
         }
-        let before = journal
+        if journal.format_version == 0
+            || (journal.format_version < 2 && journal.moved.is_some())
+            || (journal.format_version < 3 && journal.intent.is_some())
+            || (journal.format_version < 3
+                && (!journal.after.is_empty() || !journal.renames.is_empty()))
+            || (journal.intent.is_some() && journal.moved.is_some())
+        {
+            return Err(invalid(
+                "invalid journal version or simultaneous move encodings".to_owned(),
+            ));
+        }
+        if journal.id.is_empty() || journal.id.len() > 128 {
+            return Err(invalid("invalid journal identity".to_owned()));
+        }
+        let before: Vec<_> = journal
             .before
             .into_iter()
             .map(|(file, content)| {
@@ -527,9 +682,133 @@ impl ScanJournal {
                 Ok((path, content))
             })
             .collect::<Result<_, MetaError>>()?;
+        let after: Vec<_> = journal
+            .after
+            .into_iter()
+            .map(|(file, content)| {
+                let path = TagFile::at(&file)
+                    .and_then(|file| layout.tag_file_path(&file).ok())
+                    .ok_or_else(|| invalid(format!("{file:?} is not a metadata file")))?;
+                Ok((path, content))
+            })
+            .collect::<Result<_, MetaError>>()?;
+        if journal.format_version == 3 && before.len() != after.len() {
+            return Err(invalid(
+                "move intent metadata images do not match".to_owned(),
+            ));
+        }
+        if before
+            .iter()
+            .map(|(path, _)| path)
+            .collect::<BTreeSet<_>>()
+            .len()
+            != before.len()
+            || after
+                .iter()
+                .map(|(path, _)| path)
+                .collect::<BTreeSet<_>>()
+                .len()
+                != after.len()
+        {
+            return Err(invalid("duplicate metadata image".to_owned()));
+        }
+        let renames = journal
+            .renames
+            .into_iter()
+            .map(|(from, to)| {
+                let from = TagFile::at(&from)
+                    .ok_or_else(|| invalid("invalid metadata rename source".to_owned()))?;
+                let to = TagFile::at(&to)
+                    .ok_or_else(|| invalid("invalid metadata rename target".to_owned()))?;
+                if from == to || from.key() != to.key() || matches!(from, TagFile::Root) {
+                    return Err(invalid("metadata rename must change case only".to_owned()));
+                }
+                Ok((from, to))
+            })
+            .collect::<Result<Vec<_>, MetaError>>()?;
+        if journal.format_version == 3 {
+            for ((original, _), (target, _)) in before.iter().zip(&after) {
+                let relative = target
+                    .strip_prefix(layout.meta_dir())
+                    .map_err(|_| invalid("invalid image path".to_owned()))?;
+                let name = relative
+                    .iter()
+                    .map(|name| name.to_string_lossy())
+                    .collect::<Vec<_>>()
+                    .join("/");
+                let file = TagFile::at(&name)
+                    .ok_or_else(|| invalid("invalid metadata image".to_owned()))?;
+                if layout.tag_file_path(&before_rename(file, &renames))? != *original {
+                    return Err(invalid(
+                        "metadata before/after paths do not match renames".to_owned(),
+                    ));
+                }
+            }
+        }
+        let moved = journal
+            .moved
+            .map(|(from, to)| {
+                let parse = |text: &str| {
+                    RelPath::parse(text).map_err(|error| invalid(format!("{text:?}: {error}")))
+                };
+                Ok::<_, MetaError>((parse(&from)?, parse(&to)?))
+            })
+            .transpose()?;
+        if let Some((from, to)) = &moved {
+            validate_move(from, to).map_err(invalid)?;
+        }
+        if let Some(intent) = &journal.intent {
+            validate_move(&intent.from, &intent.to).map_err(invalid)?;
+            let mut ids = BTreeSet::new();
+            let mut sources = BTreeSet::new();
+            let mut targets = BTreeSet::new();
+            let mut folders = BTreeSet::new();
+            if intent.entries.is_empty()
+                || intent.entries[0].from != intent.from
+                || intent.entries[0].to != intent.to
+            {
+                return Err(invalid(
+                    "move intent has no matching root identity".to_owned(),
+                ));
+            }
+            for entry in &intent.entries {
+                let expected = match entry.from.strip_prefix(&intent.from) {
+                    Some(tail) => intent.to.join(&tail).ok(),
+                    None if entry.from == intent.from => Some(intent.to.clone()),
+                    _ => None,
+                };
+                if entry.id <= 0
+                    || expected.as_ref() != Some(&entry.to)
+                    || !ids.insert(entry.id)
+                    || !sources.insert(entry.from.clone())
+                    || !targets.insert(entry.to.clone())
+                    || is_folio_owned(&entry.from)
+                    || is_folio_owned(&entry.to)
+                    || (entry.kind == EntryKind::Folder
+                        && (entry.size != 0 || entry.disk.size != 0))
+                    || entry.size > i64::MAX as u64
+                    || entry.disk.size > i64::MAX as u64
+                    || (entry.from != intent.from
+                        && entry
+                            .from
+                            .parent()
+                            .is_none_or(|parent| !folders.contains(&parent)))
+                {
+                    return Err(invalid("invalid or duplicate subtree identity".to_owned()));
+                }
+                if entry.kind == EntryKind::Folder {
+                    folders.insert(entry.from.clone());
+                }
+            }
+        }
         Ok(Some(Self {
             id: journal.id,
             before,
+            after,
+            moved,
+            intent: journal.intent,
+            renames,
+            meta_root: layout.meta_dir(),
         }))
     }
 
@@ -537,8 +816,101 @@ impl ScanJournal {
         &self.id
     }
 
+    /// The in-app move the journal's changes follow, from and to.
+    pub fn moved(&self) -> Option<(&RelPath, &RelPath)> {
+        self.intent
+            .as_ref()
+            .map(|intent| (&intent.from, &intent.to))
+            .or_else(|| self.moved.as_ref().map(|(from, to)| (from, to)))
+    }
+
+    /// Explicit pre-move catalog snapshots and fresh disk identities, when the writer knows them.
+    pub fn move_entries(&self) -> Option<Vec<(Entry, RelPath, Metadata)>> {
+        self.intent.as_ref().map(|intent| {
+            intent
+                .entries
+                .iter()
+                .map(|entry| {
+                    (
+                        Entry {
+                            id: EntryId(entry.id),
+                            added_ns: entry.added_ns,
+                            record: EntryRecord {
+                                path: entry.from.clone(),
+                                kind: entry.kind,
+                                class: entry.class,
+                                size: entry.size,
+                                mtime_ns: entry.mtime_ns,
+                                file_id: entry.file_id.clone(),
+                                hash: entry.hash.clone(),
+                            },
+                        },
+                        entry.to.clone(),
+                        Metadata {
+                            kind: if entry.kind == EntryKind::File {
+                                crate::fs::FileKind::File
+                            } else {
+                                crate::fs::FileKind::Folder
+                            },
+                            size: entry.disk.size,
+                            modified_ns: entry.disk.modified_ns,
+                            created_ns: entry.disk.created_ns,
+                            file_id: entry.disk.file_id.clone(),
+                            presence: crate::fs::Presence::Local,
+                        },
+                    )
+                })
+                .collect()
+        })
+    }
+
+    pub fn has_after_images(&self) -> bool {
+        self.before.len() == self.after.len()
+    }
+
+    /// Checks authored files before replay: external changes must never be overwritten.
+    pub fn validate_images(&self, completed: bool) -> Result<(), MetaError> {
+        for (index, (path, before)) in self.before.iter().enumerate() {
+            let current = exact_text(&self.meta_root, path)?;
+            let after = self.after.get(index);
+            let matches = match after {
+                Some((target, after)) if target != path => {
+                    let at_target = exact_text(&self.meta_root, target)?;
+                    if completed {
+                        current.is_none() && &at_target == after
+                    } else {
+                        (at_target.is_none() && (&current == before || &current == after))
+                            || (current.is_none() && (&at_target == before || &at_target == after))
+                    }
+                }
+                Some((_, after)) => {
+                    if completed {
+                        &current == after
+                    } else {
+                        &current == before || &current == after
+                    }
+                }
+                None => &current == before,
+            };
+            if !matches {
+                return Err(MetaError::Invalid {
+                    path: path.clone(),
+                    reason: "authored metadata conflicts with a pending move".to_owned(),
+                });
+            }
+        }
+        Ok(())
+    }
+
     /// Puts back what the scan's files held before it, then removes the journal.
     pub fn undo(self, layout: &Layout) -> Result<(), MetaError> {
+        self.restore(layout)?;
+        Self::remove(layout)
+    }
+
+    /// Restores before-images but retains the intent until its reconciliation commits.
+    pub fn restore(&self, layout: &Layout) -> Result<(), MetaError> {
+        restore_renames(layout, &self.renames)?;
         for (path, content) in &self.before {
             match content {
                 Some(content) => {
@@ -553,13 +925,136 @@ impl ScanJournal {
                 }
             }
         }
-        Self::remove(layout)
+        Ok(())
     }
 
     /// Removes the journal: its scan committed, or its changes stay.
     pub fn remove(layout: &Layout) -> Result<(), MetaError> {
         remove(&layout.scan_journal_file())
     }
+}
+
+fn validate_move(from: &RelPath, to: &RelPath) -> Result<(), String> {
+    if from == to
+        || is_folio_owned(from)
+        || is_folio_owned(to)
+        || to
+            .ancestors()
+            .any(|ancestor| ancestor.key() == from.key() && ancestor != *to)
+    {
+        return Err("invalid move paths".to_owned());
+    }
+    Ok(())
+}
+
+fn save_renames(layout: &Layout, renames: Vec<(TagFile, TagFile)>) -> Result<(), MetaError> {
+    for (from, to) in renames {
+        match (from, to) {
+            (TagFile::Group(from), TagFile::Group(to)) => {
+                rename(&layout.semester_dir(&from)?, &layout.semester_dir(&to)?)?
+            }
+            (from, to) => rename(&layout.tag_file_path(&from)?, &layout.tag_file_path(&to)?)?,
+        }
+    }
+    Ok(())
+}
+
+fn before_rename(mut file: TagFile, renames: &[(TagFile, TagFile)]) -> TagFile {
+    for (from, to) in renames.iter().rev() {
+        match (from, to) {
+            (TagFile::Group(from), TagFile::Group(to))
+                if semester_of(&file).as_ref() == Some(to) =>
+            {
+                file = with_semester(&file, from);
+            }
+            _ if file == *to => file = from.clone(),
+            _ => {}
+        }
+    }
+    file
+}
+
+fn exact_path(root: &Path, path: &Path) -> Result<Option<PathBuf>, MetaError> {
+    let relative = path
+        .strip_prefix(root)
+        .map_err(|error| MetaError::Invalid {
+            path: path.to_owned(),
+            reason: error.to_string(),
+        })?;
+    let mut current = root.to_owned();
+    for name in relative.iter() {
+        let entries = match fs::read_dir(&current) {
+            Ok(entries) => entries,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+            Err(error) => return Err(io_error(&current)(error)),
+        };
+        let mut found = false;
+        for entry in entries {
+            let entry = entry.map_err(io_error(&current))?;
+            if entry.file_name() == name {
+                if entry
+                    .file_type()
+                    .map_err(io_error(&entry.path()))?
+                    .is_symlink()
+                {
+                    return Err(MetaError::Invalid {
+                        path: entry.path(),
+                        reason: "metadata move path is a link".to_owned(),
+                    });
+                }
+                current = entry.path();
+                found = true;
+                break;
+            }
+        }
+        if !found {
+            return Ok(None);
+        }
+    }
+    Ok(Some(current))
+}
+
+fn exact_text(root: &Path, path: &Path) -> Result<Option<String>, MetaError> {
+    match exact_path(root, path)? {
+        Some(path) => read_text(&path),
+        None => Ok(None),
+    }
+}
+
+/// A metadata file's text, or `None` if it is missing.
+fn read_text(path: &Path) -> Result<Option<String>, MetaError> {
+    read_bytes(path)?
+        .map(String::from_utf8)
+        .transpose()
+        .map_err(|error| MetaError::Invalid {
+            path: path.to_owned(),
+            reason: error.to_string(),
+        })
+}
+
+fn restore_renames(layout: &Layout, renames: &[(TagFile, TagFile)]) -> Result<(), MetaError> {
+    for (from, to) in renames.iter().rev() {
+        let (original, target) = match (from, to) {
+            (TagFile::Group(from), TagFile::Group(to)) => {
+                (layout.semester_dir(from)?, layout.semester_dir(to)?)
+            }
+            _ => (layout.tag_file_path(from)?, layout.tag_file_path(to)?),
+        };
+        match (
+            exact_path(&layout.meta_dir(), &original)?,
+            exact_path(&layout.meta_dir(), &target)?,
+        ) {
+            (Some(_), None) => {}
+            (None, Some(target)) => rename(&target, &original)?,
+            _ => {
+                return Err(MetaError::Invalid {
+                    path: original,
+                    reason: "metadata rename is conflicting or absent".to_owned(),
+                });
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Which file holds the metadata of a folder that several files name, which only a disk that
@@ -710,24 +1205,35 @@ fn with_semester(file: &TagFile, semester: &SemesterPath) -> TagFile {
     }
 }
 
-fn write_file(layout: &Layout, file: &TagFile, content: &Content) -> Result<(), MetaError> {
+/// Writes `content` to the file `file`, atomically.
+pub fn write_content(layout: &Layout, file: &TagFile, content: &Content) -> Result<(), MetaError> {
     let path = layout.tag_file_path(file)?;
+    let bytes = content_bytes(file, content, &path)?;
+    files::write_atomically(&layout.staging_dir(), &path, &bytes).map_err(io_error(&path))
+}
+
+/// `content` as the file `file` holds it; `path` names the file in errors. A move journal's
+/// after-images come from here too, so they are byte for byte what `write_content` writes.
+fn content_bytes(file: &TagFile, content: &Content, path: &Path) -> Result<Vec<u8>, MetaError> {
+    fn bytes<T: MetaFile>(value: &T, path: &Path) -> Result<Vec<u8>, MetaError> {
+        super::to_bytes(value).map_err(|reason| super::invalid::<T>(path, reason))
+    }
     let tags = content.tags.clone();
     match file {
-        TagFile::Root => write(layout, &path, &RootMeta { tags }),
+        TagFile::Root => bytes(&RootMeta { tags }, path),
         TagFile::Group(_) => {
             let group = match &content.settings {
                 Some(Settings::Group(settings)) => Some(settings.clone()),
                 _ => None,
             };
-            write(layout, &path, &GroupMeta { group, tags })
+            bytes(&GroupMeta { group, tags }, path)
         }
         TagFile::Course(_) => {
             let course = match &content.settings {
                 Some(Settings::Course(settings)) => Some(settings.clone()),
                 _ => None,
             };
-            write(layout, &path, &CourseMeta { course, tags })
+            bytes(&CourseMeta { course, tags }, path)
         }
     }
 }

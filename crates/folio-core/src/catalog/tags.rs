@@ -102,6 +102,15 @@ pub fn all_entry_tags(
     Ok(tags)
 }
 
+/// How many entries carry each tag themselves; tags nobody carries are left out.
+pub fn tag_usage(conn: &Connection) -> Result<BTreeMap<TagId, u32>, CatalogError> {
+    let usage = conn
+        .prepare_cached("SELECT tag_id, count(*) FROM entry_tags GROUP BY tag_id")?
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+        .collect::<Result<_, _>>()?;
+    Ok(usage)
+}
+
 pub fn entry_tags(conn: &Connection, entry: EntryId) -> Result<BTreeSet<TagId>, CatalogError> {
     let tags = conn
         .prepare_cached("SELECT tag_id FROM entry_tags WHERE entry_id = ?1")?

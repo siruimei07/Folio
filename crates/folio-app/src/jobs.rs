@@ -94,13 +94,6 @@ impl Registry {
             .any(|r| r.job.kind == kind && active(&r.job.status))
     }
 
-    /// Whether the ticket's job is still queued or running, rather than cancelled while queued.
-    pub fn live(&self, ticket: &Ticket) -> bool {
-        lock(&self.jobs)
-            .iter()
-            .any(|r| r.job.id == ticket.id && active(&r.job.status))
-    }
-
     /// A queued job is cancelled at once; a running one when its worker next checks the flag.
     pub fn cancel(&self, id: &str) -> Result<(), AppError> {
         let mut records = lock(&self.jobs);
@@ -330,7 +323,7 @@ mod tests {
             .collect();
         assert!(statuses.contains(&(hash.id.clone(), JobStatus::Cancelled)));
         assert!(statuses.contains(&(rebuild.id.clone(), JobStatus::Cancelled)));
-        assert!(!registry.live(&hash) && !registry.busy(JobKind::Rebuild));
+        assert!(!registry.busy(JobKind::Hash) && !registry.busy(JobKind::Rebuild));
         assert!(!registry.start(&hash).unwrap());
         assert!(!registry.start(&rebuild).unwrap());
         assert!(
@@ -339,7 +332,7 @@ mod tests {
                 .all(|(id, status)| id == &scan.id || !matches!(status, JobStatus::Running { .. }))
         );
         // The running scan stops at its next check and finishes itself.
-        assert!(scan.cancel.load(Ordering::Acquire) && registry.live(&scan));
+        assert!(scan.cancel.load(Ordering::Acquire) && registry.busy(JobKind::Scan));
         registry.finish(&scan, Ok(None)).unwrap();
         assert!(!registry.busy(JobKind::Scan));
     }

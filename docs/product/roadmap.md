@@ -10,8 +10,8 @@
   - 已合并：同步点 1，以及第 2 波的合约修正、文件协议、窗口骨架和数据层。界面能在浏览器面板里用假 shell 跑起来，但资料库、搜索、预览这些视图还没有。
   - 做完、待合并：Codex 做的 library-ops（18 个命令）、browse（5 个命令）和日志 lane 都停在 review，等 Claude Code 的原生评审；修 CI 崩溃的 lane 也在等你批准。
   - **main 上的 CI 从 9-29 起一直是红的**（`folio-app` 测试在 Windows Server 2022 上 `STATUS_ACCESS_VIOLATION`），修复就在那个待合并的 lane 里。
-- **下一步**：同步点 2（附录 A.11～A.15）：先合并 CI 修复让 main 变绿，再并行评审、依次合并三个 Codex lane；同时开一个前端小 lane，把剩下的数据层 hook 补齐。之后进第 3 波：4 个前端 lane 并行，Rust 名额空出来后再开 4 个后端 lane（§5、附录 A.16～A.23）。
-- **还剩多少**：到 v1.0 大约 60 个 lane：M1 约 24 个（第 3 波加了数据层 hook、WebView 快捷键和 STA 辅助函数合并三个小 lane），M2 约 14 个，M3 约 15 个，M4 约 6 个。M1 合约里合并完同步点 2 就只剩导入的 3 个命令没实现。
+- **下一步**：同步点 2（附录 A.11～A.15）：先合并 CI 修复让 main 变绿，再并行评审、依次合并三个 Codex lane；同时开一个前端小 lane，把剩下的数据层 hook 补齐。之后进第 3 波：4 个前端 lane 并行，Rust 名额空出来后再开 5 个后端 lane（§5、附录 A.16～A.24）。
+- **还剩多少**：到 v1.0 大约 60 个 lane：M1 约 25 个（第 3 波加了数据层 hook、WebView 快捷键、STA 辅助函数合并和放弃未完成移动四个小 lane），M2 约 14 个，M3 约 15 个，M4 约 6 个。M1 合约里合并完同步点 2 就只剩导入的 3 个命令没实现。
 - **分工**（每个 lane 在表里标了「分工」，说明见 §4.1）：Codex 只做后端编码（你 2026-09-28 的决定，写在上级目录的 `AGENTS.md`），约 24 个后端 lane 可以交给 **Codex**；21 个前端 lane，以及 11 个规格、合约、前端依赖、发布、实测和说明文档 lane 由 Claude Code 做；3 个设计 lane 由 Cowork 做。
 - **需要你现在决定**：批准同步点 2 的合并（CI 修复、日志、library-ops、browse）。§2 的版本定义和 M1→M4 的顺序没有单独确认过，本文按它执行，有异议随时改。完整清单见 §6。
 
@@ -85,6 +85,7 @@ brief §11 把 M4 定为「可以发给同学朋友用」，所以本文把 **v1
 | CI 修复 lane | 两个几乎一样的 STA 辅助函数：`folio-app` 的 `dialogs::in_sta` 和 `folio-core` 的 `win::recycle::in_apartment` | M1 第 3 波 `refactor/core-sta-helper` |
 | ui-architecture §17 第 4 项 | Tauri 没有开放 WebView2 的浏览器快捷键开关；正式版里 F5、Ctrl+F、Ctrl+P 等浏览器快捷键还在 | M1 第 3 波 `chore/core-webview-accelerator-keys` |
 | 第 2 波 | 只有资料库状态、任务和问题有数据层 hook；学期课程、标签、条目改动、搜索、文件、导入的 hook 还没有，几个视图 lane 都要用 | 同步点 2 `feat/ui-data-m1-hooks` |
+| A.13 评审 | 应用内移动做到一半崩溃后，如果文件、元数据或目录数据库又变了，恢复会一直失败，资料库打不开，重建也没用，只能手动删 `.folio/local/journal/scan.json`；你 2026-09-30 批准加「放弃这次未完成的移动」入口 | M1 第 3 波 `feat/core-discard-move`（合约和后端）、`feat/ui-first-run`（打不开界面上的按钮） |
 
 ## 4. 用 GitButler 排任务的规则
 
@@ -188,7 +189,7 @@ brief §11 把 M4 定为「可以发给同学朋友用」，所以本文把 **v1
 - A.12～A.15 可以同时开：三个评审 session 占满 3 个 Rust 名额，A.15 只写前端。
 - 合并一次一个：A.11 → A.12 → A.13 → A.14，A.15 做完随时合并。A.13 和 A.14 都改了 `folio-app` 的 `library/mod.rs` 和 `worker.rs`（browse 只加了只读的几行），先合 A.13 更稳。
 
-**第 3 波**（同步点 2 之后，分两组并行；附录 A.16～A.23）
+**第 3 波**（同步点 2 之后，分两组并行；附录 A.16～A.24）
 
 前端组：A.15 合并后就开，4 个 lane 的目录互不重叠，各自注册到 `app/registry.ts`（一行）。开发用假 shell，不用等后端合并；最后跑真实 app 的 e2e 时，对应的后端要已经在 main 上。
 
@@ -207,6 +208,7 @@ brief §11 把 M4 定为「可以发给同学朋友用」，所以本文把 **v1
 | `feat/core-app-settings` | 后端（含合约） | M1 要用的本机设置，合约和实现一起：设备名、外观、减少动态效果、忽略规则（改了要重扫）；同一个 lane 里更新假 shell | Rust 名额 | `folio-app` 的设置命令组、`settings.rs`、假 shell 的设置文件 | S |
 | `chore/core-webview-accelerator-keys` | 后端 · Codex | 正式版关掉 WebView2 的浏览器快捷键（ui-architecture §17 第 4 项）；debug 和 e2e 不变 | Rust 名额 | `folio-app` 的窗口初始化 | S |
 | `refactor/core-sta-helper` | 后端 · Codex | 两个 STA 辅助函数合成一个，保留 CI 修复的 MTA 规则（§3.4） | A.11、A.13 | `folio-app` 的 `dialogs.rs`、`folio-core` 的 `win/` | S |
+| `feat/core-discard-move` | 后端（含合约） | 应用内移动做到一半崩溃、之后又对不上时：`library_status` 给出单独的打不开原因，加一个要确认的「放弃这次未完成的移动」命令（不动用户文件，不覆盖已经改过的元数据，删掉 journal 后全量扫描）；同一个 lane 里更新假 shell | A.13 | `folio-core` 里放弃移动的函数、新命令和它的授权 | S |
 
 **第 4 波**（第 3 波对应的 lane 合并后；提示到时补）
 
@@ -222,7 +224,7 @@ brief §11 把 M4 定为「可以发给同学朋友用」，所以本文把 **v1
 | 现在 | A.11：合并 CI 修复（顺带合并本路线图的这次更新） | Claude Code ×1 | 很快；它合并前别的 lane 不合并 |
 | A.11 合并后 | A.12、A.13、A.14 三个评审，加 A.15 数据层 hook | Claude Code ×4 | 三个评审占满 Rust 名额；合并一次一个 |
 | A.15 合并后（不用等评审） | 第 3 波前端组：library-view、preview、search、first-run | Claude Code ×4（忙不过来就先开 library-view 和 preview，它们最大） | 共用一个 dev server；`pnpm e2e` 用 app lock 排队；preview 改 `preview.rs` 时算一个 Rust session |
-| A.12～A.14 合并后 | 第 3 波后端组：core-import、core-app-settings、两个小 lane | Codex ×3 + Claude Code ×1 | 同时最多 3 个写 Rust；Codex lane 一到 review 就开评审（§4 第 10 条） |
+| A.12～A.14 合并后 | 第 3 波后端组：core-import、core-app-settings、三个小 lane | Codex ×3 + Claude Code ×2 | 同时最多 3 个写 Rust；Codex lane 一到 review 就开评审（§4 第 10 条） |
 | 第 3 波合并后 | 第 4 波：ui-import、ui-settings | Claude Code ×2 | — |
 | 第 4 波合并后 | M1 验收，出 v0.1 | Claude Code ×1 | 见下 |
 
@@ -425,6 +427,7 @@ Own apps/desktop/src/search/** and the search namespace; app/registry.ts gets a 
 Folio lane feat/ui-first-run (docs/product/roadmap.md §5 M1 wave 3, appendix A.19; moved up from wave 4). Start after feat/ui-data-m1-hooks has landed; build against the fake shell's first-run fixture, and run the real-app e2e once feat/core-library-ops is on main. Use frontend-design.
 Read docs/design/handoff/first-run.md (all of it), library-actions.md §2 (shared components), docs/specs/library-state.md, docs/specs/ipc-m1.md §6 and §7 (library states, incomplete libraries, the unavailable reasons and the retry the contract fix added) and docs/specs/ui-architecture.md §6.1 (the current semester per library).
 Goal: the first-run flow the app shows while library_status has no library: welcome, choosing a folder (new library or taking over one), the library name, the first semester and courses with row-by-row failures (first-run.md §5), and the library-unavailable screen with Try again. Drive the native folder dialog by hand once in the real app (no lane has yet) and note the result in your lane file.
+If feat/core-discard-move (A.24) has landed, the library-unavailable screen also offers its confirmed "discard the unfinished move" action for the reason it adds (copy with design:ux-copy); if not, note it in your lane file as open.
 Own apps/desktop/src/first-run/** and the first-run namespace; app/ gets small additive edits to show the flow. Component tests for every state first-run.md names, a Playwright flow in a temporary folder, design:design-critique and design:accessibility-review, a reduced-motion check, `pnpm check` and `pnpm e2e` with the app lock, /code-review, /simplify; report to me in Chinese.
 ```
 
@@ -460,4 +463,13 @@ Own the window set-up in folio-app and its test. A manual check in a release bui
 Folio lane refactor/core-sta-helper (docs/product/roadmap.md §5 M1 wave 3, appendix A.23). Small; start after fix/build-ci-access-violation and feat/core-library-ops have landed, when fewer than three sessions are building Rust.
 Two near-identical helpers run work on a single-threaded apartment: `in_sta` in crates/folio-app/src/dialogs.rs and `in_apartment` in folio-core's win::recycle. Keep one, in folio-core's win module, and use it from both, without changing behaviour: the CI fix's rule (docs/specs/windows-adapter.md §4: hold the process MTA so a teardown never unloads a cached WinRT factory) and the Recycle Bin's COM threading stay as they are. The CI fix's commit "fix(app): keep COM initialized so cached WinRT factories stay valid" explains the rule.
 Own the two files and the shared helper. Tests for both callers, `pnpm check` and `pnpm e2e` with the app lock, /code-review, /simplify; after landing, check that the CI run on main (Windows Server 2022, where the crash showed) is green. Report to me in Chinese.
+```
+
+### A.24 第 3 波：`feat/core-discard-move`
+
+```text
+Folio lane feat/core-discard-move (docs/product/roadmap.md §5 M1 wave 3, appendix A.24). Contract and implementation in one small lane; start after feat/core-library-ops has landed, when fewer than three sessions are building Rust.
+Read docs/specs/library-scan.md §7.1 (the move intent and its recovery), docs/specs/library-state.md (recovery, the unavailable reasons, and Sirui's decision of 2026-09-30 on discarding an unfinished move), docs/specs/ipc-m1.md §6 and §20, ADR-0002 §1, and Library::recover_pending in crates/folio-core/src/library/mod.rs with ScanJournal in meta/tree.rs.
+Goal: when the intent of an in-app move that a crash interrupted can no longer be reconciled (its files, folders or metadata changed, or the catalog was recreated), library_status says so with an unavailable reason of its own instead of catalogFailed, and a confirmed command discards the move. Discarding never moves or deletes the user's files and never overwrites an authored metadata file that no longer matches the journal's images; it removes the journal, and a full scan rebuilds the catalog from the disk and the authored metadata. Write the contract into ipc-m1 (§6 and §20), regenerate the bindings and, in the same lane, update the fake shell in apps/desktop/src/ipc/mock/ and its fingerprint (roadmap §4 rule 2). Tell feat/ui-first-run (A.19) the reason and the command: the button belongs on its library-unavailable screen.
+Start with engineering:system-design. Own the new command, its manifest and capability lines, and the discard function in folio-core's library module. Contract tests, crash tests (a discard interrupted halfway, a conflicting metadata file), `pnpm check` and `pnpm e2e` with the app lock, /code-review, /security-review, /simplify; report to me in Chinese.
 ```

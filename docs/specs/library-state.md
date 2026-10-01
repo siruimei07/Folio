@@ -14,6 +14,13 @@ their group files. Planned functions compile only in tests and remain absent fro
 manifest and capabilities. The runtime/declaration/grant equality and no-default-sets tests
 remain mandatory. All grants target `main`; the page receives no filesystem/dialog plugin.
 
+The operations lane additionally owns `folio-core::library::operations`, course metadata and
+catalog migration 2 (Sirui approved the narrow supporting files on 2026-09-29). Core returns
+typed results plus `CommittedScan` deltas; its list calls emit no change. The operations shell
+hooks and `library_status` retry build on landed `feat/core-file-scheme` (main 1ebd2ad),
+reusing its guarded `with_entry` transition pattern. This approval does not transfer
+browse/search query or generated-binding ownership.
+
 ## State and threads
 
 ```text
@@ -40,6 +47,45 @@ watcher callback only merges pending work and wakes the worker. This prevents tw
 from committing stale snapshots in reverse order. Reads and cancellation remain available;
 SQLite's existing WAL readers and single writer remain the storage boundary. No new runtime,
 database pool or dependency is needed. Revisit concurrent hashing only after measuring delay.
+
+Operation execution must serialize with the entire worker disk walk and commit, validate each
+entry's id and exact path in the action's transaction, and drain before switching/shutdown.
+The catalog writer lock alone does not stop an older disk walk committing afterwards. A
+successful operation's returned committed report uses the existing revision/event merger.
+Authored edits reuse atomic Layout writers; multi-file partial I/O failures leave those files
+authoritative and require reconciliation. A successful disk action followed by catalog failure
+returns `DiskChanged`; the shell schedules recovery rather than claiming the disk rolled back.
+Metadata-only edits return `RecoveryRequired` when an authored write succeeds before later
+reconciliation fails. A batch stops if continuing is unsafe and reports each remaining item
+as not attempted; no requested item disappears from its failure list.
+
+The worker and commands share a session operation mutex through each complete disk walk,
+metadata edit and catalog commit. WAL list reads remain available during rebuilding. Failed
+disk/metadata reconciliation queues a full scan and blocks further writes until it succeeds;
+a write refused meanwhile asks for that scan again if the user cancelled it. An ambiguous
+journal fails the session closed. Before work or a mutation, explicit move-intent
+recovery commits and publishes its own report, so a later failed scan cannot hide that commit.
+All command work runs through the existing blocking-task boundary. Pending event wakeups
+hold the worker's wait mutex. A write takes its session under the transition but waits for
+the operation mutex outside it, so a write queued behind a long walk or hash job holds up
+no list read, file action, switch or close; the session drain waits for a running write, and
+a later one finds the session stopped.
+
+Discarding an unfinished move (Sirui, 2026-09-30). A retained move intent that recovery
+cannot reconcile keeps the library unavailable (`catalogFailed`), and a rebuild cannot bypass
+it, so today the only way out is removing `.folio/local/journal/scan.json` by hand. The user
+gets an explicit, confirmed action instead: wave 3 lane `feat/core-discard-move` (roadmap
+appendix A.24) adds its own unavailable reason and the command, and `feat/ui-first-run` shows
+it on the library-unavailable screen. Discarding never moves or deletes the user's files and
+never overwrites an authored metadata file that no longer matches the journal's images; it
+removes the journal, and a full scan rebuilds the catalog from the disk and authored metadata.
+
+Retry applies only when status was unavailable at call entry (ipc-m1 §6). It reopens the
+configured root behind the transition gate without saving settings or consuming a choice.
+Startup and concurrent calls share one attempt, even if it fails with the identical reason;
+an attempt generation distinguishes that case. Success publishes a fresh session/startup scan,
+failure returns this attempt's reason, and shutdown cannot resurrect a session. None/open
+statuses are read unchanged.
 
 The watcher starts before startup reconciliation. Its first `Full` event consumes the queued
 startup scan job; there is no second independent startup scan. Scoped/metadata rescans are not

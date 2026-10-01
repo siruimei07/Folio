@@ -10,8 +10,8 @@ use rusqlite::types::Type;
 use super::*;
 use crate::hash::ContentHash;
 use crate::meta::{
-    Abbr, Color, CourseSettings, DisplayName, EntryKind, FileClass, GroupSettings, PresetTag,
-    TagDefinition, TagDefinitions, TagId,
+    Abbr, Color, CourseCode, CourseSettings, DisplayName, EntryKind, FileClass, GroupSettings,
+    PresetTag, TagDefinition, TagDefinitions, TagId,
 };
 use crate::search::{SearchQuery, phrase};
 use crate::test_support::{course_at, library_id, open_catalog, path, presets, semester};
@@ -621,9 +621,10 @@ fn mirrors_semester_and_course_settings() {
         order,
     };
     let course = |abbr: &str, order| CourseSettings {
-        abbr: Abbr::parse(abbr).unwrap(),
+        abbr: Some(Abbr::parse(abbr).unwrap()),
         archived: false,
-        color: Color::parse("blue").unwrap(),
+        code: None,
+        color: Some(Color::parse("blue").unwrap()),
         order,
     };
     catalog
@@ -671,6 +672,60 @@ fn mirrors_semester_and_course_settings() {
         .map(|(course, _)| course.path().to_string())
         .collect();
     assert_eq!(all, ["2026 春/微积分", "2026 秋/线性代数"]);
+}
+
+#[test]
+fn mirrors_optional_course_information_and_can_clear_it() {
+    let dir = tempfile::tempdir().unwrap();
+    let catalog = open_catalog(dir.path());
+    let course = course_at("s/c");
+    let supplied = CourseSettings {
+        abbr: Some(Abbr::parse("CSC").unwrap()),
+        archived: true,
+        code: Some(CourseCode::parse("CSC 148").unwrap()),
+        color: Some(Color::parse("stone").unwrap()),
+        order: 7,
+    };
+    let defaults = CourseSettings {
+        abbr: None,
+        archived: false,
+        code: None,
+        color: None,
+        order: 7,
+    };
+    for settings in [&supplied, &defaults] {
+        catalog
+            .write(|tx| put_course(tx, &course, settings))
+            .unwrap();
+        assert_eq!(
+            catalog.read(|tx| courses(tx, &semester("s"))).unwrap(),
+            [(course.clone(), settings.clone())]
+        );
+        assert_eq!(
+            catalog.read(|tx| all_courses(tx)).unwrap(),
+            [(course.clone(), settings.clone())]
+        );
+    }
+}
+
+#[test]
+fn rejects_an_invalid_course_code_stored_in_the_catalog() {
+    let dir = tempfile::tempdir().unwrap();
+    let catalog = open_catalog(dir.path());
+    catalog
+        .write(|tx| {
+            tx.execute(
+                "INSERT INTO courses (path, code, sort_order, archived) VALUES ('s/c', ?1, 1, 0)",
+                [" MAT232"],
+            )?;
+            Ok(())
+        })
+        .unwrap();
+    let error = catalog.read(|tx| all_courses(tx)).unwrap_err();
+    assert!(matches!(
+        error,
+        CatalogError::Sqlite(rusqlite::Error::FromSqlConversionFailure(2, Type::Text, _))
+    ));
 }
 
 fn query(text: &str) -> SearchQuery {

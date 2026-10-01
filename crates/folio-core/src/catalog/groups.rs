@@ -4,7 +4,7 @@
 use rusqlite::{Connection, Row, params};
 
 use super::{BELOW, CatalogError};
-use crate::meta::{CourseSettings, GroupSettings};
+use crate::meta::{CourseCode, CourseSettings, GroupSettings};
 use crate::paths::{CoursePath, SemesterPath};
 
 pub fn put_semester(
@@ -50,13 +50,16 @@ pub fn put_course(
     settings: &CourseSettings,
 ) -> Result<(), CatalogError> {
     conn.execute(
-        "INSERT INTO courses (path, abbr, color, sort_order, archived) VALUES (?1, ?2, ?3, ?4, ?5)
+        "INSERT INTO courses (path, abbr, code, color, sort_order, archived)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)
          ON CONFLICT (path) DO UPDATE
-         SET abbr = excluded.abbr, color = excluded.color, sort_order = excluded.sort_order,
+         SET abbr = excluded.abbr, code = excluded.code, color = excluded.color,
+             sort_order = excluded.sort_order,
              archived = excluded.archived",
         params![
             course,
             settings.abbr,
+            settings.code.as_ref().map(CourseCode::as_str),
             settings.color,
             settings.order,
             settings.archived
@@ -77,7 +80,7 @@ pub fn courses(
 ) -> Result<Vec<(CoursePath, CourseSettings)>, CatalogError> {
     let courses = conn
         .prepare_cached(&format!(
-            "SELECT path, abbr, color, sort_order, archived FROM courses
+            "SELECT path, abbr, code, color, sort_order, archived FROM courses
              WHERE {BELOW} ORDER BY sort_order, path"
         ))?
         .query_map([semester], course_row)?
@@ -89,19 +92,40 @@ pub fn courses(
 pub fn all_courses(conn: &Connection) -> Result<Vec<(CoursePath, CourseSettings)>, CatalogError> {
     let courses = conn
         .prepare_cached(
-            "SELECT path, abbr, color, sort_order, archived FROM courses ORDER BY path",
+            "SELECT path, abbr, code, color, sort_order, archived FROM courses ORDER BY path",
         )?
         .query_map([], course_row)?
         .collect::<Result<_, _>>()?;
     Ok(courses)
 }
 
+/// The files inside `course`, at any depth.
+pub fn course_files(conn: &Connection, course: &CoursePath) -> Result<u32, CatalogError> {
+    let files = conn
+        .prepare_cached(&format!(
+            "SELECT count(*) FROM entries WHERE kind = 'file' AND {BELOW}"
+        ))?
+        .query_row([course], |row| row.get(0))?;
+    Ok(files)
+}
+
 fn course_row(row: &Row<'_>) -> rusqlite::Result<(CoursePath, CourseSettings)> {
     let settings = CourseSettings {
         abbr: row.get(1)?,
-        color: row.get(2)?,
-        order: row.get(3)?,
-        archived: row.get(4)?,
+        code: row
+            .get::<_, Option<String>>(2)?
+            .map(|code| CourseCode::parse(&code))
+            .transpose()
+            .map_err(|error| {
+                rusqlite::Error::FromSqlConversionFailure(
+                    2,
+                    rusqlite::types::Type::Text,
+                    Box::new(error),
+                )
+            })?,
+        color: row.get(3)?,
+        order: row.get(4)?,
+        archived: row.get(5)?,
     };
     Ok((row.get(0)?, settings))
 }

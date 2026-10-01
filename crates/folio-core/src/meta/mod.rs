@@ -21,19 +21,21 @@ pub use layout::{
     FolioPart, Layout, TagFile, TagFileKey, folio_part, is_folio_owned, tag_location, unescape_name,
 };
 pub use model::{
-    Abbr, Assignments, Color, CourseMeta, CourseSettings, DisplayName, EntryKind, Extension,
-    FileClass, GroupMeta, GroupSettings, LibraryConfig, LibraryId, PresetTag, RootMeta,
-    TagDefinition, TagDefinitions, TagId, ValueError, VersioningRules,
+    Abbr, Assignments, Color, CourseCode, CourseMeta, CourseSettings, DisplayName, EntryKind,
+    Extension, FileClass, GroupMeta, GroupSettings, LibraryConfig, LibraryId, MAX_ABBR_GRAPHEMES,
+    MAX_COURSE_CODE_CHARS, MAX_DISPLAY_NAME_CHARS, PresetTag, RootMeta, TagDefinition,
+    TagDefinitions, TagId, ValueError, VersioningRules,
 };
 pub use tree::{
     Content, MetaTree, Moves, Owners, ScanJournal, Settings, Stranded, StrandedCause, relocated,
+    write_content,
 };
 
 use crate::files;
 
 /// The format every metadata file is written in. Readers accept older versions and switch the
 /// library to read-only for newer ones (ADR-0002 §3).
-pub const FORMAT_VERSION: u32 = 1;
+pub const FORMAT_VERSION: u32 = 2;
 
 /// Larger files are rejected before they are parsed.
 const MAX_FILE_BYTES: u64 = 32 << 20;
@@ -143,7 +145,7 @@ fn from_bytes<T: MetaFile>(bytes: &[u8]) -> Result<T, Problem> {
         .ok_or_else(|| Problem::Invalid("`format_version` is missing".to_owned()))?;
     match version.as_u64() {
         Some(found) if found > u64::from(FORMAT_VERSION) => return Err(Problem::Newer(found)),
-        Some(found) if found == u64::from(FORMAT_VERSION) => {}
+        Some(found) if (1..=u64::from(FORMAT_VERSION)).contains(&found) => {}
         _ => {
             return Err(Problem::Invalid(format!(
                 "`format_version` {version} is not a format version"

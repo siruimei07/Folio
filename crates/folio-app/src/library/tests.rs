@@ -220,6 +220,131 @@ fn startup_waits_for_initialization_and_preserves_unreadable_settings() {
     unavailable.shutdown().unwrap();
 }
 
+#[test]
+fn unavailable_status_retry_reopens_without_saving_settings() {
+    let f = Fixture::new();
+    Settings {
+        library_root: Some(f.root.clone()),
+        ..Settings::default()
+    }
+    .save(&f.data)
+    .unwrap();
+    let before = fs::read(f.data.join("settings.json")).unwrap();
+    f.state.initialize();
+    assert!(matches!(
+        f.state.status().unwrap(),
+        LibraryStatus::Unavailable { .. }
+    ));
+    core_library(&f.root);
+    assert!(matches!(
+        f.state.retry_status().unwrap(),
+        LibraryStatus::Open { .. }
+    ));
+    let session = lock(&f.state.0.state).session.clone().unwrap();
+    f.done(&session.opened().scan);
+    assert_eq!(fs::read(f.data.join("settings.json")).unwrap(), before);
+    assert!(
+        f.events
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|event| matches!(event, Event::Library(LibraryStatus::Open { .. })))
+    );
+    let attempt = lock(&f.state.0.state).attempt;
+    f.state.retry_status().unwrap();
+    assert_eq!(lock(&f.state.0.state).attempt, attempt);
+    assert!(Arc::ptr_eq(
+        &session,
+        lock(&f.state.0.state).session.as_ref().unwrap()
+    ));
+}
+
+#[test]
+fn retry_coalesces_identical_failures_and_does_not_retry_startup() {
+    let f = Fixture::new();
+    Settings {
+        library_root: Some(f.root.clone()),
+        ..Settings::default()
+    }
+    .save(&f.data)
+    .unwrap();
+    let before = fs::read(f.data.join("settings.json")).unwrap();
+    // This call entered before startup was ready, so it must return startup's failure.
+    let waiting = f.state.clone();
+    let (send, receive) = mpsc::channel();
+    let waiter = thread::spawn(move || send.send(waiting.retry_observed(None)).unwrap());
+    f.state.initialize();
+    let first = receive
+        .recv_timeout(Duration::from_secs(3))
+        .unwrap()
+        .unwrap();
+    waiter.join().unwrap();
+    assert_eq!(lock(&f.state.0.state).attempt, 0);
+    let observed = Some(lock(&f.state.0.state).attempt);
+    // Two calls saw this same unavailable generation before either acquired transition.
+    assert_eq!(f.state.retry_observed(observed).unwrap(), first);
+    assert_eq!(f.state.retry_observed(observed).unwrap(), first);
+    assert_eq!(lock(&f.state.0.state).attempt, 1);
+    f.state.retry_status().unwrap();
+    assert_eq!(lock(&f.state.0.state).attempt, 2);
+    assert_eq!(fs::read(f.data.join("settings.json")).unwrap(), before);
+    f.state.begin_close();
+    assert!(matches!(f.state.retry_status(), Err(AppError::Busy(_))));
+    assert!(lock(&f.state.0.state).session.is_none());
+}
+
+#[test]
+fn retry_none_is_read_unchanged() {
+    let f = Fixture::new();
+    f.state.initialize();
+    assert_eq!(f.state.retry_status().unwrap(), LibraryStatus::None);
+    assert_eq!(lock(&f.state.0.state).attempt, 0);
+}
+
+#[test]
+fn shutdown_drains_an_operation_and_rejects_the_next_one() {
+    let f = Fixture::new();
+    f.state.initialize();
+    let opened = f.create();
+    f.done(&opened.scan);
+    let active = f.state.clone();
+    let closing = f.state.clone();
+    let (started, start) = mpsc::channel();
+    let (release, released) = mpsc::channel::<()>();
+    let command = thread::spawn(move || {
+        active.with_operations(|session| {
+            session.mutate(|_, _| {
+                started.send(()).unwrap();
+                released.recv_timeout(Duration::from_secs(3)).unwrap();
+                Ok(folio_core::library::operations::Outcome {
+                    value: (),
+                    committed: folio_core::library::CommittedScan::default(),
+                })
+            })
+        })
+    });
+    start.recv_timeout(Duration::from_secs(3)).unwrap();
+    let (closed, receive) = mpsc::channel();
+    let drain = thread::spawn(move || closed.send(closing.shutdown()).unwrap());
+    assert!(matches!(
+        receive.recv_timeout(Duration::from_millis(40)),
+        Err(mpsc::RecvTimeoutError::Timeout)
+    ));
+    assert!(!f.state.is_closed());
+    release.send(()).unwrap();
+    command.join().unwrap().unwrap();
+    receive
+        .recv_timeout(Duration::from_secs(3))
+        .unwrap()
+        .unwrap();
+    drain.join().unwrap();
+    assert!(matches!(
+        f.state
+            .with_operations::<()>(|_| panic!("operation after close")),
+        Err(AppError::Busy(_))
+    ));
+}
+
 /// The reason comes from where opening failed, never from the error code alone.
 #[test]
 fn startup_reports_why_the_configured_root_is_unavailable_without_replacing_it() {

@@ -2,6 +2,10 @@
 
 - **Status:** Accepted (Sirui, 2026-09-26). Amended 2026-09-27 with the six refinements of
   [`library-core.md`](../specs/library-core.md) §9, approved by Sirui.
+  M1 metadata amendments approved by Sirui on 2026-09-29: shared format version 2,
+  optional course fields, preset palette keys and folder-tag filtering (§3).
+  In-app move recovery extension approved by Sirui on 2026-09-30 (§1): a durable local
+  operation intent preserves metadata and entry identities until reconciliation commits.
 - **Date:** 2026-09-26
 - **Deciders:** Sirui Mei
 - **Inputs:**
@@ -54,6 +58,13 @@ rebuildable catalog and index.**
 Writes go to the metadata file first (atomically), then to the catalog. On start-up the catalog
 reconciles itself from the files, so a crash between the two steps loses nothing.
 
+An in-app rename/move records its validated source, destination and catalogued subtree
+identities before changing metadata or the disk. Recovery accepts only a matching source
+or destination state; conflicts and unreadable identity evidence stop recovery with a typed
+error and retain the journal and authored files. The intent is cleared after reconciliation
+commits, so another crash during recovery remains retryable, including without file IDs.
+This is local recovery data, not a synced metadata format change (Sirui, 2026-09-30).
+
 ### 2. Where state lives
 
 `<app-id>` below is the Tauri bundle identifier, chosen at scaffold time.
@@ -98,7 +109,10 @@ specific to one machine.
   renames one file instead of rewriting every key.
 - Paths use `/` separators, Unicode NFC, and their original case. Uniqueness is checked
   case-insensitively, because Windows file systems are case-insensitive.
-- A key may name a folder, which tags the folder itself.
+- A key may name a subfolder inside a course. It assigns own tags to that folder;
+  descendants inherit them for filtering and "untagged". Semester and course folders carry
+  no tags. A filter selecting several tags requires every selected effective tag
+  ([ipc-m1.md](../specs/ipc-m1.md) §8.2, §9.1).
 
 **Writing and merging**
 - Writes are atomic: write a temporary file in `.folio/local/staging/` (same volume, never synced;
@@ -112,14 +126,25 @@ specific to one machine.
 - A file with a newer `format_version` than the app understands switches the library metadata to
   read-only and asks the user to update Folio. This stops an older Folio on another PC from
   overwriting newer data.
+- M1 writes version 2 and reads versions 1 and 2 with the current structs: v2 is a superset
+  of v1. Reading does not rewrite files; the next authorized write to a file uses v2.
+- A configured course has required archive/order settings and optional abbreviation, code
+  and colour. Absent values mean the UI derives its defaults; derived values are never
+  persisted. Abbreviations accept 1–3 grapheme clusters. Operation inputs trim and NFC-normalize
+  abbreviation and code before validation/storage, following the name normalization boundary.
+  [library-core.md](../specs/library-core.md) §4.2 defines the field rules.
+- New-library presets use design palette keys; Reference uses `stone`. Stored tag definitions
+  remain authored data and are never recoloured merely by opening a library.
 
 Example, `.folio/meta/2026 秋/线性代数.json`:
 
 ```json
 {
-  "format_version": 1,
+  "format_version": 2,
   "course": {
     "abbr": "线代",
+    "archived": false,
+    "code": "MAT232",
     "color": "blue",
     "order": 1
   },

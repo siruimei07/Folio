@@ -11,7 +11,7 @@ use crate::library::LibraryState;
 #[tauri::command]
 #[specta::specta]
 pub async fn library_status(state: State<'_, LibraryState>) -> Result<LibraryStatus, AppError> {
-    blocking(state, "library status", |state| state.status()).await
+    blocking(state, "library status", |state| state.retry_status()).await
 }
 
 /// Opens the folder dialog; `null` when the user cancels.

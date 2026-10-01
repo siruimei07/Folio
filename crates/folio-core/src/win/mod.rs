@@ -9,7 +9,7 @@ mod notify;
 mod recycle;
 mod watcher;
 
-pub use files::WindowsFileSystem;
+pub use files::{WindowsFileSystem, rename_no_replace};
 pub use handle::Volume;
 pub use recycle::WindowsRecycleBin;
 pub use watcher::{WatchEvent, Watcher};

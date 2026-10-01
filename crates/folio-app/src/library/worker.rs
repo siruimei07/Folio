@@ -5,6 +5,7 @@ use std::thread::JoinHandle;
 use std::time::{Duration, Instant, SystemTime};
 
 use folio_core::catalog::{self, Catalog};
+use folio_core::library::operations::{OperationError, Outcome};
 use folio_core::library::{self as core, CommittedScan, EntryChangeKind, Library, ScanCoverage};
 use folio_core::meta::MetaTree;
 use folio_core::watch::{Rescan, WatchOptions};
@@ -29,6 +30,9 @@ pub(super) struct Session {
     pub jobs: Registry,
     startup: String,
     snapshot: Mutex<Snapshot>,
+    // ponytail: one session-wide disk/metadata lock; split only if measured latency requires it.
+    operation: Mutex<()>,
+    recovering: AtomicBool,
     pending: Mutex<Pending>,
     wake: Condvar,
     active: Arc<AtomicBool>,
@@ -147,6 +151,8 @@ impl Session {
                 event: None,
                 last_event: None,
             }),
+            operation: Mutex::new(()),
+            recovering: AtomicBool::new(false),
             pending: Mutex::new(Pending {
                 startup: Some(startup),
                 ..Pending::default()
@@ -216,6 +222,105 @@ impl Session {
                 action(self.root(), &entry).map_err(ActionError)
             })
             .map_err(|error: ActionError| error.0)
+    }
+
+    pub(super) fn read_operation<T>(
+        &self,
+        call: impl FnOnce(&Library, &Catalog) -> Result<T, OperationError>,
+    ) -> Result<T, AppError> {
+        call(&self.library, &self.catalog).map_err(super::operations::operation_error)
+    }
+
+    pub(super) fn mutate<T>(
+        &self,
+        call: impl FnOnce(&Library, &Catalog) -> Result<Outcome<T>, OperationError>,
+    ) -> Result<T, AppError> {
+        self.mutate_map(call, |_, value| Ok(value))
+    }
+
+    /// Publish the commit before mapping the response: a failed row read cannot hide a write
+    /// that already committed. Mapping still holds the operation mutex for one coherent row.
+    pub(super) fn mutate_map<T, U>(
+        &self,
+        call: impl FnOnce(&Library, &Catalog) -> Result<Outcome<T>, OperationError>,
+        map: impl FnOnce(&Catalog, T) -> Result<U, OperationError>,
+    ) -> Result<U, AppError> {
+        let _operation = lock(&self.operation);
+        if self.stopped.load(Ordering::Acquire) {
+            return Err(AppError::NoLibrary("the library is unavailable".to_owned()));
+        }
+        let recovering = self.recovering.load(Ordering::Acquire);
+        let rebuilding = self.jobs.busy(JobKind::Rebuild);
+        if recovering || rebuilding {
+            // The reconciling scan is a job the user may cancel. Ask for it again, so that
+            // writes are not blocked until some other full scan happens to complete.
+            if recovering && !rebuilding && !self.jobs.busy(JobKind::Scan) {
+                self.watch(WatchEvent::Rescan(Rescan::Full));
+            }
+            return Err(AppError::Busy(
+                "catalog is reconciling or rebuilding".to_owned(),
+            ));
+        }
+        if let Err(failure) = self.recover() {
+            let error = failure.error.clone();
+            self.fail(failure);
+            return Err(error);
+        }
+        match call(&self.library, &self.catalog) {
+            Ok(outcome) => {
+                let hash = outcome.committed.entries.iter().any(|entry| {
+                    matches!(
+                        entry.kind,
+                        EntryChangeKind::Added
+                            | EntryChangeKind::Modified
+                            | EntryChangeKind::Moved { .. }
+                    )
+                });
+                self.committed(outcome.committed);
+                if hash && let Err(failure) = self.queue_hash(Duration::ZERO) {
+                    self.fail(failure);
+                }
+                // The worker also owns delayed CatalogChanged delivery and hash scheduling.
+                let _pending = lock(&self.pending);
+                self.wake.notify_one();
+                drop(_pending);
+                map(&self.catalog, outcome.value).map_err(|error| {
+                    self.reconcile_error(&error);
+                    super::operations::operation_error(error)
+                })
+            }
+            Err(error) => {
+                self.reconcile_error(&error);
+                Err(super::operations::operation_error(error))
+            }
+        }
+    }
+
+    pub(super) fn reconcile_error(&self, error: &OperationError) {
+        if matches!(
+            error,
+            OperationError::DiskChanged { .. } | OperationError::RecoveryRequired { .. }
+        ) {
+            self.recovering.store(true, Ordering::Release);
+            self.watch(WatchEvent::Rescan(Rescan::Full));
+            self.send(Event::Error(error.to_string()));
+        }
+    }
+
+    fn recover(&self) -> Result<(), Failure> {
+        let report = self
+            .library
+            .recover_pending(&self.catalog)
+            .map_err(|error| match &error {
+                core::LibraryError::Meta(folio_core::meta::MetaError::Invalid { path, .. })
+                    if *path == self.library.layout().scan_journal_file() =>
+                {
+                    Failure::own(AppError::Internal(error.to_string()))
+                }
+                _ => errors::library(error),
+            })?;
+        self.committed(report);
+        Ok(())
     }
 
     pub fn opened(&self) -> LibraryOpened {
@@ -317,12 +422,15 @@ impl Session {
             watcher.stop();
         }
         let worker = lock(&self.worker).take();
-        if let Some(worker) = worker {
+        let joined = worker.map_or(Ok(()), |worker| {
             worker
                 .join()
-                .map_err(|_| AppError::Internal("library worker panicked".to_owned()))?;
-        }
-        Ok(())
+                .map_err(|_| AppError::Internal("library worker panicked".to_owned()))
+        });
+        // Commands wait for the operation mutex outside the library transition. A write that
+        // holds it finishes before the drain does; a later one sees `stopped` under it.
+        drop(lock(&self.operation));
+        joined
     }
 
     /// Library and catalog failures keep the reason they got where they happened; a failure of
@@ -335,6 +443,12 @@ impl Session {
                 self.jobs.cancel_all();
                 return Ok(());
             };
+            // Hold through walking and committing: otherwise a pre-operation snapshot could
+            // commit afterwards and undo the operation's catalog result.
+            let _operation = lock(&self.operation);
+            if !matches!(&work, Work::Failed(_)) {
+                self.recover()?;
+            }
             match work {
                 Work::Failed(failure) => return Err(failure),
                 Work::Scan(rescan, ticket) => {
@@ -474,6 +588,9 @@ impl Session {
             )
             .map_err(errors::library)?;
         let problems = lock(&self.snapshot).problems.total();
+        if completed && matches!(rescan, Rescan::Full) {
+            self.recovering.store(false, Ordering::Release);
+        }
         Ok(completed.then_some(JobResult::Scan {
             changes: count(changes),
             problems: count(problems as u64),
@@ -620,15 +737,14 @@ impl Session {
         if self.stopped.load(Ordering::Acquire) || self.jobs.busy(JobKind::Rebuild) {
             return Ok(());
         }
-        // A hash job cancelled while it waited has already finished: queue a new one.
-        if pending
-            .hash
-            .as_ref()
-            .is_none_or(|(_, ticket)| !self.jobs.live(ticket))
-        {
-            let ticket = self.jobs.queue(JobKind::Hash, true).map_err(Failure::own)?;
-            pending.hash = Some((Instant::now() + delay, ticket));
+        // A queued hash job sees this change too, also one the worker already took but has not
+        // started when a command runs. A job cancelled while it waited has finished and does
+        // not count, so a new one replaces it.
+        if self.jobs.busy(JobKind::Hash) {
+            return Ok(());
         }
+        let ticket = self.jobs.queue(JobKind::Hash, true).map_err(Failure::own)?;
+        pending.hash = Some((Instant::now() + delay, ticket));
         Ok(())
     }
 
@@ -636,6 +752,7 @@ impl Session {
         {
             let _pending = lock(&self.pending);
             self.stopped.store(true, Ordering::Release);
+            self.wake.notify_all();
         }
         lock(&self.snapshot).failure = Some(failure.reason);
         self.jobs.cancel_all();
@@ -664,7 +781,7 @@ fn entry_change(change: core::EntryChange) -> EntryChange {
     }
 }
 
-fn now_ns() -> i64 {
+pub(super) fn now_ns() -> i64 {
     folio_core::fs::unix_ns(SystemTime::now()).unwrap_or(i64::MAX)
 }
 
@@ -694,6 +811,232 @@ mod tests {
         .unwrap();
         let session = Session::prepare(&root, &data, Arc::new(|_| {})).unwrap();
         (dir, session)
+    }
+
+    #[test]
+    fn operations_wait_for_the_whole_walk_but_reads_remain_available() {
+        let (_dir, session) = inactive_session();
+        // Represents the worker after walking begins but before it acquires the writer.
+        let walk = lock(&session.operation);
+        assert_eq!(
+            session
+                .read_operation(|library, catalog| library.list_tags(catalog))
+                .unwrap()
+                .len(),
+            0
+        );
+        let (started, start) = mpsc::channel();
+        let (finished, finish) = mpsc::channel();
+        let changing = session.clone();
+        let command = thread::spawn(move || {
+            started.send(()).unwrap();
+            finished
+                .send(changing.mutate(|_, _| {
+                    Ok(Outcome {
+                        value: 7,
+                        committed: CommittedScan::default(),
+                    })
+                }))
+                .unwrap();
+        });
+        start.recv_timeout(Duration::from_secs(3)).unwrap();
+        assert!(matches!(
+            finish.recv_timeout(Duration::from_millis(40)),
+            Err(mpsc::RecvTimeoutError::Timeout)
+        ));
+        drop(walk);
+        assert_eq!(
+            finish
+                .recv_timeout(Duration::from_secs(3))
+                .unwrap()
+                .unwrap(),
+            7
+        );
+        command.join().unwrap();
+        session.shutdown().unwrap();
+    }
+
+    #[test]
+    fn rebuilding_and_recovery_reject_writes_before_running_them() {
+        let (_dir, session) = inactive_session();
+        let rebuild = session.jobs.queue(JobKind::Rebuild, true).unwrap();
+        assert!(matches!(
+            session.mutate::<()>(|_, _| panic!("write during rebuild")),
+            Err(AppError::Busy(_))
+        ));
+        session.jobs.cancel(&rebuild.id).unwrap();
+        session.reconcile_error(&OperationError::RecoveryRequired {
+            source: Box::new(OperationError::InvalidArgument("failed reconciliation")),
+            cleanup: None,
+        });
+        assert!(matches!(lock(&session.pending).rescan, Some(Rescan::Full)));
+        assert!(matches!(
+            session.mutate::<()>(|_, _| panic!("write before recovery")),
+            Err(AppError::Busy(_))
+        ));
+        session.shutdown().unwrap();
+    }
+
+    #[test]
+    fn a_write_asks_again_for_a_cancelled_reconciling_scan() {
+        let (_dir, session) = inactive_session();
+        session.jobs.cancel(&session.startup).unwrap();
+        session.reconcile_error(&OperationError::RecoveryRequired {
+            source: Box::new(OperationError::InvalidArgument("failed reconciliation")),
+            cleanup: None,
+        });
+        // The worker took the scan, and the user cancelled it before it completed.
+        lock(&session.pending).rescan = None;
+        assert!(matches!(
+            session.mutate::<()>(|_, _| panic!("write before reconciliation")),
+            Err(AppError::Busy(_))
+        ));
+        assert!(matches!(lock(&session.pending).rescan, Some(Rescan::Full)));
+        session.shutdown().unwrap();
+    }
+
+    #[test]
+    fn a_write_waiting_for_the_worker_leaves_reads_available() {
+        let (dir, session) = inactive_session();
+        let state = super::super::LibraryState::new(Ok(dir.path().join("data")), Arc::new(|_| {}));
+        {
+            let mut current = lock(&state.0.state);
+            current.ready = true;
+            current.session = Some(session.clone());
+        }
+        // Represents the worker walking or hashing.
+        let walk = lock(&session.operation);
+        let (done, read) = mpsc::channel();
+        thread::scope(|scope| {
+            let write = scope.spawn(|| {
+                state.create_tag(crate::ipc::tags::CreateTag {
+                    name: "Queued".to_owned(),
+                    color: "blue".to_owned(),
+                })
+            });
+            // Let the write reach the operation mutex before reading.
+            thread::sleep(Duration::from_millis(50));
+            scope.spawn(|| done.send(state.list_tags().map(|tags| tags.len())).unwrap());
+            assert_eq!(
+                read.recv_timeout(Duration::from_secs(3)).unwrap().unwrap(),
+                0
+            );
+            assert!(!write.is_finished());
+            drop(walk);
+            assert_eq!(write.join().unwrap().unwrap().name, "Queued");
+        });
+        state.shutdown().unwrap();
+    }
+
+    #[test]
+    fn the_drain_waits_for_a_running_write() {
+        let (_dir, session) = inactive_session();
+        // Represents a write in progress.
+        let write = lock(&session.operation);
+        let (done, drained) = mpsc::channel();
+        thread::scope(|scope| {
+            scope.spawn(|| done.send(session.shutdown()).unwrap());
+            assert!(matches!(
+                drained.recv_timeout(Duration::from_millis(40)),
+                Err(mpsc::RecvTimeoutError::Timeout)
+            ));
+            drop(write);
+            drained
+                .recv_timeout(Duration::from_secs(3))
+                .unwrap()
+                .unwrap();
+        });
+        assert!(matches!(
+            session.mutate::<()>(|_, _| panic!("write after the drain")),
+            Err(AppError::NoLibrary(_))
+        ));
+    }
+
+    #[test]
+    fn mutation_hash_scheduling_reuses_a_ticket_already_taken_by_the_worker() {
+        let (_dir, session) = inactive_session();
+        let hash = session.jobs.queue(JobKind::Hash, true).unwrap();
+        assert!(lock(&session.pending).hash.is_none());
+        session.queue_hash(Duration::ZERO).unwrap();
+        let hashes: Vec<_> = session
+            .jobs
+            .list()
+            .into_iter()
+            .filter(|job| job.kind == JobKind::Hash)
+            .collect();
+        assert_eq!(hashes.len(), 1);
+        assert_eq!(hashes[0].id, hash.id);
+        session.shutdown().unwrap();
+    }
+
+    #[test]
+    fn a_failed_response_read_keeps_the_commit_and_requests_reconciliation() {
+        let (_dir, session) = inactive_session();
+        let result: Result<(), AppError> = session.mutate_map(
+            |library, catalog| library.create_tag(catalog, "Committed tag", "blue"),
+            |_, _| {
+                Err(OperationError::DiskChanged {
+                    path: folio_core::paths::RelPath::parse("s/c/file.md").unwrap(),
+                    source: Box::new(OperationError::NotFound),
+                })
+            },
+        );
+        assert!(matches!(result, Err(AppError::NotFound(_))));
+        assert_eq!(lock(&session.snapshot).revision, 1);
+        assert!(
+            session
+                .read_operation(|library, catalog| library.list_tags(catalog))
+                .unwrap()
+                .iter()
+                .any(|tag| tag.definition.name.as_str() == "Committed tag")
+        );
+        assert!(session.recovering.load(Ordering::Acquire));
+        assert!(matches!(lock(&session.pending).rescan, Some(Rescan::Full)));
+        session.shutdown().unwrap();
+    }
+
+    #[test]
+    fn a_conflicting_recovery_journal_stops_writes_without_losing_the_record() {
+        let (_dir, session) = inactive_session();
+        let path = session.library.layout().scan_journal_file();
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        let bytes = br#"{"format_version":3,"id":"conflict","before":[["../other.json",null]],"after":[["../other.json",null]]}"#;
+        std::fs::write(&path, bytes).unwrap();
+        assert!(matches!(
+            session.mutate::<()>(|_, _| panic!("write despite conflicting journal")),
+            Err(AppError::Internal(_))
+        ));
+        assert!(matches!(
+            session.status(),
+            LibraryStatus::Unavailable {
+                reason: Unavailable::CatalogFailed,
+                ..
+            }
+        ));
+        assert_eq!(std::fs::read(path).unwrap(), bytes);
+        session.shutdown().unwrap();
+    }
+
+    #[test]
+    fn status_that_failed_after_call_entry_returns_without_retrying() {
+        let (dir, session) = inactive_session();
+        let state = super::super::LibraryState::new(Ok(dir.path().join("data")), Arc::new(|_| {}));
+        {
+            let mut current = lock(&state.0.state);
+            current.ready = true;
+            current.session = Some(session.clone());
+        }
+        session.fail(Failure::root(AppError::NotFound("watch stopped".into())));
+        assert!(matches!(
+            state.retry_observed(None).unwrap(),
+            LibraryStatus::Unavailable { .. }
+        ));
+        assert_eq!(lock(&state.0.state).attempt, 0);
+        assert!(Arc::ptr_eq(
+            &session,
+            lock(&state.0.state).session.as_ref().unwrap()
+        ));
+        state.shutdown().unwrap();
     }
 
     /// A failure while the library runs keeps the reason of where it happened: a watch that ends

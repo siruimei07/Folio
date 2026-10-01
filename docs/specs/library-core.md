@@ -9,6 +9,11 @@ ADRs; this spec fixes the details the ADRs leave open and the API the next lanes
   §2–§5; [testing strategy](testing-strategy.md).
 - Section 9 lists where this spec refines ADR-0002. Sirui approved them on 2026-09-27, and
   ADR-0002 now includes them.
+- M1 metadata v2, catalog migration 2 and the folder-tag/all-tags clarifications below
+  were approved by Sirui on 2026-09-29 (ipc-m1 §20).
+  Sirui approved the narrow in-app move recovery extension on 2026-09-30: durable local
+  intent, stable catalog identities, fail-closed conflicts and interrupted-recovery safety
+  ([library-scan.md](library-scan.md) §7.1; ADR-0002 §1).
 
 ## 1. Scope
 
@@ -104,7 +109,7 @@ Semester and course folders themselves carry no tags: `meta::tag_location` has n
 them. A key in a course file names a file or a subfolder inside the course, relative to it
 (`作业/hw2.pdf`); keys in `_group.json` and `_root.json` name files directly in the folder.
 
-### 4.2 Format (`format_version` 1)
+### 4.2 Format (current `format_version` 2; v1 readable)
 
 Common rules (ADR-0002 §3): UTF-8 without BOM, LF, two-space indent, trailing newline. Objects
 are expanded one field per line; arrays stay on one line, so each tag assignment is one line.
@@ -113,10 +118,11 @@ code point; tag lists and extension lists are sorted and free of duplicates.
 
 ```json
 {
-  "format_version": 1,
+  "format_version": 2,
   "course": {
     "abbr": "线代",
     "archived": false,
+    "code": "MAT232",
     "color": "blue",
     "order": 1
   },
@@ -133,7 +139,7 @@ code point; tag lists and extension lists are sorted and free of duplicates.
 | `tags.json` | `tags`: map from tag id to `{color, name, order}` |
 | `_root.json` | `tags` |
 | `_group.json` | `group`: `{archived, order}`, left out until the group is configured; `tags` |
-| `<course>.json` | `course`: `{abbr, archived, color, order}`, left out until the course is configured; `tags` |
+| `<course>.json` | `course`: `{archived, order}` with optional `abbr`, `code`, `color`, left out until configured; `tags` |
 
 Value rules:
 
@@ -141,10 +147,29 @@ Value rules:
   `homework`, `exam`, `reference`; new tags get 16 random lowercase hex digits. The core owns the
   preset ids, colours and order; the preset **names** come from the caller (UI strings, CLAUDE.md
   §2).
-- Colours are palette keys (`blue`, 1–32 of `a–z 0–9 -`, starting with a letter). The design
-  system's tag palette defines them; the preset keys are placeholders until milestone 6.
-- `abbr` is one or two grapheme clusters, without whitespace or control characters (brief §5.1).
-- Names (library, tag) are 1–128 characters without surrounding whitespace or control characters.
+- Colours are palette keys (1–32 of `a–z 0–9 -`, starting with a letter). The current palette
+  is red, orange, amber, green, teal, blue, indigo, violet, pink, stone. Unknown valid keys
+  display neutrally. New presets keep their ids; Reference uses stone. Stored definitions,
+  including the former gray key, are not rewritten or recoloured on open.
+- `abbr` is 1–3 extended grapheme clusters without whitespace or control characters;
+  `MAX_ABBR_GRAPHEMES` is exposed by core. Operation inputs trim and NFC-normalize it before
+  validation/storage. Missing/null means no explicit badge; the UI derives it from the name.
+- `code` is 1–32 Unicode scalar values without surrounding whitespace or control characters;
+  `MAX_COURSE_CODE_CHARS` is exposed by core. Operation inputs trim and NFC-normalize it before
+  validation/storage. Missing/null means no code; an empty string is invalid, so callers clear
+  it with null.
+- Course colour is optional too. Readers accept omitted/null optional fields and writers omit
+  absent fields; IPC responses retain explicit nulls (ipc-m1 §4). Derived badges/colours are
+  never stored. Present values use the core value types.
+- Names (library, tag) are 1–128 Unicode scalar values without surrounding whitespace or
+  control characters. Core exposes `MAX_DISPLAY_NAME_CHARS`; IPC LIMITS references these three
+  core limits without changing their exported values.
+- Versions 1 and 2 use the current structs and current value rules (`1..=FORMAT_VERSION`).
+  There is no separate legacy course shape or mapping. Unknown fields and invalid values
+  remain invalid in both versions.
+- Folder keys assign own tags inside a course; descendants inherit them for filtering and
+  "untagged". Several selected tags require all effective tags. This does not change the
+  assignment representation; browse/search filtering belongs to its query lane.
 - `order` is an unsigned 32-bit integer. Ties sort by name.
 - Extensions are stored lower-case without the dot. Defaults: common text, markup, data and
   source-code extensions (`meta::VersioningRules::default`), Word `docx`, and a 10 MiB text limit
@@ -158,7 +183,7 @@ Value rules:
   integer:
   - newer than the app supports → `MetaError::NewerFormat`; the library layer then makes the
     library metadata read-only (ADR-0002 §3);
-  - supported → parse strictly: an unknown field, a wrong type, an invalid key, an exact or
+  - supported (1 or 2) → deserialize the current structs strictly: an unknown field, a wrong type, an invalid key, an exact or
     case-insensitive duplicate key or an invalid value is `MetaError::Invalid`, naming the file
     and the problem. Every change to a format bumps `format_version`, so an unknown field never
     means "newer".
@@ -170,6 +195,8 @@ Value rules:
   to a new file in `local/staging/`, are flushed with `sync_all`, and replace the target with one
   rename on the same volume. On Windows, sharing and lock violations (antivirus, indexers,
   Explorer previews) are retried with backoff for about two seconds, then reported.
+  Reading/opening does not upgrade files. The first authorized write uses v2 while preserving
+  assignments and authored settings. Never overwrite source metadata from the derived catalog.
 
 ## 5. Catalog
 
@@ -187,19 +214,18 @@ Value rules:
 - A panic inside a transaction rolls it back; a poisoned mutex is recovered, because the
   connection is consistent after the rollback.
 
-### 5.2 Schema v1
+### 5.2 Schema v2 (migration 1 preserved)
 
 `rusqlite_migration` tracks the version in `PRAGMA user_version`. Its `validate()` opens a
 connection without `folio_cjk`, so the test applies the migrations to a connection that has it.
-Until the first release,
-migration 1 may still be edited in place; after that, changes only add migrations (with fixtures,
-ADR-0002 §4).
+This lane preserves migration 1 and adds migration 2 with a populated v1 fixture test
+(ADR-0002 §4), even though pre-release migrations were previously editable in place.
 
 | Table | Columns |
 |---|---|
 | `info` | `key`, `value`: `library_id`, `tokenizer_version`, `paths_version`; the scan's `scan_journal` and `first_scan_ns` ([library-scan.md](library-scan.md) §6.3, §7.1) |
 | `semesters` | `path` (one segment), `sort_order`, `archived` |
-| `courses` | `path` (two segments), `abbr`, `color`, `sort_order`, `archived` |
+| `courses` | `path` (two segments), nullable `abbr`, nullable `code`, nullable `color`, `sort_order`, `archived` |
 | `entries` | `id`; `path` (unique); `path_key` (indexed); `parent_id` (not cascading); `name`; `kind` (`file`, `folder`); `class` (`text`, `word`, `other`); `size`; `mtime_ns`; `file_id`; `hash` (`b3:` + 64 hex); `added_ns` (when a scan first saw it; a rebuild takes the file's creation time, [library-scan.md](library-scan.md) §6.3) |
 | `tags` | `id`, `name`, `color`, `sort_order` |
 | `entry_tags` | `entry_id` (cascading), `tag_id`. No foreign key to `tags`: an assignment may name a tag that `tags.json` has not synced yet, or no longer defines |
@@ -208,6 +234,14 @@ ADR-0002 §4).
 All ordinary tables are `STRICT`. Entries hold no semester or course ids: a semester or course
 view is a range scan on `path` (`path > 'P/' AND path < 'P0'`), so a rename touches only paths.
 Extraction status, thumbnails and recents get their tables with their features.
+
+Migration 2 replaces only the courses mirror in the migration transaction, retaining STRICT,
+WITHOUT ROWID and the archive check. It copies each path, explicit abbreviation/colour, order
+and archive value, with code initialized to NULL. All other data, entry ids, tags/assignments,
+search text, indexes and info remain intact. Fresh databases run both migrations. Regression tests
+open a populated v1 fixture through `Catalog::open`, verify preservation and `user_version`
+2, exercise nullable/three-grapheme/code settings, and reopen without recovery or data loss.
+Catalog schema version is separate from metadata `format_version`; SQLite stays rebuildable.
 
 The entry repositories keep the `search` row in step: an entry's `name` and `path` columns are
 written with the entry, `tags` whenever its tags or a tag's name change, and `body` by extraction.
