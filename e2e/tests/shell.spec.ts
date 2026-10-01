@@ -21,15 +21,18 @@ test('shows the Library on the rail and in the content region, and passes axe', 
   // Until M2 the rail shows the Library only (ADR-0005, product decision 3).
   await expect(rail.getByRole('button')).toHaveCount(1);
 
-  // Ctrl+1 keeps the Library; the keyboard reaches the rail.
+  // Focus opens the rail button's tooltip. Check it before any key: React Aria closes it on every
+  // keydown on its trigger, so a check after one only passes during the fade-out.
   await library.focus();
+  await expect(page.getByRole('tooltip')).toBeVisible();
+  // Closed before axe runs, which would catch it halfway through a fade.
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('tooltip')).toBeHidden();
+
+  // Ctrl+1 keeps the Library; the keyboard reaches the rail.
   await page.keyboard.press('Control+1');
   await expect(library).toBeFocused();
   await expect(library).toHaveAttribute('aria-current', 'page');
-  // Focus opens the rail button's tooltip; axe would catch it halfway through its fade-in.
-  await expect(page.getByRole('tooltip')).toBeVisible();
-  await page.keyboard.press('Escape');
-  await expect(page.getByRole('tooltip')).toBeHidden();
 
   const { violations } = await new AxeBuilder({ page }).analyze();
   const blocking = violations.filter(({ impact }) => impact === 'serious' || impact === 'critical');
