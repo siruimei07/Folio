@@ -259,7 +259,8 @@ Four questions this ADR left open, with the options Sirui was given and his choi
    not registered (spec §10.4 has the proposed shape); `feat/data-browse-queries` implements it.
    (2026-09-29: done by `feat/ipc-m1-contract-fixes`, which replaced this lane and also declared
    `log_ui_error` for spec §13; ipc-m1 §9.1, §16.4 and §20.2.)
-5. [ ] `feat/ui-data-layer`: data layer and fake shell (spec §5, §11).
+5. [x] `feat/ui-data-layer`: data layer and fake shell (spec §5, §11). (2026-09-30: built as
+   specified; deviations are marked "As built" in spec §5.2–§5.4, §5.6 and §11.2–§11.5.)
 6. [x] `feat/ui-app-shell`: stores, `<Activity>` view host, shortcuts, layout mode, component
    wrappers, ESLint import and security rules (spec §3, §6, §7.1, §14). (2026-09-30: built as
    specified, with a registry through which lanes add views, dialogs and toolbar controls; the

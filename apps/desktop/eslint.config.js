@@ -1,5 +1,6 @@
 // @ts-check
 import js from '@eslint/js';
+import pluginQuery from '@tanstack/eslint-plugin-query';
 import { defineConfig, globalIgnores } from 'eslint/config';
 import i18next from 'eslint-plugin-i18next';
 import reactHooks from 'eslint-plugin-react-hooks';
@@ -116,6 +117,9 @@ export default defineConfig([
   tseslint.configs.stylisticTypeChecked,
   reactHooks.configs.flat['recommended-latest'],
   i18next.configs['flat/recommended'],
+  // TanStack Query: keys cover what each query function reads, a stable client, and the rest of
+  // the plugin's recommended rules (ui-architecture §5).
+  pluginQuery.configs['flat/recommended'],
   {
     languageOptions: {
       globals: globals.browser,

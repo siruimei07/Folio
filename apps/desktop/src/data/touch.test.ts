@@ -1,0 +1,184 @@
+import { describe, expect, it } from 'vitest';
+
+import type { CatalogChanged, EntryChange, EntryRef } from '../ipc';
+import type { LibraryQuery } from './keys';
+import { isTouched, touches } from './touch';
+
+const ref = (id: string, path: string): EntryRef => ({ id, path });
+const noTags = { tags: null, addedAfterMs: null };
+
+const course = ref('10', 'Fall 2026/MAT232');
+const lectures = ref('11', 'Fall 2026/MAT232/Lectures');
+const lecture = ref('12', 'Fall 2026/MAT232/Lectures/Lecture 01.pdf');
+const other = ref('20', 'Fall 2026/CSC148');
+
+const children = (folder: EntryRef | null): LibraryQuery => ({ kind: 'children', folder });
+const files = (scope: EntryRef | null): LibraryQuery => ({ kind: 'files', scope });
+const search = (scope: EntryRef | null): LibraryQuery => ({ kind: 'search', scope });
+const entry = (target: EntryRef): LibraryQuery => ({ kind: 'entry', entry: target });
+
+const added = (target: EntryRef): EntryChange => ({ kind: 'added', entry: target });
+const modified = (target: EntryRef): EntryChange => ({ kind: 'modified', entry: target });
+const removed = (target: EntryRef): EntryChange => ({ kind: 'removed', entry: target });
+const tagged = (target: EntryRef): EntryChange => ({ kind: 'tagged', entry: target });
+const moved = (target: EntryRef, from: string): EntryChange => ({ kind: 'moved', entry: target, from });
+
+describe('touches: children of a folder', () => {
+  it.each([
+    ['added', added(lecture)],
+    ['modified', modified(lecture)],
+    ['removed', removed(lecture)],
+    ['tagged', tagged(lecture)],
+  ])('a change %s in the folder touches it, and nothing else', (_kind, change) => {
+    expect(touches(children(lectures), change)).toBe(true);
+    expect(touches(children(course), change)).toBe(false);
+    expect(touches(children(other), change)).toBe(false);
+    expect(touches(children(null), change)).toBe(false);
+  });
+
+  it('a change at the top level touches the root', () => {
+    expect(touches(children(null), added(ref('1', 'Personal')))).toBe(true);
+  });
+
+  it('a move touches both the old and the new parent', () => {
+    const change = moved(ref('12', 'Fall 2026/CSC148/Lecture 01.pdf'), lecture.path);
+    expect(touches(children(lectures), change)).toBe(true);
+    expect(touches(children(other), change)).toBe(true);
+    expect(touches(children(course), change)).toBe(false);
+  });
+
+  it('a tagged folder touches every folder at or below it, whose rows carry its tags', () => {
+    const change = tagged(course);
+    expect(touches(children(course), change)).toBe(true);
+    expect(touches(children(lectures), change)).toBe(true);
+    expect(touches(children(ref('1', 'Fall 2026')), change)).toBe(true); // its own row
+    expect(touches(children(other), change)).toBe(false);
+  });
+
+  it('a folder that moved or went away leaves its own children list and those below it stale', () => {
+    const renamed = moved(ref('10', 'Fall 2026/MAT237'), course.path);
+    expect(touches(children(course), renamed)).toBe(true);
+    expect(touches(children(lectures), renamed)).toBe(true);
+    // A key made with the new path was read after the move.
+    expect(touches(children(ref('10', 'Fall 2026/MAT237')), renamed)).toBe(false);
+    expect(touches(children(lectures), removed(course))).toBe(true);
+  });
+});
+
+describe('touches: files, counts and search over a scope', () => {
+  it.each([
+    ['files', files],
+    ['search', search],
+    ['count of files', (scope: EntryRef | null): LibraryQuery => ({
+      kind: 'count',
+      request: { of: 'files', scope, filter: noTags },
+    })],
+  ])('%s: a change anywhere inside the scope touches it', (_name, query) => {
+    expect(touches(query(course), added(lecture))).toBe(true);
+    expect(touches(query(null), added(lecture))).toBe(true);
+    expect(touches(query(other), added(lecture))).toBe(false);
+    // Out of the scope and into another one.
+    const change = moved(ref('12', 'Fall 2026/CSC148/Lecture 01.pdf'), lecture.path);
+    expect(touches(query(course), change)).toBe(true);
+    expect(touches(query(other), change)).toBe(true);
+    // A folder above the scope was tagged: effective tags inside it changed.
+    expect(touches(query(lectures), tagged(course))).toBe(true);
+    expect(touches(query(other), tagged(course))).toBe(false);
+  });
+
+  it('paths compare as whole names, case included', () => {
+    const similar = ref('30', 'Fall 2026/MAT2320/notes.md');
+    expect(touches(files(course), added(similar))).toBe(false);
+    expect(touches(files(course), added(ref('31', 'fall 2026/MAT232/a.md')))).toBe(false);
+  });
+
+  it('a count of children follows the children rule', () => {
+    const count: LibraryQuery = { kind: 'count', request: { of: 'children', folder: lectures } };
+    expect(touches(count, added(lecture))).toBe(true);
+    expect(touches(count, added(ref('40', 'Fall 2026/MAT232/Lectures/Old/a.pdf')))).toBe(false);
+  });
+
+  it('the problem count changes only with ProblemsChanged', () => {
+    const count: LibraryQuery = { kind: 'count', request: { of: 'problems' } };
+    expect(touches(count, added(lecture))).toBe(false);
+  });
+});
+
+describe('touches: one entry', () => {
+  it('changes of the entry itself touch it', () => {
+    expect(touches(entry(lecture), modified(lecture))).toBe(true);
+    expect(touches(entry(lecture), tagged(lecture))).toBe(true);
+    expect(touches(entry(lecture), modified(ref('99', 'Fall 2026/MAT232/Lectures/x.pdf')))).toBe(false);
+  });
+
+  it('a tagged folder above it changes its folder tags', () => {
+    expect(touches(entry(lecture), tagged(course))).toBe(true);
+    expect(touches(entry(lecture), tagged(other))).toBe(false);
+  });
+
+  it('the entry, or a folder above it, moving or going away leaves the reference stale', () => {
+    expect(touches(entry(lecture), moved(ref('12', 'Fall 2026/MAT232/L1.pdf'), lecture.path))).toBe(true);
+    expect(touches(entry(lecture), moved(ref('11', 'Fall 2026/MAT232/Slides'), lectures.path))).toBe(true);
+    expect(touches(entry(lecture), removed(course))).toBe(true);
+    // Another entry that took the same path does not.
+    expect(touches(entry(ref('50', lecture.path)), removed(lecture))).toBe(false);
+  });
+});
+
+describe('touches: groups, tags, jobs, problems', () => {
+  it('semesters and courses follow entries coming, going and moving (course file counts)', () => {
+    for (const kind of ['semesters', 'courses'] as const) {
+      expect(touches({ kind }, added(lecture))).toBe(true);
+      expect(touches({ kind }, removed(lecture))).toBe(true);
+      expect(touches({ kind }, moved(lecture, 'a.pdf'))).toBe(true);
+      expect(touches({ kind }, modified(lecture))).toBe(false);
+      expect(touches({ kind }, tagged(lecture))).toBe(false);
+    }
+  });
+
+  it('tags follow assignments (usage counts)', () => {
+    expect(touches({ kind: 'tags' }, tagged(lecture))).toBe(true);
+    expect(touches({ kind: 'tags' }, added(lecture))).toBe(false);
+  });
+
+  it('jobs and problems never: their own events keep them current', () => {
+    for (const change of [added(lecture), removed(lecture), tagged(course)]) {
+      expect(touches({ kind: 'jobs' }, change)).toBe(false);
+      expect(touches({ kind: 'problems' }, change)).toBe(false);
+    }
+  });
+
+  it('a query kind this file does not know is touched by every change', () => {
+    expect(touches({ kind: 'unknown' }, modified(lecture))).toBe(true);
+  });
+});
+
+describe('isTouched', () => {
+  const event = (overrides: Partial<CatalogChanged>): CatalogChanged => ({
+    revision: 5,
+    entries: [],
+    complete: true,
+    tags: false,
+    groups: false,
+    ...overrides,
+  });
+
+  it('`complete: false` touches everything', () => {
+    for (const query of [children(null), { kind: 'jobs' } as const, entry(lecture)]) {
+      expect(isTouched(query, event({ complete: false }))).toBe(true);
+    }
+  });
+
+  it('`tags` touches the tag list and `groups` the semesters and courses', () => {
+    expect(isTouched({ kind: 'tags' }, event({ tags: true }))).toBe(true);
+    expect(isTouched({ kind: 'semesters' }, event({ groups: true }))).toBe(true);
+    expect(isTouched({ kind: 'courses' }, event({ groups: true }))).toBe(true);
+    expect(isTouched({ kind: 'tags' }, event({ groups: true }))).toBe(false);
+    expect(isTouched(children(null), event({ tags: true, groups: true }))).toBe(false);
+  });
+
+  it('otherwise any listed change decides', () => {
+    expect(isTouched(children(lectures), event({ entries: [added(ref('1', 'x')), added(lecture)] }))).toBe(true);
+    expect(isTouched(children(lectures), event({ entries: [added(ref('1', 'x'))] }))).toBe(false);
+  });
+});

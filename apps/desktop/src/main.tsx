@@ -8,7 +8,16 @@ import { applyAppearance, DEFAULT_APPEARANCE } from './app/appearance';
 import { boundarySource } from './app/ErrorBoundary';
 import { watchLayout } from './app/layout';
 import { reportUiError, reportUncaughtErrors } from './app/log';
+import { createQueryClient } from './data/client';
+import { DataProvider } from './data/DataProvider';
 import { initI18n } from './i18n';
+
+// A dev server page outside Tauri is the browser pane: a fake shell stands in for the real one
+// (UI architecture §11.2). Production builds drop this, since `import.meta.env.DEV` is false there.
+if (import.meta.env.DEV && !('__TAURI_INTERNALS__' in window)) {
+  const { installFakeShell, optionsFromUrl } = await import('./ipc/mock');
+  installFakeShell(optionsFromUrl(window.location.search));
+}
 
 await initI18n();
 
@@ -32,6 +41,8 @@ createRoot(container, {
   },
 }).render(
   <StrictMode>
-    <App />
+    <DataProvider client={createQueryClient()}>
+      <App />
+    </DataProvider>
   </StrictMode>,
 );

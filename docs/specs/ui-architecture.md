@@ -187,15 +187,22 @@ and no page of one library answers a query of another:
 ```ts
 ['lib', libraryId, 'children', { folder: EntryRef | null, sort }, pageIndex]
 ['lib', libraryId, 'files',    { scope: EntryRef | null, filter, sort }, pageIndex]
-['lib', libraryId, 'count',    'children' | 'files', request]   // a page with limit 0
+['lib', libraryId, 'count',    'children' | 'files' | 'problems', request]   // a page with limit 0
 ['lib', libraryId, 'search',   { text, scope }]                 // infinite query, pages of 50
-['lib', libraryId, 'entry',    id]
+['lib', libraryId, 'entry',    entry]                           // the EntryRef, see below
 ['lib', libraryId, 'semesters'] | ['lib', libraryId, 'courses', semesterPath | null]
 ['lib', libraryId, 'tags'] | ['lib', libraryId, 'jobs'] | ['lib', libraryId, 'problems', pageIndex]
 ['app', 'libraryStatus']
 ```
 
 `data/keys.ts` is the only place that builds keys; the invalidation predicates (§5.4) read them.
+
+As built (`feat/ui-data-layer`, 2026-09-30): an `entry` key holds the whole reference, not only the
+id. The query function needs the path, and after a move the old key must not be refetched under
+the same key: the reference followers (§5.5) give the holder the new path, and the old key
+answers `NotFound` if anyone still shows it. `data/touch.ts` holds the predicates; a key kind it
+does not know is touched by every change, so a lane that adds one refreshes too often rather than
+too rarely until it adds its rule.
 
 ### 5.3 Paged lists
 
@@ -212,7 +219,21 @@ A virtualised list asks for the pages its visible range needs (§8). `data/paged
 - Row keys are entry ids, which stay stable across renames and moves (ipc-m1 §5.1); a row whose
   page is not loaded is keyed `placeholder:<index>` and renders a skeleton.
 
-Counts (quick views, course and folder counts) are separate queries with `limit: 0`.
+Counts (quick views, course and folder counts) are separate queries with `limit: 0`
+(`useCount` in `data/paged.ts`).
+
+As built:
+- `usePagedList(listKey, fetchPage, range)` takes `listKey` as a function of the library id
+  (`keys.children`, …) and asks nothing while no library is open; single queries do the same
+  through `libraryQuery` in `data/keys.ts`.
+- While the visible range keeps moving, pages are asked for at most every 100 ms
+  (`RANGE_SETTLE_MS`), and the last range always lands: dragging the scroll bar to row 40,000 asks
+  for the pages where it rests, not for every page it passes (§8.1). Rows of pages not yet asked
+  for show placeholders meanwhile.
+- Pages fetched ahead are not watched (`queryClient.query`), so a refresh removes them and they
+  are fetched again once visible.
+- While pages of two revisions are on screen (a refetch is under way), a row the newer pages
+  already hold is a placeholder in the older page, so no id is rendered twice.
 
 ### 5.4 CatalogChanged and revisions
 
@@ -224,6 +245,15 @@ catalog event; components never subscribe to `CatalogChanged` themselves.
 serial-number arithmetic: `a` is older than `b` when `(b - a) mod 2³²` is between 1 and 2³¹ − 1. A
 page whose revision is older than `lastRevision` arrived after an event that may have changed it:
 its query is invalidated once for that event revision.
+
+As built (`feat/ui-data-layer`, 2026-09-30), the overtaken answer is handled when the event
+arrives instead: a touched query whose fetch is still under way is cancelled and asked again
+(`refresh` in `data/events.ts`). That covers every kind of query, counts and single entries too,
+which carry no revision; TanStack Query would otherwise let a running first load finish with its
+older answer. Revisions then serve one purpose: a touched query whose data was read at the event's
+revision or later is not refetched. `lastRevision` lives beside the store in `data/session.ts`
+(`latestRevision()`), since only the event handler reads it. The fake shell sends a command's
+events before its answer when `?latency` is set, so the browser pane and tests see this race.
 
 **On `CatalogChanged { revision, entries, complete, tags, groups }`:**
 
@@ -277,7 +307,11 @@ only by path (§9), and a path is enough to expand the tree top-down (§8.2).
 
 - `jobs` is filled by `list_jobs` once, then kept current by `JobChanged`: each event replaces that
   job in the cached list with `setQueryData` (it carries the whole `Job`); no refetch.
-- `ProblemsChanged { total }` updates a `problemsTotal` value and invalidates `problems` pages.
+- `ProblemsChanged { total }` updates a `problemsTotal` value and invalidates `problems` pages. As
+  built, the value is the problem count query (`useProblemsTotal`), written with `setQueryData`.
+- As built, `data/jobs.ts` replays JobChanged events that arrive while `list_jobs` runs, and an
+  event never takes a job back (queued, running, finished; progress never decreases), so an event
+  that overtook `list_jobs` cannot leave a finished job spinning.
 - After a reload (`pnpm dev` reloads, WebView2 crashes), everything is rebuilt from `list_jobs` and
   the first pages: no UI state has to survive a reload.
 
@@ -740,18 +774,25 @@ error state in the browser, and the fixtures serve a few sample files through
   absent), import and install the fake shell before the first render. The same Vite dev server then
   serves both the app (`pnpm dev`) and the browser pane: open `http://localhost:5173/`.
 - Parameters: `?scenario=small|large|first-run|read-only|errors`, `?latency=<ms>` for loading
-  states, `?fail=<command>:<code>` for error states.
+  states, `?fail=<command>:<code>` for error states. As built (`src/ipc/mock/scenarios.ts`) also
+  `?scenario=unavailable` with `?reason=<Unavailable>` and `?retry=open` (then "Try again"
+  opens it), and for `first-run` `?choice=<FolderContent kind>` and `?sync=<SyncProvider>`.
+  The console drives the fake through `window.__FOLIO_FAKE_SHELL__`: `finishJobs()`,
+  `dropFiles()`, `setProblems()`, `makeUnavailable()`, `setFailure()`.
 - Production builds contain no fake shell: `import.meta.env.DEV` is statically false, so the import
   is removed. The fake sets `window.__FOLIO_FAKE_SHELL__`; an e2e test checks that the real app
   has no such property.
 - A `.claude/launch.json` entry that attaches to `http://localhost:5173` lets agents open it in the
-  browser pane without a second dev server (CLAUDE.md §7.5: one dev server).
+  browser pane without a second dev server (CLAUDE.md §7.5: one dev server). As built:
+  `desktop-browser-pane` attaches; `desktop-vite` starts the dev server when none runs.
 
 ### 11.3 In component tests
 
 - `src/test/render.tsx`: `renderApp(ui, { fixture, fail })` creates a fresh `QueryClient`
   (`retry: false`, `gcTime: Infinity`), the providers, and a fake shell with the fixture.
-  View-level tests use it; small components keep `vi.mock('../ipc')` as today.
+  View-level tests use it; small components keep `vi.mock('../ipc')` as today. As built,
+  `renderAppHook(hook, …)` does the same for data hooks, and the library status is in the cache
+  before the first render, as in the app once `library_status` has answered.
 - `@testing-library/user-event` drives keyboard patterns (tree keys, type-ahead, dialogs).
 - Every state a handoff spec names (loading, empty, error, success) gets a component test
   (testing strategy, coverage targets).
@@ -762,6 +803,11 @@ jsdom has no layout, so a virtualiser renders nothing. `src/test/virtual.ts` pro
 that gives the collections an `initialRect` (for example 800 × 600) in tests; real scrolling is
 covered by e2e.
 
+As built: no context. TanStack Virtual measures its scroll element (`offsetWidth`,
+`offsetHeight`) as soon as it mounts and replaces `initialRect` with jsdom's 0 × 0, so
+`mockLayout()` gives every element an 800 × 600 box instead, and `renderApp` applies it by
+default (`layout: false` turns it off). The collections need no test-only code.
+
 ### 11.5 Drift
 
 The fake is typed by `bindings.ts`, so `tsc` catches any change of shape. Behaviour can drift:
@@ -769,6 +815,13 @@ each command file states which spec sections it follows, the e2e flows run again
 and when a core lane implements a command, the next UI lane that uses it compares the fake with the
 implementation. Codex lanes do not edit `apps/desktop` (roadmap §4.1): they hand differences over
 in writing.
+
+As built: `src/ipc/mock/contract.ts` derives the handler types from `commands`, so a new command
+fails `tsc` until the fake answers it, and `contract.test.ts` fails whenever `bindings.ts` changes
+(doc comments included) until someone compares the change with the fake and records the new
+fingerprint, which the failure prints. That someone is the contract lane that regenerated the
+bindings, in the same change: only contract lanes change `bindings.ts` (roadmap §4 rule 2), and
+they are Claude Code lanes, so the drift never reaches `main`.
 
 ## 12. i18n structure (from `feat/ui-i18n-english`)
 

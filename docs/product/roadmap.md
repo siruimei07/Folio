@@ -78,7 +78,7 @@ brief §11 把 M4 定为「可以发给同学朋友用」，所以本文把 **v1
 来自 CLAUDE.md §7 和这几天的实际情况：23 个提交积压；一个三层 stack 被另一个分支卡住；`feat/ui-i18n-english` 要等两个分支合并才能开始。
 
 1. **先合并，再开新 lane。** review 完的 lane 尽快 land。工作区里同时应用的分支越多，GitButler 的 hunk 依赖和冲突越多。每一波开始前，上一波应基本合并完。
-2. **合约先行。** 每个里程碑先有一个 `feat/ipc-mN-contract` lane 定下命令和类型并 land；之后核心 lane 和界面 lane 在 main 上并行，界面用 mock 的 `ipc` 模块开发，不等核心。实现 lane 不改合约；确实要改，就开一个小的合约修正 lane 先合并。
+2. **合约先行。** 每个里程碑先有一个 `feat/ipc-mN-contract` lane 定下命令和类型并 land；之后核心 lane 和界面 lane 在 main 上并行，界面用 mock 的 `ipc` 模块开发，不等核心。实现 lane 不改合约；确实要改，就开一个小的合约修正 lane 先合并。合约 lane 重新生成 bindings 时，在同一个 lane 里更新界面的假 shell（`apps/desktop/src/ipc/mock/`）和它的指纹，否则 `pnpm check` 不通过（2026-09-30 定）。
 3. **stack 只给真实依赖，最多两层。** 能等上游 land 再开的，就不要 stack。只改文档、一起合并的 stack 例外。
 4. **按目录分所有权。** 核心 lane 拥有 `crates/folio-core/src/<模块>/**`，shell lane 拥有 `crates/folio-app/src/<功能>`，界面 lane 拥有 `apps/desktop/src/<视图>/**`。不再让一个 lane 拥有整个 `crates/folio-core/**`。
 5. **拆开热点文件。** 并行 lane 最容易在同一段列表上撞车：

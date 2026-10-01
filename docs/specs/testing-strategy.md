@@ -34,10 +34,11 @@ Living document. Update it when a new kind of test or tool is added.
 | Golden vectors | `cargo test` | Remote format: fixed inputs must produce fixed ids and bytes (ADR-0003 §13) | CI |
 | Sync simulation (M3) | `cargo test`; long runs nightly or on demand | ADR-0003 Action item 3: eventually consistent fake remote, two devices plus an iPad writer, crash injection at every journal step | Short seeds on every change; long runs nightly |
 | IPC contract | `cargo test` in `folio-app` | Every command rejects bad input (paths outside the library, oversized values) and maps failures to the typed error union. Generated bindings match the Rust types. The commands Tauri runs are exactly those in the app manifest and the capabilities; planned ones are in none of them ([ipc-m1.md](ipc-m1.md) §3, §19) | CI |
-| UI component | Vitest + Testing Library (jsdom) | Components and hooks with the `ipc` module mocked; loading, empty, error and success states from the handoff specs. `tsc` (part of `pnpm check`) fails on a `t()` key that the `en` locale lacks | Every change; CI |
-| UI in a browser | Vite dev server with the mocked `ipc` module | Design and accessibility reviews in the browser pane; fast full-Chromium checks | Local |
+| UI component | Vitest + Testing Library (jsdom), user-event | Small components with the `ipc` module mocked (`vi.mock`); views and data hooks with `renderApp` / `renderAppHook` (`src/test/render.tsx`) against the fake shell; loading, empty, error and success states from the handoff specs. `tsc` (part of `pnpm check`) fails on a `t()` key that the `en` locale lacks | Every change; CI |
+| Data layer and fake shell | Vitest | `src/data/`: touch predicates for every event kind, revisions across the wrap, reference following, paged lists, jobs; `src/ipc/mock/`: the fake shell against the contract through the real bindings, and its drift test (below) | Every change; CI |
+| UI in a browser | Vite dev server with the fake shell (`src/ipc/mock/`) | Design and accessibility reviews in the browser pane on realistic data (`?scenario=` `small`, `large`, `first-run`, `read-only`, `unavailable`, `errors`); fast full-Chromium checks | Local |
 | End to end | Playwright over WebView2 CDP | The real app: start-up, IPC round trip, one flow per user-facing feature, keyboard use, reduced motion | CI after the build |
-| Accessibility | `@axe-core/playwright` inside e2e, plus `design:accessibility-review` | WCAG 2.1 AA: no serious or critical violations | CI; before a UI lane is done |
+| Accessibility | `@axe-core/playwright` (4.13, installed in `e2e/`) inside e2e specs, plus `design:accessibility-review` in the browser pane | WCAG 2.1 AA: no serious or critical violations | CI; before a UI lane is done |
 | Manual | Written test plans | Real iCloud (ADR-0003 Action item 4), installer and updates, SmartScreen | Before releases |
 
 ## Coverage targets
@@ -49,6 +50,34 @@ Living document. Update it when a new kind of test or tool is added.
 - UI: every state named in a handoff spec has a component test.
 - E2E: at least one flow per user-facing feature.
 - Not tested directly: Tauri and React internals, generated bindings, and one-off scripts.
+
+## Fake shell
+
+`apps/desktop/src/ipc/mock/` implements every M1 command and event on an in-memory library, below
+the generated bindings (`@tauri-apps/api/mocks`), so the real `ipc` module runs unchanged (UI
+architecture §11). It serves two layers:
+
+- **Browser pane.** `main.tsx` installs it when the dev server's page runs outside Tauri. URL
+  parameters pick the fixture, latency and forced failures (`src/ipc/mock/scenarios.ts`); the
+  console can drive it through `window.__FOLIO_FAKE_SHELL__` (`finishJobs()`, `dropFiles()`,
+  `setProblems()`, `makeUnavailable()`). `.claude/launch.json` has `desktop-vite` (starts the
+  dev server) and `desktop-browser-pane` (attaches to a running one; CLAUDE.md §7.5).
+- **View tests.** `renderApp(ui, { scenario, fixture, fail })` and `renderAppHook(hook, …)` give a
+  fresh query client, the providers and a fake shell; `src/test/virtual.ts` gives elements a box
+  so virtualised lists render rows in jsdom.
+
+Fixtures: `small` (hand-written), `large` (50,000 entries from a seeded generator), `first-run`
+(no library; the folder dialog answers with each kind of folder), plus `read-only`,
+`unavailable` and `errors` variants.
+
+**Drift.** The fake is typed by `bindings.ts`, so a changed command shape fails `tsc`.
+`src/ipc/mock/contract.test.ts` also fails whenever `bindings.ts` changes at all (doc comments
+included) until the fake is compared with the change and the new fingerprint is recorded in
+`src/ipc/mock/contract.ts`; the failure prints the value. Only contract lanes change
+`bindings.ts` (roadmap §4 rule 2), and they update the fake and the fingerprint in the same
+change, so `pnpm check` passes on every land; implementation lanes, Codex's included, leave the
+file as it is. E2E runs on the real shell and checks that the app has no fake shell
+(`e2e/tests/fake-shell.spec.ts`).
 
 ## End-to-end harness
 
@@ -91,7 +120,8 @@ Known limits:
 
 ## Gaps today
 
-The shell and UI have smoke tests only. `folio-core` has unit, property and integration tests
+The shell has smoke tests only; the UI has component tests for the data layer and the fake
+shell. `folio-core` has unit, property and integration tests
 for paths, metadata files (with golden bytes), the catalog, search and library scans. Scan tests
 run on `MemFs`, an in-memory file system with NTFS-like file ids in `test_support` (unit tests
 only), plus one test on a real folder; `tests/scan_benchmark.rs` times a 50,000-file library.
