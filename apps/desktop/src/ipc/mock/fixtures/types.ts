@@ -2,6 +2,7 @@
 // give. Fixtures are functions of the current time, so "Recently added" means something whenever
 // the browser pane opens them; tests pass a fixed time.
 import type {
+  AppSettings,
   EntryKind,
   FolderContent,
   ImportName,
@@ -55,6 +56,8 @@ export interface LibrarySeed {
   /** Parents before their children. */
   entries: SeedEntry[];
   problems: Problem[];
+  /** The text of `.folio/ignore`; none by default. */
+  ignoreRules?: string;
 }
 
 /** One answer of the folder dialog (`pick_library_folder`); `null`: the user cancels. */
@@ -86,4 +89,6 @@ export interface Fixture {
   folderChoices: (FolderScript | null)[];
   /** Answers of the file dialog, in order; the last one repeats. */
   importSources: (ImportScript | null)[];
+  /** App settings on this computer; Windows' own appearance and the name `G16` by default. */
+  appSettings?: AppSettings;
 }

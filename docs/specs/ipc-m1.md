@@ -26,7 +26,7 @@ reverse are in [ADR-0004](../adr/ADR-0004-ipc-contract.md); this spec fixes the 
 
 | In this contract | In later contracts |
 |---|---|
-| Library: status, choose a folder, create or take over, open | Settings: device name, theme, AI, ignore rules, file types |
+| Library: status, choose a folder, create or take over, open | Settings beyond §22: AI, file types, start with Windows, updates |
 | Semesters and courses: list, create, update, reorder | Actions on problems: rename to NFC, reattach or discard orphaned metadata |
 | Tags: list, create, update, reorder, delete, assign | Workspace, commits and history (M2) |
 | Entries: list, filter, get, create a folder, rename, move, delete to the Recycle Bin | Sync (M3) |
@@ -34,6 +34,7 @@ reverse are in [ADR-0004](../adr/ADR-0004-ipc-contract.md); this spec fixes the 
 | Preview: file bytes and thumbnails, open with the default app, show in File Explorer | |
 | Import: pick or drop, check, import with tags | |
 | Jobs (scans, hashing, imports, catalog rebuilds), problems, change notifications | |
+| Settings (§22, added 2026-10-01): device name, theme, reduce motion, the library's ignore rules | |
 
 ## 2. Requirements
 
@@ -53,6 +54,7 @@ reverse are in [ADR-0004](../adr/ADR-0004-ipc-contract.md); this spec fixes the 
 | Progress of scans, hashing and imports; "Rebuild search index" (handoff §9) | `list_jobs`, `cancel_job`, `rebuild_catalog`, `JobChanged` |
 | Problems found by scans (library-scan §9) | `list_problems`, `ProblemsChanged` |
 | Changes made in other programs show up on their own (brief §5.1) | `CatalogChanged` |
+| App settings → General and Appearance; Library settings → Ignore rules (brief §5.1, handoff §9) | `get_app_settings`, `update_app_settings`, `AppSettingsChanged`, `get_ignore_rules`, `set_ignore_rules`, `IgnoreRulesChanged` (§22) |
 
 Non-functional:
 
@@ -140,6 +142,7 @@ One constant, `LIMITS`, is exported with the bindings; the shell enforces the sa
 | `resolvePaths` | 64 | Paths in one `resolve_paths` request |
 | `relativePathChars` | 1,024 | A relative path in `resolve_paths`, in characters |
 | `logChars` | 8,192 | The `message`, and the `stack`, of one `log_ui_error` report, in characters |
+| `ignoreRulesChars` | 65,536 | The text of `set_ignore_rules` (§22), in characters, without its trailing line breaks |
 
 ### 4.2 User choices
 
@@ -702,6 +705,7 @@ type EntryChange =
   everything.
 - `tags`: tag definitions changed (name, colour, order, deletion). `groups`: semesters or courses
   changed (their folders, settings or order).
+- Settings have their own events, `AppSettingsChanged` and `IgnoreRulesChanged` (§22).
 
 ### 15.2 Revisions
 
@@ -778,7 +782,7 @@ and IMEs expect, then checks it:
 | Name | Rules | Codes |
 |---|---|---|
 | File or folder (`create_folder`, `rename_entry`, `create_semester`, `create_course`) | Library core §3; `.folio` at the library root, in any case, is reserved | `NameEmpty`, `NameTooLong`, `NameInvalidCharacter`, `NameTrailingDotOrSpace`, `NameReserved`, `PathTooLong` |
-| Library and tag names | 1–128 characters, no control characters | `NameEmpty`, `NameTooLong`, `NameInvalidCharacter` |
+| Library, tag and device names (§22) | 1–128 characters, no control characters | `NameEmpty`, `NameTooLong`, `NameInvalidCharacter` |
 | Course badge (`abbr`) | 1–3 grapheme clusters, no whitespace or control characters | `NameEmpty`, `NameTooLong`, `NameInvalidCharacter` |
 | Course code | 1–32 characters, no control characters | `NameEmpty`, `NameTooLong`, `NameInvalidCharacter` |
 
@@ -856,6 +860,8 @@ Every implementation lane checks these; `/security-review` checks them again.
    `source` limited to a name from the code (§16.4).
 10. **Nothing is deleted for good, and nothing downloads.** What the Recycle Bin cannot take stays
     (`NotRecyclable`); the scheme never reads a file that is not on this disk (`NotLocal`).
+11. **Settings name no files.** The shell writes only its own `settings.json` and the open
+    library's `.folio/ignore`, with sizes checked first and links in `.folio/` refused (§22.3).
 
 ## 18. Shell-side design
 
@@ -933,6 +939,17 @@ Generated bindings changed for 1, 2, 3, 4, 5 and 7, and in doc comments for 8; t
 Other documents: first-run handoff §4.2, §7 and §12; library-actions handoff §4, §7.4, §9.2 and
 §16; UI architecture §10.4, §13 and §18; Windows adapter §4; ADR-0005 action item 4.
 
+### 20.3 Settings (2026-10-01)
+
+Lane `feat/core-app-settings` (roadmap appendix A.21) added §22, contract and implementation in
+one lane, and these rows elsewhere: §1 scope, §2 requirements, §4.1 `ignoreRulesChars`, §15.1
+events, §16.3 device names, §17 rule 11. Generated bindings gained the four commands, the two
+events, `Theme`, `ReduceMotion`, the limit and the constant `DEFAULT_IGNORE_RULES`; the fake shell answers them
+(`apps/desktop/src/ipc/mock/commands/settings.ts`, URL parameters `theme` and `motion`) and
+`shellEvents` has `onAppSettingsChanged` and `onIgnoreRulesChanged`. Other documents: ADR-0002
+§2 (the settings row), library-state.md "Persistence and choices", UI architecture §6.1 and
+§6.3, system overview §4.
+
 ## 21. Next lanes
 
 1. **Done (2026-09-28).** **Library state and jobs** (`feat/core-library-state`): the settings
@@ -952,3 +969,138 @@ Other documents: first-run handoff §4.2, §7 and §12; library-actions handoff 
 6. **Windows adapter**: the watcher's scoped scans feed `CatalogChanged` (library scan §12).
 7. **Contract fixes** (`feat/ipc-m1-contract-fixes`, 2026-09-29): §20.2.
 8. **Logging** (`chore/core-logging`): the logging module and `log_ui_error` (§16.4).
+9. **Settings** (`feat/core-app-settings`, 2026-10-01): §22, contract and implementation. The
+   settings dialogs themselves are `feat/ui-settings` (roadmap wave 4).
+
+## 22. Settings
+
+The settings M1 needs (roadmap appendix A.21; app-shell handoff §9): App settings → General
+(device name) and → Appearance (theme, reduce motion), which belong to this computer, and Library
+settings → Ignore rules, which belong to the library and sync with it. AI, file types, "Open
+Folio when Windows starts" and updates come with their own contracts.
+
+- Status: implemented with the contract in lane `feat/core-app-settings` (2026-10-01). Types in
+  `crates/folio-app/src/ipc/settings.rs`, commands in `crates/folio-app/src/commands/settings.rs`
+  and `crates/folio-app/src/library/ignore.rs`, storage in `folio_core::library::state`. The
+  window's first frame in the stored theme (`window_background::starts_dark`, §22.1 "No white
+  flash") lands in a follow-up commit after `chore/core-webview-accelerator-keys`, which rewrites
+  the same window setup; until then the first frame follows Windows' app mode and the page
+  applies the stored theme before its first render.
+
+### 22.1 App settings
+
+```ts
+type AppSettings = { deviceName: string | null; theme: Theme; reduceMotion: ReduceMotion };
+type Theme = "system" | "light" | "dark";
+type ReduceMotion = "system" | "on" | "off";
+type UpdateAppSettings = {                // null: keep the stored value
+  deviceName: string | null; theme: Theme | null; reduceMotion: ReduceMotion | null;
+};
+```
+
+| Command or event | Request → response | Errors |
+|---|---|---|
+| `get_app_settings` | — → `AppSettings` | `DataDirUnavailable` |
+| `update_app_settings` | `UpdateAppSettings` → `AppSettings` | name errors for `deviceName` (§16.3), `DataDirUnavailable` |
+| `AppSettingsChanged` event | `{ settings: AppSettings }` | — |
+
+- **Where.** `settings.json` in the data directory, beside `library_root` (ADR-0002 §2,
+  library-state.md "Persistence and choices"): per machine, never synced. The keys are
+  `device_name`, `theme` and `reduce_motion`. The format version stays 1: a file written before
+  them reads with the defaults, and an older Folio keeps them as fields it does not know.
+- **Unknown values read as defaults.** A value this Folio does not know, from a newer Folio or a
+  hand edit, reads as the default and the next save replaces it, so a cosmetic setting never
+  makes the library unavailable. The file as a whole stays strict: invalid JSON or a newer
+  format version is `DataDirUnavailable`, and the file is left as it was.
+- **One writer at a time.** Switching libraries and App settings both write the file. Each
+  loads, changes and saves it under one lock for the process (`Settings::update`), so neither
+  saves over the other's change with what it read before. A request that changes nothing writes
+  nothing and sends no event.
+- **Partial updates.** `update_app_settings` changes the fields that are not `null`: the device
+  name's Save sends `deviceName`, each appearance control its own field (handoff §9: switches
+  apply at once, fields with Save on click). M1 has no way back to a default device name.
+- **Device name.** The name the user saved, else the name Windows gives the computer (Settings →
+  System → About: the DNS host name as typed, else the NetBIOS name). That default is read once
+  a run, since Windows renames a computer only when it restarts, and never stored, so renaming
+  the computer changes it until the user saves a name. `null` only when Windows gives neither. The rules of library and tag names apply (§16.3); M2's commits
+  record the name (ADR-0003 `device`).
+- **Theme and reduce motion.** `light` and `dark` set `data-theme`, `on` and `off` set
+  `data-reduce-motion` on the root; `system` removes the attribute, and `prefers-color-scheme`
+  and `prefers-reduced-motion` follow Windows (UI architecture §6.3). Before the first render,
+  `startAppearance` (`apps/desktop/src/app/appearance.ts`) applies the stored values, then every
+  `AppSettingsChanged`; when the settings cannot be read, Windows' settings apply and the log has
+  why (`appearance.load`). `main.tsx` loads them while it loads the strings.
+- **No white flash.** The shell builds the window with the background of the stored theme, or
+  of Windows' app mode for System (`window_background::starts_dark`): creating the webview
+  dispatches window messages, so a colour set after building could be painted too late. A new
+  theme in App settings repaints it. Repainting and the event follow a saved change, one update
+  at a time, so events arrive in the order of the saves; if either fails, the log has it and the
+  command still succeeds. Not covered: with System, a change of Windows' app mode while Folio
+  runs restyles the page but leaves the window background until the next start, which shows
+  only while the window is resized.
+
+### 22.2 Ignore rules
+
+```ts
+type IgnoreRules = {
+  text: string;            // .folio/ignore; "" when the library has none
+  invalidLines: number[];  // lines scans skip, from 1 (the first 100); 0: the rules cannot be built
+};
+type SetIgnoreRules = { text: string };   // at most ignoreRulesChars characters
+const DEFAULT_IGNORE_RULES: string;       // exported with the bindings
+```
+
+| Command or event | Request → response | Errors |
+|---|---|---|
+| `get_ignore_rules` | — → `IgnoreRules` | `NoLibrary`, file-system errors, `Internal` (a link in `.folio/`) |
+| `set_ignore_rules` | `SetIgnoreRules` → `IgnoreRules` | `InvalidArgument` (over `ignoreRulesChars`), `NoLibrary`, file-system errors, `Internal` |
+| `IgnoreRulesChanged` event | `{ rules: IgnoreRules }` | — |
+
+- The rules are `.folio/ignore` in gitignore syntax (ADR-0002 §2), which every scan reads after
+  Folio's defaults (library scan §5; `DEFAULT_IGNORE_RULES`, exported with the bindings like
+  `LIMITS`): a `!` line takes a default back. They sync with the library, so every computer
+  leaves out the same files.
+- **Stored text.** The shell writes LF line breaks and one final line break in place of any
+  trailing ones, atomically through `.folio/local/staging/` like every metadata file; scans
+  convert each rule to NFC themselves. `ignoreRulesChars` counts the text without its trailing
+  line breaks, so text the shell returned always saves again. Text equal to the file writes
+  nothing, sends no event and starts no scan.
+- **Invalid lines are kept.** Git keeps them too: scans skip them and list them as problems
+  (`invalidIgnoreRule`, `file: null`, §14), and `invalidLines` lists the same lines, so the
+  page can mark them before anything is scanned. Line 0 means the rules cannot be built as a
+  whole and none applies, the defaults included.
+- **A change starts a full scan.** The watcher sees `.folio/ignore` change, as it sees an edit
+  made in another program, and asks for a full scan (Windows adapter §5.3), which runs as a
+  `scan` job (§13) and reports what left or joined the catalog through `CatalogChanged`. One
+  path for both, so a save never scans twice. The response does not name the job: `JobChanged`
+  reports it about 300 ms later.
+- A rebuild (§13) does not stop a save: it does not drop the watcher's full scan, which runs
+  after it with the new rules. Read-only metadata (§6) does not apply either: `.folio/ignore`
+  has no format version, so no newer Folio wrote it in a form this one would damage.
+- **The event** goes out when Folio saves new rules, while no library switch can come between,
+  so it reaches the UI before the `LibraryStateChanged` of a later switch. Rules edited outside
+  Folio send none: Library settings asks for the rules when it opens, and the M3 sync lane reports
+  rules it pulls.
+
+### 22.3 Security
+
+- Neither command takes a path. `settings.json` is in the shell's data directory and
+  `.folio/ignore` in the open library; the UI sends only values.
+- Sizes are checked before anything is read or written: a device name at most
+  `displayNameChars`, rules at most `ignoreRulesChars`; `invalidLines` lists at most 100.
+- Before `.folio/ignore` is read or written, links in `.folio/` are refused
+  (`state::validate_metadata`, library-state.md "Persistence and choices").
+- Rules only leave files out of the catalog or take them back. They never move, delete or open
+  a file; the worst a rule can do is make a scan longer, by taking back `node_modules/`.
+- The computer's name comes from Windows, never from the UI.
+
+### 22.4 Tests
+
+| Where | Tests |
+|---|---|
+| `folio_core::library::state` | New fields round-trip; unknown values read as defaults; files from before the fields read; `update` writes only changes and keeps other writers' changes |
+| `folio_core::library` (rules) | `invalid_ignore_lines` marks the lines the scan reports; the defaults are valid |
+| `commands/settings/tests.rs` | Defaults follow Windows and name the computer; partial updates; unchanged requests write nothing; device-name codes; invalid and newer files are `DataDirUnavailable` and stay; enum forms over IPC |
+| `library/ignore/tests.rs` | Empty rules; LF and one final line break; invalid lines; unchanged text announces nothing; the limit; a change rescans with the new rules and taking a rule back restores the entries; rules saved during a rebuild apply after it; `NoLibrary` |
+| `apps/desktop/src/ipc/mock/shell.test.ts` | The fake follows these rules; `startAppearance` applies stored values and every change, and falls back to Windows' settings |
+| `e2e/tests/settings.spec.ts` | The real app: App settings survive a restart and set the root before the first render; saving rules rescans a temporary library |

@@ -103,11 +103,8 @@ impl Rules {
     /// skipped.
     pub fn load(layout: &Layout, problems: &mut Vec<Problem>) -> Result<Self, LibraryError> {
         let text = layout.read_ignore()?.unwrap_or_default();
-        let mut builder = builder(layout.root());
-        add_lines(&mut builder, DEFAULT_IGNORE_RULES, None, problems);
-        add_lines(&mut builder, &text, None, problems);
         Ok(Self {
-            library: build(&builder, None, problems),
+            library: library_rules(layout.root(), &text, problems),
             root: layout.root().into(),
         })
     }
@@ -147,6 +144,31 @@ impl Rules {
         }));
         Gitignores(layers)
     }
+}
+
+/// The defaults, then the text of `.folio/ignore`, in one matcher, so that the text can override
+/// the defaults.
+fn library_rules(root: &Path, text: &str, problems: &mut Vec<Problem>) -> Gitignore {
+    let mut builder = builder(root);
+    add_lines(&mut builder, DEFAULT_IGNORE_RULES, None, problems);
+    add_lines(&mut builder, text, None, problems);
+    build(&builder, None, problems)
+}
+
+/// The lines of `.folio/ignore` text that scans skip, counted from 1, in order, as the problem
+/// list reports them; 0 when the rules as a whole cannot be built, and none of them, the
+/// defaults included, applies.
+pub fn invalid_ignore_lines(text: &str) -> Vec<usize> {
+    let mut problems = Vec::new();
+    // Nothing is matched here, so the root does not matter.
+    library_rules(Path::new("."), text, &mut problems);
+    problems
+        .into_iter()
+        .filter_map(|problem| match problem {
+            Problem::InvalidIgnoreRule { line, .. } => Some(line),
+            _ => None,
+        })
+        .collect()
 }
 
 /// The `.gitignore` files that apply inside one folder: its own and its ancestors', the deepest

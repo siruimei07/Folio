@@ -36,9 +36,11 @@ describe('the fake shell follows the bindings', () => {
   it('knows every event the bindings declare', () => {
     // The fake emits all of these but MaximizeButtonChanged, which only the native overlay sends.
     expect(Object.keys(events).sort()).toEqual([
+      'appSettingsChanged',
       'catalogChanged',
       'dropHover',
       'filesDropped',
+      'ignoreRulesChanged',
       'jobChanged',
       'libraryStateChanged',
       'maximizeButtonChanged',

@@ -4,10 +4,12 @@
 import type { Event, UnlistenFn } from '@tauri-apps/api/event';
 
 import {
+  type AppSettingsChanged,
   type CatalogChanged,
   type DropHover,
   events,
   type FilesDropped,
+  type IgnoreRulesChanged,
   type JobChanged,
   type LibraryStateChanged,
   type ProblemsChanged,
@@ -80,4 +82,10 @@ export const shellEvents = {
     subscribe(events.filesDropped, onEvent),
   /** Files are dragged over the window, or left it. */
   onDropHover: (onEvent: (payload: DropHover) => void) => subscribe(events.dropHover, onEvent),
+  /** App settings changed: device name, theme or reduced motion. */
+  onAppSettingsChanged: (onEvent: (payload: AppSettingsChanged) => void) =>
+    subscribe(events.appSettingsChanged, onEvent),
+  /** Folio saved new ignore rules for the library; a scan job follows. */
+  onIgnoreRulesChanged: (onEvent: (payload: IgnoreRulesChanged) => void) =>
+    subscribe(events.ignoreRulesChanged, onEvent),
 };

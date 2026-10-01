@@ -92,6 +92,8 @@ export class FakeLibrary {
   private readonly byPath = new Map<string, FakeNode>();
   tags: SeedTag[];
   problems: ProblemItem[] = [];
+  /** The text of `.folio/ignore`. */
+  ignoreRules: string;
   revision = 0;
   private nextId = 1;
   private nextProblem = 1;
@@ -108,6 +110,7 @@ export class FakeLibrary {
       recovered: seed.recovered,
     };
     this.tags = seed.tags.map((tag) => ({ ...tag }));
+    this.ignoreRules = seed.ignoreRules ?? '';
     this.root = {
       id: '0',
       name: '',

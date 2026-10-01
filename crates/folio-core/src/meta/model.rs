@@ -74,7 +74,7 @@ text_value!(
 );
 
 text_value!(
-    /// The name of a library or a tag.
+    /// The name of a library, a tag or this computer (App settings).
     DisplayName,
     "a name",
     "must be 1–128 characters without surrounding spaces or control characters",

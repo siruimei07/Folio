@@ -35,6 +35,9 @@ pub struct Limits {
     pub relative_path_chars: u32,
     /// The `message` and the `stack` of a `log_ui_error` report, each in characters.
     pub log_chars: u32,
+    /// The text of the ignore rules in `set_ignore_rules`, in characters, trailing line breaks
+    /// not counted.
+    pub ignore_rules_chars: u32,
 }
 
 pub const LIMITS: Limits = Limits {
@@ -51,6 +54,7 @@ pub const LIMITS: Limits = Limits {
     resolve_paths: 64,
     relative_path_chars: 1_024,
     log_chars: 8_192,
+    ignore_rules_chars: 65_536,
 };
 
 /// A core limit as a `u32`; a limit that does not fit fails the build.

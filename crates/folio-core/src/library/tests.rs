@@ -420,7 +420,8 @@ impl Fixture {
     }
 
     fn write_ignore(&self, rules: &str) {
-        std_fs::write(self.layout().ignore_file(), rules).unwrap();
+        self.layout().write_ignore(rules).unwrap();
+        assert_eq!(self.layout().read_ignore().unwrap().as_deref(), Some(rules));
     }
 
     /// Hashes everything, however recently it changed.
@@ -682,6 +683,10 @@ fn invalid_rules_are_reported_and_the_others_apply() {
         f.paths(),
         sorted(&["c.txt", "proj", "proj/.gitignore", "proj/y.c"])
     );
+    // Library settings mark the same lines before anything is scanned; the defaults are valid.
+    assert_eq!(invalid_ignore_lines("*.log\n{unclosed\n*.bak\n"), [2]);
+    assert_eq!(invalid_ignore_lines("a\r\n[z-a]\r\n\r\n{b\n"), [2, 4]);
+    assert!(invalid_ignore_lines("").is_empty());
 }
 
 #[test]

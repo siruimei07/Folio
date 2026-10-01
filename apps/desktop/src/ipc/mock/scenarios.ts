@@ -8,13 +8,14 @@
 //   ?sync=iCloud|oneDrive|dropbox|other                     first run: the folder is in a cloud folder
 //   ?reason=missing|notALibrary|newerFormat|accessDenied|catalogFailed   unavailable: why
 //   ?retry=open                        unavailable: "Try again" opens the library
+//   ?theme=light|dark&motion=on|off    App settings → Appearance as stored (ipc-m1 §22)
 import type { AppError, SyncProvider, Unavailable } from '../bindings';
 import type { CommandName } from './contract';
 import { type FolderKind, folderScript } from './fixtures/first-run';
 import { largeLibrary } from './fixtures/large';
 import { sampleImport, smallLibrary } from './fixtures/small';
 import type { Fixture } from './fixtures/types';
-import type { Failure, FakeShellOptions } from './shell';
+import { DEFAULT_APP_SETTINGS, type Failure, type FakeShellOptions } from './shell';
 
 export const SCENARIOS = ['small', 'large', 'first-run', 'read-only', 'unavailable', 'errors'] as const;
 export type Scenario = (typeof SCENARIOS)[number];
@@ -92,6 +93,8 @@ function oneOf<T extends string>(value: string | null, allowed: readonly T[]): T
 const FOLDER_KINDS = ['empty', 'folders', 'library', 'insideLibrary', 'incomplete'] as const;
 const PROVIDERS = ['iCloud', 'oneDrive', 'dropbox', 'other'] as const;
 const REASONS = ['missing', 'notALibrary', 'newerFormat', 'accessDenied', 'catalogFailed'] as const;
+const THEMES = ['system', 'light', 'dark'] as const;
+const MOTIONS = ['system', 'on', 'off'] as const;
 
 /** Fake shell options from the page's URL parameters; anything unknown falls back to defaults. */
 export function optionsFromUrl(search: string, now: number = Date.now()): FakeShellOptions {
@@ -106,6 +109,11 @@ export function optionsFromUrl(search: string, now: number = Date.now()): FakeSh
     const [command = '', code = 'Internal'] = item.split(':');
     failures.push({ command: command as CommandName, code: code as AppError['code'] });
   }
+  fixture.appSettings = {
+    ...DEFAULT_APP_SETTINGS,
+    theme: oneOf(params.get('theme'), THEMES) ?? 'system',
+    reduceMotion: oneOf(params.get('motion'), MOTIONS) ?? 'system',
+  };
   const latency = Number(params.get('latency'));
   return {
     fixture,

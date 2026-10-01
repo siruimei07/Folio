@@ -4,8 +4,8 @@ use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
 use super::{
-    CourseMeta, EntryKind, GroupMeta, LibraryConfig, MetaError, RootMeta, TagDefinitions, read,
-    read_bytes, write,
+    CourseMeta, EntryKind, GroupMeta, LibraryConfig, MetaError, RootMeta, TagDefinitions, io_error,
+    read, read_bytes, write,
 };
 use crate::files;
 use crate::paths::{
@@ -92,6 +92,14 @@ impl Layout {
     /// invalid UTF-8 replaced.
     pub fn read_ignore(&self) -> Result<Option<String>, MetaError> {
         Ok(read_bytes(&self.ignore_file())?.map(|bytes| files::lossy_text(&bytes)))
+    }
+
+    /// Replaces the library's ignore rules atomically, like every metadata file. The text is
+    /// written as given: the caller decides its line endings.
+    pub fn write_ignore(&self, text: &str) -> Result<(), MetaError> {
+        let path = self.ignore_file();
+        files::write_atomically(&self.staging_dir(), &path, text.as_bytes())
+            .map_err(io_error(&path))
     }
 
     pub fn read_library(&self) -> Result<Option<LibraryConfig>, MetaError> {

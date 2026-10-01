@@ -11,6 +11,7 @@ pub(crate) mod log;
 #[cfg_attr(not(test), allow(dead_code))]
 pub(crate) mod manifest;
 pub(crate) mod operations;
+pub(crate) mod settings;
 pub(crate) mod shell;
 
 use crate::error::AppError;

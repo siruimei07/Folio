@@ -4,8 +4,10 @@ use std::collections::BTreeMap;
 use std::fs::{self, File};
 use std::io;
 use std::path::{Path, PathBuf};
+use std::sync::{Mutex, PoisonError};
 
-use serde::{Deserialize, Serialize};
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 
 use crate::files;
@@ -15,12 +17,52 @@ const SETTINGS_VERSION: u32 = 1;
 const MAX_SETTINGS_BYTES: u64 = 1 << 20;
 
 /// Settings belong to this machine, never to the synced library. Preserve fields of later lanes.
+///
+/// The App settings fields (ipc-m1 §22) are cosmetic, so a value this Folio does not know, written
+/// by a newer Folio or by hand, reads as the default instead of failing the whole file (and with
+/// it the library); the next save replaces it.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Settings {
     pub format_version: u32,
     pub library_root: Option<PathBuf>,
+    /// This computer's name in History; `None`: the name Windows gives the computer.
+    #[serde(default, deserialize_with = "lenient")]
+    pub device_name: Option<DisplayName>,
+    #[serde(default, deserialize_with = "lenient")]
+    pub theme: Theme,
+    #[serde(default, deserialize_with = "lenient")]
+    pub reduce_motion: ReduceMotion,
     #[serde(flatten)]
     pub extra: BTreeMap<String, Value>,
+}
+
+/// The colour mode of the window.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Theme {
+    /// Follows Windows' app mode.
+    #[default]
+    System,
+    Light,
+    Dark,
+}
+
+/// Whether animations are shortened to nothing.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ReduceMotion {
+    /// Follows Windows' "Animation effects".
+    #[default]
+    System,
+    On,
+    Off,
+}
+
+/// A value of a type that has a default, or the default when the value does not fit the type.
+fn lenient<'de, D: Deserializer<'de>, T: DeserializeOwned + Default>(
+    deserializer: D,
+) -> Result<T, D::Error> {
+    Ok(serde_json::from_value(Value::deserialize(deserializer)?).unwrap_or_default())
 }
 
 impl Default for Settings {
@@ -28,12 +70,34 @@ impl Default for Settings {
         Self {
             format_version: SETTINGS_VERSION,
             library_root: None,
+            device_name: None,
+            theme: Theme::default(),
+            reduce_motion: ReduceMotion::default(),
             extra: BTreeMap::new(),
         }
     }
 }
 
 impl Settings {
+    /// Loads the settings, applies `change` and saves them if it changed anything, holding one
+    /// lock for the whole process: switching libraries and App settings both write the file, and
+    /// neither may save over the other's change with what it read before. Use it for every
+    /// write. Returns the settings before and after the change.
+    pub fn update(
+        data_dir: &Path,
+        change: impl FnOnce(&mut Self),
+    ) -> Result<(Self, Self), MetaError> {
+        static WRITER: Mutex<()> = Mutex::new(());
+        let _writer = WRITER.lock().unwrap_or_else(PoisonError::into_inner);
+        let before = Self::load(data_dir)?;
+        let mut after = before.clone();
+        change(&mut after);
+        if after != before {
+            after.save(data_dir)?;
+        }
+        Ok((before, after))
+    }
+
     pub fn load(data_dir: &Path) -> Result<Self, MetaError> {
         let path = data_dir.join("settings.json");
         let file = match File::open(&path) {
@@ -77,13 +141,19 @@ impl Settings {
     }
 
     fn validate(&self, path: &Path) -> Result<(), MetaError> {
+        const TYPED: [&str; 5] = [
+            "format_version",
+            "library_root",
+            "device_name",
+            "theme",
+            "reduce_motion",
+        ];
         if self.format_version != SETTINGS_VERSION
             || self
                 .library_root
                 .as_ref()
                 .is_some_and(|root| !root.is_absolute())
-            || self.extra.contains_key("format_version")
-            || self.extra.contains_key("library_root")
+            || TYPED.iter().any(|key| self.extra.contains_key(*key))
         {
             return Err(invalid(path, "invalid settings version or library root"));
         }
@@ -247,9 +317,17 @@ mod tests {
         };
         settings
             .extra
-            .insert("theme".to_owned(), Value::String("dark".to_owned()));
+            .insert("ai".to_owned(), Value::String("deepseek".to_owned()));
         settings.save(dir.path()).unwrap();
         assert_eq!(Settings::load(dir.path()).unwrap(), settings);
+        // A typed field cannot hide in the untyped ones, where it would be written twice.
+        settings
+            .extra
+            .insert("theme".to_owned(), Value::String("dark".to_owned()));
+        assert!(matches!(
+            settings.save(dir.path()),
+            Err(MetaError::Invalid { .. })
+        ));
         let file = dir.path().join("settings.json");
         let newer = br#"{"format_version":2,"library_root":null}"#;
         fs::write(&file, newer).unwrap();
@@ -265,6 +343,78 @@ mod tests {
         ));
         fs::write(&file, b"{").unwrap();
         assert!(Settings::load(dir.path()).is_err());
+    }
+
+    #[test]
+    fn app_settings_round_trip_and_unknown_values_read_as_defaults() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("settings.json");
+        // Version 1 before App settings: the new fields take their defaults.
+        fs::write(&file, br#"{"format_version":1,"library_root":null}"#).unwrap();
+        assert_eq!(Settings::load(dir.path()).unwrap(), Settings::default());
+
+        let settings = Settings {
+            device_name: Some(DisplayName::parse("G16").unwrap()),
+            theme: Theme::Dark,
+            reduce_motion: ReduceMotion::On,
+            ..Settings::default()
+        };
+        settings.save(dir.path()).unwrap();
+        let text = fs::read_to_string(&file).unwrap();
+        assert!(text.contains(r#""device_name": "G16""#), "{text}");
+        assert!(text.contains(r#""theme": "dark""#), "{text}");
+        assert!(text.contains(r#""reduce_motion": "on""#), "{text}");
+        assert_eq!(Settings::load(dir.path()).unwrap(), settings);
+
+        // A newer Folio's value, or a hand edit, must not cost the user their library.
+        fs::write(
+            &file,
+            br#"{"format_version":1,"library_root":null,"device_name":" padded ","theme":"highContrast","reduce_motion":7}"#,
+        )
+        .unwrap();
+        assert_eq!(Settings::load(dir.path()).unwrap(), Settings::default());
+    }
+
+    #[test]
+    fn update_saves_only_changes_and_keeps_what_others_saved() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("settings.json");
+        let (before, after) = Settings::update(dir.path(), |_| {}).unwrap();
+        assert_eq!(
+            (&before, &after),
+            (&Settings::default(), &Settings::default())
+        );
+        assert!(!file.exists(), "an unchanged update writes nothing");
+
+        let root = dir.path().join("library");
+        Settings::update(dir.path(), |settings| {
+            settings.library_root = Some(root.clone());
+        })
+        .unwrap();
+        let (before, after) = Settings::update(dir.path(), |settings| {
+            settings.theme = Theme::Light;
+        })
+        .unwrap();
+        assert_eq!(before.theme, Theme::System);
+        assert_eq!(after.theme, Theme::Light);
+        assert_eq!(after.library_root.as_deref(), Some(root.as_path()));
+        assert_eq!(Settings::load(dir.path()).unwrap(), after);
+
+        // Writers on other threads each see the others' saves.
+        std::thread::scope(|scope| {
+            for n in 0..8 {
+                let data = dir.path();
+                scope.spawn(move || {
+                    Settings::update(data, |settings| {
+                        settings
+                            .extra
+                            .insert(format!("writer{n}"), Value::Bool(true));
+                    })
+                    .unwrap();
+                });
+            }
+        });
+        assert_eq!(Settings::load(dir.path()).unwrap().extra.len(), 8);
     }
 
     #[test]

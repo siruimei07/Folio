@@ -192,9 +192,17 @@ impl LibraryState {
         self.0.data_dir.as_deref().map_err(Clone::clone)
     }
 
-    fn settings(&self) -> Result<Settings, AppError> {
-        Settings::load(self.data_dir()?)
-            .map_err(|error| AppError::DataDirUnavailable(error.to_string()))
+    /// This computer's `settings.json`; failing to read it is the data directory failing.
+    pub(crate) fn settings(&self) -> Result<Settings, AppError> {
+        Settings::load(self.data_dir()?).map_err(settings_error)
+    }
+
+    /// Changes `settings.json` through `Settings::update`; returns it before and after.
+    pub(crate) fn update_settings(
+        &self,
+        change: impl FnOnce(&mut Settings),
+    ) -> Result<(Settings, Settings), AppError> {
+        Settings::update(self.data_dir()?, change).map_err(settings_error)
     }
 
     fn accepting(&self) -> Result<(), AppError> {
@@ -270,26 +278,27 @@ impl LibraryState {
         self.status()?;
         let _transition = lock(&self.0.transition);
         self.accepting()?;
-        let mut settings = self.settings()?;
+        // An unreadable settings.json fails before the folder changes.
+        self.settings()?;
         let root = self.consume(&request.folder)?;
         state::create(&root, name, names).map_err(|error| match errors::meta(error) {
             AppError::AlreadyExists(detail) => AppError::AlreadyALibrary(detail),
             error => error,
         })?;
-        self.replace(&root, &mut settings)
+        self.replace(&root)
     }
 
     pub fn open(&self, request: OpenLibrary) -> Result<LibraryOpened, AppError> {
         self.status()?;
         let _transition = lock(&self.0.transition);
         self.accepting()?;
-        let mut settings = self.settings()?;
+        self.settings()?;
         let root = self.consume(&request.folder)?;
         read_config(&root)?;
-        self.replace(&root, &mut settings)
+        self.replace(&root)
     }
 
-    fn replace(&self, root: &Path, settings: &mut Settings) -> Result<LibraryOpened, AppError> {
+    fn replace(&self, root: &Path) -> Result<LibraryOpened, AppError> {
         // In particular, reopening the same catalog must not overlap two writers/journals.
         let old = lock(&self.0.state).session.take();
         let previous = old.as_ref().map(|old| old.root().to_owned());
@@ -302,12 +311,15 @@ impl LibraryState {
                 Session::prepare(root, data_dir, self.0.emit.clone()).map_err(AppError::from)
             })
             .and_then(|session| {
-                settings.library_root = Some(root.to_owned());
-                match settings.save(self.data_dir()?) {
-                    Ok(()) => Ok(self.publish(session)),
+                // Read again under the settings lock: App settings may have changed meanwhile.
+                let saved = self.update_settings(|settings| {
+                    settings.library_root = Some(root.to_owned());
+                });
+                match saved {
+                    Ok(_) => Ok(self.publish(session)),
                     Err(error) => {
                         self.drain(&session, "closing the unsaved library failed");
-                        Err(AppError::DataDirUnavailable(error.to_string()))
+                        Err(error)
                     }
                 }
             });
@@ -552,7 +564,14 @@ fn classify(root: &Path) -> Result<FolderContent, AppError> {
     })
 }
 
-fn display_name(value: &str) -> Result<DisplayName, AppError> {
+/// `settings.json` belongs to the data directory: failing to read or write it is the data
+/// directory failing.
+fn settings_error(error: folio_core::meta::MetaError) -> AppError {
+    AppError::DataDirUnavailable(error.to_string())
+}
+
+/// A library, tag or device name the user typed (ipc-m1 §16.3).
+pub(crate) fn display_name(value: &str) -> Result<DisplayName, AppError> {
     let value: String = value.trim().nfc().collect();
     if value.is_empty() {
         return Err(AppError::NameEmpty("display name".to_owned()));
@@ -597,6 +616,9 @@ fn unavailable(root: &Path, reason: Unavailable) -> LibraryStatus {
         reason,
     }
 }
+
+// Library settings → Ignore rules (ipc-m1 §22).
+mod ignore;
 
 #[cfg(test)]
 mod tests;

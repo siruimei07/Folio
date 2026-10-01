@@ -4,9 +4,11 @@
 // contract of docs/specs/ipc-m1.md, not the file system: nothing here touches the disk.
 import {
   type AppError,
+  type AppSettings,
   type EntryChange,
   events,
   type FilesDropped,
+  type IgnoreRules,
   type Job,
   type JobKind,
   type JobResult,
@@ -52,6 +54,12 @@ export interface FakeShellOptions {
 
 /** How long a choice token lives (ipc-m1 §4.2). */
 const TOKEN_LIFETIME_MS = 10 * 60_000;
+/** App settings of a fixture that names none: Windows' appearance, and a computer called G16. */
+export const DEFAULT_APP_SETTINGS: AppSettings = {
+  deviceName: 'G16',
+  theme: 'system',
+  reduceMotion: 'system',
+};
 /** Finished jobs `list_jobs` returns after the active ones. */
 const FINISHED_KEPT = 20;
 
@@ -122,6 +130,8 @@ export class FakeShell {
   private disposed = false;
   /** `log_ui_error` reports, oldest first. */
   readonly log: { kind: string; source: string; message: string; stack: string | null }[] = [];
+  /** App settings on this computer (ipc-m1 §22); they outlive library changes. */
+  private settings: AppSettings;
 
   constructor(options: FakeShellOptions) {
     this.options = {
@@ -133,6 +143,7 @@ export class FakeShell {
     };
     for (const failure of options.failures ?? []) this.failures.set(failure.command, failure.code);
     const { fixture } = options;
+    this.settings = { ...(fixture.appSettings ?? DEFAULT_APP_SETTINGS) };
     this.folderChoices = [...fixture.folderChoices];
     this.importSources = [...fixture.importSources];
     this.state =
@@ -362,6 +373,32 @@ export class FakeShell {
     this.emit(() => events.problemsChanged.emit({ total }));
   }
 
+  // ---- settings
+
+  get appSettings(): AppSettings {
+    return { ...this.settings };
+  }
+
+  /** Stores App settings; a change goes out as AppSettingsChanged. */
+  saveAppSettings(next: AppSettings): void {
+    const changed = (Object.keys(next) as (keyof AppSettings)[]).some(
+      (key) => next[key] !== this.settings[key],
+    );
+    this.settings = { ...next };
+    if (changed) {
+      const settings = this.appSettings;
+      this.emit(() => events.appSettingsChanged.emit({ settings }));
+    }
+  }
+
+  /** Stores the library's new ignore rules: IgnoreRulesChanged, then the scan the watcher starts. */
+  saveIgnoreRules(rules: IgnoreRules): void {
+    this.library.ignoreRules = rules.text;
+    const copy = overIpc(rules);
+    this.emit(() => events.ignoreRulesChanged.emit({ rules: copy }));
+    this.startScan();
+  }
+
   // ---- choices and dialogs
 
   /** A new token for `choice`, which it stands for until it is used or expires. */
@@ -583,5 +620,6 @@ function seedOf(library: FakeLibrary): LibrarySeed {
       blocked: node.blocked,
     })),
     problems: library.problems.map((item) => item.problem),
+    ignoreRules: library.ignoreRules,
   };
 }

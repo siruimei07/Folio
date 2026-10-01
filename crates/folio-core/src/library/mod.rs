@@ -16,7 +16,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 pub use hashing::HashReport;
-pub use rules::DEFAULT_IGNORE_RULES;
+pub use rules::{DEFAULT_IGNORE_RULES, invalid_ignore_lines};
 
 use crate::catalog::{self, Catalog, CatalogError, EntryId};
 use crate::files;

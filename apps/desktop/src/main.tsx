@@ -4,7 +4,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { App } from './App';
-import { applyAppearance, DEFAULT_APPEARANCE } from './app/appearance';
+import { startAppearance } from './app/appearance';
 import { boundarySource } from './app/ErrorBoundary';
 import { watchLayout } from './app/layout';
 import { reportUiError, reportUncaughtErrors } from './app/log';
@@ -19,11 +19,12 @@ if (import.meta.env.DEV && !('__TAURI_INTERNALS__' in window)) {
   installFakeShell(optionsFromUrl(window.location.search));
 }
 
-await initI18n();
-
 // Theme, reduced motion and layout are attributes on the root that every stylesheet reads, so the
-// first frame must already have them (UI architecture §6.3).
-applyAppearance(DEFAULT_APPEARANCE);
+// first frame must already have them (UI architecture §6.3). The appearance follows App settings
+// for as long as the window lives; its settings load while the strings do.
+const appearance = startAppearance();
+await initI18n();
+await appearance;
 watchLayout();
 reportUncaughtErrors();
 

@@ -350,8 +350,8 @@ zustand stores (ADR-0005 §2); server state stays in the query cache, never copi
 | UI preferences | `app/preferences.ts` | List / Tree mode, sort, History panel width, last settings page | yes, `localStorage` (per machine, not synced; parsed defensively, versioned key) |
 | Library view | `library/state.ts` | expanded paths, selection, focused row, filters, previewed entry, scroll offset | no |
 
-Theme, reduce motion and device name are shell settings (`feat/core-app-settings`), not UI
-preferences: the shell needs the theme before the first frame (no white flash, roadmap §3.4).
+Theme, reduce motion and device name are shell settings (ipc-m1 §22), not UI preferences: the
+shell needs the theme before the first frame (no white flash, roadmap §3.4).
 
 Components select narrow slices (`useStore(selector)`, `useShallow` for objects), so a selection
 change re-renders the rows it affects, not the list.
@@ -395,14 +395,15 @@ button and popover, both presentational, for the lanes that wire them to data.
 
 As built (`feat/ui-app-shell`): the generator writes `src/tokens/tokens.ts` beside `tokens.css`,
 with every `size.*` and `space.*` token in pixels (`SIZE.narrowBreakpoint`, `SIZE.row`,
-`SPACE[8]`), for media queries, icon sizes and overlay offsets. `main.tsx` calls
-`applyAppearance(DEFAULT_APPEARANCE)` (System and "Use Windows setting", until
-`feat/core-app-settings` stores the choices; `feat/ui-settings` calls it again when they change)
-and `watchLayout()` before the first render. The shell builds the main window itself
-(`create: false` in `tauri.conf.json`) with `color.surface.app` of Windows' app mode as the
-window and WebView2 background (`crates/folio-app/src/window_background.rs`, whose test keeps the
-colours equal to the tokens), so a dark first frame never flashes white; with a stored theme, that
-lane passes the stored mode instead.
+`SPACE[8]`), for media queries, icon sizes and overlay offsets. Before the first render,
+`main.tsx` awaits `startAppearance()` (`app/appearance.ts`, from `feat/core-app-settings`: the
+stored settings through `get_app_settings`, loaded while the strings load, then every
+`AppSettingsChanged`, so `feat/ui-settings` only calls `update_app_settings`) and calls
+`watchLayout()`. The shell builds the main window itself (`create: false` in `tauri.conf.json`)
+with `color.surface.app` of the stored theme, or of Windows' app mode for System, as the window
+and WebView2 background (`crates/folio-app/src/window_background.rs`, whose test keeps the
+colours equal to the tokens), and repaints it when App settings change the theme, so a dark
+first frame never flashes white.
 
 ### 6.4 Keyboard shortcuts
 

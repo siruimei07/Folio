@@ -3,18 +3,21 @@
 import { mockIPC } from '@tauri-apps/api/mocks';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { startAppearance } from '../../app/appearance';
 import { unwrap } from '../../data/errors';
 import {
+  type AppSettingsChanged,
   type CatalogChanged,
   type EntryRef,
   type EntryRow,
+  type IgnoreRulesChanged,
   type IpcError,
   ipc,
   type JobChanged,
   LIMITS,
   shellEvents,
 } from '..';
-import { installFakeShell, scenarioFixture } from '.';
+import { installFakeShell, optionsFromUrl, scenarioFixture } from '.';
 import { folderScript } from './fixtures/first-run';
 import { LARGE_ENTRIES, largeLibrary } from './fixtures/large';
 import type { Fixture } from './fixtures/types';
@@ -572,5 +575,108 @@ describe('the fake itself', () => {
     expect(performance.now() - started).toBeLessThan(100);
     expect(far.total).toBe(first.total);
     expect(far.items).toHaveLength(200);
+  });
+});
+
+describe('App settings (ipc-m1 §22)', () => {
+  it('start with Windows’ appearance and change one field at a time', async () => {
+    install();
+    const changes = collect<AppSettingsChanged>(shellEvents.onAppSettingsChanged);
+    expect(await unwrap(ipc.getAppSettings())).toEqual({
+      deviceName: 'G16',
+      theme: 'system',
+      reduceMotion: 'system',
+    });
+    const dark = await unwrap(ipc.updateAppSettings({ deviceName: null, theme: 'dark', reduceMotion: null }));
+    expect(dark).toEqual({ deviceName: 'G16', theme: 'dark', reduceMotion: 'system' });
+    const named = await unwrap(
+      ipc.updateAppSettings({ deviceName: '  Café PC ', theme: null, reduceMotion: 'on' }),
+    );
+    expect(named).toEqual({ deviceName: 'Café PC', theme: 'dark', reduceMotion: 'on' });
+    // Nothing new: no event.
+    await unwrap(ipc.updateAppSettings({ deviceName: 'Café PC', theme: 'dark', reduceMotion: null }));
+    await settle();
+    expect(changes.seen).toEqual([{ settings: dark }, { settings: named }]);
+    changes.stop();
+  });
+
+  it('refuse device names that break the display name rules, and change nothing else', async () => {
+    install();
+    const blank = ipc.updateAppSettings({ deviceName: ' ', theme: 'light', reduceMotion: null });
+    expect(await failure(blank)).toBe('NameEmpty');
+    const long = '字'.repeat(LIMITS.displayNameChars + 1);
+    expect(await failure(ipc.updateAppSettings({ deviceName: long, theme: null, reduceMotion: null }))).toBe(
+      'NameTooLong',
+    );
+    expect((await unwrap(ipc.getAppSettings())).theme).toBe('system');
+  });
+
+  it('come from the browser pane’s URL', () => {
+    const { fixture } = optionsFromUrl('?scenario=first-run&theme=dark&motion=on', NOW);
+    expect(fixture.appSettings).toMatchObject({ theme: 'dark', reduceMotion: 'on' });
+    expect(optionsFromUrl('?theme=purple', NOW).fixture.appSettings).toMatchObject({ theme: 'system' });
+  });
+
+  it('set the root: the stored appearance, then every change', async () => {
+    install().saveAppSettings({ deviceName: 'G16', theme: 'dark', reduceMotion: 'off' });
+    await settle();
+    const root = document.createElement('div');
+    const stop = await startAppearance(root);
+    expect(root.dataset).toMatchObject({ theme: 'dark', reduceMotion: 'off' });
+
+    await unwrap(ipc.updateAppSettings({ deviceName: null, theme: 'system', reduceMotion: 'on' }));
+    await settle();
+    expect(root.dataset.theme).toBeUndefined();
+    expect(root.dataset.reduceMotion).toBe('on');
+
+    stop();
+    await unwrap(ipc.updateAppSettings({ deviceName: null, theme: 'light', reduceMotion: null }));
+    await settle();
+    expect(root.dataset.theme).toBeUndefined();
+  });
+
+  it('leave the root to Windows, and log why, when they cannot be read', async () => {
+    const fake = install();
+    fake.setFailure('get_app_settings', 'DataDirUnavailable');
+    const root = document.createElement('div');
+    root.dataset.theme = 'dark';
+    const stop = await startAppearance(root);
+    expect(root.dataset.theme).toBeUndefined();
+    await expect.poll(() => fake.log.map((entry) => entry.source)).toContain('appearance.load');
+    stop();
+  });
+});
+
+describe('ignore rules (ipc-m1 §22)', () => {
+  it('store LF text with one final line break, mark invalid lines and scan after a change', async () => {
+    const fake = install();
+    const announced = collect<IgnoreRulesChanged>(shellEvents.onIgnoreRulesChanged);
+    const jobs = collect<JobChanged>(shellEvents.onJobChanged);
+    expect(await unwrap(ipc.getIgnoreRules())).toEqual({ text: '', invalidLines: [] });
+
+    const rules = await unwrap(ipc.setIgnoreRules({ text: 'build/\r\n[z-a]\r\n{a,b\n*.bak\n\n' }));
+    expect(rules).toEqual({ text: 'build/\n[z-a]\n{a,b\n*.bak\n', invalidLines: [2, 3] });
+    expect(await unwrap(ipc.getIgnoreRules())).toEqual(rules);
+    await unwrap(ipc.setIgnoreRules({ text: rules.text }));
+    await fake.flush();
+    expect(announced.seen).toEqual([{ rules }]);
+    expect(jobs.seen.filter(({ job }) => job.kind === 'scan' && job.status.state === 'queued')).toHaveLength(1);
+    announced.stop();
+    jobs.stop();
+  });
+
+  it('count the limit without the final line break, save during a rebuild and need a library', async () => {
+    const fake = install('read-only');
+    expect(await failure(ipc.setIgnoreRules({ text: 'a'.repeat(LIMITS.ignoreRulesChars + 1) }))).toBe(
+      'InvalidArgument',
+    );
+    // Its own text saves again; read-only metadata does not apply.
+    const longest = await unwrap(ipc.setIgnoreRules({ text: 'a'.repeat(LIMITS.ignoreRulesChars) }));
+    expect(await unwrap(ipc.setIgnoreRules({ text: longest.text }))).toEqual(longest);
+    await unwrap(ipc.rebuildCatalog());
+    expect((await unwrap(ipc.setIgnoreRules({ text: 'x' }))).text).toBe('x\n');
+    fake.finishJobs();
+    install('first-run');
+    expect(await failure(ipc.getIgnoreRules())).toBe('NoLibrary');
   });
 });

@@ -101,6 +101,9 @@ Core-owned, versioned `settings.json` lives in the resolved per-machine data dir
 library path is absolute. Use bounded JSON reads and the existing atomic-write helper with
 staging on the same volume. Unknown future versions fail without overwriting. Preserve fields
 belonging to later settings lanes. Catalog location is `libraries/<library-id>/catalog.sqlite`.
+Switching libraries and App settings (ipc-m1 §22) both write the file, each through
+`Settings::update`, which loads, changes and saves it under one lock for the process; the App
+settings fields read a value they do not know as their default.
 
 The Windows folder dialog returns a native path to the shell only. A debug-only environment
 override supplies the dialog result for isolated e2e tests. The shell canonicalizes the choice,

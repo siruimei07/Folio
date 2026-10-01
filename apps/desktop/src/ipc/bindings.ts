@@ -72,13 +72,25 @@ export const commands = {
 	listProblems: (request: ListProblems) => typedError<Page<ProblemItem>, AppError>(__TAURI_INVOKE("list_problems", { request })),
 	/**  Writes one UI error to the shell's log. */
 	logUiError: (request: LogUiError) => typedError<null, AppError>(__TAURI_INVOKE("log_ui_error", { request })),
+	getAppSettings: () => typedError<AppSettings, AppError>(__TAURI_INVOKE("get_app_settings")),
+	/**
+	 *  Saves the fields that are not `null`. A change goes to every listener as
+	 *  `AppSettingsChanged`, and a new theme repaints the window background; both only follow a
+	 *  saved change, so their failures go to the log instead of failing the command.
+	 */
+	updateAppSettings: (request: UpdateAppSettings) => typedError<AppSettings, AppError>(__TAURI_INVOKE("update_app_settings", { request })),
+	getIgnoreRules: () => typedError<IgnoreRules, AppError>(__TAURI_INVOKE("get_ignore_rules")),
+	/**  Saves the rules; the watcher sees `.folio/ignore` change and starts a full scan. */
+	setIgnoreRules: (request: SetIgnoreRules) => typedError<IgnoreRules, AppError>(__TAURI_INVOKE("set_ignore_rules", { request })),
 };
 
 /** Events */
 export const events = {
+	appSettingsChanged: makeEvent<AppSettingsChanged>("app-settings-changed"),
 	catalogChanged: makeEvent<CatalogChanged>("catalog-changed"),
 	dropHover: makeEvent<DropHover>("drop-hover"),
 	filesDropped: makeEvent<FilesDropped>("files-dropped"),
+	ignoreRulesChanged: makeEvent<IgnoreRulesChanged>("ignore-rules-changed"),
 	jobChanged: makeEvent<JobChanged>("job-changed"),
 	libraryStateChanged: makeEvent<LibraryStateChanged>("library-state-changed"),
 	maximizeButtonChanged: makeEvent<MaximizeButtonChanged>("maximize-button-changed"),
@@ -86,11 +98,13 @@ export const events = {
 };
 
 /* Constants */
+export const DEFAULT_IGNORE_RULES = "# Files that operating systems leave behind\n.DS_Store\n._*\n.AppleDouble/\n.Spotlight-V100/\n.Trashes/\n.fseventsd/\n.TemporaryItems/\nThumbs.db\nehthumbs.db\ndesktop.ini\n$RECYCLE.BIN/\nSystem Volume Information/\n# Lock files of office suites\n.~lock.*#\n# Version control\n.git\n.svn/\n.hg/\n# Dependencies, caches and virtual environments of code projects\nnode_modules/\n__pycache__/\n.venv/\n.ipynb_checkpoints/\n.pytest_cache/\n.mypy_cache/\n.ruff_cache/\n.gradle/\n.idea/\n.vs/\n" as const;
+
 export const FILE_ERROR_CODES = ["InvalidArgument","NoLibrary","NotFound","AccessDenied","InUse","NotLocal","NoThumbnail","FileSystem","Internal"] as const;
 
 export const FILE_ERROR_HEADER = "X-Folio-Error" as const;
 
-export const LIMITS = {"abbrGraphemes":3,"batch":10000,"courseCodeChars":32,"displayNameChars":128,"eventEntries":200,"filterTags":16,"logChars":8192,"nameUnits":255,"pageSize":500,"queryChars":256,"relativePathChars":1024,"resolvePaths":64,"searchResults":500} as const;
+export const LIMITS = {"abbrGraphemes":3,"batch":10000,"courseCodeChars":32,"displayNameChars":128,"eventEntries":200,"filterTags":16,"ignoreRulesChars":65536,"logChars":8192,"nameUnits":255,"pageSize":500,"queryChars":256,"relativePathChars":1024,"resolvePaths":64,"searchResults":500} as const;
 
 /* Types */
 /**
@@ -176,6 +190,22 @@ export type AppInfo = {
 	appVersion: string,
 	coreVersion: string,
 	dataDir: string,
+};
+
+/**  App settings → General and Appearance. */
+export type AppSettings = {
+	/**
+	 *  The name History shows next to changes made on this computer: the one the user saved,
+	 *  else the computer's name in Windows; `null` only when Windows gives none either.
+	 */
+	deviceName: string | null,
+	theme: Theme,
+	reduceMotion: ReduceMotion,
+};
+
+/**  App settings changed (spec §22). The root applies `theme` and `reduceMotion` from here. */
+export type AppSettingsChanged = {
+	settings: AppSettings,
 };
 
 /**  What a batch command did: items are independent, so some may fail while others succeed. */
@@ -398,6 +428,29 @@ export type FolderContent = { kind: "empty" } |
 
 export type GetEntry = {
 	entry: EntryRef,
+};
+
+/**
+ *  Library settings → Ignore rules: what the library leaves out, in gitignore syntax, on top of
+ *  Folio's defaults (`DEFAULT_IGNORE_RULES`, which apply first; a `!` line takes one back).
+ */
+export type IgnoreRules = {
+	/**  The text of `.folio/ignore`; `""` when the library has none. */
+	text: string,
+	/**
+	 *  Lines of `text` that are not valid patterns, counted from 1 (the first 100). Scans skip
+	 *  them and list them as problems; the other lines apply. Line 0: the rules cannot be built
+	 *  as a whole, and none applies, the defaults included.
+	 */
+	invalidLines: number[],
+};
+
+/**
+ *  Folio saved new ignore rules (spec §22); a full scan follows as a `scan` job. Rules edited
+ *  outside Folio are read again when Library settings asks for them.
+ */
+export type IgnoreRulesChanged = {
+	rules: IgnoreRules,
 };
 
 /**  What an import would do: run it before `import_files` and ask once how to handle clashes. */
@@ -735,6 +788,12 @@ export type ReadFailure = "denied" |
 /**  Larger than Folio reads. */
 "tooLarge" | "other";
 
+/**
+ *  `on` and `off` set `data-reduce-motion` on the root, `system` follows Windows' animation
+ *  effects.
+ */
+export type ReduceMotion = "system" | "on" | "off";
+
 /**  A new name in the same folder. A change of case only is a rename too. */
 export type RenameEntry = {
 	entry: EntryRef,
@@ -821,6 +880,18 @@ export type SetEntryTags = {
 	remove: string[],
 };
 
+/**
+ *  Replaces the ignore rules. A change starts a full scan, which adds and removes what the new
+ *  rules keep and leave out.
+ */
+export type SetIgnoreRules = {
+	/**
+	 *  At most `LIMITS.ignoreRulesChars` characters, trailing line breaks not counted. Line
+	 *  breaks are written as LF, with one at the end.
+	 */
+	text: string,
+};
+
 /**  Ties go to the path, so pages never overlap. Missing modification times sort last. */
 export type SortKey = 
 /**  Without case, digits by value (`hw2` before `hw10`), as File Explorer sorts. */
@@ -869,6 +940,12 @@ export type TagFilter =
 /**  Files without tags. */
 { kind: "untagged" };
 
+/**
+ *  The colour mode: `light` and `dark` set `data-theme` on the root, `system` follows Windows'
+ *  app mode.
+ */
+export type Theme = "system" | "light" | "dark";
+
 export type UiErrorKind = 
 /**  Nothing caught it: React's `onUncaughtError`, `window` `error` or `unhandledrejection`. */
 "uncaught" | 
@@ -904,6 +981,20 @@ export type Unavailable =
  *  work failed.
  */
 "catalogFailed";
+
+/**
+ *  Changes App settings: each field that is not `null` replaces the stored value, so the
+ *  device name's Save and the appearance controls each send only their own field.
+ */
+export type UpdateAppSettings = {
+	/**
+	 *  A name the user typed: trimmed and converted to NFC, then 1 to
+	 *  `LIMITS.displayNameChars` characters without control characters.
+	 */
+	deviceName: string | null,
+	theme: Theme | null,
+	reduceMotion: ReduceMotion | null,
+};
 
 /**  Replaces all four fields: send what the dialog shows. */
 export type UpdateCourse = {

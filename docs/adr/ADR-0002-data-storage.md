@@ -81,7 +81,7 @@ This is local recovery data, not a synced metadata format change (Sirui, 2026-09
 | History store | `.folio/` (layout in ADR-0003) | ADR-0003 | Yes | No |
 | Catalog, extracted text, full-text index, thumbnail index | `%LOCALAPPDATA%\<app-id>\libraries\<library-id>\catalog.sqlite` | SQLite | No | Yes |
 | Thumbnails | `%LOCALAPPDATA%\<app-id>\cache\` | Image files keyed by content hash; LRU cap 2 GB by default | No | Yes |
-| Settings (per machine) | `%LOCALAPPDATA%\<app-id>\settings.json` | JSON | No | No (small; re-enter) |
+| Settings (per machine): library location, device name, theme, reduce motion ([ipc-m1](../specs/ipc-m1.md) §22) | `%LOCALAPPDATA%\<app-id>\settings.json` | JSON | No | No (small; re-enter) |
 | DeepSeek API key | Windows Credential Manager | — | No | Re-enter |
 | Logs | `%LOCALAPPDATA%\<app-id>\logs\` | Text; daily rotation; 7 days kept; at most 8 MiB a day | No | n/a |
 

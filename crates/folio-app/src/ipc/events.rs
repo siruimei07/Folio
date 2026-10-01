@@ -7,6 +7,7 @@ use specta::Type;
 use super::import::ImportSource;
 use super::jobs::Job;
 use super::library::LibraryStatus;
+use super::settings::{AppSettings, IgnoreRules};
 use super::types::{EntryRef, Point};
 
 /// The library opened, was created, or became unavailable or read-only. Drop every cached page
@@ -81,4 +82,17 @@ pub struct FilesDropped {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type, tauri_specta::Event)]
 pub struct DropHover {
     pub position: Option<Point>,
+}
+
+/// App settings changed (spec §22). The root applies `theme` and `reduceMotion` from here.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type, tauri_specta::Event)]
+pub struct AppSettingsChanged {
+    pub settings: AppSettings,
+}
+
+/// Folio saved new ignore rules (spec §22); a full scan follows as a `scan` job. Rules edited
+/// outside Folio are read again when Library settings asks for them.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type, tauri_specta::Event)]
+pub struct IgnoreRulesChanged {
+    pub rules: IgnoreRules,
 }

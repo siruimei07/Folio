@@ -10,6 +10,7 @@ import { importCommands } from './import';
 import { jobCommands } from './jobs';
 import { libraryCommands } from './library';
 import { searchCommands } from './search';
+import { settingsCommands } from './settings';
 import { tagCommands } from './tags';
 
 export function createHandlers(shell: FakeShell): Handlers {
@@ -23,5 +24,6 @@ export function createHandlers(shell: FakeShell): Handlers {
     ...fileCommands(shell),
     ...importCommands(shell),
     ...jobCommands(shell),
+    ...settingsCommands(shell),
   };
 }

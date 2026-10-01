@@ -1,15 +1,16 @@
 //! The main window's colour before the page paints its first frame. WebView2 shows its default
 //! background, white, until then, which flashes in dark mode (roadmap §3.4, feat/ui-app-shell).
 //! The window is built from its configuration (`create: false` in tauri.conf.json) with the app
-//! background of the mode Windows asks apps to use; the page's own theme then takes over, which
-//! follows the same setting until App settings → Appearance exists (design/tokens/README.md
-//! "Modes").
+//! background of the mode Windows asks apps to use; the page's own theme then takes over
+//! (design/tokens/README.md "Modes"), and a new theme in App settings → Appearance repaints the
+//! window (ipc-m1 §22).
 
 #![allow(
     unsafe_code,
     reason = "Win32 registry FFI; the unsafe block states why it is sound"
 )]
 
+use folio_core::library::state::Theme;
 use tauri::window::Color;
 use windows::Win32::Foundation::ERROR_SUCCESS;
 use windows::Win32::System::Registry::{HKEY_CURRENT_USER, RRF_RT_REG_DWORD, RegGetValueW};
@@ -23,6 +24,19 @@ const DARK: Color = Color(0x15, 0x13, 0x12, 0xff);
 /// The background for the window and its webview before the page has painted.
 pub(crate) fn first_frame(dark: bool) -> Color {
     if dark { DARK } else { LIGHT }
+}
+
+/// The background of a theme from App settings, when it changes.
+pub(crate) fn for_theme(theme: Theme) -> Color {
+    first_frame(is_dark(theme))
+}
+
+fn is_dark(theme: Theme) -> bool {
+    match theme {
+        Theme::System => apps_use_dark_mode(),
+        Theme::Light => false,
+        Theme::Dark => true,
+    }
 }
 
 /// Whether Windows asks apps for dark mode (Settings → Personalization → Colors → "Choose your
@@ -66,5 +80,8 @@ mod tests {
         let dark = include_str!("../../../design/tokens/color.dark.tokens.json");
         assert_eq!(first_frame(false), surface_app(light));
         assert_eq!(first_frame(true), surface_app(dark));
+        assert_eq!(for_theme(Theme::Light), surface_app(light));
+        assert_eq!(for_theme(Theme::Dark), surface_app(dark));
+        assert_eq!(for_theme(Theme::System), first_frame(apps_use_dark_mode()));
     }
 }

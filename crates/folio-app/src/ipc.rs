@@ -61,7 +61,7 @@ macro_rules! implemented_commands {
 /// What the app runs: the implemented commands.
 pub fn builder() -> Builder<tauri::Wry> {
     contract(Builder::<tauri::Wry>::new().commands(implemented_commands!(
-        []; shell, library, browse, operations, file, import, jobs, log
+        []; shell, library, browse, operations, file, import, jobs, log, settings
     )))
 }
 
@@ -109,6 +109,10 @@ fn export_builder() -> Builder<tauri::Wry> {
         commands::jobs::rebuild_catalog,
         commands::jobs::list_problems,
         commands::log::log_ui_error,
+        commands::settings::get_app_settings,
+        commands::settings::update_app_settings,
+        commands::settings::get_ignore_rules,
+        commands::settings::set_ignore_rules,
     ]))
 }
 
@@ -124,12 +128,22 @@ fn contract(builder: Builder<tauri::Wry>) -> Builder<tauri::Wry> {
             events::ProblemsChanged,
             events::FilesDropped,
             events::DropHover,
+            events::AppSettingsChanged,
+            events::IgnoreRulesChanged,
         ])
         .constant("LIMITS", types::LIMITS)
         .constant("FILE_ERROR_HEADER", entries::FILE_ERROR_HEADER)
         .constant("FILE_ERROR_CODES", entries::FILE_ERROR_CODES)
+        .constant(
+            "DEFAULT_IGNORE_RULES",
+            folio_core::library::DEFAULT_IGNORE_RULES,
+        )
         .typed_error_impl(TYPED_ERROR_IMPL)
 }
+
+// App and library settings (spec §22). Kept apart from the module list above while
+// feat/core-import rewrites that list; it joins the list once both lanes have landed.
+pub(crate) mod settings;
 
 #[cfg(test)]
 mod tests {
