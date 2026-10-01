@@ -75,7 +75,7 @@ Discarding an unfinished move (Sirui, 2026-09-30). A retained move intent that r
 cannot reconcile keeps the library unavailable (`catalogFailed`), and a rebuild cannot bypass
 it, so today the only way out is removing `.folio/local/journal/scan.json` by hand. The user
 gets an explicit, confirmed action instead: wave 3 lane `feat/core-discard-move` (roadmap
-appendix A.24) adds its own unavailable reason and the command, and `feat/ui-first-run` shows
+§2, task board) adds its own unavailable reason and the command, and `feat/ui-first-run` shows
 it on the library-unavailable screen. Discarding never moves or deletes the user's files and
 never overwrites an authored metadata file that no longer matches the journal's images; it
 removes the journal, and a full scan rebuilds the catalog from the disk and authored metadata.
