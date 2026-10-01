@@ -1,16 +1,19 @@
 # Folio 上线路线图（到 v1.0）
 
-> **状态**：v0.3，M1 第 1 波基本完成，同步点 1 进行中 · **更新**：2026-09-28 · **决策人**：Sirui · **整理**：Claude Code
+> **状态**：v0.4，M1 第 2 波实现完成，同步点 2（评审和合并）待做 · **更新**：2026-09-30 · **决策人**：Sirui · **整理**：Claude Code
 >
 > 依据：产品简介 [`brief.md`](brief.md) §10–§11，四份 ADR 的行动项，各 spec 的 "Next lanes" 一节，`.agents/lanes/` 里的 lane 文件和 `but status`（2026-09-28）。每一波开始前更新本文：勾掉完成的 lane，补上下一波的启动提示。
 
 ## 1. 结论
 
-- **现在在哪**：**M1 还没有结束**，第 1 波基本完成（2026-09-28 下午）。阶段 0 已全部合并（含 Tauri 2.12）。第 1 波里界面架构（ADR-0005 已接受）和英文界面已合并；`feat/core-library-state`（Codex）做完了 8 个资料库和任务命令，等 Claude Code 评审；Office spike 做完了，等你选 PPT 方案；Cowork 画完了首次使用和资料库操作的设计，还没提交。M1 的**功能层**大部分还没开始：35 个 M1 命令里 27 个还没实现，界面只有标题栏。
-- **下一步**：同步点 1（附录 A.1～A.3）：提交并合并设计和 spike，评审并合并 library-state，然后装 M1 的界面依赖。之后开第 2 波：先开一个合约修正 lane，把设计交接里发现的合约缺口一次补齐，再开 3 个后端 lane 和 2 个前端 lane（附录 A.4～A.10）。
-- **还剩多少**：到 v1.0 大约 57 个 lane：M1 约 21 个（ADR-0005 加了两个），M2 约 14 个，M3 约 15 个，M4 约 6 个。按「核心 / 界面 / 设计 / 验证」四条轨道并行，同一时间 3～5 个 lane。
-- **分工**（每个 lane 在表里标了「分工」，说明见 §4.1）：Codex 只做后端编码（你 2026-09-28 的决定，写在上级目录的 `AGENTS.md`），约 22 个后端 lane 可以交给 **Codex**；20 个前端 lane，以及 11 个规格、合约、前端依赖、发布、实测和说明文档 lane 由 Claude Code 做；3 个设计 lane 由 Cowork 做。
-- **需要你现在决定**：审阅 Cowork 的首次使用和资料库操作设计；选 PPT 预览方案（spike 建议 A）；批准同步点 1 的合并。§2 的版本定义和 M1→M4 的顺序没有单独确认过，本文按它执行，有异议随时改。完整清单见 §6。
+- **现在在哪**：**M1 还没有结束**，第 2 波的实现全部完成（2026-09-30），但只合并了一半。
+  - 已合并：同步点 1，以及第 2 波的合约修正、文件协议、窗口骨架和数据层。界面能在浏览器面板里用假 shell 跑起来，但资料库、搜索、预览这些视图还没有。
+  - 做完、待合并：Codex 做的 library-ops（18 个命令）、browse（5 个命令）和日志 lane 都停在 review，等 Claude Code 的原生评审；修 CI 崩溃的 lane 也在等你批准。
+  - **main 上的 CI 从 9-29 起一直是红的**（`folio-app` 测试在 Windows Server 2022 上 `STATUS_ACCESS_VIOLATION`），修复就在那个待合并的 lane 里。
+- **下一步**：同步点 2（附录 A.11～A.15）：先合并 CI 修复让 main 变绿，再并行评审、依次合并三个 Codex lane；同时开一个前端小 lane，把剩下的数据层 hook 补齐。之后进第 3 波：4 个前端 lane 并行，Rust 名额空出来后再开 4 个后端 lane（§5、附录 A.16～A.23）。
+- **还剩多少**：到 v1.0 大约 60 个 lane：M1 约 24 个（第 3 波加了数据层 hook、WebView 快捷键和 STA 辅助函数合并三个小 lane），M2 约 14 个，M3 约 15 个，M4 约 6 个。M1 合约里合并完同步点 2 就只剩导入的 3 个命令没实现。
+- **分工**（每个 lane 在表里标了「分工」，说明见 §4.1）：Codex 只做后端编码（你 2026-09-28 的决定，写在上级目录的 `AGENTS.md`），约 24 个后端 lane 可以交给 **Codex**；21 个前端 lane，以及 11 个规格、合约、前端依赖、发布、实测和说明文档 lane 由 Claude Code 做；3 个设计 lane 由 Cowork 做。
+- **需要你现在决定**：批准同步点 2 的合并（CI 修复、日志、library-ops、browse）。§2 的版本定义和 M1→M4 的顺序没有单独确认过，本文按它执行，有异议随时改。完整清单见 §6。
 
 ## 2. 「上线」指什么（建议）
 
@@ -23,9 +26,9 @@ brief §11 把 M4 定为「可以发给同学朋友用」，所以本文把 **v1
 | v0.3 | M3 云端同步 | 你自己，从这里开始「连续用一整个学期」的实测（brief §10） | iCloud 云端仓库、同步、冲突处理 |
 | v1.0 | M4 打磨与分发 | 同学朋友 | Office 预览、安装包、自动更新、首次使用引导 |
 
-## 3. 当前进度（2026-09-28 下午，M1 第 1 波之后）
+## 3. 当前进度（2026-09-30，M1 第 2 波之后）
 
-### 3.1 已在 main 上（84 个提交，CI 通过）
+### 3.1 已在 main 上（120 个提交；CI 从 9-29 起失败，见 §3.2）
 
 | 方面 | 内容 |
 |---|---|
@@ -35,21 +38,27 @@ brief §11 把 M4 定为「可以发给同学朋友用」，所以本文把 **v1
 | 技术验证 | 自绘标题栏 + Windows 11 贴靠布局（ADR-0001 4b，含顶部缩放边和读屏修复）；预览沙箱 iframe（安全基线）；中文分词器 `folio_cjk`（5 万条目上一页结果 1～81 ms）；tauri-specta 端到端（4d）；CI 上的 e2e（4a） |
 | 核心库 `folio-core` | 库内路径和 Windows 命名规则；`.folio/` 元数据读写；SQLite catalog（迁移、恢复）；排序搜索和高亮；扫描与对账（标签跟着文件移动、忽略规则、哈希）；5 万文件的扫描基准 |
 | Windows 适配 | NTFS 文件 ID 和 iCloud 占位文件识别；只进回收站、绝不永久删除；文件监视和防抖的局部重扫 |
-| IPC 合约 | M1 的 35 个命令、事件和错误的类型；生成的 bindings 和界面侧封装；planned 命令只声明、不注册 |
-| 设计基础 | 设计 token（浅色和深色）、app-shell 界面规格；从 token 生成的 CSS |
+| IPC 合约 | M1 的命令、事件和错误的类型（含合约修正加的 `resolve_paths` 和 `log_ui_error`）；生成的 bindings 和界面侧封装；planned 命令只声明、不注册；命令注册按功能组拆开（每组自己的清单和 capability 文件） |
+| 资料库状态 | 设置文件、`LibraryState`、任务注册表；新建、接管、打开资料库（含建到一半的资料库）；启动扫描和哈希；文件监视 → `CatalogChanged`；安全关窗。8 个命令 |
+| 文件协议 | 只读的 `folio-file` 协议（失败时说明原因）、按 catalog 哈希缓存缩略图、用默认程序打开（媒体、笔记、Office；不运行程序，拦截加载项）、在资源管理器中显示 |
+| 设计 | 设计 token（浅色和深色）；app-shell、首次使用、资料库操作三份 handoff；从 token 生成的 CSS 和尺寸常量 |
+| 界面 | 依赖已装（ADR-0005）；窗口骨架：标题栏、工具栏、方块栏（只有 Library，先是占位）、对话框、提示、任务活动按钮、窗口命令失败；共用组件（React Aria）；ESLint 目录和安全规则；数据层（TanStack Query、按 revision 失效）；假 shell（含 5 万条的数据），浏览器面板和组件测试都用它 |
+| 研究 | Office 预览 spike，PPT 选方案 A（正常渲染，提示可能与 PowerPoint 略有不同） |
 
-### 3.2 等合并（第 1 波的 3 个 lane）
+### 3.2 等合并（同步点 2）
 
 | 分支 | 提交 | 内容 | 还差什么 |
 |---|---|---|---|
-| `feat/core-library-state`（Codex） | 3 | 命令注册按功能组拆开；设置文件、`LibraryState`、任务注册表；新建、接管、打开资料库；启动扫描和哈希；文件监视 → `CatalogChanged`；安全关窗。实现了 8 个命令（`library_status`、`pick_library_folder`、`create_library`、`open_library`、`list_jobs`、`cancel_job`、`rebuild_catalog`、`list_problems`）。Rust 检查和 e2e 12/12 通过 | Claude Code 的 `/code-review`、`/security-review`、`/simplify`；`pnpm check` 被还没提交的设计 token 卡住（`tokens.css` 过期）；你批准合并 |
-| `spike/ui-office-preview` | 1 | Office 预览对比（`docs/research/office-preview-spike.md`）：Word 用 docx-preview，Excel 用 SheetJS，PPT 用 `@aiden0z/pptx-renderer`，都不用放宽 CSP | 你选 PPT 方案（A / B / C，建议 A），记进 ADR-0001 行动项 4c；你批准合并 |
-| `design/design-m1-flows`（Cowork，未提交） | — | `first-run.md`、`library-actions.md` 两份 handoff，42 个新 token，app-shell §12 的指向 | 你审阅设计；一个 Claude Code session 重新生成 `tokens.css` 一起提交，再合并 |
+| `fix/build-ci-access-violation`（Claude Code） | 1 | 修 CI 崩溃：WinRT 工厂缓存在 COM 卸载后失效；进程内一直保持 MTA。CI 上验证过通过；三项评审都做了 | 你批准合并 |
+| `chore/core-logging`（Codex） | 1 | 日志按天轮转、保留 7 天；`log_ui_error` 命令（长度上限、限流）。约 530 行 | Claude Code 的三项原生评审；你批准合并 |
+| `feat/core-library-ops`（Codex） | 3 | 学期、课程、标签和条目的 18 个命令（删除只进回收站）；元数据格式 2 和 catalog 迁移 2（你 9-29 批准）；移动的崩溃恢复（你 9-30 批准）；`library_status` 重试。约 8,100 行 | 同上 |
+| `feat/data-browse-queries`（Codex） | 1 | 树、列表、网格、搜索和 `resolve_paths` 的 5 个命令；5 万条目上 200 行一页最慢 43 ms、50 条搜索最慢 64 ms。约 4,500 行 | 同上 |
+
+三个 Codex lane 各自的 `pnpm check` 和 e2e 都通过了（在合在一起的工作区上），评审范围写在 `../folio-agent-work/tasks/<lane>/` 的 `claude-review-handoff.md`（日志 lane 是 `verification-and-handoff.md`）。
 
 ### 3.3 还没开始的
 
-- **M1 功能层**：35 个 M1 命令里还有 27 个没实现（浏览、搜索、学期课程标签和条目操作、预览、导入）；资料库、搜索、预览、导入、设置、首次使用这些界面都没有。
-- **M1 的界面依赖**：ADR-0005 选定的包（ui-architecture §16）还没装，由同步点 1 的 `chore/build-deps-ui-m1` 安装。
+- **M1 功能层**：导入的 3 个命令（`pick_import_files`、`check_import`、`import_files`）和本机设置还没实现；资料库、搜索、预览、导入、设置、首次使用这些视图都还没有。
 - **M2 和 M3 的前置工作**：`remote-format.md` 和 golden vectors（ADR-0003 行动项 2，「M2 之前」）；同步仿真 harness（行动项 3，「M3 之前」）；真实 iCloud 实测（行动项 4）和它的前提——把开发机上的 iCloud for Windows 从 13.4 升级（行动项 5，要你来做）。
 - **分发**：更新源、签名方案、安装说明（ADR-0001 行动项 6）。
 
@@ -72,6 +81,10 @@ brief §11 把 M4 定为「可以发给同学朋友用」，所以本文把 **v1
 | ADR-0001 4b | Windows 10、缩放比例不同的多显示器还没测 | M4 `test/build-release-candidate` |
 | ADR-0002 行动项 5 | 第一个发布的 schema 需要 fixture | M1 验收 |
 | library-scan §12.4 | 哈希时每个文件打开三次等性能改进 | M4 性能复核时按需处理 |
+| CI（9-29 起） | main 上 `folio-app` 测试在 Windows Server 2022 崩溃 | 同步点 2 合并 `fix/build-ci-access-violation` |
+| CI 修复 lane | 两个几乎一样的 STA 辅助函数：`folio-app` 的 `dialogs::in_sta` 和 `folio-core` 的 `win::recycle::in_apartment` | M1 第 3 波 `refactor/core-sta-helper` |
+| ui-architecture §17 第 4 项 | Tauri 没有开放 WebView2 的浏览器快捷键开关；正式版里 F5、Ctrl+F、Ctrl+P 等浏览器快捷键还在 | M1 第 3 波 `chore/core-webview-accelerator-keys` |
+| 第 2 波 | 只有资料库状态、任务和问题有数据层 hook；学期课程、标签、条目改动、搜索、文件、导入的 hook 还没有，几个视图 lane 都要用 | 同步点 2 `feat/ui-data-m1-hooks` |
 
 ## 4. 用 GitButler 排任务的规则
 
@@ -85,9 +98,11 @@ brief §11 把 M4 定为「可以发给同学朋友用」，所以本文把 **v1
    - IPC 注册（`ipc.rs` 里的命令列表、`build.rs`、`capabilities/`）：由 `feat/core-library-state` 先改成每个功能组各自注册、各自一个 capability 文件；
    - 界面文案：由 `feat/ui-i18n-english` 把语言文件按视图拆成 namespace；
    - lockfile：每个里程碑一个 `chore/build-deps-*` lane 集中装依赖（独占操作）。
-6. **并行上限：最多 3 个写 Rust 的 session（Claude Code 和 Codex 合计），加 1～2 个界面 session 和 Cowork。** 所有 session 共用一个 `target/` 目录和一个 dev server；跑基准测试要找没有别的构建在跑的时候。
+6. **并行上限：最多 3 个写 Rust 的 session（Claude Code 和 Codex 合计），界面 session 按目录分开可以开到 4 个，另加 Cowork。** 所有 session 共用一个 `target/` 目录和一个 dev server，`pnpm e2e` 用 app lock 排队；跑基准测试要找没有别的构建在跑的时候。
 7. **独占操作放在波次之间的「同步点」。** `but land`、`but pull`、装依赖、Tauri 升级都在同步点做；做之前确认其他 lane 都是 `checkpoint`、`review` 或 `done`。
 8. **每个 lane 同样收尾。** `pnpm check` + `pnpm e2e` → `/code-review`（改到特权层或 IPC 再加 `/security-review`）→ `/simplify` → 用中文向你汇报 → 你批准 → `but land` → `but status` 确认 → 删 lane 文件。
+9. **CI 红了先修。** main 的 CI 失败时，先合并修复，再合并别的 lane。9-29 到 9-30 CI 一直是红的，这期间合并的 6 个 lane 都没有 CI 把关。
+10. **Codex lane 一到 review 就安排评审。** 第 2 波有三个 Codex lane（约 1.3 万行）同时停在 review 等 Claude 评审，成了合并的瓶颈。每个 Codex lane 进入 review 时，就开一个 Claude Code 评审 session（附录 A.12～A.14 的提示可以照抄）。一次只合并一个，合并前确认其他 lane 是 `checkpoint` 或 `review`。
 
 ### 4.1 分工：前端、后端和 Codex
 
@@ -103,7 +118,7 @@ brief §11 把 M4 定为「可以发给同学朋友用」，所以本文把 **v1
 交给 Codex 时要注意：
 
 1. **Codex 只做后端编码（你 2026-09-28 的决定）。** 上级目录的 `AGENTS.md` 写明：Codex 只做 `folio-core` 和 `folio-app` 的后端编码，不做前端、视觉设计、一般产品文档、前端依赖和发布 lane；其余规则以 `CLAUDE.md` 为准：lane 文件写在 `.agents/lanes/`，后端需要的 spec 和 ADR 写进仓库的 `docs/`，草稿放 `folio-agent-work/tasks/<lane>/`。本文的 Codex 标记已按这个范围调整。标记只说明「可以给」，lane 仍由你来开。
-2. **评审由 Claude Code 补。** Codex 用自己的技能先做代码评审和安全评审，但 `CLAUDE.md` 要求的 `/code-review`、`/security-review`、`/simplify` 仍由一个 Claude Code session 在合并前做。Tauri 升级就是这样：Codex 做完停在 review，等 Claude 评审（步骤 0.5）。
+2. **评审由 Claude Code 补。** Codex 用自己的技能先做代码评审和安全评审，但 `CLAUDE.md` 要求的 `/code-review`、`/security-review`、`/simplify` 仍由一个 Claude Code session 在合并前做（§4 第 10 条）。Codex 会把评审范围写进 `folio-agent-work/tasks/<lane>/claude-review-handoff.md`，评审 session 从那里开始。
 3. **跨层问题交给前端 lane。** Codex 发现要改界面时，写一份具体的前端交接（命令、类型、预期行为、错误情况），不自己改 `apps/desktop`。
 4. **关键路径要盯。** `feat/core-library-state`、`feat/core-object-store`、`feat/core-sync-round` 卡住会挡住后面整波 lane。WP-03 曾经卡在半路（2026-09-27），这几个交给 Codex 时要及时看进度。
 5. **启动方式。** Codex 在 `Documents Manage` 目录启动（这样才会读到 `AGENTS.md`），提示和给 Claude 的一样，开头加附录 A.0 的一句。
@@ -134,9 +149,9 @@ brief §11 把 M4 定为「可以发给同学朋友用」，所以本文把 **v1
 | 0.4 | 版本管理 | 整理：`.agents/work/` 只作只读存档（CLAUDE.md §7.7）；app lock 移到 `.agents/locks/app`（§7.5） | 已合并 |
 | 0.5 | 版本管理 | 收尾：评审并合并 Tauri 升级，合并三个文档分支 | 已完成 |
 
-### M1 本地资料库 → v0.1（约 21 个 lane）
+### M1 本地资料库 → v0.1（约 24 个 lane）
 
-**第 1 波**（4 个 lane 加 Cowork 并行，只有一个写 Rust）。状态（2026-09-28 下午）：ADR-0005 和英文界面**已合并**；`feat/core-library-state`、`spike/ui-office-preview` **待评审和合并**；Cowork 的设计**已交接、待提交**（§3.2）。
+**第 1 波**（已全部合并，2026-09-29）
 
 | Lane | 分工 | 做什么 | 依赖 | 拥有路径 | 规模 |
 |---|---|---|---|---|---|
@@ -146,9 +161,9 @@ brief §11 把 M4 定为「可以发给同学朋友用」，所以本文把 **v1
 | `spike/ui-office-preview` | 前端（验证） | ADR-0001 4c：用你的真实课程文件（含中文 PPT）比较 docx-preview、SheetJS 和两个 PPT 渲染器，在预览沙箱的 CSP 下测保真度、速度、体积；试验代码放在仓库外，不动 lockfile | — | ADR-0001 的 4c 一项、`docs/research/office-preview-spike.md` | M |
 | `design/design-m1-flows` | 设计 · Cowork | 补画 handoff §12 缺的：首次使用（欢迎、新建、接管、建第一个学期和课程）、拖放目标和导入对话框（同名文件：替换 / 都保留 / 跳过）、右键菜单、错误和空状态、任务进度和问题列表 | — | `docs/design/handoff/` 下的新规格、`design/tokens/**` | M |
 
-**同步点 1**（进行中）：① 提交 Cowork 的设计（连同重新生成的 `tokens.css`），合并设计和 spike（附录 A.1）；② 评审并合并 `feat/core-library-state`（A.2）；③ `chore/build-deps-ui-m1`（构建，Claude Code：一次装齐 M1 界面依赖，独占操作，A.3）。ADR-0005 已批准。
+**同步点 1**（已完成，2026-09-29）：提交并合并 Cowork 的设计和 spike；评审并合并 `feat/core-library-state`；`chore/build-deps-ui-m1` 装好 M1 界面依赖。
 
-**第 2 波**（3 个核心 lane、2 个界面 lane、2 个小 lane；ADR-0005 加了合约 lane 和 `feat/ui-data-layer`）。合约 lane 原名 `feat/ipc-m1-resolve-paths`，现在把设计交接列出的合约缺口一起补上，改名 `feat/ipc-m1-contract-fixes`：只重新生成一次 bindings，后端 lane 也只需要等一个合约 lane。
+**第 2 波**（实现全部完成，2026-09-30。合约修正、文件协议、窗口骨架、数据层已合并；library-ops、browse、日志在同步点 2 评审和合并）。合约 lane 原名 `feat/ipc-m1-resolve-paths`，现在把设计交接列出的合约缺口一起补上，改名 `feat/ipc-m1-contract-fixes`：只重新生成一次 bindings，后端 lane 也只需要等一个合约 lane。
 
 | Lane | 分工 | 做什么 | 依赖 | 拥有路径 | 规模 |
 |---|---|---|---|---|---|
@@ -160,23 +175,56 @@ brief §11 把 M4 定为「可以发给同学朋友用」，所以本文把 **v1
 | `feat/ui-data-layer` | 前端 | 数据层：TanStack Query 缓存、按 `CatalogChanged` 失效、分页列表、跟随移动的引用；浏览器面板和组件测试用的假 shell（含 5 万条的数据）；测试渲染工具（ui-architecture §5、§11） | ADR-0005、依赖 | `apps/desktop/src/` 的 `data/`、`ipc/mock/`、`test/` 的渲染工具 | M |
 | `chore/core-logging` | 后端 · Codex | 正式日志模块替换 `diagnostics.rs`（按天轮转，保留 7 天）；实现界面错误写日志的命令 | 合约修正 | `folio-app` 的日志 | S |
 
-**第 3 波**
+**同步点 2**（现在；附录 A.11～A.15）
+
+| 步骤 | Lane | 分工 | 做什么 | 依赖 | 规模 |
+|---|---|---|---|---|---|
+| A.11 | `fix/build-ci-access-violation` | 构建 | 合并 CI 修复，确认 main 的 CI 变绿 | — | S |
+| A.12 | `chore/core-logging` | 评审 | Claude Code 原生评审 Codex 的日志 lane，然后合并 | A.11 | S |
+| A.13 | `feat/core-library-ops` | 评审 | 同上，library-ops（约 8,100 行，重点是崩溃恢复和操作锁） | A.11 | L |
+| A.14 | `feat/data-browse-queries` | 评审 | 同上，browse（约 4,500 行，重点是新的 FTS 回调和快照读） | A.11；在 A.13 之后合并 | L |
+| A.15 | `feat/ui-data-m1-hooks` | 前端 | 补齐第 3 波几个视图共用的数据层 hook：学期课程、标签、条目改动、搜索、文件、资料库的选择和新建、导入。按假 shell 写；不做视图 | — | S |
+
+- A.12～A.15 可以同时开：三个评审 session 占满 3 个 Rust 名额，A.15 只写前端。
+- 合并一次一个：A.11 → A.12 → A.13 → A.14，A.15 做完随时合并。A.13 和 A.14 都改了 `folio-app` 的 `library/mod.rs` 和 `worker.rs`（browse 只加了只读的几行），先合 A.13 更稳。
+
+**第 3 波**（同步点 2 之后，分两组并行；附录 A.16～A.23）
+
+前端组：A.15 合并后就开，4 个 lane 的目录互不重叠，各自注册到 `app/registry.ts`（一行）。开发用假 shell，不用等后端合并；最后跑真实 app 的 e2e 时，对应的后端要已经在 main 上。
+
+| Lane | 分工 | 做什么 | 依赖 | 拥有路径 | 规模 |
+|---|---|---|---|---|---|
+| `feat/ui-library-view` | 前端 | 资料库视图（替换现在的占位）：课程树（含学期里的零散文件）、标签筛选、最近添加和未打标签、列表 / 网格、排序、多选、新建文件夹、重命名 / 移动 / 删除、批量打标签、右键菜单、空和错误状态；第三栏放预览区 | A.15（e2e 要 A.13、A.14） | `src/library/**` | L |
+| `feat/ui-preview` | 前端 | 预览区：图片、PDF、Markdown（公式、代码高亮、清洗、笔记旁边的图片）、代码、音视频、其他；预览头部（标签、打开、在资源管理器中显示）；Office 文件在 M1 先显示「用默认程序打开」；每个文件一个新 frame；`preview.rs` 的 CSP 加 `worker-src blob:` 和 `'wasm-unsafe-eval'`（要 `/security-review`）；验证 pdf.js、Temml 和 HEIC | A.15（e2e 要 A.14） | `src/preview/**`、`preview.rs` | L |
+| `feat/ui-search-palette` | 前端 | `Ctrl+K` 搜索：输入即出结果、分组、高亮只当文本渲染、方向键和回车（在资料库里选中并预览） | A.15（e2e 要 A.14） | `src/search/**` | M |
+| `feat/ui-first-run` | 前端 | 从第 4 波提前：欢迎页 → 新建或接管资料库 → 第一个学期和课程；资料库打不开时的界面和重试；手动点一次原生选文件夹对话框 | A.15（e2e 要 A.13） | `src/first-run/**` | M |
+
+后端组：A.12～A.14 合并、Rust 名额空出来后开，同时最多 3 个（先开 core-import、app-settings 和一个小 lane）。
+
+| Lane | 分工 | 做什么 | 依赖 | 拥有路径 | 规模 |
+|---|---|---|---|---|---|
+| `feat/core-import` | 后端 · Codex | M1 最后 3 个命令：选择文件对话框、原生拖放（`dragDropEnabled` 和一次性 token）、`check_import`（标出文件夹）、带进度的导入任务、同名处理、可选把原文件移进回收站；定下 `ImportResult` 的计数口径；planned 命令清空后按 `ipc.rs` 的说明收尾 | A.13 | `folio-app` 的导入命令组、`folio-core` 的导入模块 | M |
+| `feat/core-app-settings` | 后端（含合约） | M1 要用的本机设置，合约和实现一起：设备名、外观、减少动态效果、忽略规则（改了要重扫）；同一个 lane 里更新假 shell | Rust 名额 | `folio-app` 的设置命令组、`settings.rs`、假 shell 的设置文件 | S |
+| `chore/core-webview-accelerator-keys` | 后端 · Codex | 正式版关掉 WebView2 的浏览器快捷键（ui-architecture §17 第 4 项）；debug 和 e2e 不变 | Rust 名额 | `folio-app` 的窗口初始化 | S |
+| `refactor/core-sta-helper` | 后端 · Codex | 两个 STA 辅助函数合成一个，保留 CI 修复的 MTA 规则（§3.4） | A.11、A.13 | `folio-app` 的 `dialogs.rs`、`folio-core` 的 `win/` | S |
+
+**第 4 波**（第 3 波对应的 lane 合并后；提示到时补）
 
 | Lane | 分工 | 做什么 | 依赖 | 规模 |
 |---|---|---|---|---|
-| `feat/core-import` | 后端 · Codex | 选择文件对话框、原生拖放（`dragDropEnabled` 和一次性 token）、`check_import`（标出文件夹）、带进度的导入任务、可选删除原文件；确认 `ImportResult` 的计数口径（library-actions §16） | library-ops、合约修正 | M |
-| `feat/core-app-settings` | 后端（含合约） | M1 要用的本机设置，合约和实现一起：设备名、外观、减少动态效果、忽略规则（ipc-m1 §1 把设置留给了后续合约，这里先做最小的一组） | library-state | S |
-| `feat/ui-library-view` | 前端 | 资料库视图：树、标签筛选、快捷视图、列表 / 网格、排序、多选、重命名 / 移动 / 删除、批量打标签、右键菜单 | app-shell、data-layer、browse、ops | L |
-| `feat/ui-search-palette` | 前端 | `Ctrl+K` 搜索：输入即出结果、分组、高亮只当文本渲染、方向键和回车 | app-shell、data-layer、browse | M |
-| `feat/ui-preview` | 前端 | 预览区：图片、PDF（pdf.js）、Markdown（公式、代码高亮、清洗过的 HTML、笔记旁边的图片）、代码、音视频、其他；链接只显示地址、可复制；每个文件一个新 frame；验证 HEIC | app-shell、data-layer、file-scheme、browse（`resolve_paths`） | L |
+| `feat/ui-import` | 前端 | 拖放目标、「Add files」、导入对话框（标签、同名处理、删除原文件）、进度和结果 | core-import、library-view | M |
+| `feat/ui-settings` | 前端 | Library settings（学期、课程、标签、忽略规则、重建索引）和 App settings（设备名、外观、减少动态效果） | core-app-settings、library-view | M |
 
-**第 4 波**
+**下一阶段可以并行的任务**（按时间顺序，同一行可以同时开）
 
-| Lane | 分工 | 做什么 | 依赖 | 规模 |
-|---|---|---|---|---|
-| `feat/ui-import` | 前端 | 拖放目标、「Add files」、导入对话框（标签、同名处理、删除原文件）、进度 | core-import、library-view | M |
-| `feat/ui-settings` | 前端 | Library settings（学期、课程、标签、忽略规则、重建索引）和 App settings（设备名、外观、减少动态效果） | app-settings、library-view | M |
-| `feat/ui-first-run` | 前端 | 欢迎页 → 新建或接管资料库 → 第一个学期和课程 | library-state、ops、Cowork 设计 | M |
+| 时间 | 同时进行 | 谁 | 限制 |
+|---|---|---|---|
+| 现在 | A.11：合并 CI 修复（顺带合并本路线图的这次更新） | Claude Code ×1 | 很快；它合并前别的 lane 不合并 |
+| A.11 合并后 | A.12、A.13、A.14 三个评审，加 A.15 数据层 hook | Claude Code ×4 | 三个评审占满 Rust 名额；合并一次一个 |
+| A.15 合并后（不用等评审） | 第 3 波前端组：library-view、preview、search、first-run | Claude Code ×4（忙不过来就先开 library-view 和 preview，它们最大） | 共用一个 dev server；`pnpm e2e` 用 app lock 排队；preview 改 `preview.rs` 时算一个 Rust session |
+| A.12～A.14 合并后 | 第 3 波后端组：core-import、core-app-settings、两个小 lane | Codex ×3 + Claude Code ×1 | 同时最多 3 个写 Rust；Codex lane 一到 review 就开评审（§4 第 10 条） |
+| 第 3 波合并后 | 第 4 波：ui-import、ui-settings | Claude Code ×2 | — |
+| 第 4 波合并后 | M1 验收，出 v0.1 | Claude Code ×1 | 见下 |
 
 **M1 验收（出 v0.1 之前）**
 
@@ -255,10 +303,11 @@ brief §11 把 M4 定为「可以发给同学朋友用」，所以本文把 **v1
 | M1 期间，越早越好 | 升级 iCloud for Windows | 手动 | 待做 |
 | M1 第 1 波 | 给 Office spike 准备一批真实课程文件（含中文 PPT） | 手动 | 已完成（用了 一门课的英文课件和一份 iCloud 里的中文 PPT） |
 | M1 同步点 1 | 批准 ADR-0005 界面架构 | 批准 | 已完成（2026-09-28）：笔记旁边的图片 M1 就做；预览里的链接只显示地址；v0.1 的方块栏只有 Library；新开 `feat/ui-data-layer` |
-| 现在（同步点 1） | 审阅 Cowork 的首次使用和资料库操作设计（Design canvas「Folio 设计基础」第 3～5 行） | 决定 | 待定（附录 A.1 里确认） |
-| 现在（同步点 1） | PPT 预览做到什么程度：A 正常渲染并提示「可能与 PowerPoint 略有不同」、B 只显示第一页、C 不渲染（spike §8，建议 A） | 决定 | 待定（附录 A.1 里选） |
-| 现在（同步点 1） | 批准合并设计、spike 和 `feat/core-library-state`，以及装 M1 界面依赖 | 批准 | 待定（附录 A.1～A.3） |
-| M1 第 2 波 | 批准课程编号等对 ADR-0002 的修订 | 批准 | 待定 |
+| M1 同步点 1 | 审阅 Cowork 的首次使用和资料库操作设计 | 决定 | 已完成，已合并 |
+| M1 同步点 1 | PPT 预览做到什么程度 | 决定 | 已完成：选 A（正常渲染，提示可能与 PowerPoint 略有不同），记在 ADR-0001 行动项 4c |
+| M1 同步点 1 | 批准合并设计、spike 和 `feat/core-library-state`，以及装 M1 界面依赖 | 批准 | 已完成 |
+| M1 第 2 波 | 批准课程编号等对 ADR-0002 的修订；移动操作的崩溃恢复扩展 | 批准 | 已完成（9-29、9-30） |
+| 现在（同步点 2） | 批准合并 CI 修复、日志、library-ops 和 browse | 批准 | 待定（附录 A.11～A.14 的提示里写了你的批准，评审通过才合并） |
 | M2 之前 | 批准 `remote-format.md`：云端格式一旦有了真实数据就很难再改 | 批准 | 待定 |
 | M3 之前 | 准备第二台 Windows 设备（或虚拟机）做双设备测试 | 手动 | 待做 |
 | M4 之前 | 更新源放在哪；要不要代码签名（Windows 11 的「智能应用控制」会直接拦截未签名的程序，三个方案见 ADR-0001 行动项 6） | 决定 | 待定 |
@@ -278,128 +327,137 @@ brief §11 把 M4 定为「可以发给同学朋友用」，所以本文把 **v1
 
 ## 附录 A：下一批 lane 的启动提示
 
-按 CLAUDE.md §2，给 agent 的提示用英文，直接粘贴。Claude Code 在 `Folio/` 里打开；Codex 在上级目录 `Documents Manage` 里打开，提示开头加 A.0。第 1 波的提示已经用完（见 git 历史里的 `ce27ffd`）；第 3 波的提示在第 2 波合并后补上。
+按 CLAUDE.md §2，给 agent 的提示用英文，直接粘贴。Claude Code 在 `Folio/` 里打开；Codex 在上级目录 `Documents Manage` 里打开，提示开头加 A.0。编号接着上一批往下排，用完的 A.1～A.10 在 git 历史里（`1293648`）；第 4 波和 M1 验收的提示在第 3 波合并后补上。开法和能并行的组合见 §5 的「下一阶段可以并行的任务」。
 
-同步点 1 和第 2 波的开法：
-
-| 顺序 | 什么时候 | Lane | 谁 | 提示 |
-|---|---|---|---|---|
-| 1 | 现在 | 同步点 1a：提交 Cowork 的设计，合并设计、spike 和本路线图的这次更新 | Claude Code | A.1 |
-| 2 | 1 提交设计之后（之前 `pnpm check` 过不了） | 同步点 1b：评审并合并 `feat/core-library-state` | Claude Code | A.2 |
-| 3 | 1、2 合并之后 | 同步点 1c：`chore/build-deps-ui-m1`（独占操作） | Claude Code | A.3 |
-| 4 | 2 合并之后 | `feat/ipc-m1-contract-fixes` | Claude Code | A.4 |
-| 5 | 2 合并之后，两个可以同时开（合约修正还没合并就 stack 在它上面） | `feat/core-library-ops`、`feat/core-file-scheme` | Codex（加 A.0） | A.5、A.6 |
-| 6 | 4 合并之后 | `feat/data-browse-queries` | Codex（加 A.0） | A.7 |
-| 7 | 4 合并之后，有空出的 Rust 名额时 | `chore/core-logging` | Codex（加 A.0） | A.8 |
-| 8 | 3 合并之后，两个可以同时开 | `feat/ui-app-shell`、`feat/ui-data-layer` | Claude Code | A.9、A.10 |
-
-- 同时写 Rust 的 session 最多 3 个：合约修正、library-ops、file-scheme 同时在跑时，browse-queries 和 logging 等其中一个合并后再开。
-- `pnpm e2e` 一次只能有一个 session 跑：先拿 app lock（CLAUDE.md §7.5），跑完释放。
-- 第 2 波合并完以后是同步点 2：更新本附录，写第 3 波（导入、本机设置、资料库视图、搜索、预览）的提示。
+`pnpm e2e` 一次只能有一个 session 跑：先拿 app lock（CLAUDE.md §7.5），跑完释放。
 
 ### A.0 交给 Codex 时加在提示开头
 
 ```text
-Codex: follow Documents Manage/AGENTS.md and Folio/CLAUDE.md. Backend coding only: lane file in Folio/.agents/lanes/, specs and ADRs in Folio/docs/, scratch in folio-agent-work/tasks/<lane>/. Map the Claude skill names below to your skills in AGENTS.md §5. Stop at review; a Claude Code session runs /code-review, /security-review and /simplify before I approve the land.
+Codex: follow Documents Manage/AGENTS.md and Folio/CLAUDE.md. Backend coding only: lane file in Folio/.agents/lanes/, specs and ADRs in Folio/docs/, scratch in folio-agent-work/tasks/<lane>/. Map the Claude skill names below to your skills in AGENTS.md §5. Stop at review and write the review scope into folio-agent-work/tasks/<lane>/claude-review-handoff.md; a Claude Code session runs /code-review, /security-review and /simplify before I approve the land.
 ```
 
-### A.1 同步点 1a：提交 Cowork 的设计，合并设计和 spike
+### A.11 同步点 2：合并 CI 修复
 
 ```text
-Folio: sync point 1, part 1 (docs/product/roadmap.md §5 M1, appendix A.1): commit the Cowork design hand-off, then land it, the Office spike and the roadmap update. I approve landing all three once I have confirmed the design and chosen the PowerPoint option below.
-1. Read CLAUDE.md §7 and every file in .agents/lanes/; run `but status` and `but pull --check`. .agents/lanes/docs--adr-0005-ui-architecture.md is stale (that lane landed as 80f6ad1 and 3c4cdd0): delete it.
-2. Take over design/design-m1-flows (Cowork, Status: review, changes uncommitted; its lane file lists the files). Regenerate the CSS with `pnpm --filter @folio/desktop tokens`, check that tokens.css only gains the 42 new custom properties, run `pnpm check`, and commit the design files and tokens.css on design/design-m1-flows with the message the lane file suggests.
-3. Summarise for me in Chinese the decisions in docs/design/handoff/first-run.md §1 and library-actions.md §1, with the Design canvas boards to look at, and wait for my OK. If I want changes, do not land the design: tell me what to ask the Cowork follow-up for.
-4. Show me the PowerPoint options in docs/research/office-preview-spike.md §8 (A, B, C; the spike recommends A) and record my choice in ADR-0001 action item 4c with a commit on spike/ui-office-preview.
-5. Land docs/docs-roadmap-wave2, spike/ui-office-preview, then design/design-m1-flows (`but land <branch> --yes`), with `but status` after each. Stop at the first conflict or failure and report it; never use --ai. Delete their lane files.
+Folio: sync point 2, step 1 (docs/product/roadmap.md §5 M1, appendix A.11): land fix/build-ci-access-violation so CI on main goes green again, then the roadmap update docs/docs-roadmap-wave3. I approve landing both.
+1. Read CLAUDE.md §7, every file in .agents/lanes/ and .agents/lanes/fix--build-ci-access-violation.md; run `but status` and `but pull --check`.
+2. Its reviews are done and the fix passed CI on a probe run, but the later /simplify cleanup was checked locally only: take the app lock (CLAUDE.md §7.5), run `pnpm check` and `pnpm e2e`, release the lock.
+3. Land with `but land fix/build-ci-access-violation --yes`, then `but land docs/docs-roadmap-wave3 --yes` (docs only), with `but status` after each, and delete both lane files. Stop at the first conflict or failure and report it; never use --ai.
+4. Follow the CI run for the push to main until it finishes. If it is red, find out why and report before anything else lands.
 Report to me in Chinese.
 ```
 
-### A.2 同步点 1b：评审并合并 `feat/core-library-state`
+### A.12 同步点 2：评审并合并 `chore/core-logging`
 
 ```text
-Folio: sync point 1, part 2 (docs/product/roadmap.md §5 M1, appendix A.2): review and land feat/core-library-state, which Codex finished. I approve landing it once your reviews pass and the checks are green.
-1. Start after the design hand-off's tokens.css is committed (appendix A.1): `pnpm check` fails without it. Read CLAUDE.md, every file in .agents/lanes/, docs/specs/library-state.md, and the lane's evidence: .agents/lanes/feat--core-library-state.md, ../folio-agent-work/tasks/feat-core-library-state/verification.md and security-review.md. Run `but status` and `but pull --check`.
-2. Take over the lane for review: run /code-review, /security-review and /simplify on its three commits, with attention to the privilege boundary (single-use folder tokens, path confinement), lock lifetimes and cancellation, the shutdown drain and swallowed errors. Fix findings with commits on the branch; stop and ask me if a finding needs a product or security decision.
+Folio: sync point 2, review of chore/core-logging (docs/product/roadmap.md §5 M1, appendix A.12). Codex finished the lane; I approve landing it once your reviews pass and the checks are green.
+1. Read CLAUDE.md, every file in .agents/lanes/, .agents/lanes/chore--core-logging.md and ../folio-agent-work/tasks/chore-core-logging/verification-and-handoff.md (the review scope). Run `but status` and `but pull --check`. Land only after fix/build-ci-access-violation (appendix A.11) is on main.
+2. Take over the lane for review: /code-review, /security-review and /simplify on its commit, with attention to what the UI can write into the log (size, rate limit, validation on the privileged side, no file contents), retention and pruning (never outside the logs folder, symlinks, future dates) and swallowed errors. Fix findings with commits on the branch; stop and ask me if a finding needs a product or security decision.
 3. Take the app lock (CLAUDE.md §7.5), run `pnpm check` and `pnpm e2e`, release the lock. apps/desktop/src/ipc/bindings.ts must stay unchanged.
-4. If the lane has not done so, add a progress line for it to ADR-0004 action item 3 and mark item 1 of docs/specs/ipc-m1.md §21 as done.
-5. Land with `but land feat/core-library-state --yes`, run `but status`, delete the lane file and check the CI run on main. Stop at the first conflict or failure and report it; never use --ai.
-Report to me in Chinese, including the frontend hand-off the lane file lists.
+4. Land one lane at a time (roadmap §4 rule 10): check that no other lane is landing and every other lane is checkpoint or review, then `but land chore/core-logging --yes`, `but status`, delete the lane file and check the CI run on main. Stop at the first conflict or failure and report it; never use --ai.
+Report to me in Chinese.
 ```
 
-### A.3 同步点 1c：`chore/build-deps-ui-m1`
+### A.13 同步点 2：评审并合并 `feat/core-library-ops`
 
 ```text
-Folio lane chore/build-deps-ui-m1 (docs/product/roadmap.md §5 M1 sync point 1, appendix A.3). This is an exclusive operation (CLAUDE.md §7.4): start only after appendix A.1 and A.2 have landed and while no other lane is editing package files, and say in your lane file that you hold the dependency slot.
-Install the packages listed in docs/specs/ui-architecture.md §16 into apps/desktop and e2e with exact versions. Re-check every version, transitive ones included, against pnpm's minimum release age; a newer patch that passes may replace a listed one, majors stay. Keep react-aria at the exact version react-aria-components depends on, and highlight.js within lowlight's range. Never add minimumReleaseAgeExclude. Change only the package.json files and pnpm-lock.yaml, plus the smallest configuration the packages need to typecheck; no application code, and the ESLint rules belong to feat/ui-app-shell.
-Run `pnpm check` and, with the app lock, `pnpm e2e`. Record the installed versions and publish dates in your lane file, and in ui-architecture §16 where they differ. /code-review; report to me in Chinese and stop at review.
+Folio: sync point 2, review of feat/core-library-ops (docs/product/roadmap.md §5 M1, appendix A.13). Codex finished the lane (three commits, about 8,100 lines); I approve landing it once your reviews pass and the checks are green.
+1. Read CLAUDE.md, every file in .agents/lanes/, .agents/lanes/feat--core-library-ops.md and ../folio-agent-work/tasks/feat-core-library-ops/claude-review-handoff.md (the review scope and focus list), then final-review.md and independent-review.md there. Read the approved amendments in ADR-0002 and docs/specs/library-core.md. Run `but status` and `but pull --check`. Land only after fix/build-ci-access-violation (appendix A.11) is on main.
+2. Take over the lane for review: /code-review at high effort, /security-review and /simplify on its three commits. Focus on the handoff's list: the separate recovery commit and its publication, before/after image conflicts and interrupted restoration, case-only spelling, retained IDs, hashes and bodies, fallible response mapping, the full-walk operation lock, retry generation and shutdown, Recycle Bin only (never a permanent delete), and reading metadata format 1 and journal versions before 3. Fix findings with commits on the branch; stop and ask me if a finding needs a product or security decision.
+3. Take the app lock (CLAUDE.md §7.5), run `pnpm check` and `pnpm e2e`, release the lock. apps/desktop/src/ipc/bindings.ts must stay unchanged.
+4. Add a progress line to ADR-0004 action item 3 and mark item 3 of docs/specs/ipc-m1.md §21 as done, if the lane has not.
+5. Land one lane at a time (roadmap §4 rule 10): `but land feat/core-library-ops --yes`, `but status`, delete the lane file and check the CI run on main. Stop at the first conflict or failure and report it; never use --ai.
+Report to me in Chinese, including the frontend hand-off in the lane file.
 ```
 
-### A.4 第 2 波：`feat/ipc-m1-contract-fixes`
+### A.14 同步点 2：评审并合并 `feat/data-browse-queries`
 
 ```text
-Folio lane feat/ipc-m1-contract-fixes (docs/product/roadmap.md §5 M1 wave 2, appendix A.4; contract first, roadmap §4 rule 2). Start after feat/core-library-state has landed: planned declarations now live in its per-group command files (docs/specs/library-state.md, "Command ownership"). Use engineering:system-design; keep the lane small and land it early, since browse, operations, file scheme, import and logging build on it.
-Settle in docs/specs/ipc-m1.md and the Rust types in crates/folio-app/src/ipc/, planned and not registered (ipc-m1 §3):
-1. resolve_paths: images next to a note, found by relative path (ADR-0005 product decision 1; proposed shape in docs/specs/ui-architecture.md §10.4), with its LIMITS key.
-2. A command that writes UI errors to the shell's log (ui-architecture §13), for chore/core-logging to implement.
-3. ImportSource.names says which names are folders (docs/design/handoff/library-actions.md §16 item 1).
-4. An error code of its own for an item the Recycle Bin cannot take, instead of FileSystem (library-actions §16 item 3; docs/specs/windows-adapter.md §4), with its string in the en errors namespace.
-5. Why a folio-file request failed (in use, not on this disk, not found) in a form the preview can read; today the scheme answers 404 for every failure (library-actions §16 item 4; ipc-m1 §11.2).
-6. library_status retries opening a library whose last state is unavailable (docs/design/handoff/first-run.md §12 item 1): behaviour text only, no type change.
-7. A folder holding an incomplete .folio (a creation that failed before library.json, e.g. disk full) is a dead end today: pick_library_folder reports ordinary content, create_library AlreadyALibrary, open_library NotALibrary. Give it a code or FolderContent kind of its own and a way out, with its strings (Sirui, 2026-09-29: settle it in this lane).
-8. The Unavailable reason is guessed from the flattened AppError (crates/folio-app/src/library/mod.rs `unavailable`): a catalog error can show as missing or accessDenied. Decide the reason where the failure happens, and say in ipc-m1 §6 what each reason covers.
-Regenerate the bindings with `cargo test -p folio-app export_bindings`, update the wrappers in apps/desktop/src/ipc/ only where a type changed, and record the changes in ipc-m1 §20. Tick ADR-0005 action item 4, noting that this lane replaced the planned feat/ipc-m1-resolve-paths. Contract tests (the planned-command test must still pass), `pnpm check`, `pnpm e2e` with the app lock, /code-review, /security-review; report to me in Chinese.
+Folio: sync point 2, review of feat/data-browse-queries (docs/product/roadmap.md §5 M1, appendix A.14). Codex finished the lane (one commit, about 4,500 lines); I approve landing it once your reviews pass and the checks are green.
+1. Read CLAUDE.md, every file in .agents/lanes/, .agents/lanes/feat--data-browse-queries.md and ../folio-agent-work/tasks/feat-data-browse-queries/claude-review-handoff.md (the review scope), then snapshot-decision.md, snippet-decision.md and frontend-handoff.md there. Run `but status` and `but pull --check`. Land after fix/build-ci-access-violation and, if it is ready, after feat/core-library-ops: both change crates/folio-app/src/library/mod.rs and worker.rs.
+2. Take over the lane for review: /code-review at high effort, /security-review and /simplify on its commit. Focus on exact ID-and-path references, all-tag, inheritance and scope semantics, empty and out-of-range pages, the fixed search window and its time anchor, the commit and read lock order on shutdown and switch, bind-only SQL, plain-text highlights, resolve_paths' lexical confinement (no absolute paths, schemes or root escape), and the new FTS5 callback in queries/snippet.rs (ABI, context and text lifetimes, panic containment, oversized bodies). Fix findings with commits on the branch; stop and ask me if a finding needs a product or security decision.
+3. Take the app lock (CLAUDE.md §7.5), run `pnpm check` and `pnpm e2e`, release the lock. apps/desktop/src/ipc/bindings.ts must stay unchanged.
+4. Add a progress line to ADR-0004 action item 3 and mark item 2 of docs/specs/ipc-m1.md §21 as done, if the lane has not.
+5. Land one lane at a time (roadmap §4 rule 10): `but land feat/data-browse-queries --yes`, `but status`, delete the lane file and check the CI run on main. Stop at the first conflict or failure and report it; never use --ai.
+Report to me in Chinese.
 ```
 
-### A.5 第 2 波：`feat/core-library-ops`（可交给 Codex）
+### A.15 同步点 2：`feat/ui-data-m1-hooks`
 
 ```text
-Folio lane feat/core-library-ops (docs/product/roadmap.md §5 M1 wave 2, appendix A.5). Start after feat/core-library-state has landed. If feat/ipc-m1-contract-fixes has not landed yet, stack on it (CLAUDE.md §7.3 item 10): you use its Recycle Bin error code and its library_status retry.
-Read docs/specs/ipc-m1.md §7, §8, §9.2 and §20, ADR-0002 §3, docs/specs/library-core.md §4.2, docs/specs/library-state.md (command ownership, jobs), docs/specs/windows-adapter.md §4, and the behaviour the UI expects in docs/design/handoff/library-actions.md §7 and first-run.md §5.
-Goal: semesters, courses and tags (list, create, update, reorder and archive; delete for tags), set_entry_tags, create_folder, rename_entry, move_entries and delete_entries (Recycle Bin only, never a permanent delete), each emitting CatalogChanged; the metadata changes of ipc-m1 §20 (optional course code, optional badge text and colour, 1–3 character badges, palette keys for preset tags) with a catalog schema migration and its migration test; and library_status retrying an unavailable library (a small change in the library command group).
-Start with engineering:system-design. The ADR-0002 and library-core amendments for §20 need my approval: summarise them in Chinese and wait before implementing them. Own only your command group, an operations module in folio-core, meta/model.rs and the catalog schema; feat/data-browse-queries owns the read queries and does not change the schema. Contract tests for every command, property tests where names and ordering are involved, `pnpm check` and `pnpm e2e` with the app lock, /code-review, /security-review, /simplify; report to me in Chinese.
+Folio lane feat/ui-data-m1-hooks (docs/product/roadmap.md §5 M1 sync point 2, appendix A.15). Front end and small: start now, in parallel with the reviews, and land it early, since the four wave 3 view lanes start from it.
+Read docs/specs/ui-architecture.md §4 (one data file per command group), §5 (data layer) and §11 (fake shell), docs/specs/ipc-m1.md §6–§12, and the existing apps/desktop/src/data/ (library.ts, entries.ts, jobs.ts, problems.ts, keys.ts, paged.ts, references.ts).
+Goal: the data hooks the views share: groups.ts (semester and course lists and mutations), tags.ts (list, create, update, reorder, delete, set_entry_tags), the entry mutations (create_folder, rename_entry, move_entries, delete_entries) with their CatalogChanged handling, search.ts (pages over the fixed window), files.ts (open_entry, reveal_entry, resolve_paths), the library choices in library.ts (pick_library_folder, create_library, open_library), and import.ts (pick_import_files, check_import, import_files, against the fake shell until feat/core-import lands). Batch results keep every failed item, and errors stay typed (CLAUDE.md §5).
+Own only these data files and their tests; no views. Unit tests against the fake shell for every hook, including revisions, partial batch failures and stale references; `pnpm check`, /code-review, /simplify; report to me in Chinese.
 ```
 
-### A.6 第 2 波：`feat/core-file-scheme`（可交给 Codex）
+### A.16 第 3 波：`feat/ui-library-view`
 
 ```text
-Folio lane feat/core-file-scheme (docs/product/roadmap.md §5 M1 wave 2, appendix A.6). Start after feat/core-library-state has landed. If feat/ipc-m1-contract-fixes has not landed yet, stack on it: you implement its failure reasons for folio-file requests.
-Read docs/specs/ipc-m1.md §11 and §17, ADR-0004 (option 6 and action item 5), ADR-0001 action item 5 (the preview sandbox), docs/specs/ui-architecture.md §10.1–§10.3, docs/specs/system-overview.md §5 (thumbnail cache) and docs/design/handoff/library-actions.md §9.2–§9.3.
-Goal: the read-only folio-file scheme, confined to the library, with range requests and the failure reasons from the contract fix; thumbnails cached by content hash in the app's cache directory (LRU, 2 GB); open_entry ("Open with default app" never runs programs or scripts, ipc-m1 product decision 6) and reveal_entry; the main window's CSP sources for the scheme; an e2e test that the preview frame cannot load the scheme.
-Start with engineering:system-design. Own only your command group, the scheme, thumbnail and open modules in folio-app, and the scheme's CSP entries in tauri.conf.json. Do not change the preview frame's own CSP in preview.rs: feat/ui-preview does that. Contract and e2e tests, `pnpm check` and `pnpm e2e` with the app lock, /code-review, /security-review (this lane widens what the window can read), /simplify; report to me in Chinese.
+Folio lane feat/ui-library-view (docs/product/roadmap.md §5 M1 wave 3, appendix A.16). Start after feat/ui-data-m1-hooks has landed; build against the fake shell, and run the real-app e2e once feat/core-library-ops and feat/data-browse-queries are on main. Use frontend-design.
+Read docs/design/handoff/app-shell.md §3 and §5 (toolbar, Library view), docs/design/handoff/library-actions.md (§6 context menus; §7 rename, new folder, move, delete; §8 empty states; §9 error states; §12 keyboard; §14 narrow window; §16 items 6 and 8), docs/specs/ui-architecture.md (§6, §7, §8.2 the tree as a flat list, §13, §17 item 3), ADR-0005, and the backend hand-offs: ../folio-agent-work/tasks/feat-data-browse-queries/frontend-handoff.md and the hand-off in feat/core-library-ops's lane file (or its commit message once landed).
+Goal: the Library view, replacing PlaceholderLibrary in app/registry.ts: the course tree (courses, folders, files; a semester's loose files after its courses), tag filter chips (every selected tag must match), Recently added and Untagged, list and grid with sorting, the semester switcher if the toolbar does not have it yet, selection and multi-select, new folder, rename, move between courses, delete to the Recycle Bin, batch tagging, context menus, and every empty and error state of the specs. The third column hosts feat/ui-preview's pane once it lands; until then, its empty state.
+Own apps/desktop/src/library/** and the library namespace; app/registry.ts and other app/ files get one-line additive edits. Component tests for every state the specs name, a Playwright flow, design:design-critique and design:accessibility-review on the built screen (run + browser pane), a reduced-motion check, `pnpm check` and `pnpm e2e` with the app lock, /code-review, /simplify; report to me in Chinese.
 ```
 
-### A.7 第 2 波：`feat/data-browse-queries`（可交给 Codex）
+### A.17 第 3 波：`feat/ui-preview`
 
 ```text
-Folio lane feat/data-browse-queries (docs/product/roadmap.md §5 M1 wave 2, appendix A.7). Start after feat/core-library-state and feat/ipc-m1-contract-fixes have landed.
-Read docs/specs/ipc-m1.md §2, §5, §9.1 and §10, docs/specs/library-core.md §5–§6, docs/specs/library-state.md, the query-builder notes under "Tokenizer" in .agents/work/coordinator-notes.md (read-only archive), and what the UI needs: docs/specs/ui-architecture.md §5.3 (paged lists), §8.2 (the tree as a flat list), §9 (the search palette) and §10.4 (resolve_paths), and docs/design/handoff/library-actions.md §16 item 6 (loose files in a semester).
-Goal: list_children, list_files, get_entry and search, with natural name order, effective tags (a folder's tags apply below it), multi-tag filters that match all tags, "Recently added" and "Untagged", scopes, pages with totals, the fixed search window and a bounded query length; and resolve_paths. Targets at 50,000 entries: a page of 200 rows under 50 ms, a search page of 50 hits with highlights under 100 ms (ipc-m1 §2); measure them with the existing benchmarks.
-Start with engineering:system-design. Own only your command group and a queries module in folio-core's catalog; read the schema but do not change it (feat/core-library-ops owns migrations). Contract tests, property tests for ordering and filters, `pnpm check` and `pnpm e2e` with the app lock, /code-review, /security-review, /simplify; report to me in Chinese.
+Folio lane feat/ui-preview (docs/product/roadmap.md §5 M1 wave 3, appendix A.17). Start after feat/ui-data-m1-hooks has landed; build against the fake shell, and run the real-app e2e once feat/data-browse-queries is on main (feat/core-file-scheme already is). Use frontend-design.
+Read docs/specs/ui-architecture.md §10 (where each type renders, the frame, the protocol, the renderers, keyboard and focus), §14, §17 items 1 and 2 and §18; ADR-0005 (product decisions 1 and 2); ADR-0001 action items 4c and 5 (Office choice, preview sandbox); docs/design/handoff/app-shell.md §5 (the preview pane) and library-actions.md §9.2–§9.3; docs/specs/ipc-m1.md §11 with the failure reasons the contract fix added.
+Goal: the preview pane: images, PDF with pdf.js, Markdown with maths, code highlighting, sanitised HTML and images next to the note (resolve_paths), code and plain text, audio and video, and the card for other files; links show their address and can be copied, never opened; the header with tags and the Open and Show in File Explorer actions; one fresh frame per file; the frame protocol. Office files show the "Open with default app" card in M1 (their renderers come with feat/ui-office-preview in M4). Settle ui-architecture §17 items 1 and 2 (the pdf.js worker in the sandboxed frame, Temml on real notes) and check HEIC.
+Add `worker-src blob:` and `'wasm-unsafe-eval'` to the preview CSP in crates/folio-app/src/preview.rs and nowhere else; the preview-sandbox e2e tests must still pass, and that change gets /security-review. Own apps/desktop/src/preview/** (move src/preview/frame.ts into src/preview/frame/), preview.rs and the preview namespace. Component tests, a Playwright flow per renderer family, design:design-critique and design:accessibility-review, a reduced-motion check, `pnpm check` and `pnpm e2e` with the app lock, /code-review, /security-review, /simplify; report to me in Chinese.
 ```
 
-### A.8 第 2 波：`chore/core-logging`（可交给 Codex）
+### A.18 第 3 波：`feat/ui-search-palette`
 
 ```text
-Folio lane chore/core-logging (docs/product/roadmap.md §5 M1 wave 2, appendix A.8). Start after feat/ipc-m1-contract-fixes has landed, when fewer than three sessions are building Rust.
-Replace the interim append-only crates/folio-app/src/diagnostics.rs (logs\shell-errors.log, no timestamps or rotation) with the logging module that ADR-0002 §2 and docs/specs/system-overview.md §5 describe: %LOCALAPPDATA%\<app-id>\logs\, one file a day, kept 7 days, with timestamps, and no file contents or other user data beyond what the shell logs today. Implement the UI-error log command the contract fix declared: bounded message size, a rate limit, validated on the privileged side. Keep every current caller of diagnostics working.
-Start with engineering:system-design; reuse installed crates where they fit and put any new crate through the one-day age rule. Tests with a temporary log directory, `pnpm check` and `pnpm e2e` with the app lock, /code-review, /security-review, /simplify; report to me in Chinese.
+Folio lane feat/ui-search-palette (docs/product/roadmap.md §5 M1 wave 3, appendix A.18). Start after feat/ui-data-m1-hooks has landed; build against the fake shell, and run the real-app e2e once feat/data-browse-queries is on main. Use frontend-design.
+Read docs/design/handoff/app-shell.md §8 (search), docs/specs/ui-architecture.md §9 and §14, docs/specs/ipc-m1.md §10, the browse hand-off (../folio-agent-work/tasks/feat-data-browse-queries/frontend-handoff.md: the fixed 500-result window, QueryTooLong, plain-text spans), and app/registry.ts and app/navigation.ts (registering the search dialog shows the toolbar button and Ctrl+K).
+Goal: the Ctrl+K palette: results as you type, grouped, highlights rendered as text from the spans (never innerHTML), arrow keys, Enter selecting the file in the Library view and opening its preview through the navigation store, Escape, and the empty, too-long and error states.
+Own apps/desktop/src/search/** and the search namespace; app/registry.ts gets a one-line edit. Component tests, a Playwright flow, keyboard and screen-reader checks with design:accessibility-review, design:design-critique, a reduced-motion check, `pnpm check` and `pnpm e2e` with the app lock, /code-review, /simplify; report to me in Chinese.
 ```
 
-### A.9 第 2 波：`feat/ui-app-shell`
+### A.19 第 3 波：`feat/ui-first-run`
 
 ```text
-Folio lane feat/ui-app-shell (docs/product/roadmap.md §5 M1 wave 2, appendix A.9). Start after chore/build-deps-ui-m1 has landed. Use frontend-design.
-Read docs/specs/ui-architecture.md (§3, §4, §6, §7.1, §13, §14 and §17 item 4), ADR-0005, docs/design/handoff/app-shell.md (§2–§4, §10, §11), docs/design/handoff/library-actions.md (§2 shared components, §9.5 failed window commands, §10 activity button, §13 motion, §14 narrow window), apps/desktop/src/i18n/README.md and design/tokens/README.md.
-Goal: the window shell: title bar, toolbar (sync area empty until M3), the rail with Library only in v0.1 (ADR-0005 product decision 3), the content region and the narrow layout below 760 px; theme and reduced-motion attributes on the root; a WebView2 background colour so a dark first frame does not flash light; the shared components of handoff §10 and library-actions §2 on React Aria Components; the activity button and popover (wire them to the data layer's jobs hooks if feat/ui-data-layer has landed, otherwise leave the wiring to feat/ui-library-view); the error state for failed window commands; the ESLint folder and security rules of ui-architecture §3 and §14. Update the apps/desktop line of CLAUDE.md §6's directory map for the new feature folders (small edit).
-Own apps/desktop/src/app/, components/, lib/ and titlebar/ and your views' i18n namespaces; feat/ui-data-layer owns data/, ipc/mock/ and the test helpers in parallel. Component tests for every state the specs name, a Playwright flow, design:design-critique and design:accessibility-review on the built screen (run + browser pane), a reduced-motion check, `pnpm check` and `pnpm e2e` with the app lock, /code-review, /simplify; report to me in Chinese.
+Folio lane feat/ui-first-run (docs/product/roadmap.md §5 M1 wave 3, appendix A.19; moved up from wave 4). Start after feat/ui-data-m1-hooks has landed; build against the fake shell's first-run fixture, and run the real-app e2e once feat/core-library-ops is on main. Use frontend-design.
+Read docs/design/handoff/first-run.md (all of it), library-actions.md §2 (shared components), docs/specs/library-state.md, docs/specs/ipc-m1.md §6 and §7 (library states, incomplete libraries, the unavailable reasons and the retry the contract fix added) and docs/specs/ui-architecture.md §6.1 (the current semester per library).
+Goal: the first-run flow the app shows while library_status has no library: welcome, choosing a folder (new library or taking over one), the library name, the first semester and courses with row-by-row failures (first-run.md §5), and the library-unavailable screen with Try again. Drive the native folder dialog by hand once in the real app (no lane has yet) and note the result in your lane file.
+Own apps/desktop/src/first-run/** and the first-run namespace; app/ gets small additive edits to show the flow. Component tests for every state first-run.md names, a Playwright flow in a temporary folder, design:design-critique and design:accessibility-review, a reduced-motion check, `pnpm check` and `pnpm e2e` with the app lock, /code-review, /simplify; report to me in Chinese.
 ```
 
-### A.10 第 2 波：`feat/ui-data-layer`
+### A.20 第 3 波：`feat/core-import`（可交给 Codex）
 
 ```text
-Folio lane feat/ui-data-layer (docs/product/roadmap.md §5 M1 wave 2, appendix A.10). Start after chore/build-deps-ui-m1 has landed; it runs beside feat/ui-app-shell.
-Read docs/specs/ui-architecture.md §5, §11, §15 and §18, ADR-0005, docs/specs/ipc-m1.md §5 and §15, and docs/specs/library-state.md.
-Goal: the data layer on TanStack Query: the query client, query keys, the library session, event subscriptions with CatalogChanged revision handling, references that follow moves, paged lists, and hooks for jobs and problems; the fake shell in ipc/mock/ with the small, large (50,000 entries) and first-run fixtures, covering every M1 command and event, including those of feat/ipc-m1-contract-fixes once it has landed; test/render.tsx and test/virtual.ts; the .claude/launch.json entry for the browser pane. Add the fake shell, renderApp and @axe-core/playwright to the layers in docs/specs/testing-strategy.md.
-Own apps/desktop/src/data/, ipc/mock/ and the test helpers; feat/ui-app-shell owns app/, components/, lib/ and titlebar/ in parallel. The fake shell's drift test must fail when bindings.ts changes (ui-architecture §11.5). Unit tests for revisions, pages and reference moves, `pnpm check`, /code-review, /simplify; report to me in Chinese.
+Folio lane feat/core-import (docs/product/roadmap.md §5 M1 wave 3, appendix A.20). Start after feat/core-library-ops has landed, when fewer than three sessions are building Rust.
+Read docs/specs/ipc-m1.md §4.2 (user choices), §12 (import), §17 and §20, ADR-0004 (options 2 and 5, action item 6), docs/specs/library-state.md (jobs, command ownership), docs/specs/windows-adapter.md §4 (Recycle Bin), and what the UI expects in docs/design/handoff/library-actions.md §3–§5 and §16 items 1 and 2.
+Goal: the last three M1 commands: pick_import_files, check_import (with folder flags) and import_files as a job with progress, copying into a course with tags, the one name-clash choice (replace, keep both, skip), and optionally moving the originals to the Recycle Bin; native file drops through the shell with single-use tokens (dragDropEnabled, the FilesDropped and DropHover events) and the replacement for the test main_window_does_not_publish_native_drag_paths. Settle whether ImportResult.imported includes replaced and renamed files and write it into ipc-m1 §12. With the last planned command gone, follow the note at the top of crates/folio-app/src/ipc.rs (make the modules private again) and keep e2e/tests/ipc-planned.spec.ts meaningful (an unknown command is still rejected).
+Start with engineering:system-design. Own your command group and an import module in folio-core. Contract tests, crash and partial-failure tests (disk full, a file in use), `pnpm check` and `pnpm e2e` with the app lock, /code-review, /security-review (outside paths enter the privileged layer), /simplify; report to me in Chinese.
+```
+
+### A.21 第 3 波：`feat/core-app-settings`
+
+```text
+Folio lane feat/core-app-settings (docs/product/roadmap.md §5 M1 wave 3, appendix A.21). Contract and implementation in one small lane; start when fewer than three sessions are building Rust.
+Read docs/specs/ipc-m1.md §1 (settings were left for a later contract), docs/specs/library-state.md (the per-machine settings file), docs/specs/system-overview.md §5, ADR-0002 §3 (`.folio/ignore`), docs/design/handoff/app-shell.md §9 (the two settings dialogs), docs/specs/ui-architecture.md §6.3 (theme and motion) and apps/desktop/src/app/appearance.ts.
+Goal: the settings M1 needs: the device name, appearance (System, Light, Dark), reduce motion, and the library's ignore rules (a change starts a rescan), with get and set commands, validation on the privileged side and an event when they change. Write the contract into ipc-m1 (a new section, and §20), regenerate the bindings and, in the same lane, update the fake shell in apps/desktop/src/ipc/mock/ and its fingerprint (roadmap §4 rule 2). If appearance.ts keeps the theme somewhere temporary today, wire it to the stored setting.
+Start with engineering:system-design. Own the settings command group, settings.rs and the fake shell's settings file. Contract tests, `pnpm check` and `pnpm e2e` with the app lock, /code-review, /security-review, /simplify; report to me in Chinese.
+```
+
+### A.22 第 3 波：`chore/core-webview-accelerator-keys`（可交给 Codex）
+
+```text
+Folio lane chore/core-webview-accelerator-keys (docs/product/roadmap.md §5 M1 wave 3, appendix A.22). Small; start when fewer than three sessions are building Rust.
+Read docs/specs/ui-architecture.md §6.4 and §17 item 4. Goal: in release builds only, turn off WebView2's browser accelerator keys (reload, find, print and the like) with ICoreWebView2Settings3::SetAreBrowserAcceleratorKeysEnabled(false) through WebviewWindow::with_webview before the first navigation; debug builds and e2e keep them. webview2-com is already in the lockfile through wry: add it as a direct dependency at the locked version, so nothing new is downloaded. The app's own shortcuts (Ctrl+K, Ctrl+1, Ctrl+,) must still reach the page; record the result in ui-architecture §17 item 4.
+Own the window set-up in folio-app and its test. A manual check in a release build, `pnpm check` and `pnpm e2e` with the app lock, /code-review, /security-review, /simplify; report to me in Chinese.
+```
+
+### A.23 第 3 波：`refactor/core-sta-helper`（可交给 Codex）
+
+```text
+Folio lane refactor/core-sta-helper (docs/product/roadmap.md §5 M1 wave 3, appendix A.23). Small; start after fix/build-ci-access-violation and feat/core-library-ops have landed, when fewer than three sessions are building Rust.
+Two near-identical helpers run work on a single-threaded apartment: `in_sta` in crates/folio-app/src/dialogs.rs and `in_apartment` in folio-core's win::recycle. Keep one, in folio-core's win module, and use it from both, without changing behaviour: the CI fix's rule (docs/specs/windows-adapter.md §4: hold the process MTA so a teardown never unloads a cached WinRT factory) and the Recycle Bin's COM threading stay as they are. The CI fix's commit "fix(app): keep COM initialized so cached WinRT factories stay valid" explains the rule.
+Own the two files and the shared helper. Tests for both callers, `pnpm check` and `pnpm e2e` with the app lock, /code-review, /simplify; after landing, check that the CI run on main (Windows Server 2022, where the crash showed) is green. Report to me in Chinese.
 ```
