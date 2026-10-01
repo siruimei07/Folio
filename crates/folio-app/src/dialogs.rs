@@ -8,11 +8,14 @@
 use std::ffi::OsString;
 use std::os::windows::ffi::{OsStrExt, OsStringExt};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use windows::Storage::Provider::StorageProviderSyncRootManager;
 use windows::Win32::Foundation::{ERROR_CANCELLED, HWND};
 use windows::Win32::Globalization::{CSTR_EQUAL, CompareStringOrdinal};
-use windows::Win32::System::Com::{CLSCTX_INPROC_SERVER, CoCreateInstance, CoTaskMemFree};
+use windows::Win32::System::Com::{
+    CLSCTX_INPROC_SERVER, CoCreateInstance, CoIncrementMTAUsage, CoTaskMemFree,
+};
 use windows::Win32::System::WinRT::{RO_INIT_SINGLETHREADED, RoInitialize, RoUninitialize};
 use windows::Win32::UI::Shell::{
     FOS_DONTADDTORECENT, FOS_FORCEFILESYSTEM, FOS_NOCHANGEDIR, FOS_PATHMUSTEXIST, FOS_PICKFOLDERS,
@@ -80,34 +83,34 @@ pub fn pick_folder(owner: Option<isize>) -> Result<Option<PathBuf>, AppError> {
 
 /// Classifies a canonical folder using Windows' registered sync roots, including legacy
 /// registrations. This is a warning, not an access grant. Unregistered providers cannot be
-/// detected.
+/// detected. The class is registered as both-threaded, so it runs in the caller's apartment, or in
+/// the process's MTA on a thread without one.
 pub fn sync_provider(root: &Path) -> Result<Option<SyncProvider>, AppError> {
-    in_sta(|| {
-        let roots = StorageProviderSyncRootManager::GetCurrentSyncRoots().map_err(native_error)?;
-        for index in 0..roots.Size().map_err(native_error)? {
-            let registered = roots.GetAt(index).map_err(native_error)?;
-            let path = registered
-                .Path()
-                .and_then(|folder| folder.Path())
-                .map_err(native_error)?;
-            let path = PathBuf::from(path.to_os_string());
-            let path = match path.canonicalize() {
-                Ok(path) => path,
-                // A stale registration on a missing drive cannot contain the existing choice.
-                Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
-                Err(error) => {
-                    return Err(AppError::Internal(format!(
-                        "resolve registered sync root: {error}"
-                    )));
-                }
-            };
-            if inside_root(root, &path)? {
-                let id = registered.Id().map_err(native_error)?;
-                return Ok(Some(provider_from_id(&id.to_string_lossy())));
+    hold_mta()?;
+    let roots = StorageProviderSyncRootManager::GetCurrentSyncRoots().map_err(native_error)?;
+    for index in 0..roots.Size().map_err(native_error)? {
+        let registered = roots.GetAt(index).map_err(native_error)?;
+        let path = registered
+            .Path()
+            .and_then(|folder| folder.Path())
+            .map_err(native_error)?;
+        let path = PathBuf::from(path.to_os_string());
+        let path = match path.canonicalize() {
+            Ok(path) => path,
+            // A stale registration on a missing drive cannot contain the existing choice.
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(error) => {
+                return Err(AppError::Internal(format!(
+                    "resolve registered sync root: {error}"
+                )));
             }
+        };
+        if inside_root(root, &path)? {
+            let id = registered.Id().map_err(native_error)?;
+            return Ok(Some(provider_from_id(&id.to_string_lossy())));
         }
-        Ok(None)
-    })
+    }
+    Ok(None)
 }
 
 fn absolute_path(path: PathBuf) -> Result<PathBuf, AppError> {
@@ -167,8 +170,8 @@ fn in_sta<T: Send>(work: impl FnOnce() -> Result<T, AppError> + Send) -> Result<
         std::thread::Builder::new()
             .name("folio-shell-com".into())
             .spawn_scoped(scope, || {
-                // SAFETY: a new thread has no conflicting apartment. RoInitialize initializes
-                // COM and WinRT together; all interfaces drop before the apartment guard.
+                // SAFETY: a new thread has no conflicting apartment; this makes it an STA. All
+                // interfaces drop before the apartment guard.
                 unsafe { RoInitialize(RO_INIT_SINGLETHREADED) }.map_err(native_error)?;
                 let _apartment = Apartment;
                 work()
@@ -177,6 +180,22 @@ fn in_sta<T: Send>(work: impl FnOnce() -> Result<T, AppError> + Send) -> Result<
             .join()
             .map_err(|_| AppError::Internal("shell COM worker panicked".into()))?
     })
+}
+
+static MTA_HELD: AtomicBool = AtomicBool::new(false);
+
+/// Keeps COM initialized until the process exits; call before any WinRT call. windows-rs caches
+/// WinRT activation factories for the whole process. When the last apartment ends, COM shuts
+/// down and may unload their DLLs (Windows Server 2022 unloads windows.storage.dll), and the next
+/// call through the cache reads unloaded code: STATUS_ACCESS_VIOLATION.
+fn hold_mta() -> Result<(), AppError> {
+    if !MTA_HELD.load(Ordering::Relaxed) {
+        // SAFETY: no preconditions. The cookie is dropped without CoDecrementMTAUsage on purpose,
+        // so the hold lasts as long as the process; two first callers may both take one.
+        unsafe { CoIncrementMTAUsage() }.map_err(native_error)?;
+        MTA_HELD.store(true, Ordering::Relaxed);
+    }
+    Ok(())
 }
 
 struct Apartment;
@@ -234,6 +253,19 @@ mod tests {
         ] {
             assert!(!inside_root(Path::new(path), root).unwrap());
         }
+    }
+
+    /// Short-lived STAs must not unload cached WinRT factories (see `hold_mta`). Only Windows
+    /// Server 2022 crashes without the hold; the flag check covers Windows 11.
+    #[test]
+    fn sync_root_lookups_hold_com_for_the_process() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().canonicalize().unwrap();
+        for _ in 0..3 {
+            // The answer depends on this machine's registrations; the process must survive.
+            let _ = in_sta(|| sync_provider(&root));
+        }
+        assert!(MTA_HELD.load(Ordering::Relaxed));
     }
 
     #[test]

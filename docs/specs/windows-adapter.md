@@ -238,6 +238,11 @@ the library root or `.folio`) is the delete operation's rule, in the library lay
 - `IFileOperation` works only in a single-threaded apartment, so each call runs on a short-lived
   thread of its own (`CoInitializeEx` with `COINIT_APARTMENTTHREADED`), whatever the caller's
   thread.
+- **WinRT needs COM held.** windows-rs caches WinRT activation factories for the whole process.
+  When a short-lived apartment is the last one, its teardown shuts COM down, Windows Server 2022
+  then unloads the factory's DLL, and the next call crashes (STATUS_ACCESS_VIOLATION). So code
+  that calls WinRT first holds the MTA for the life of the process, as `folio-app`'s
+  `dialogs::hold_mta` does (`fix/build-ci-access-violation`, 2026-09-29).
 - A folder goes to the Recycle Bin as one item, with everything below it.
 - **Dependencies.** The `windows` crate for the COM interfaces. Its `#[implement]` macro expands
   to `::windows_core` paths, so the sink also needs `windows-core` as a direct dependency (Sirui,
