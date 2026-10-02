@@ -1,4 +1,4 @@
-import { mkdir, stat, writeFile } from 'node:fs/promises';
+import { mkdir, realpath, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import AxeBuilder from '@axe-core/playwright';
@@ -44,7 +44,8 @@ test('Library settings: pages from the keyboard, a new tag, ignore rules, axe, a
   await page.keyboard.press('Control+,');
   const dialog = page.getByRole('dialog', { name: settings.library.title });
   await expect(dialog.getByRole('tab', { name: settings.library.pages.library })).toBeFocused();
-  await expect(dialog.getByRole('textbox', { name: settings.folder.label })).toHaveValue(libraryDir);
+  // The shell shows the canonical path; os.tmpdir() can be an 8.3 short one (RUNNER~1 on CI).
+  await expect(dialog.getByRole('textbox', { name: settings.folder.label })).toHaveValue(await realpath(libraryDir));
   await expectNoBlockingViolations(page);
 
   // Arrow keys move between pages; Tags lists the presets.

@@ -1449,6 +1449,38 @@
       ]
     },
     {
+      "id": "fix/ui-settings-e2e-long-path",
+      "title": "设置 e2e 的长路径",
+      "milestone": "M1",
+      "phase": "m1-w4",
+      "track": "ui",
+      "agent": "claude-code",
+      "size": "S",
+      "effort": "low",
+      "deps": [
+        "feat/ui-settings"
+      ],
+      "summary": "main 的 CI 是红的：settings-ui.spec.ts 拿 os.tmpdir() 的 8.3 短路径（RUNNER~1）比较资料库文件夹，界面显示的是规范长路径。改成和 first-run.spec 一样先 realpath；生产代码不变",
+      "status": "done",
+      "updated": "2026-10-02",
+      "landed": "2026-10-02",
+      "gates": {
+        "check": "na",
+        "e2e": "pass",
+        "codeReview": "pass",
+        "securityReview": "na",
+        "simplify": "na",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "e2e/tests/settings-ui.spec.ts"
+      ],
+      "notes": [
+        "CI run 37036505917（a306072）只有这一条失败（含重试）；修后本机 settings-ui.spec 3/3"
+      ]
+    },
+    {
       "id": "feat/ui-import",
       "title": "导入界面",
       "milestone": "M1",
