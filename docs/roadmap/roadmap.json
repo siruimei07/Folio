@@ -5,17 +5,18 @@
     "owner": "Sirui",
     "repo": "https://github.com/siruimei07/Folio",
     "explorer": "https://claude.ai/artifact/Mv1f9eXfrkYTbAs7fqQVDC",
-    "updated": "2026-10-02T02:20-04:00",
+    "updated": "2026-10-02T13:05-04:00",
     "updatedBy": "Claude Code",
     "model": "Opus 5.5"
   },
   "now": {
-    "stage": "M1 第 3 波收尾 · 同步点 3",
+    "stage": "M1 同步点 3 · main 复绿，可以逐个合并",
     "focus": "M1",
     "summary": [
-      "项目已搬到新电脑 DESKTOP-N7UG6S7：工具链装好，9 个任务分支全部应用到工作区，组合工作区 `pnpm check` 全绿（前端 528、Rust 542 个测试），`pnpm e2e` 37 个里 36 个通过，唯一失败是这台显示器上的亚像素误差，已由 `fix/ui-e2e-subpixel-bounds` 修好。",
-      "资料库视图和本机设置已经合并（10-01）。第 3 波剩下 7 个 lane：3 个前端待合并（时钟修复、搜索、首次使用），2 个 Codex lane 等 Claude Code 评审（导入、WebView 快捷键），预览和首帧主题还差最后的检查。",
-      "下一步按「合并队列」一次合并一个；合并后导入界面解锁，设置界面现在就可以开。"
+      "10-02 已合并：路径图 + 提交身份检查、「最近添加」时钟修复、`Ctrl+K` 搜索、首次使用、预览区、PDF 预览的 CI 修复、WebView 快捷键。第 3 波的前端全部完成。",
+      "进行中：首帧主题（快捷键已合并，它排在下一个）；导入等跑完整检查，再做 /security-review 和 /simplify；第 4 波的设置界面在评审。",
+      "main 复绿：`fix/ui-preview-pdf-ci`（pdf.js legacy 构建，兼容 CI 上的 WebView2 131）合并后，CI run 37033529420 和 Commits run 37033529409 都通过（ac766fe）。合并恢复，一次一个，每个等上一个在 main 上的 CI 跑完。等你批准的：e2e 亚像素容差、换电脑交接、本路线图刷新。",
+      "工作区里仍有没登记 lane 的 Codex 项目级 skills 改动（`AGENTS.md`、`.agents/skills/`、`.codex/`、`.claude/skills/`）和 CLAUDE.md 两处改动，见「需要你」。"
     ]
   },
   "limits": {
@@ -1377,6 +1378,42 @@
       ]
     },
     {
+      "id": "docs/docs-roadmap-sync-point-3",
+      "title": "同步点 3 路线图刷新",
+      "milestone": "M1",
+      "phase": "m1-s3",
+      "track": "flow",
+      "agent": "claude-code",
+      "size": "S",
+      "effort": "low",
+      "deps": [
+        "docs/docs-roadmap-explorer"
+      ],
+      "summary": "早上合并之后刷新路线图的全局部分（now、decisions、log），登记没归属的 Codex 项目级 skills 改动",
+      "status": "done",
+      "updated": "2026-10-02",
+      "landed": "2026-10-02",
+      "gates": {
+        "check": "pass",
+        "e2e": "na",
+        "codeReview": "na",
+        "securityReview": "na",
+        "simplify": "na",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "docs/roadmap/roadmap.json"
+      ],
+      "prompt": [
+        "Folio: land docs/docs-roadmap-sync-point-3 (docs/roadmap/roadmap.json). Docs only. I approve landing it once the checks are green.",
+        "1. Read CLAUDE.md §7, every file in .agents/lanes/ and its lane file; run `but status` and `but pull --check`.",
+        "2. Run `pnpm roadmap doctor`; refresh `now` and `log` for whatever landed since, mark this lane done (`pnpm roadmap status docs/docs-roadmap-sync-point-3 done`) and commit both on the branch.",
+        "3. `pnpm check`, then `but land docs/docs-roadmap-sync-point-3 --yes`, `but status`, delete the lane file, check the Commits run on main, and republish the explorer (docs/roadmap/README.md, Publish). Stop at the first conflict or failure; never use --ai.",
+        "Report to me in Chinese."
+      ]
+    },
+    {
       "id": "refactor/core-sta-helper",
       "title": "合并 STA 辅助函数",
       "milestone": "M1",
@@ -2235,10 +2272,6 @@
       "why": "和首次使用都改 shell.spec.ts；合并后新电脑的 e2e 全绿"
     },
     {
-      "lane": "chore/core-webview-accelerator-keys",
-      "why": "先要 Claude Code 评审；首帧主题 stack 在它上面"
-    },
-    {
       "lane": "feat/core-first-frame-theme",
       "why": "紧跟快捷键 lane"
     },
@@ -2249,15 +2282,34 @@
     {
       "lane": "docs/docs-device-handoff-2026-10-01",
       "why": "留档；随时可以合并或丢弃"
+    },
+    {
+      "lane": "docs/docs-roadmap-sync-point-3",
+      "why": "只改路线图的全局部分；随时可以合并"
     }
   ],
   "decisions": [
+    {
+      "id": "ci-red-preview-pdf",
+      "when": "2026-10-02",
+      "item": "main 的 CI 红了：预览合并后 CI 上 PDF 预览失败（`e2e/tests/preview.spec.ts:162`，windows-2022 显示「Can't show this file」，本机通过）。要不要开修复 lane（建议 `fix/ui-preview-pdf-ci`，Opus 5.5 · high），还是先回退或跳过这个用例",
+      "type": "decide",
+      "state": "done",
+      "result": "开了 fix/ui-preview-pdf-ci（pdf.js legacy 构建，兼容 CI 上的 WebView2 131），已合并 ac766fe"
+    },
     {
       "id": "approve-landing",
       "when": "每个 lane 汇报后",
       "item": "批准合并（提示词里已写好「检查通过才合并」）",
       "type": "approve",
       "state": "recurring"
+    },
+    {
+      "id": "codex-project-skills",
+      "when": "现在",
+      "item": "工作区里有一组没提交、也没有 lane 文件的改动：仓库内的 `AGENTS.md`、`.agents/skills/`、`.codex/`、`.claude/skills/`，以及 CLAUDE.md 把 GitButler skill 改成项目级路径。要不要进仓库、由哪个 lane 提交，需要你定",
+      "type": "decide",
+      "state": "open"
     },
     {
       "id": "sync-point-3",
@@ -2349,6 +2401,16 @@
     }
   ],
   "looseEnds": [
+    {
+      "state": "open",
+      "item": "pdf.js 按 bundled: URL 加载自带的标准字体，被预览的 CSP 拒绝（控制台报错，退回系统字体）",
+      "lane": "feat/ui-preview"
+    },
+    {
+      "state": "done",
+      "item": "CI（windows-2022）上 PDF 预览失败，本机通过；main 的 CI 因此是红的",
+      "lane": "feat/ui-preview"
+    },
     {
       "state": "done",
       "item": "窗口命令失败的界面错误状态；data-theme 和首帧不闪白（Windows 主题）",
@@ -2479,6 +2541,12 @@
       "risk": "显示器不同导致 e2e 像素断言失败",
       "impact": "新电脑上 e2e 红，掩盖真正的问题",
       "mitigation": "像素比较一律用容差（fix/ui-e2e-subpixel-bounds）"
+    },
+    {
+      "level": "med",
+      "risk": "CI 测试机的 WebView2（131）比开发机（154）旧",
+      "impact": "本机全过、CI 才失败，main 变红",
+      "mitigation": "新的前端依赖按 WebView2 131 的 JS 支持挑构建；合并前看分支上的完整 CI"
     }
   ],
   "rules": [
@@ -2549,6 +2617,41 @@
       "at": "2026-10-02",
       "by": "Claude Code",
       "text": "路线图迁成数据 + 交互式路径图（docs/docs-roadmap-explorer）；资料库视图和本机设置标为已合并；设置界面解锁"
+    },
+    {
+      "at": "2026-10-02",
+      "by": "Claude Code",
+      "text": "合并：docs-roadmap-board → docs-roadmap-explorer → chore/build-commit-identity，fix/ui-recently-added-clock"
+    },
+    {
+      "at": "2026-10-02",
+      "by": "Claude Code",
+      "text": "同步点 3 检查：预览持有 app lock 收尾；导入评审修复已提交、等锁；登记未归属的 Codex 项目级 skills 改动"
+    },
+    {
+      "at": "2026-10-02",
+      "by": "Claude Code",
+      "text": "合并：feat/ui-search-palette；预览等 main 的 CI 后合并，app lock 释放"
+    },
+    {
+      "at": "2026-10-02",
+      "by": "Claude Code",
+      "text": "合并：feat/ui-first-run、feat/ui-preview；开工：WebView 快捷键评审、feat/ui-settings"
+    },
+    {
+      "at": "2026-10-02",
+      "by": "Claude Code",
+      "text": "main 的 CI 红：预览合并后 PDF e2e 在 windows-2022 上失败；合并队列暂停，修复 lane 等 Sirui 决定"
+    },
+    {
+      "at": "2026-10-02",
+      "by": "Claude Code",
+      "text": "合并：fix/ui-preview-pdf-ci（pdf.js legacy 构建）；等 main 的 CI run 37033529420"
+    },
+    {
+      "at": "2026-10-02",
+      "by": "Claude Code",
+      "text": "main 复绿（CI 37033529420、Commits 37033529409 通过，ac766fe）；之后合并了 WebView 快捷键（ff7d693）；合并队列恢复，一次一个"
     }
   ]
 }
