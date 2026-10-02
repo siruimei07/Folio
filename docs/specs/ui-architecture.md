@@ -709,9 +709,10 @@ each side validates shape and source before acting.
 
 **PDF: pdf.js 6 (`pdfjs-dist`).**
 
-- `PDFViewer` from `pdfjs-dist/web/pdf_viewer.mjs` with `EventBus` and `PDFLinkService`: lazy page
-  rendering, a text layer for selection and screen readers, zoom. No scripting manager (PDF
-  JavaScript never runs), `enableXfa: false`, annotations displayed but not editable.
+- `PDFViewer` from `pdfjs-dist/legacy/web/pdf_viewer.mjs` (the legacy build, §10.6) with
+  `EventBus` and `PDFLinkService`: lazy page rendering, a text layer for selection and screen
+  readers, zoom. No scripting manager (PDF JavaScript never runs), `enableXfa: false`, annotations
+  displayed but not editable.
 - **No fetches.** The frame's CSP has no `connect-src`. `getDocument({ data, useWorkerFetch: false,
   BinaryDataFactory })`: a small factory returns CMaps (needed for Chinese PDFs), standard fonts and
   wasm files from bundled, lazily imported modules (`import()` is `script-src 'self'`).
@@ -848,6 +849,14 @@ resolve_paths({ base: EntryRef; paths: string[] }) → (EntryRow | null)[]   // 
   the window. An e2e probe checks that a worker in the frame starts from `blob:` only, compiles
   WebAssembly, and reaches neither the network, IPC, the `folio-file` scheme, other scripts nor
   `eval`.
+  The frame loads pdf.js's **legacy build** (`pdfjs-dist/legacy/…`), since 2026-10-02: the modern
+  build of 6.3 calls JavaScript added after Chromium 131 (`Map.prototype.getOrInsertComputed`,
+  `Math.sumPrecise`, `Uint8Array.fromBase64`), so on WebView2 131, which CI's windows-2022 runner
+  has and an Evergreen runtime held back by policy can have, every PDF failed. The legacy build
+  brings them as polyfills; the same 300-page PDF's first page takes 1.38–1.40 s with it against
+  1.36–1.48 s with the modern build (debug build, WebView2 154), and the frame's pdf.js chunk grows
+  by 0.1 MB. A pdf.js error that is not a password or a damaged file is logged in the frame's
+  console.
 - **Maths** (§17 item 2): Temml with Cambria Math renders aligned environments, `pmatrix`,
   `cases`, `\mathbb`, sums, integrals and fractions on a real midterm review cleanly in both
   themes; KaTeX is not needed. `Temml-Local.css` comes along for `\cancel`, boxes and script

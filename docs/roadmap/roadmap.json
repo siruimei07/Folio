@@ -915,6 +915,44 @@
       }
     },
     {
+      "id": "fix/ui-preview-pdf-ci",
+      "title": "CI 上的 PDF 预览",
+      "milestone": "M1",
+      "phase": "m1-s3",
+      "track": "ui",
+      "agent": "claude-code",
+      "size": "S",
+      "effort": "high",
+      "deps": [
+        "feat/ui-preview"
+      ],
+      "summary": "预览合并后 main 的 CI 变红：runner 的 WebView2 是 131，pdf.js 6.3 的 modern 构建用了更新的 JS（getOrInsertComputed 等），每个 PDF 都打不开。改用 pdf.js 的 legacy 构建，并把 pdf.js 的错误打到 frame 的 console",
+      "status": "done",
+      "updated": "2026-10-02",
+      "landed": "2026-10-02",
+      "gates": {
+        "check": "pass",
+        "e2e": "pass",
+        "codeReview": "pass",
+        "securityReview": "na",
+        "simplify": "na",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "apps/desktop/src/preview/frame/pdf.ts",
+        "apps/desktop/src/preview/frame/pdfWorker.ts",
+        "apps/desktop/src/preview/frame/pdfjs.d.ts"
+      ],
+      "shared": [
+        "docs/specs/ui-architecture.md"
+      ],
+      "notes": [
+        "CI 诊断：runner 是 Chrome/Edg 131、1024×768；frame 在 ready 后 0.4 s 回报 failed: renderer",
+        "300 页 100 MB 扫描 PDF 首页：legacy 1.38–1.40 s，modern 1.36–1.48 s（本机 WebView2 154）"
+      ]
+    },
+    {
       "id": "feat/ui-preview",
       "title": "预览区",
       "milestone": "M1",

@@ -3,11 +3,16 @@
 // (no scripting manager) and XFA forms are off. Links show their address and never navigate
 // (links.ts); destinations inside the document still work through the link service. The window
 // draws the page and zoom pill from `pdfState` and sends `pdf` commands back.
+//
+// pdf.js's legacy build: its modern build calls JavaScript added after Chromium 131
+// (`Map.prototype.getOrInsertComputed`, `Math.sumPrecise`, `Uint8Array.fromBase64`), and an
+// Evergreen WebView2 can be that old (CI's windows-2022 runner has 131), so every PDF would fail.
+// The legacy build brings those as polyfills and costs no measurable time (§10.6).
 
-import 'pdfjs-dist/web/pdf_viewer.css';
+import 'pdfjs-dist/legacy/web/pdf_viewer.css';
 import './pdf.css';
 
-import * as pdfjs from 'pdfjs-dist';
+import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 import { PDF_ZOOM_MAX, PDF_ZOOM_MIN, type PdfCommand } from '../protocol';
 import { BUNDLED_URLS, BundledDataFactory } from './pdfData';
@@ -53,7 +58,7 @@ async function startWorker(): Promise<'worker' | 'main thread'> {
     return 'worker';
   } catch (error) {
     console.warn('pdf.js runs on the frame thread:', error);
-    await import('pdfjs-dist/build/pdf.worker.mjs');
+    await import('pdfjs-dist/legacy/build/pdf.worker.mjs');
     return 'main thread';
   }
 }
@@ -61,6 +66,9 @@ async function startWorker(): Promise<'worker' | 'main thread'> {
 function failureOf(error: unknown): RenderFailure {
   if (error instanceof pdfjs.PasswordException) return new RenderFailure('unsupported');
   if (error instanceof pdfjs.InvalidPDFException) return new RenderFailure('corrupt');
+  // The window shows the generic failure; the cause goes to the console (main.ts logs only
+  // errors that are not a RenderFailure).
+  console.error('pdf.js could not open the file', error);
   return new RenderFailure('renderer');
 }
 
@@ -86,7 +94,7 @@ export const renderPdf: RenderFile = async (root, { bytes }) => {
   Object.assign(globalThis, { pdfjsLib: pdfjs });
   // The worker parses the file while the viewer's module loads.
   const [{ EventBus, PDFLinkService, PDFViewer, LinkTarget }, { document: document_, thread }] = await Promise.all([
-    import('pdfjs-dist/web/pdf_viewer.mjs'),
+    import('pdfjs-dist/legacy/web/pdf_viewer.mjs'),
     open(bytes),
   ]);
   root.dataset.thread = thread;
