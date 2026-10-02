@@ -154,6 +154,14 @@ section[role="tabpanel"] { display: grid; gap: 20px; }
 .effort i { display: inline-flex; gap: 1.5px; }
 .effort i b { width: 3px; height: 9px; border-radius: 1px; background: var(--line-strong); }
 .effort i b.on { background: var(--accent); }
+.effort[data-m="sonnet"] i b.on { background: var(--down); }
+.tag.codex { font-weight: 600; color: var(--ink); background: var(--accent-soft); border-color: transparent; }
+.prompt + .prompt { margin-top: 12px; }
+.prompt h3 { margin: 0 0 4px; }
+.codex-desk { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.codex-desk > div { display: grid; gap: 6px; align-content: start; min-width: 0; }
+.codex-desk ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.codex-desk li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
 .btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line-strong); background: var(--surface); border-radius: var(--radius); padding: 3px 10px; font-size: var(--step--1); cursor: pointer; color: var(--ink); white-space: nowrap; }
 .btn:hover { border-color: var(--accent); }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
@@ -461,11 +469,18 @@ const DATA = /*@data*/null;
   const statusOf = (lane) => SHOWN.get(lane.id);
   /** Recommended model and reasoning effort, with a five-step meter. */
   function effortTag(lane) {
-    const level = effortFor(lane);
+    const codex = isCodex(lane);
+    const model = codex ? auditModelFor(lane) : modelFor(lane);
+    const name = modelName(D, model);
+    const level = codex ? auditEffortFor(lane) : effortFor(lane);
     const n = EFFORTS.indexOf(level) + 1;
-    return h('span', { class: 'effort', title: `推荐 ${D.meta.model}，推理强度 ${level}${lane.effort ? '' : '（按规模和轨道的默认值）'}` },
-      h('i', { 'aria-hidden': 'true' }, EFFORTS.map((_, i) => h('b', { class: i < n ? 'on' : null }))), `${D.meta.model} · ${level}`);
+    const own = codex ? lane.auditModel || lane.auditEffort : lane.model || lane.effort;
+    const title = `${codex ? 'Codex 实现；Claude Code 快速审计推荐' : '推荐'} ${name}，推理强度 ${level}${own ? '' : '（按规模和轨道的默认值）'}`;
+    return h('span', { class: 'effort', 'data-m': model, title },
+      h('i', { 'aria-hidden': 'true' }, EFFORTS.map((_, i) => h('b', { class: i < n ? 'on' : null }))), `${codex ? '审计 · ' : ''}${name} · ${level}`);
   }
+  /** Marks a lane Codex builds; a Claude Code session audits it. */
+  const codexTag = (lane) => (isCodex(lane) ? h('span', { class: 'tag codex', title: 'Codex 做后端实现，Claude Code 快速审计后合并' }, 'Codex') : null);
   const trackTag = (id) => h('span', { class: 'track', 'data-t': id }, TRACK.get(id)?.label ?? id);
   const agentName = (id) => AGENT.get(id)?.label ?? id;
   const phaseLabel = (id) => PHASE.get(id)?.label ?? id;
@@ -508,15 +523,25 @@ const DATA = /*@data*/null;
       fail();
     }
   }
-  function promptBlock(lane) {
-    const text = composePrompt(D, lane);
-    if (!text) return null;
+  function promptCard(text, heading, hint, button) {
     const pre = h('pre', {}, text);
     return h('div', { class: 'prompt' },
+      heading ? h('h3', {}, heading) : null,
       h('div', { class: 'row', style: 'justify-content: space-between; margin-bottom: 6px' },
-        h('span', { class: 'row small muted' }, lane.prompt ? '新开 session，选' : '通用开工提示词；新开 session，选', effortTag(lane), '，再粘贴'),
-        h('button', { type: 'button', class: 'btn primary', onclick: () => copy(text, pre) }, '复制提示词')),
+        h('span', { class: 'row small muted' }, ...hint),
+        h('button', { type: 'button', class: 'btn primary', onclick: () => copy(text, pre) }, button)),
       pre);
+  }
+  function promptBlock(lane) {
+    const codex = codexPrompts(D, lane);
+    if (codex) {
+      return h('div', {},
+        codex.handoff ? promptCard(codex.handoff, '交给 Codex', ['完整交接：新开 Codex session，粘贴；它做完停在 review'], '复制 Codex 提示词') : null,
+        promptCard(codex.audit, 'Claude 快速审计', ['Codex 到 review 后新开 Claude Code session，选', effortTag(lane), '，再粘贴'], '复制审计提示词'));
+    }
+    const text = composePrompt(D, lane);
+    if (!text) return null;
+    return promptCard(text, null, [lane.prompt ? '新开 session，选' : '通用开工提示词；新开 session，选', effortTag(lane), '，再粘贴'], '复制提示词');
   }
   const tip = $('#tip');
   function showTip(event, lines) {
@@ -633,6 +658,7 @@ const DATA = /*@data*/null;
       h('div', { class: 'panel' },
         h('header', {}, h('h2', {}, '现在可以开', h('small', {}, '依赖都合并了')), h('p', {}, '⏳ 表示依赖已满足，但有理由先等一等')),
         h('div', { class: 'cards' }, D.lanes.filter((l) => ['ready', 'queued'].includes(statusOf(l))).sort(byStatus).map(laneCard))),
+      codexDesk(),
       h('div', { class: 'grid-2' },
         h('div', { class: 'panel' },
           h('header', {}, h('h2', {}, '关键路径'), h('p', {}, `到 ${FOCUS_GATE?.title ?? ''} 最长的一串未完成工作（按规模加权）`)),
@@ -641,6 +667,26 @@ const DATA = /*@data*/null;
           h('header', {}, h('h2', {}, '最近更新')),
           h('ul', { class: 'log' }, [...D.log].reverse().slice(0, 6).map((entry) => h('li', {}, h('time', {}, entry.at), entry.text, h('span', { class: 'muted' }, ` · ${entry.by}`)))))));
   }
+  /** Codex lanes by what they need next: a handoff, Codex at work, or the Claude audit. */
+  function codexDesk() {
+    const open = D.lanes.filter((l) => codexPrompts(D, l)).map((lane) => ({ lane, p: codexPrompts(D, lane), st: statusOf(lane) }));
+    const item = ({ lane, st }, text, label) => h('li', {},
+      h('span', { class: 'mark', 'data-s': st }), laneLink(lane),
+      text ? h('button', { type: 'button', class: 'btn', onclick: () => copy(text) }, label) : null);
+    const column = (title, hint, rows, count = rows.length) => h('div', {},
+      h('b', {}, `${title} ${count}`), h('span', { class: 'small muted' }, hint),
+      rows.length ? h('ul', {}, rows) : h('span', { class: 'small muted' }, '没有'));
+    const later = open.filter((x) => x.st === 'locked');
+    const byMilestone = D.milestones.map((m) => [m.id, later.filter((x) => x.lane.milestone === m.id).length]).filter(([, n]) => n);
+    return h('div', { class: 'panel' },
+      h('header', {}, h('h2', {}, 'Codex 工作台', h('small', {}, `${open.length} 个后端 lane 由 Codex 做`)),
+        h('p', {}, 'Codex 拿完整提示词做到 review；Claude Code 再用短提示词审计、合并。Rust 名额和 Claude 合计。')),
+      h('div', { class: 'codex-desk' },
+        column('可以交给 Codex', '依赖都合并了', open.filter((x) => ['ready', 'queued'].includes(x.st)).map((x) => item(x, x.p.handoff, '复制 Codex 提示词'))),
+        column('Codex 在做', '做完停在 review', open.filter((x) => x.st === 'wip' && x.p.handoff).map((x) => item(x, null))),
+        column('等 Claude 审计', '审计通过就合并', open.filter((x) => x.st === 'review' || (x.st === 'wip' && !x.p.handoff)).map((x) => item(x, x.p.audit, '复制审计提示词'))),
+        column('之后', '依赖还没合并', byMilestone.map(([m, n]) => h('li', { class: 'small' }, `${MILESTONE.get(m).short}：${n} 个`)), later.length)));
+  }
   function queueList() {
     return h('ol', { class: 'queue' }, D.landingQueue.map((entry) => {
       const lane = LANES.get(entry.lane);
@@ -648,7 +694,7 @@ const DATA = /*@data*/null;
       return h('li', {},
         h('div', { style: 'display: grid; gap: 3px; min-width: 0' },
           h('div', { class: 'row' }, pill(statusOf(lane)), laneLink(lane), gatesRow(lane)),
-          h('div', { class: 'row' }, h('span', { class: 'id' }, lane.id), effortTag(lane)),
+          h('div', { class: 'row' }, h('span', { class: 'id' }, lane.id), codexTag(lane), effortTag(lane)),
           h('span', { class: 'why' }, rich(entry.why))),
         h('div', { class: 'actions' },
           text ? h('button', { type: 'button', class: 'btn', onclick: () => copy(text) }, '复制提示词') : null,
@@ -685,7 +731,7 @@ const DATA = /*@data*/null;
     return h('button', { type: 'button', class: 'card', onclick: () => openLane(lane.id) },
       h('div', { class: 'row' }, pill(st), h('span', { class: 'title' }, lane.title)),
       h('span', { class: 'id' }, lane.id),
-      h('div', { class: 'row' }, trackTag(lane.track), h('span', { class: 'tag' }, lane.size), lane.status !== 'done' ? effortTag(lane) : null, h('span', { class: 'small muted' }, `${agentName(lane.agent)} · ${phaseLabel(lane.phase)}`)),
+      h('div', { class: 'row' }, trackTag(lane.track), h('span', { class: 'tag' }, lane.size), lane.status !== 'done' ? codexTag(lane) : null, lane.status !== 'done' ? effortTag(lane) : null, h('span', { class: 'small muted' }, `${agentName(lane.agent)} · ${phaseLabel(lane.phase)}`)),
       lane.next || lane.hold ? h('span', { class: 'next' }, lane.hold ? ['等：', rich(lane.hold)] : rich(lane.next)) : h('span', { class: 'next' }, rich(lane.summary)),
       gatesRow(lane));
   }
@@ -827,7 +873,7 @@ const DATA = /*@data*/null;
       nodeShape(lane, st),
       s('text', { class: 'label', x: 15, y: -1 }, title),
       s('text', { class: 'sub', x: 15, y: 13 }, `${lane.size} · ${agentName(lane.agent)}`));
-      tipFor(node, () => [lane.title, `${DISPLAY[st].label} · ${lane.id}`, `${D.meta.model} · ${effortFor(lane)}`, lane.next ?? lane.hold ?? lane.summary]);
+      tipFor(node, () => [lane.title, `${DISPLAY[st].label} · ${lane.id}`, isCodex(lane) ? `Codex 实现 · Claude 审计 ${modelName(D, auditModelFor(lane))} · ${auditEffortFor(lane)}` : `${modelName(D, modelFor(lane))} · ${effortFor(lane)}`, lane.next ?? lane.hold ?? lane.summary]);
       svg.append(node);
     }
     if (sel) svg.classList.add('has-sel');
@@ -1005,7 +1051,7 @@ const DATA = /*@data*/null;
         statusBar(lanes),
         h('div', {}, h('b', { class: 'small' }, '验收'), h('ul', {}, m.acceptance.map((a) => h('li', {}, a)))),
         h('div', { class: 'scroll-x' }, h('table', {},
-          h('thead', {}, h('tr', {}, ['状态', 'Lane', '波次', '轨道', '谁', '规模', '推理强度', '更新'].map((x) => h('th', {}, x)))),
+          h('thead', {}, h('tr', {}, ['状态', 'Lane', '波次', '轨道', '谁', '规模', '模型 · 推理强度', '更新'].map((x) => h('th', {}, x)))),
           h('tbody', {}, lanes.map((l) => h('tr', { class: 'clickrow', onclick: () => openLane(l.id) },
             h('td', {}, pill(statusOf(l))),
             h('td', {}, laneLink(l), h('div', { class: 'id' }, l.id)),
@@ -1077,6 +1123,22 @@ const DATA = /*@data*/null;
   }
 
   // ---------- For agents ----------
+  /** How lanes pick Opus or Sonnet and an effort (lib.mjs modelFor, effortFor), with today's split. */
+  function renderModels() {
+    const open = D.lanes.filter((l) => !['done', 'dropped'].includes(l.status) && l.kind !== 'gate');
+    const count = (model) => open.filter((l) => (isCodex(l) ? auditModelFor(l) : modelFor(l)) === model).length;
+    const opus = modelName(D, 'opus');
+    const sonnet = modelName(D, 'sonnet');
+    return h('div', { class: 'panel' },
+      h('header', {}, h('h2', {}, '模型和推理强度'),
+        h('p', {}, `没完成的 lane：${opus} ${count('opus')} 个，${sonnet} ${count('sonnet')} 个（Codex lane 按 Claude 审计算）`)),
+      h('ul', { class: 'steps small' },
+        h('li', {}, `${opus}（默认）：Rust 核心、验收关卡、L 规模、推理强度 xhigh 及以上，以及 M 规模的界面和规格（要做设计评审、无障碍、取舍）`),
+        h('li', {}, `${sonnet}（价格是 Opus 的一半）：S 规模的界面、测试、文档，以及只负责合并的 lane；Codex 小 lane 的 Claude 审计`),
+        h('li', {}, '推理强度：S medium、M high、L xhigh；Rust 核心高一档，docs/ 低一档；只合并的 lane 用 low。两个模型都有 low 到 max 五档'),
+        h('li', {}, 'lane 可以用 model / effort（Codex lane 用 auditModel / auditEffort）覆盖默认值；开 session 时按卡片上的标签选')));
+  }
+
   function renderMaintain(root) {
     const cmd = (code, note) => h('div', { class: 'cmd' }, h('code', {}, code), h('button', { type: 'button', class: 'btn', onclick: () => copy(code) }, '复制'), h('span', {}, note));
     const promptPre = (lines) => h('pre', {}, lines.join('\n'));
@@ -1102,6 +1164,7 @@ const DATA = /*@data*/null;
               h('li', {}, 'pnpm roadmap build'),
               h('li', {}, `用 Artifact 工具发布 docs/roadmap/dist/explorer.html${D.meta.explorer ? `，url = ${D.meta.explorer}` : ''}（先 read 一次这个 url）`)),
             D.meta.explorer ? h('p', { class: 'small' }, '当前地址：', h('a', { href: D.meta.explorer, target: '_blank', rel: 'noopener' }, D.meta.explorer)) : null),
+          renderModels(),
           h('div', { class: 'panel' },
             h('header', {}, h('h2', {}, '设备')),
             h('div', { style: 'display: grid; gap: 10px' }, D.runtime.devices.map((d) => h('div', { class: 'small' },
@@ -1112,7 +1175,14 @@ const DATA = /*@data*/null;
               h('div', { class: 'muted' }, d.notes))))))),
       h('div', { class: 'grid-2' },
         h('div', { class: 'panel' }, h('header', {}, h('h2', {}, '通用开工提示词'), h('p', {}, '没写专用提示词的 lane 用它，{lane} 等由页面填好')), promptPre(D.prompts.start)),
-        h('div', { class: 'panel' }, h('header', {}, h('h2', {}, '给 Codex 的开头'), h('p', {}, 'Codex 的 planned lane 会自动加在提示词前面')), promptPre(D.prompts.codexPreamble))),
+        h('div', { class: 'panel' }, h('header', {}, h('h2', {}, '交给 Codex'), h('p', {}, '标着 Codex 的后端 lane 用它；lane 自己的细节填在 {extra}')), promptPre(D.prompts.codexHandoff))),
+      h('div', { class: 'grid-2' },
+        h('div', { class: 'panel' }, h('header', {}, h('h2', {}, 'Claude 快速审计'), h('p', {}, '相信 Codex：一次 /code-review，涉及特权层加 /security-review，不重跑 /simplify')), promptPre(D.prompts.codexAudit)),
+        h('div', { class: 'panel' }, h('header', {}, h('h2', {}, 'Codex 命令')),
+          h('div', { class: 'cmds' },
+            cmd('pnpm roadmap prompt feat/core-object-store --codex', '交给 Codex 的完整提示词'),
+            cmd('pnpm roadmap prompt feat/core-object-store --audit', 'Claude Code 快速审计的提示词'),
+            cmd('pnpm roadmap next', '「Codex」一节：现在能交给 Codex 的、等审计的')))),
       h('div', { class: 'panel' },
         h('header', {}, h('h2', {}, '更新记录')),
         h('ul', { class: 'log' }, [...D.log].reverse().map((entry) => h('li', {}, h('time', {}, entry.at), entry.text, h('span', { class: 'muted' }, ` · ${entry.by}`))))));
@@ -1138,7 +1208,7 @@ const DATA = /*@data*/null;
     const idCode = h('code', {}, lane.id);
     drawer.replaceChildren(
       h('header', {},
-        h('div', { class: 'row' }, pill(st), CRIT.has(id) ? h('span', { class: 'tag' }, '关键路径') : null, lane.kind === 'gate' ? h('span', { class: 'tag' }, '验收关') : null),
+        h('div', { class: 'row' }, pill(st), codexTag(lane), CRIT.has(id) ? h('span', { class: 'tag' }, '关键路径') : null, lane.kind === 'gate' ? h('span', { class: 'tag' }, '验收关') : null),
         h('h2', { id: 'drawer-title', tabindex: '-1' }, lane.title),
         h('div', { class: 'row' }, idCode, lane.kind !== 'gate' ? h('button', { type: 'button', class: 'btn', onclick: () => copy(lane.id, idCode) }, '复制分支名') : null),
         h('div', { class: 'row small muted' },

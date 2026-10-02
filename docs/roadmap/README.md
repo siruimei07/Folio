@@ -40,6 +40,7 @@ can start and what needs Sirui, and `pnpm roadmap doctor` to compare the data wi
 pnpm roadmap next                         where things stand
 pnpm roadmap show <lane>                  one lane: what it waits for and unblocks, gates, paths
 pnpm roadmap prompt <lane>                its copyable prompt (custom, template or the generic start prompt)
+      [--codex | --audit]                 a Codex lane: the full handoff to Codex, or the short Claude Code audit
 pnpm roadmap status <lane> <status>       done | review | wip | planned | dropped
       [--next "…"] [--hold "…" | --no-hold] [--landed YYYY-MM-DD]
 pnpm roadmap gate <lane> <gate>=<state>…  gates check e2e codeReview securityReview simplify designCritique a11y;
@@ -55,7 +56,7 @@ browser pane opens it with `preview_start roadmap`.
 
 ## Data model
 
-Top level: `meta`, `now` (stage, focus milestone, summary lines), `limits` (session caps),
+Top level: `meta` (with `models`, the display names of `opus` and `sonnet`), `now` (stage, focus milestone, summary lines), `limits` (session caps),
 `runtime` (app lock holder, dev server, devices), `agents`, `tracks` (graph rows), `milestones`,
 `phases` (graph columns, in order; `kind` is `wave`, `sync` or `gate`), `lanes`,
 `landingQueue` (ordered `{ lane, why }`), `decisions` (`approve | decide | manual`,
@@ -70,7 +71,9 @@ A lane, in canonical field order (`?` = optional):
 | `kind?` | `"gate"` for an acceptance gate |
 | `title`, `summary` | Chinese, for Sirui |
 | `milestone`, `phase`, `track`, `agent`, `reviewer?`, `size` | Placement; `size` is S, M or L (critical-path weight 1, 2, 3) |
-| `effort?` | Reasoning effort to run the lane's session at with `meta.model` (`low`, `medium`, `high`, `xhigh`, `max`). Without it: S medium, M high, L xhigh, one step up for `core`, one down for `docs/` lanes. Set it when the work is lighter (landing only) or heavier (formats, crash recovery, security) than its size says |
+| `model?` | Model to run the lane's session on: `opus` (Opus 5.5) or `sonnet` (Sonnet 5.5, half the price). Without it: Opus for gates, `core`, size L and effort `xhigh` or above; Sonnet for size S and landing-only lanes (`prompt.template` `land`); Opus otherwise (M screens and specs need design, accessibility and trade-off judgment) |
+| `effort?` | Reasoning effort for that session (`low`, `medium`, `high`, `xhigh`, `max`; both models take all five). Without it: S medium, M high, L xhigh, one step up for `core`, one down for `docs/` lanes. Set it when the work is lighter (landing only) or heavier (formats, crash recovery, security) than its size says |
+| `auditModel?`, `auditEffort?` | Codex lanes only: model and effort for the Claude Code audit. Without them: S Sonnet · low, M and L Opus · medium |
 | `deps` | Lanes that must land before this one can start; drives ready / locked |
 | `landAfter?` | Landing order only (no code dependency) |
 | `status` | Stored: `done`, `review`, `wip`, `planned`, `dropped`. A planned lane shows as ready when every dep is done, queued when it also has `hold`, else locked |
@@ -80,10 +83,18 @@ A lane, in canonical field order (`?` = optional):
 | `gates?` | Check results: `pass`, `partial`, `fail`, `todo`, `na` |
 | `owns?`, `shared?` | Paths (globs allowed); the explorer's ownership board flags paths two active lanes touch |
 | `notes?`, `links?` | Notes and doc paths (relative to the repo root) |
-| `prompt?` | Lines, or `{ "template": "land" | "reviewCodex" | "landRoadmap", "extra": [lines] }`. Without it a planned lane gets `prompts.start`; a planned Codex lane also gets `prompts.codexPreamble` |
+| `prompt?` | Lines, or `{ "template": "<name in prompts>", "extra": [lines] }`. Without it a planned lane gets `prompts.start`. A Codex lane (`agent: "codex"`) gets two prompts instead: `prompts.codexHandoff` (the whole lane for Codex, with its `{ "template": "codexHandoff", "extra" }` details) until it reaches review, and `prompts.codexAudit` (the short Claude Code audit). Any other template on a Codex lane means Claude Code has taken it over and is its audit (`reviewCodex` for feat/core-import) |
 
-Template placeholders: `{lane}`, `{laneFile}` (`/` → `--`), `{taskDir}` (`/` → `-`),
-`{milestone}`, `{phase}`, `{summary}`, and a line `{extra}`.
+Template placeholders: `{lane}`, `{title}`, `{laneFile}` (`/` → `--`), `{taskDir}` (`/` → `-`),
+`{milestone}`, `{phase}`, `{summary}`, `{deps}`, `{owns}`, `{shared}`, `{links}`, `{model}` and
+`{effort}` (the lane's session), `{auditModel}` and `{auditEffort}` (a Codex lane's audit), and a
+line `{extra}`.
+
+Codex lanes: Codex does backend Rust only (`AGENTS.md`), runs its own checks, code review and
+simplify pass, writes `folio-agent-work/tasks/<lane>/claude-review-handoff.md` and stops at
+review. Claude Code then audits quickly (Sirui, 2026-10-02): one `/code-review`,
+`/security-review` only for the privileged layer, IPC or unsafe code, no second `/simplify`.
+A lane that regenerates the bindings and the fake shell stays with Claude Code.
 
 ## Publish
 

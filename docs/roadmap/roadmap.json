@@ -5,18 +5,21 @@
     "owner": "Sirui",
     "repo": "https://github.com/siruimei07/Folio",
     "explorer": "https://claude.ai/artifact/Mv1f9eXfrkYTbAs7fqQVDC",
-    "updated": "2026-10-02T13:05-04:00",
+    "updated": "2026-10-02T15:10-04:00",
     "updatedBy": "Claude Code",
-    "model": "Opus 5.5"
+    "models": {
+      "opus": "Opus 5.5",
+      "sonnet": "Sonnet 5.5"
+    }
   },
   "now": {
-    "stage": "M1 同步点 3 · main 复绿，可以逐个合并",
+    "stage": "M1 · 后端已齐，只剩导入界面和收尾",
     "focus": "M1",
     "summary": [
-      "10-02 已合并：路径图 + 提交身份检查、「最近添加」时钟修复、`Ctrl+K` 搜索、首次使用、预览区、PDF 预览的 CI 修复、WebView 快捷键。第 3 波的前端全部完成。",
-      "进行中：首帧主题（快捷键已合并，它排在下一个）；导入等跑完整检查，再做 /security-review 和 /simplify；第 4 波的设置界面在评审。",
-      "main 复绿：`fix/ui-preview-pdf-ci`（pdf.js legacy 构建，兼容 CI 上的 WebView2 131）合并后，CI run 37033529420 和 Commits run 37033529409 都通过（ac766fe）。合并恢复，一次一个，每个等上一个在 main 上的 CI 跑完。等你批准的：e2e 亚像素容差、换电脑交接、本路线图刷新。",
-      "工作区里仍有没登记 lane 的 Codex 项目级 skills 改动（`AGENTS.md`、`.agents/skills/`、`.codex/`、`.claude/skills/`）和 CLAUDE.md 两处改动，见「需要你」。"
+      "10-02 已合并：路径图 + 提交身份检查、「最近添加」时钟修复、`Ctrl+K` 搜索、首次使用、预览区、PDF 预览的 CI 修复、WebView 快捷键、设置界面、设置 e2e 的长路径（da1c486）、e2e 亚像素容差（1688239）、首帧主题（a417dd9）、窗口主题（7c88c0b）、导入后端 `feat/core-import`（20c1d58）。第 3 波的后端全部合并，M1 只剩导入界面和验收。",
+      "10-02 换电脑交接也已合并（8c193ff、25f29f3、9c84d3e）。导入合并后 main 的完整 CI run 37055180308 还在跑（Commits run 37055180557 通过）；上一次完整 CI（窗口主题 run 37051369268）是绿的。合并一次一个，每个等上一个在 main 上的 CI 跑完，所以等 37055180308 出结果再合并下一个。",
+      "可以开始：导入界面 `feat/ui-import`（Opus 5.5 · high，M1 关键路径）、`feat/core-discard-move`（hunk 已和导入隔开）、STA 辅助函数（Codex，导入已合并）。合并队列里剩两个路线图 lane（Codex 交接、换电脑刷新，`--whole-stack` 一起合并；同步点 3 已合并为 e84ccd0）。",
+      "Codex 的项目级 skills（`AGENTS.md`、`.agents/skills/`、`.codex/`、`.claude/skills/`）和 CLAUDE.md 里的两处改动不进仓库，由 Codex 管理：任何 lane 都不提交、不丢弃。"
     ]
   },
   "limits": {
@@ -35,8 +38,8 @@
         "since": "2026-10-02",
         "path": "D:/CS Projects Repositories/Files & Backup/Folio",
         "toolchain": "Node 24.19.0 · pnpm 11.25.0 · Rust 1.97.1 · VS 2022 Build Tools 17.14 · WebView2 154.0.4258.48 · GitButler 0.22.3 · Python 3.14.7 · Claude Code 2.1.286",
-        "verified": "2026-10-02：组合工作区 pnpm check 通过；pnpm e2e 36/37（修复后 shell spec 12/12）",
-        "notes": "路径含空格和 &：脚本里一律加引号。系统代码页 GBK，文件只用 Write/Edit 写（CLAUDE.md §5）。Codex 还没装。"
+        "verified": "2026-10-02：组合工作区 pnpm check 通过（web 580、Rust 547），pnpm e2e 40/40（窗口主题 lane 跑的）",
+        "notes": "路径含空格和 &：脚本里一律加引号。系统代码页 GBK，文件只用 Write/Edit 写（CLAUDE.md §5）。Codex 已装；能推送到 GitHub。"
       },
       {
         "id": "g16-strix",
@@ -893,9 +896,9 @@
         "feat/ui-first-run"
       ],
       "summary": "新电脑（3440×1440，100%）上窄工具栏量出来是 40.995 px，shell e2e 每次都失败；边界框比较改成 0.05 px 容差",
-      "status": "review",
+      "status": "done",
       "updated": "2026-10-02",
-      "next": "等你批准合并（在首次使用之后，两者都改 shell.spec.ts）",
+      "landed": "2026-10-02",
       "gates": {
         "check": "pass",
         "e2e": "pass",
@@ -1347,9 +1350,9 @@
       "effort": "low",
       "deps": [],
       "summary": "旧电脑的交接文档和不进 Git 的记录（lane 文件、评审交接、上级目录说明、Claude 记忆）；新电脑的恢复记录",
-      "status": "review",
+      "status": "done",
       "updated": "2026-10-02",
-      "next": "新电脑已恢复完毕：可以合并（留档）或丢弃。CLAUDE.md §1 的新路径在这个 lane 里",
+      "landed": "2026-10-02",
       "gates": {
         "check": "pass",
         "e2e": "na",
@@ -1414,6 +1417,84 @@
       ]
     },
     {
+      "id": "docs/docs-roadmap-codex-handoff",
+      "title": "Codex 交接与快速审计提示词",
+      "milestone": "M1",
+      "phase": "m1-s3",
+      "track": "flow",
+      "agent": "claude-code",
+      "size": "S",
+      "effort": "low",
+      "deps": [
+        "docs/docs-roadmap-sync-point-3"
+      ],
+      "summary": "标出 Codex 做的后端 lane；每个给「交给 Codex」的完整提示词和「Claude 快速审计」的短提示词（CLI、路径图页面、规则）",
+      "status": "review",
+      "updated": "2026-10-02",
+      "next": "叠在 docs/docs-roadmap-sync-point-3 上，和它一起合并（--whole-stack）",
+      "gates": {
+        "check": "pass",
+        "e2e": "na",
+        "codeReview": "na",
+        "securityReview": "na",
+        "simplify": "na",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "docs/roadmap/tools/**",
+        "docs/roadmap/index.html",
+        "docs/roadmap/README.md"
+      ],
+      "shared": [
+        "docs/roadmap/roadmap.json"
+      ],
+      "prompt": [
+        "Folio: land the stack docs/docs-roadmap-sync-point-3 → docs/docs-roadmap-codex-handoff (docs/roadmap/). Docs and roadmap tooling only. I approve landing it once the checks are green.",
+        "1. Read CLAUDE.md §7, every file in .agents/lanes/ and both lane files; run `but status` and `but pull --check`.",
+        "2. Run `pnpm roadmap doctor`; refresh `now` and `log` for whatever landed since, mark both lanes done and commit that on the top branch.",
+        "3. `pnpm check`, then `but land docs/docs-roadmap-codex-handoff --whole-stack --yes`, `but status`, delete both lane files, check the CI and Commits runs on main, and republish the explorer (docs/roadmap/README.md, Publish). Stop at the first conflict or failure; never use --ai.",
+        "Report to me in Chinese."
+      ]
+    },
+    {
+      "id": "docs/docs-roadmap-device-refresh",
+      "title": "换电脑后的路线图刷新",
+      "milestone": "M1",
+      "phase": "m1-s3",
+      "track": "flow",
+      "agent": "claude-code",
+      "size": "S",
+      "effort": "low",
+      "deps": [
+        "docs/docs-roadmap-codex-handoff"
+      ],
+      "summary": "换电脑后对齐路线图的全局部分：只有 Codex 在做导入、补上窗口主题的合并位置、关掉已办完的事项，并记下换电脑交接已合并、main 是绿的",
+      "status": "review",
+      "updated": "2026-10-02",
+      "next": "叠在 Codex 交接上；三个路线图 lane 一起合并：but land docs/docs-roadmap-device-refresh --whole-stack",
+      "gates": {
+        "check": "pass",
+        "e2e": "na",
+        "codeReview": "na",
+        "securityReview": "na",
+        "simplify": "na",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [],
+      "shared": [
+        "docs/roadmap/roadmap.json"
+      ],
+      "prompt": [
+        "Folio: land the stack docs/docs-roadmap-sync-point-3 → docs/docs-roadmap-codex-handoff → docs/docs-roadmap-device-refresh (docs/roadmap/). Docs and roadmap tooling only. I approve landing it once the checks are green.",
+        "1. Read CLAUDE.md §7, every file in .agents/lanes/ and the three lane files; run `but status` and `but pull --check`.",
+        "2. Run `pnpm roadmap doctor`; refresh `now` and `log` for whatever landed since, mark the three lanes done and commit that on the top branch.",
+        "3. `pnpm check`, then `but land docs/docs-roadmap-device-refresh --whole-stack --yes`, `but status`, delete the three lane files, check the CI and Commits runs on main, and republish the explorer (docs/roadmap/README.md, Publish). Stop at the first conflict or failure; never use --ai.",
+        "Report to me in Chinese."
+      ]
+    },
+    {
       "id": "refactor/core-sta-helper",
       "title": "合并 STA 辅助函数",
       "milestone": "M1",
@@ -1436,11 +1517,13 @@
       "links": [
         "docs/specs/windows-adapter.md"
       ],
-      "prompt": [
-        "Folio lane refactor/core-sta-helper (docs/roadmap/roadmap.json, M1 wave 3). Small. Start only when fewer than three sessions are building Rust (count the lane files in .agents/lanes/) and after feat/core-import has landed.",
-        "Two near-identical helpers run work on a single-threaded apartment: `in_sta` in crates/folio-app/src/dialogs.rs and `in_apartment` in folio-core's win::recycle. Keep one, in folio-core's win module, and use it from both, without changing behaviour: the CI fix's rule (docs/specs/windows-adapter.md §4: hold the process MTA so a teardown never unloads a cached WinRT factory) and the Recycle Bin's COM threading stay as they are. The commit \"fix(app): keep COM initialized so cached WinRT factories stay valid\" explains the rule.",
-        "Write the lane file and set the roadmap entry to wip (`pnpm roadmap status refactor/core-sta-helper wip`). Own the two files and the shared helper. Tests for both callers, `pnpm check` and `pnpm e2e` with the app lock (CLAUDE.md §7.5), /code-review, /simplify; set the entry to review and report to me in Chinese. After landing, check that the CI run on main (Windows Server 2022, where the crash showed) is green."
-      ]
+      "prompt": {
+        "template": "codexHandoff",
+        "extra": [
+          "Start after feat/core-import has landed: it edits the dialog code too.",
+          "Two near-identical helpers run work on a single-threaded apartment: `in_sta` in crates/folio-app/src/dialogs.rs and `in_apartment` in folio-core's win::recycle. Keep one, in folio-core's win module, and use it from both without changing behaviour: the CI fix's rule (docs/specs/windows-adapter.md §4: hold the process MTA so a teardown never unloads a cached WinRT factory) and the Recycle Bin's COM threading stay as they are. The commit \"fix(app): keep COM initialized so cached WinRT factories stay valid\" explains the rule. Tests for both callers. After landing, the CI run on main (Windows Server 2022, where the crash showed) must stay green."
+        ]
+      }
     },
     {
       "id": "feat/core-discard-move",
@@ -2268,24 +2351,12 @@
   ],
   "landingQueue": [
     {
-      "lane": "fix/ui-e2e-subpixel-bounds",
-      "why": "和首次使用都改 shell.spec.ts；合并后新电脑的 e2e 全绿"
+      "lane": "docs/docs-roadmap-codex-handoff",
+      "why": "叠在路线图刷新上，一起合并；只改路线图和它的工具"
     },
     {
-      "lane": "feat/core-first-frame-theme",
-      "why": "紧跟快捷键 lane"
-    },
-    {
-      "lane": "feat/core-import",
-      "why": "修完评审问题、再做 /security-review 和 /simplify；合并后导入界面解锁"
-    },
-    {
-      "lane": "docs/docs-device-handoff-2026-10-01",
-      "why": "留档；随时可以合并或丢弃"
-    },
-    {
-      "lane": "docs/docs-roadmap-sync-point-3",
-      "why": "只改路线图的全局部分；随时可以合并"
+      "lane": "docs/docs-roadmap-device-refresh",
+      "why": "叠在 Codex 交接上：三个路线图 lane 从这里 --whole-stack 一起合并"
     }
   ],
   "decisions": [
@@ -2309,12 +2380,13 @@
       "when": "现在",
       "item": "工作区里有一组没提交、也没有 lane 文件的改动：仓库内的 `AGENTS.md`、`.agents/skills/`、`.codex/`、`.claude/skills/`，以及 CLAUDE.md 把 GitButler skill 改成项目级路径。要不要进仓库、由哪个 lane 提交，需要你定",
       "type": "decide",
-      "state": "open"
+      "state": "done",
+      "result": "不进仓库，由 Codex 管理（10-02）。Claude Code 只记录：任何 lane 都不提交、不丢弃、不改这些文件和 CLAUDE.md 里的这两处改动"
     },
     {
       "id": "sync-point-3",
       "when": "现在",
-      "item": "批准同步点 3：按「合并队列」的顺序一次合并一个",
+      "item": "同步点 3 只剩两个路线图 lane（Codex 交接、换电脑刷新）：批准用 --whole-stack 一起合并（导入和同步点 3 已合并）",
       "type": "approve",
       "state": "open"
     },
@@ -2331,21 +2403,24 @@
       "when": "合并前",
       "item": "在这台电脑上登录 GitHub：but land 要推送（Git Credential Manager 第一次推送时会弹出登录），GitButler 的 forge 认证在 GitButler 设置里",
       "type": "manual",
-      "state": "open"
+      "state": "done",
+      "result": "10-02 已从这台电脑合并并推送（WebView 快捷键 ff7d693、设置界面 a306072）"
     },
     {
       "id": "codex-device",
       "when": "下一个 Codex lane 之前",
       "item": "这台电脑还没装 Codex 和它的 skills / GitButler 指南（AGENTS.md 已改成新路径）",
       "type": "manual",
-      "state": "open"
+      "state": "done",
+      "result": "Codex 已装，10-02 起接手 feat/core-import；它的项目级 skills 还没提交，见上一条"
     },
     {
       "id": "icloud-upgrade",
       "when": "越早越好",
       "item": "把 iCloud for Windows 升到 Microsoft Store 的当前版本（ADR-0003 行动项 5）",
       "type": "manual",
-      "state": "open"
+      "state": "done",
+      "result": "这台电脑（DESKTOP-N7UG6S7）已装（10-02）"
     },
     {
       "id": "version-plan",
@@ -2398,6 +2473,14 @@
       "type": "approve",
       "state": "done",
       "result": "9-29、9-30 已批准"
+    },
+    {
+      "id": "codex-quick-audit",
+      "when": "2026-10-02",
+      "item": "Codex 做的后端 lane 由 Claude Code 怎么审",
+      "type": "decide",
+      "state": "done",
+      "result": "相信 Codex：Claude 只做快速审计（一次 /code-review，涉及特权层加 /security-review，不重跑 /simplify），S 用 low、M/L 用 medium"
     }
   ],
   "looseEnds": [
@@ -2427,12 +2510,12 @@
       "lane": "feat/ui-first-run"
     },
     {
-      "state": "open",
+      "state": "done",
       "item": "首帧跟随 App settings 里选的主题",
       "lane": "feat/core-first-frame-theme"
     },
     {
-      "state": "open",
+      "state": "done",
       "item": "正式版的浏览器快捷键",
       "lane": "chore/core-webview-accelerator-keys"
     },
@@ -2452,7 +2535,7 @@
       "lane": "feat/core-discard-move"
     },
     {
-      "state": "open",
+      "state": "done",
       "item": "设置里切换外观和减少动态效果",
       "lane": "feat/ui-settings"
     },
@@ -2557,9 +2640,9 @@
     "拆开热点文件：命令按功能组、文案按视图、registry 只改一行、依赖由 chore/build-deps-* 集中装",
     "并行上限：Rust session 最多 3 个，界面最多 4 个，另加 Cowork；pnpm e2e 用 app lock 排队",
     "独占操作放在同步点：but land、but pull、装依赖",
-    "每个 lane 同样收尾：pnpm check + pnpm e2e → /code-review（+ /security-review）→ /simplify → 中文汇报 → 你批准 → but land",
+    "每个 lane 同样收尾：pnpm check + pnpm e2e → /code-review（+ /security-review）→ /simplify → 中文汇报 → 你批准 → but land（Codex lane 见下一条）",
     "CI 红了先修",
-    "Codex lane 一到 review 就开 Claude Code session 评审",
+    "Codex lane（标着 Codex 的后端 lane）：用「交给 Codex」提示词开工，Codex 自己跑完检查、code-review 和 simplify 后停在 review；再开 Claude Code session 用「Claude 快速审计」提示词：一次 /code-review，涉及特权层再加 /security-review，不重跑 /simplify",
     "路线图数据随 lane 更新：开工、到 review、合并前各跑一次 pnpm roadmap status，只改自己那一条"
   ],
   "prompts": {
@@ -2598,8 +2681,35 @@
       "Follow the feature pipeline in CLAUDE.md §4.2 for this kind of lane (engineering:system-design first for backend or IPC work; a handoff spec first for UI).",
       "Finish with `pnpm check` and `pnpm e2e` under the app lock (CLAUDE.md §7.5), /code-review, /security-review if it touches the privileged layer or IPC, and /simplify; set the entry to review and report to me in Chinese."
     ],
-    "codexPreamble": [
-      "Codex: follow AGENTS.md in the folder above Folio and Folio/CLAUDE.md. Backend coding only: lane file in Folio/.agents/lanes/, specs and ADRs in Folio/docs/, scratch in folio-agent-work/tasks/<lane>/. Map the Claude skill names below to your skills in AGENTS.md §5. Stop at review and write the review scope into folio-agent-work/tasks/<lane>/claude-review-handoff.md; a Claude Code session runs /code-review, /security-review and /simplify before I approve the land."
+    "codexHandoff": [
+      "Folio Codex lane {lane}: {title} ({milestone}, {phase}). Backend Rust only. Work in D:/CS Projects Repositories/Files & Backup/Folio (REPO); scratch and review notes go in D:/CS Projects Repositories/Files & Backup/folio-agent-work/tasks/{taskDir}/ (WORK).",
+      "Read REPO/AGENTS.md and REPO/CLAUDE.md in full first: on policy they win over this prompt. Reply to me in Simplified Chinese; code, tests, commits, specs and lane records in English.",
+      "",
+      "Goal: {summary}",
+      "{extra}",
+      "Depends on: {deps} (all landed on main unless the roadmap says to stack on one).",
+      "Paths to own: {owns}.",
+      "Shared files, small additive hunks only: {shared}.",
+      "Read before coding: {links}; the accepted ADRs and docs/specs/ipc-m1.md for any command or event.",
+      "",
+      "Steps:",
+      "1. `but status` and `but pull --check`; read every file in REPO/.agents/lanes/ and `pnpm roadmap show {lane}`. Start only when fewer than three sessions write Rust and no active lane owns a path you need; otherwise stop and tell me.",
+      "2. Write REPO/.agents/lanes/{laneFile}.md (CLAUDE.md §7.3), create the branch with `but branch new {lane}` (`--above <lane>` only for an unlanded dependency) and run `pnpm roadmap status {lane} wip --next \"Codex: implementing\"`.",
+      "3. system-design against the specs and ADRs before coding. A missing contract or a costly decision: stop and ask me. Never change the IPC contract (generated bindings, the fake shell) unless this lane owns it; never hand-edit apps/desktop/src/ipc/bindings.ts.",
+      "4. Implement with tests in the same commits: failure, crash-recovery and migration cases where they apply, disposable data only. Commit only your own files or hunks: `but commit -b {lane} -m \"<type>(<scope>): <summary>\" <ids>`. Commits are Sirui's: no Codex, model, session or co-author lines; never `--ai`.",
+      "5. Finish: `pnpm check`, then `pnpm e2e` under the app lock (CLAUDE.md §7.5; remove the lock only if you took it). Run code-review, ponytail (simplify), and the security skills (differential-review, unsafe-checker) when the lane touches the privileged layer, IPC, capabilities or unsafe/FFI code; fix what they find. Record results with `pnpm roadmap gate {lane} check=pass e2e=pass codeReview=pass simplify=pass` (securityReview too when it applies).",
+      "6. Write WORK/claude-review-handoff.md for a short Claude Code audit: commits, behaviour, exact check results, the three to five places most worth a second look, open risks and any frontend handoff (command, types, errors). Then `pnpm roadmap status {lane} review --next \"Claude audit\"`, commit that entry on the branch and stop: no push, no land.",
+      "",
+      "Report to me in Chinese: branch, what changed, exact check results, risks and anything the frontend needs."
+    ],
+    "codexAudit": [
+      "Folio: quick Claude Code audit of the Codex lane {lane}: {title}. Run at {auditModel} · {auditEffort}. Codex is trusted: check its work, do not redo it. I approve landing it once the audit passes and the checks are green.",
+      "1. Read CLAUDE.md §7, .agents/lanes/{laneFile}.md and ../folio-agent-work/tasks/{taskDir}/claude-review-handoff.md; run `but status` and `but pull --check`.",
+      "2. One /code-review pass over the lane's commits, aimed at the handoff's hot spots: correctness, swallowed errors, new or changed types, data safety. Add /security-review only if the lane touches the privileged layer, IPC, capabilities or unsafe code. Codex's own simplify pass counts; skip /simplify.",
+      "3. Fix small findings with a commit on {lane}. A finding that needs a redesign, or a product or security decision: stop and report it to me; it goes back to Codex.",
+      "4. Take the app lock (CLAUDE.md §7.5), run `pnpm check` and `pnpm e2e`, release the lock. Record the gates, mark the lane done (`pnpm roadmap status {lane} done`) and commit that entry on the branch.",
+      "5. Land one lane at a time, after the previous land's main CI has finished: `but land {lane} --yes`, `but status`, delete the lane file, check the CI run on main. Stop at the first conflict or failure; never use --ai.",
+      "Report to me in Chinese: findings, fixes and check results."
     ]
   },
   "log": [
@@ -2652,6 +2762,56 @@
       "at": "2026-10-02",
       "by": "Claude Code",
       "text": "main 复绿（CI 37033529420、Commits 37033529409 通过，ac766fe）；之后合并了 WebView 快捷键（ff7d693）；合并队列恢复，一次一个"
+    },
+    {
+      "at": "2026-10-02",
+      "by": "Claude Code",
+      "text": "路径图：标出 Codex 可做的后端 lane，每个给「交给 Codex」和「Claude 快速审计」两段提示词"
+    },
+    {
+      "at": "2026-10-02",
+      "by": "Claude Code",
+      "text": "换电脑后同步：main 的 CI 又红（run 37036505917，settings-ui 的 8.3 临时路径），修复排第一；只有 Codex 在做导入，其余 lane 等新 session；补上窗口主题的合并位置；Codex 已装、这台电脑能推送"
+    },
+    {
+      "at": "2026-10-02",
+      "by": "Claude Code",
+      "text": "亚像素容差的合并 session 停在 but land 之前：pnpm e2e 40/40，pnpm check 只卡在 feat/core-import 没提交的 dialogs.rs（rustfmt）；顺序定为先 long-path、main 变绿，再亚像素"
+    },
+    {
+      "at": "2026-10-02",
+      "by": "Claude Code",
+      "text": "路径图按 lane 推荐模型：Opus 5.5（核心、关卡、L、M 界面和规格）或 Sonnet 5.5（S、只合并、Codex 小 lane 的审计），加上各自的推理强度"
+    },
+    {
+      "at": "2026-10-02",
+      "by": "Claude Code",
+      "text": "合并：fix/ui-settings-e2e-long-path（da1c486）、fix/ui-e2e-subpixel-bounds（1688239，路线图的 done 由路线图 lane 补记）；main 复绿（CI 37045746411）"
+    },
+    {
+      "at": "2026-10-02",
+      "by": "Claude Code",
+      "text": "合并：feat/core-first-frame-theme（a417dd9，它在合并队列里的那行由路线图 lane 移除）；等 main 的 CI run 37048178937"
+    },
+    {
+      "at": "2026-10-02",
+      "by": "Claude Code",
+      "text": "合并：fix/core-window-theme（7c88c0b，CI 37051369268 通过）。Sirui：Codex 的项目级 skills 不进仓库、由 Codex 管理；iCloud for Windows 已装"
+    },
+    {
+      "at": "2026-10-02",
+      "by": "Claude Code",
+      "text": "合并：换电脑交接（8c193ff、25f29f3、9c84d3e，Commits 37054521417 通过；它的 done 由路线图 lane 补记）。路线图盘点：队列只剩导入审计和三个路线图 lane"
+    },
+    {
+      "at": "2026-10-02",
+      "by": "Claude Code",
+      "text": "合并：docs/docs-roadmap-sync-point-3（e84ccd0，Commits 37054713751 通过，explorer 已重新发布）。路线图队列剩 Codex 交接和换电脑刷新两个 lane"
+    },
+    {
+      "at": "2026-10-02",
+      "by": "Claude Code",
+      "text": "合并：feat/core-import（20c1d58，Claude 审计无发现，pnpm check 和 e2e 40/40 通过）；main 的 CI run 37055180308 进行中，Commits 37055180557 通过。解锁 feat/ui-import；STA 辅助函数可以交给 Codex"
     }
   ]
 }

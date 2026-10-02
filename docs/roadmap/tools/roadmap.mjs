@@ -13,14 +13,20 @@ import {
   GATE_STATES,
   GATES,
   STATUSES,
+  auditEffortFor,
+  auditModelFor,
   byId,
   canonical,
+  codexPrompts,
   composePrompt,
   criticalPath,
   dependents,
   displayStatus,
   effortFor,
+  isCodex,
   laneFile,
+  modelFor,
+  modelName,
   sharedPaths,
   tally,
   today,
@@ -79,6 +85,13 @@ function parse(args) {
   return { positional, options };
 }
 
+/** "Sonnet 5.5 · low": the model and effort to start a lane's session at. */
+const run = (data, lane) => `${modelName(data, modelFor(lane))} · ${effortFor(lane)}`;
+/** The same for the Claude Code audit of a Codex lane. */
+const audit = (data, lane) => `${modelName(data, auditModelFor(lane))} · ${auditEffortFor(lane)}`;
+/** What a Claude Code session for this lane runs at now: the audit once a Codex lane is in review. */
+const session = (data, lane) => (!isCodex(lane) ? run(data, lane) : lane.status === 'review' ? `audit ${audit(data, lane)}` : 'Codex');
+
 const tag = (lane, lanes) => {
   const shown = displayStatus(lane, lanes);
   return `${DISPLAY[shown].mark} ${DISPLAY[shown].label}`;
@@ -114,18 +127,26 @@ function next() {
     const lane = lanes.get(entry.lane);
     const open = Object.entries(lane.gates ?? {}).filter(([, v]) => v === 'todo' || v === 'fail' || v === 'partial');
     const gates = open.length ? `  [open: ${open.map(([k, v]) => `${GATES[k]} ${v}`).join(', ')}]` : '';
-    console.log(`${i + 1}. ${lane.id}  ${tag(lane, lanes)}  [${data.meta.model} · ${effortFor(lane)}]${gates}\n   ${entry.why}`);
+    console.log(`${i + 1}. ${lane.id}  ${tag(lane, lanes)}  [${session(data, lane)}]${gates}\n   ${entry.why}`);
   });
 
   const active = data.lanes.filter((l) => shown(l) === 'wip');
   const rust = active.filter((l) => l.track === 'core').length;
   const ui = active.filter((l) => l.track === 'ui').length;
   console.log(`\n## In progress (Rust ${rust}/${data.limits.rustSessions}, UI ${ui}/${data.limits.uiSessions})`);
-  for (const lane of active) console.log(`- ${lane.id} (${lane.agent}, ${effortFor(lane)}): ${lane.next ?? ''}`);
+  for (const lane of active) console.log(`- ${lane.id} (${lane.agent}, ${session(data, lane)}): ${lane.next ?? ''}`);
+
+  const codexOpen = data.lanes.filter((l) => codexPrompts(data, l));
+  const codexReady = codexOpen.filter((l) => ['ready', 'queued'].includes(shown(l)));
+  const codexReview = codexOpen.filter((l) => l.status === 'review');
+  console.log(`\n## Codex (backend): ${codexOpen.length} open lanes`);
+  for (const lane of codexReady) console.log(`- hand to Codex: ${lane.id}  →  pnpm roadmap prompt ${lane.id} --codex`);
+  for (const lane of codexReview) console.log(`- Claude audit (${audit(data, lane)}): ${lane.id}  →  pnpm roadmap prompt ${lane.id} --audit`);
+  if (!codexReady.length && !codexReview.length) console.log('- nothing to hand over or audit right now');
 
   console.log('\n## Can start now');
   for (const lane of data.lanes.filter((l) => ['ready', 'queued'].includes(shown(l))))
-    console.log(`- ${tag(lane, lanes)}  ${lane.id} [${lane.track}, ${lane.size}, ${effortFor(lane)}]${lane.hold ? `: ${lane.hold}` : ''}`);
+    console.log(`- ${tag(lane, lanes)}  ${lane.id} [${lane.track}, ${lane.size}, ${session(data, lane)}]${lane.hold ? `: ${lane.hold}` : ''}`);
 
   const focusGate = data.lanes.find((l) => l.kind === 'gate' && l.milestone === data.now.focus);
   if (focusGate) {
@@ -148,7 +169,9 @@ function show(args) {
   line('status', `${tag(lane, lanes)} (stored: ${lane.status}, updated ${lane.updated})`);
   line('where', `${lane.milestone} · ${data.phases.find((p) => p.id === lane.phase)?.label} · ${lane.track} · ${lane.size}`);
   line('agent', lane.reviewer ? `${lane.agent} (review: ${lane.reviewer})` : lane.agent);
-  line('model', `${data.meta.model}, effort ${effortFor(lane)}${lane.effort ? '' : ' (default by size and track)'}`);
+  line('model', isCodex(lane)
+    ? `Codex builds it; Claude Code audit at ${audit(data, lane)}${lane.auditModel || lane.auditEffort ? '' : ' (default by size)'}`
+    : `${run(data, lane)}${lane.model || lane.effort ? '' : ' (default by size and track)'}`);
   line('summary', lane.summary);
   line('next', lane.next);
   line('hold', lane.hold);
@@ -169,14 +192,22 @@ function show(args) {
   }
   for (const key of ['owns', 'shared', 'notes', 'links'])
     if (lane[key]?.length) console.log(`${key}\n  ${lane[key].join('\n  ')}`);
-  console.log(composePrompt(data, lane) ? `\nprompt: pnpm roadmap prompt ${lane.id}` : '');
+  const codex = codexPrompts(data, lane);
+  if (codex) {
+    console.log('');
+    if (codex.handoff) console.log(`Codex handoff: pnpm roadmap prompt ${lane.id} --codex`);
+    console.log(`Claude audit:  pnpm roadmap prompt ${lane.id} --audit`);
+  } else console.log(composePrompt(data, lane) ? `\nprompt: pnpm roadmap prompt ${lane.id}` : '');
 }
 
 function prompt(args) {
   const { data } = load();
   const lane = findLane(data, args.positional[0]);
-  const text = composePrompt(data, lane);
-  if (!text) throw new UsageError(`${lane.id} has no prompt (it is ${lane.status})`);
+  const which = args.options.codex ? 'handoff' : args.options.audit ? 'audit' : null;
+  const codex = codexPrompts(data, lane);
+  if (which && !codex) throw new UsageError(`${lane.id} is not an open Codex lane`);
+  const text = which ? codex[which] : composePrompt(data, lane);
+  if (!text) throw new UsageError(`${lane.id} has no ${which === 'handoff' ? 'Codex handoff' : 'prompt'} (it is ${lane.status})`);
   console.log(text);
 }
 
@@ -343,7 +374,9 @@ const HELP = `pnpm roadmap <command>
 
   next                         where things stand: landing queue, active lanes, what can start, decisions
   show <lane>                  one lane: status, what it waits for and unblocks, gates, paths
-  prompt <lane>                print the lane's copyable prompt
+  prompt <lane> [--codex | --audit]
+                               print the lane's copyable prompt; for a Codex lane --codex is the
+                               full handoff to Codex and --audit the short Claude Code audit
   status <lane> <status>       set done | review | wip | planned | dropped
         [--next "…"] [--hold "…" | --no-hold] [--landed YYYY-MM-DD]
   gate <lane> <gate>=<state>…  gates: ${Object.keys(GATES).join(', ')}; states: ${GATE_STATES.join(', ')}
