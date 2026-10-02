@@ -18,8 +18,8 @@ conversation, Sirui wins.
 | Product one-liner | Windows desktop document library for students: files organised in semester → course folders with multi-select category tags, quick search, in-app preview, and a GitButler-style change history (full versions for text and Word files, change events only for everything else), pushed to and pulled from a plain folder in iCloud Drive that serves as a versioned backup other devices can browse. Scope and decisions: [`docs/product/brief.md`](docs/product/brief.md) (Chinese). Do not extend scope beyond it without asking. |
 | Tech stack | Tauri 2 shell + React 19 / TypeScript UI + Rust core crate `folio-core` ([ADR-0001](docs/adr/ADR-0001-application-stack.md), accepted 2026-09-26). Pins (exact versions live in the files named): Node 24 (`.nvmrc`), pnpm 11 (`packageManager`), Rust (`rust-toolchain.toml`), Tauri 2.12 (`Cargo.lock` and `package.json`), TypeScript 6.0 (`catalog` in `pnpm-workspace.yaml`; typescript-eslint does not support TypeScript 7 yet). |
 | Repo | Scaffolded 2026-09-26 (§6 milestone 7): Cargo + pnpm workspaces, placeholder UI, CI; no product features yet. GitButler workspace mode, target `origin/main`. Remote `github.com/siruimei07/Folio` (private). |
-| Local path | `E:\CS Projects Development\Documents Manage\Folio` (device `g16-strix`). Open agent sessions in this folder, not its parent. |
-| Local toolchain | Node 24, pnpm 11, Rust 1.97, Python 3.14 (as of 2026-09-26). ADR-0001 pins the versions the project uses. |
+| Local path | `D:\CS Projects Repositories\Files & Backup\Folio` (device `DESKTOP-N7UG6S7`, since 2026-10-02; before that `E:\CS Projects Development\Documents Manage\Folio` on `g16-strix`). Open agent sessions in this folder, not its parent. The path has spaces and an `&`: quote it everywhere. Develop on one device at a time (lane files and locks are not in Git). |
+| Local toolchain | Node 24.19.0, pnpm 11.25.0, Rust 1.97.1, VS 2022 Build Tools (MSVC, Windows SDK), WebView2 154, GitButler 0.22.3 (`D:\Program Files\GitButler`, on the user PATH), Python 3.14, Claude Code 2.1.286 (as of 2026-10-02). ADR-0001 pins the versions the project uses. |
 
 ---
 
@@ -288,5 +288,5 @@ Check every item that applies; a docs or ADR lane skips the UI and backend items
 
 ### 9.2 To do (Sirui, optional)
 
-- [ ] `git config --global core.quotepath false` so Git prints Chinese file names readably.
+- [x] `git config --global core.quotepath false` so Git prints Chinese file names readably (set on DESKTOP-N7UG6S7, 2026-10-02).
 - [ ] Disable the unrelated `finance` plugin on the Claude account to shorten the skill list.
