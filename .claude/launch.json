@@ -7,6 +7,12 @@
       "port": 5173
     },
     {
+      "name": "roadmap",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["docs/roadmap/tools/roadmap.mjs", "serve", "--port", "5199"],
+      "port": 5199
+    },
+    {
       "name": "desktop-vite",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "@folio/desktop", "dev"],

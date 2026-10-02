@@ -130,6 +130,7 @@ docs/
   agents/              agent reference docs, e.g. skill-routing.md   (English)
   adr/                 ADR-NNNN-<slug>.md                            (English)
   product/             product brief, roadmap                         (Chinese, for Sirui)
+  roadmap/             roadmap.json (live lane state), `pnpm roadmap` CLI, explorer page (README: English)
   research/            research plans and synthesis                   (Chinese, for Sirui)
   specs/               feature specs for agents                       (English)
   design/handoff/      design-handoff specs                           (English)
@@ -191,14 +192,14 @@ syntax. On syntax, the skill wins; on policy, this section wins.
 ```
 
 **Start**
-1. `but status` and `but pull --check`. Read every file in `.agents/lanes/`.
+1. `but status` and `but pull --check`. Read every file in `.agents/lanes/`. `pnpm roadmap next` shows the landing queue, the active lanes and what can start; `pnpm roadmap show <lane>` shows your lane's dependencies, paths and prompt.
 2. Choose paths to own. They must not overlap another active lane's `Owns`. On overlap: if your work depends on that lane, stack on it (below); otherwise stop and ask Sirui in Chinese.
 3. Write your lane file, then create the branch: `but branch new <name>` — or let the first `but commit -b <name>` create it.
 
 **Work**
 4. Edit only owned paths. Shared hot spots — package manifest and lockfile, root configs, token source, IPC contract index, router/route table, i18n base file, `CLAUDE.md`, `.claude/settings.json` — get small additive edits only; never reformat or reorder a shared file.
 5. Dependency installs change the shared lockfile and `node_modules`: do them in a dedicated `chore/build-deps-<desc>` lane or as an exclusive operation (7.4).
-6. Keep the lane file's `Status` and `Updated` current.
+6. Keep the lane file's `Status` and `Updated` current, and your lane's entry in `docs/roadmap/roadmap.json` (the roadmap's only live state): `pnpm roadmap status <lane> wip` at the start, `pnpm roadmap gate` as checks finish, `review` with the report, and `done` in the lane's last commit right before `but land`. Change only your own entry; `docs/roadmap/README.md` has the commands. `pnpm check` validates the file.
 
 **Commit**
 7. `but status -fv` (or `but diff`) → commit **only your own files or hunks**: `but commit -b <branch> -m "<msg>" <id> <id>`. If a file contains another lane's hunks, commit by hunk ID. Never commit, amend, discard or move another lane's changes.
@@ -267,6 +268,7 @@ Check every item that applies; a docs or ADR lane skips the UI and backend items
 - [ ] Backend/IPC: inputs validated on the privileged side; `/security-review` findings resolved.
 - [ ] `/simplify` pass done; no duplicated pattern introduced.
 - [ ] ADR written for any costly-to-reverse decision.
+- [ ] Roadmap entry current (`pnpm roadmap status`), and `done` committed on the lane right before landing.
 - [ ] Commits on the lane branch only, Conventional Commits, no AI attribution.
 - [ ] Chinese summary sent to Sirui.
 

@@ -1,0 +1,2452 @@
+{
+  "meta": {
+    "title": "Folio 上线路线图（到 v1.0）",
+    "schema": 1,
+    "owner": "Sirui",
+    "repo": "https://github.com/siruimei07/Folio",
+    "explorer": "https://claude.ai/artifact/Mv1f9eXfrkYTbAs7fqQVDC",
+    "updated": "2026-10-02T02:20-04:00",
+    "updatedBy": "Claude Code",
+    "model": "Opus 5.5"
+  },
+  "now": {
+    "stage": "M1 第 3 波收尾 · 同步点 3",
+    "focus": "M1",
+    "summary": [
+      "项目已搬到新电脑 DESKTOP-N7UG6S7：工具链装好，9 个任务分支全部应用到工作区，组合工作区 `pnpm check` 全绿（前端 528、Rust 542 个测试），`pnpm e2e` 37 个里 36 个通过，唯一失败是这台显示器上的亚像素误差，已由 `fix/ui-e2e-subpixel-bounds` 修好。",
+      "资料库视图和本机设置已经合并（10-01）。第 3 波剩下 7 个 lane：3 个前端待合并（时钟修复、搜索、首次使用），2 个 Codex lane 等 Claude Code 评审（导入、WebView 快捷键），预览和首帧主题还差最后的检查。",
+      "下一步按「合并队列」一次合并一个；合并后导入界面解锁，设置界面现在就可以开。"
+    ]
+  },
+  "limits": {
+    "rustSessions": 3,
+    "uiSessions": 4,
+    "coworkSessions": 1,
+    "e2eRunners": 1
+  },
+  "runtime": {
+    "appLock": "",
+    "devServer": "",
+    "devices": [
+      {
+        "id": "DESKTOP-N7UG6S7",
+        "role": "current",
+        "since": "2026-10-02",
+        "path": "D:/CS Projects Repositories/Files & Backup/Folio",
+        "toolchain": "Node 24.19.0 · pnpm 11.25.0 · Rust 1.97.1 · VS 2022 Build Tools 17.14 · WebView2 154.0.4258.48 · GitButler 0.22.3 · Python 3.14.7 · Claude Code 2.1.286",
+        "verified": "2026-10-02：组合工作区 pnpm check 通过；pnpm e2e 36/37（修复后 shell spec 12/12）",
+        "notes": "路径含空格和 &：脚本里一律加引号。系统代码页 GBK，文件只用 Write/Edit 写（CLAUDE.md §5）。Codex 还没装。"
+      },
+      {
+        "id": "g16-strix",
+        "role": "previous",
+        "since": "2026-09-26",
+        "path": "E:/CS Projects Development/Documents Manage/Folio",
+        "toolchain": "同上（交接时一致）",
+        "verified": "2026-10-01 交接：所有分支已推到 origin",
+        "notes": "还留着 feat/ui-preview 的旧 app lock 和交接压缩包。两台电脑不要同时开发：lane 文件不进 Git，另一台看不到。"
+      }
+    ]
+  },
+  "agents": [
+    {
+      "id": "claude-code",
+      "label": "Claude Code",
+      "does": "前端、合约、规格、评审、合并"
+    },
+    {
+      "id": "codex",
+      "label": "Codex",
+      "does": "只做后端编码（Rust），停在 review"
+    },
+    {
+      "id": "cowork",
+      "label": "Cowork",
+      "does": "设计画布、设计系统、handoff"
+    },
+    {
+      "id": "sirui",
+      "label": "Sirui",
+      "does": "批准合并、产品决定、实机测试"
+    }
+  ],
+  "tracks": [
+    {
+      "id": "core",
+      "label": "核心 / shell",
+      "hint": "crates/ · Rust · 合约"
+    },
+    {
+      "id": "ui",
+      "label": "界面",
+      "hint": "apps/desktop · React"
+    },
+    {
+      "id": "design",
+      "label": "设计",
+      "hint": "Cowork · design/"
+    },
+    {
+      "id": "verify",
+      "label": "验证 / 测试",
+      "hint": "spike · 实测 · 验收"
+    },
+    {
+      "id": "flow",
+      "label": "规格 / 构建 / 文档",
+      "hint": "docs/ · 依赖 · 发布"
+    }
+  ],
+  "milestones": [
+    {
+      "id": "M0",
+      "title": "阶段 0：清空合并队列",
+      "short": "阶段 0",
+      "version": "—",
+      "state": "done",
+      "date": "2026-09-28",
+      "outcome": "Tauri 2.12、合并积压的 23 个提交",
+      "acceptance": [
+        "合并队列清空，main 的 CI 通过"
+      ]
+    },
+    {
+      "id": "M1",
+      "title": "M1 本地资料库",
+      "short": "M1",
+      "version": "v0.1，你自己用（先在资料库的副本上用）",
+      "state": "active",
+      "date": "",
+      "outcome": "日常替代资源管理器：浏览、标签、搜索、预览、导入",
+      "acceptance": [
+        "每个用户流程都有 Playwright e2e；每个新界面都过了 design:design-critique 和 design:accessibility-review，并检查过减少动态效果",
+        "5 万文件的资料库：一页 200 行 < 50 ms，搜索一页 < 100 ms，常见文件 1 秒内出预览（browse 已测到 43 ms 和 64 ms）",
+        "冻结 catalog schema 和 .folio 格式的 fixture（ADR-0002 行动项 5）：从此每次改格式都带迁移和测试",
+        "过一遍 engineering:tech-debt；打一个未签名的 NSIS 安装包，先在资料库的副本上用一两周"
+      ]
+    },
+    {
+      "id": "M2",
+      "title": "M2 版本记录",
+      "short": "M2",
+      "version": "v0.2，你自己用",
+      "state": "locked",
+      "date": "",
+      "outcome": "提交、历史、文本和 Word 的差异与恢复、正文搜索",
+      "acceptance": [
+        "提交和恢复在崩溃注入下不丢数据",
+        "你自己用 v0.2 至少一两周"
+      ]
+    },
+    {
+      "id": "M3",
+      "title": "M3 云端同步",
+      "short": "M3",
+      "version": "v0.3，开始「连续用一整个学期」的实测（brief §10）",
+      "state": "locked",
+      "date": "",
+      "outcome": "iCloud 云端仓库、同步、冲突处理",
+      "acceptance": [
+        "长时间同步仿真全绿",
+        "iCloud 实测通过",
+        "两台 Windows 设备加 iPad 的实机测试"
+      ]
+    },
+    {
+      "id": "M4",
+      "title": "M4 打磨与分发",
+      "short": "M4",
+      "version": "v1.0 上线，发给同学朋友",
+      "state": "locked",
+      "date": "",
+      "outcome": "Office 预览、安装包、自动更新、首次使用引导",
+      "acceptance": [
+        "发布候选测试通过（Windows 10、多显示器缩放、全量无障碍、5 万文件 / 100 GB 性能、整个 IPC 面的 /security-review）",
+        "2～3 位同学试用，修完问题"
+      ]
+    }
+  ],
+  "phases": [
+    {
+      "id": "m0",
+      "milestone": "M0",
+      "label": "阶段 0",
+      "kind": "wave"
+    },
+    {
+      "id": "m1-w1",
+      "milestone": "M1",
+      "label": "第 1 波",
+      "kind": "wave"
+    },
+    {
+      "id": "m1-s1",
+      "milestone": "M1",
+      "label": "同步点 1",
+      "kind": "sync"
+    },
+    {
+      "id": "m1-w2",
+      "milestone": "M1",
+      "label": "第 2 波",
+      "kind": "wave"
+    },
+    {
+      "id": "m1-s2",
+      "milestone": "M1",
+      "label": "同步点 2",
+      "kind": "sync"
+    },
+    {
+      "id": "m1-w3",
+      "milestone": "M1",
+      "label": "第 3 波",
+      "kind": "wave"
+    },
+    {
+      "id": "m1-s3",
+      "milestone": "M1",
+      "label": "同步点 3",
+      "kind": "sync"
+    },
+    {
+      "id": "m1-w4",
+      "milestone": "M1",
+      "label": "第 4 波",
+      "kind": "wave"
+    },
+    {
+      "id": "m1-acc",
+      "milestone": "M1",
+      "label": "M1 验收",
+      "kind": "gate"
+    },
+    {
+      "id": "m2-spec",
+      "milestone": "M2",
+      "label": "M2 规格与设计",
+      "kind": "wave"
+    },
+    {
+      "id": "m2-impl",
+      "milestone": "M2",
+      "label": "M2 实现",
+      "kind": "wave"
+    },
+    {
+      "id": "m2-acc",
+      "milestone": "M2",
+      "label": "M2 验收",
+      "kind": "gate"
+    },
+    {
+      "id": "m3-pre",
+      "milestone": "M3",
+      "label": "M3 前置验证（M2 期间）",
+      "kind": "wave"
+    },
+    {
+      "id": "m3-spec",
+      "milestone": "M3",
+      "label": "M3 规格与设计",
+      "kind": "wave"
+    },
+    {
+      "id": "m3-impl",
+      "milestone": "M3",
+      "label": "M3 实现",
+      "kind": "wave"
+    },
+    {
+      "id": "m3-acc",
+      "milestone": "M3",
+      "label": "M3 验收",
+      "kind": "gate"
+    },
+    {
+      "id": "m4-impl",
+      "milestone": "M4",
+      "label": "M4 打磨",
+      "kind": "wave"
+    },
+    {
+      "id": "m4-rc",
+      "milestone": "M4",
+      "label": "发布候选",
+      "kind": "wave"
+    },
+    {
+      "id": "m4-ship",
+      "milestone": "M4",
+      "label": "试用 → v1.0",
+      "kind": "gate"
+    }
+  ],
+  "lanes": [
+    {
+      "id": "fix/core-snap-overlay-edges",
+      "title": "贴靠覆盖层",
+      "milestone": "M0",
+      "phase": "m0",
+      "track": "core",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [],
+      "summary": "贴靠按钮不挡顶部缩放边；读屏软件看不到覆盖层",
+      "status": "done",
+      "updated": "2026-09-28",
+      "landed": "2026-09-28"
+    },
+    {
+      "id": "feat/core-windows-fs",
+      "title": "NTFS 文件 ID 和占位文件",
+      "milestone": "M0",
+      "phase": "m0",
+      "track": "core",
+      "agent": "claude-code",
+      "size": "M",
+      "deps": [],
+      "summary": "NTFS 文件 ID、iCloud 占位文件的识别",
+      "status": "done",
+      "updated": "2026-09-28",
+      "landed": "2026-09-28"
+    },
+    {
+      "id": "feat/core-windows-recycle-bin",
+      "title": "只进回收站",
+      "milestone": "M0",
+      "phase": "m0",
+      "track": "core",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "feat/core-windows-fs"
+      ],
+      "summary": "删除一律进回收站，不做永久删除",
+      "status": "done",
+      "updated": "2026-09-28",
+      "landed": "2026-09-28"
+    },
+    {
+      "id": "feat/core-windows-watcher",
+      "title": "文件监视",
+      "milestone": "M0",
+      "phase": "m0",
+      "track": "core",
+      "agent": "claude-code",
+      "size": "M",
+      "deps": [
+        "feat/core-windows-recycle-bin"
+      ],
+      "summary": "文件监视和局部重扫（三层 stack 一起合并）",
+      "status": "done",
+      "updated": "2026-09-28",
+      "landed": "2026-09-28"
+    },
+    {
+      "id": "feat/ipc-m1-contract",
+      "title": "M1 IPC 合约",
+      "milestone": "M0",
+      "phase": "m0",
+      "track": "core",
+      "agent": "claude-code",
+      "size": "M",
+      "deps": [],
+      "summary": "M1 全部命令和类型的合约，ADR-0004",
+      "status": "done",
+      "updated": "2026-09-28",
+      "landed": "2026-09-28",
+      "links": [
+        "docs/adr/ADR-0004-ipc-contract.md",
+        "docs/specs/ipc-m1.md"
+      ]
+    },
+    {
+      "id": "design/design-foundation-v1",
+      "title": "设计基础",
+      "milestone": "M0",
+      "phase": "m0",
+      "track": "design",
+      "agent": "cowork",
+      "size": "L",
+      "deps": [],
+      "summary": "设计 token（浅色和深色）、app-shell handoff、brief v0.3",
+      "status": "done",
+      "updated": "2026-09-27",
+      "landed": "2026-09-28",
+      "links": [
+        "design/tokens/README.md",
+        "docs/design/handoff/app-shell.md"
+      ]
+    },
+    {
+      "id": "feat/ui-token-css",
+      "title": "token → CSS",
+      "milestone": "M0",
+      "phase": "m0",
+      "track": "ui",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "design/design-foundation-v1"
+      ],
+      "summary": "从设计 token 生成 CSS 和 TS 常量",
+      "status": "done",
+      "updated": "2026-09-28",
+      "landed": "2026-09-28"
+    },
+    {
+      "id": "chore/build-deps-tauri-2-12",
+      "title": "Tauri 2.12",
+      "milestone": "M0",
+      "phase": "m0",
+      "track": "flow",
+      "agent": "codex",
+      "size": "S",
+      "deps": [],
+      "summary": "Tauri 2.11 → 2.12",
+      "status": "done",
+      "updated": "2026-09-28",
+      "landed": "2026-09-28"
+    },
+    {
+      "id": "feat/core-library-state",
+      "title": "资料库状态",
+      "milestone": "M1",
+      "phase": "m1-w1",
+      "track": "core",
+      "agent": "codex",
+      "size": "L",
+      "deps": [
+        "feat/ipc-m1-contract",
+        "feat/core-windows-watcher"
+      ],
+      "summary": "命令按功能组注册；LibraryState、任务、启动扫描、监视 → CatalogChanged、安全关窗；8 个命令",
+      "status": "done",
+      "updated": "2026-09-29",
+      "landed": "2026-09-29",
+      "links": [
+        "docs/specs/library-state.md"
+      ]
+    },
+    {
+      "id": "docs/adr-0005-ui-architecture",
+      "title": "界面架构 ADR",
+      "milestone": "M1",
+      "phase": "m1-w1",
+      "track": "flow",
+      "agent": "claude-code",
+      "size": "M",
+      "deps": [
+        "feat/ipc-m1-contract"
+      ],
+      "summary": "ADR-0005 和 ui-architecture spec",
+      "status": "done",
+      "updated": "2026-09-28",
+      "landed": "2026-09-28",
+      "links": [
+        "docs/adr/ADR-0005-ui-architecture.md",
+        "docs/specs/ui-architecture.md"
+      ]
+    },
+    {
+      "id": "feat/ui-i18n-english",
+      "title": "英文界面",
+      "milestone": "M1",
+      "phase": "m1-w1",
+      "track": "ui",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "feat/ui-token-css"
+      ],
+      "summary": "英文界面，每个视图一个 namespace",
+      "status": "done",
+      "updated": "2026-09-28",
+      "landed": "2026-09-28"
+    },
+    {
+      "id": "spike/ui-office-preview",
+      "title": "Office 预览 spike",
+      "milestone": "M1",
+      "phase": "m1-w1",
+      "track": "verify",
+      "agent": "claude-code",
+      "size": "M",
+      "deps": [],
+      "summary": "Office 预览对比；PPT 选方案 A",
+      "status": "done",
+      "updated": "2026-09-28",
+      "landed": "2026-09-28",
+      "links": [
+        "docs/research/office-preview-spike.md"
+      ]
+    },
+    {
+      "id": "design/design-m1-flows",
+      "title": "M1 流程设计",
+      "milestone": "M1",
+      "phase": "m1-w1",
+      "track": "design",
+      "agent": "cowork",
+      "size": "M",
+      "deps": [
+        "design/design-foundation-v1"
+      ],
+      "summary": "首次使用、资料库操作两份 handoff",
+      "status": "done",
+      "updated": "2026-09-28",
+      "landed": "2026-09-28",
+      "links": [
+        "docs/design/handoff/first-run.md",
+        "docs/design/handoff/library-actions.md"
+      ]
+    },
+    {
+      "id": "chore/build-deps-ui-m1",
+      "title": "M1 界面依赖",
+      "milestone": "M1",
+      "phase": "m1-s1",
+      "track": "flow",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "docs/adr-0005-ui-architecture"
+      ],
+      "summary": "装 M1 界面依赖（React Aria、TanStack Query 等）",
+      "status": "done",
+      "updated": "2026-09-28",
+      "landed": "2026-09-28"
+    },
+    {
+      "id": "feat/ipc-m1-contract-fixes",
+      "title": "合约补缺",
+      "milestone": "M1",
+      "phase": "m1-w2",
+      "track": "core",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "design/design-m1-flows",
+        "docs/adr-0005-ui-architecture"
+      ],
+      "summary": "resolve_paths、log_ui_error 和设计交接里的合约缺口",
+      "status": "done",
+      "updated": "2026-09-29",
+      "landed": "2026-09-29"
+    },
+    {
+      "id": "feat/core-file-scheme",
+      "title": "folio-file 协议",
+      "milestone": "M1",
+      "phase": "m1-w2",
+      "track": "core",
+      "agent": "codex",
+      "size": "M",
+      "deps": [
+        "feat/core-library-state"
+      ],
+      "summary": "只读的 folio-file 协议、缩略图、打开和在资源管理器中显示",
+      "status": "done",
+      "updated": "2026-09-29",
+      "landed": "2026-09-29"
+    },
+    {
+      "id": "feat/ui-app-shell",
+      "title": "窗口骨架",
+      "milestone": "M1",
+      "phase": "m1-w2",
+      "track": "ui",
+      "agent": "claude-code",
+      "size": "L",
+      "deps": [
+        "chore/build-deps-ui-m1",
+        "feat/ui-i18n-english",
+        "design/design-m1-flows"
+      ],
+      "summary": "窗口骨架、共用组件、ESLint 规则",
+      "status": "done",
+      "updated": "2026-09-30",
+      "landed": "2026-09-30"
+    },
+    {
+      "id": "feat/ui-data-layer",
+      "title": "数据层",
+      "milestone": "M1",
+      "phase": "m1-w2",
+      "track": "ui",
+      "agent": "claude-code",
+      "size": "M",
+      "deps": [
+        "chore/build-deps-ui-m1"
+      ],
+      "summary": "TanStack Query 数据层、浏览器窗格用的假 shell",
+      "status": "done",
+      "updated": "2026-09-30",
+      "landed": "2026-09-30"
+    },
+    {
+      "id": "fix/build-ci-access-violation",
+      "title": "CI 崩溃修复",
+      "milestone": "M1",
+      "phase": "m1-s2",
+      "track": "core",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [],
+      "summary": "修 CI 上的 STATUS_ACCESS_VIOLATION（保持 COM 初始化），main 恢复绿色",
+      "status": "done",
+      "updated": "2026-09-30",
+      "landed": "2026-09-30",
+      "links": [
+        "docs/specs/windows-adapter.md"
+      ]
+    },
+    {
+      "id": "chore/core-logging",
+      "title": "日志轮转",
+      "milestone": "M1",
+      "phase": "m1-s2",
+      "track": "core",
+      "agent": "codex",
+      "size": "S",
+      "deps": [
+        "feat/ipc-m1-contract-fixes"
+      ],
+      "summary": "日志按天轮转、每天上限 8 MiB、log_ui_error",
+      "status": "done",
+      "updated": "2026-09-30",
+      "landed": "2026-09-30"
+    },
+    {
+      "id": "feat/core-library-ops",
+      "title": "资料库操作",
+      "milestone": "M1",
+      "phase": "m1-s2",
+      "track": "core",
+      "agent": "codex",
+      "size": "L",
+      "deps": [
+        "feat/core-library-state",
+        "feat/ipc-m1-contract-fixes"
+      ],
+      "summary": "学期、课程、标签、条目的 18 个命令；元数据格式 2；移动的崩溃恢复",
+      "status": "done",
+      "updated": "2026-09-30",
+      "landed": "2026-09-30",
+      "links": [
+        "docs/specs/library-core.md"
+      ]
+    },
+    {
+      "id": "feat/data-browse-queries",
+      "title": "浏览和搜索",
+      "milestone": "M1",
+      "phase": "m1-s2",
+      "track": "core",
+      "agent": "codex",
+      "size": "M",
+      "deps": [
+        "feat/core-library-state",
+        "feat/ipc-m1-contract-fixes"
+      ],
+      "summary": "浏览、搜索、resolve_paths 的 5 个命令（5 万文件一页 43 ms、搜索 64 ms）",
+      "status": "done",
+      "updated": "2026-09-30",
+      "landed": "2026-09-30"
+    },
+    {
+      "id": "feat/ui-data-m1-hooks",
+      "title": "M1 数据 hook",
+      "milestone": "M1",
+      "phase": "m1-s2",
+      "track": "ui",
+      "agent": "claude-code",
+      "size": "M",
+      "deps": [
+        "feat/ui-data-layer"
+      ],
+      "summary": "视图共用的数据层 hook：分组、标签、条目、搜索、文件、导入",
+      "status": "done",
+      "updated": "2026-09-30",
+      "landed": "2026-09-30"
+    },
+    {
+      "id": "feat/ui-library-view",
+      "title": "资料库视图",
+      "milestone": "M1",
+      "phase": "m1-w3",
+      "track": "ui",
+      "agent": "claude-code",
+      "size": "L",
+      "deps": [
+        "feat/ui-app-shell",
+        "feat/ui-data-m1-hooks",
+        "feat/core-library-ops",
+        "feat/data-browse-queries"
+      ],
+      "summary": "课程树、标签筛选、最近添加和未打标签、列表 / 网格、新建文件夹、重命名 / 移动 / 删除、批量打标签、右键菜单",
+      "status": "done",
+      "updated": "2026-10-01",
+      "landed": "2026-10-01"
+    },
+    {
+      "id": "feat/core-app-settings",
+      "title": "本机设置",
+      "milestone": "M1",
+      "phase": "m1-w3",
+      "track": "core",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "feat/core-library-state"
+      ],
+      "summary": "settings.json：设备名、外观、减少动态效果、忽略规则（ipc-m1 §22）",
+      "status": "done",
+      "updated": "2026-10-01",
+      "landed": "2026-10-01",
+      "links": [
+        "docs/specs/ipc-m1.md"
+      ]
+    },
+    {
+      "id": "fix/ui-recently-added-clock",
+      "title": "「最近添加」测试时钟",
+      "milestone": "M1",
+      "phase": "m1-s3",
+      "track": "ui",
+      "agent": "claude-code",
+      "size": "S",
+      "effort": "low",
+      "deps": [],
+      "summary": "main 的 CI 是红的：3 个资料库视图测试按真实时钟数「最近添加」。renderApp 的 now 现在也启动 Date；生产代码不变",
+      "status": "review",
+      "updated": "2026-10-02",
+      "next": "第一个合并（规则 9：CI 红了先修）。只需 pnpm check，不用 e2e",
+      "gates": {
+        "check": "pass",
+        "e2e": "na",
+        "codeReview": "pass",
+        "securityReview": "na",
+        "simplify": "pass",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "apps/desktop/src/test/render.tsx"
+      ],
+      "shared": [
+        "docs/specs/testing-strategy.md"
+      ],
+      "notes": [
+        "修之前在 2026-10-01 12:00 UTC 之后的任何时刻都失败 3 个；修之后 desktop vitest 400/400 ×12",
+        "2026-10-02 新电脑组合工作区 pnpm check 全绿"
+      ],
+      "prompt": {
+        "template": "land",
+        "extra": [
+          "This lane only changes a test helper: run `pnpm check`; `pnpm e2e` is not needed, so skip the app lock."
+        ]
+      }
+    },
+    {
+      "id": "feat/ui-search-palette",
+      "title": "Ctrl+K 搜索",
+      "milestone": "M1",
+      "phase": "m1-w3",
+      "track": "ui",
+      "agent": "claude-code",
+      "size": "M",
+      "effort": "medium",
+      "deps": [
+        "feat/ui-data-m1-hooks",
+        "feat/ui-app-shell"
+      ],
+      "landAfter": [
+        "fix/ui-recently-added-clock"
+      ],
+      "summary": "输入即出结果、分组、高亮只当文本渲染、方向键和回车（在资料库里选中并预览）、空 / 过长 / 出错状态",
+      "status": "review",
+      "updated": "2026-10-02",
+      "next": "等你批准合并；预览依赖它的 lib/places.ts，要先合并它",
+      "gates": {
+        "check": "pass",
+        "e2e": "pass",
+        "codeReview": "pass",
+        "securityReview": "na",
+        "simplify": "pass",
+        "designCritique": "pass",
+        "a11y": "pass"
+      },
+      "owns": [
+        "apps/desktop/src/search/**",
+        "apps/desktop/src/i18n/locales/en/search.json",
+        "e2e/tests/search.spec.ts",
+        "apps/desktop/src/lib/places.ts"
+      ],
+      "shared": [
+        "apps/desktop/src/app/registry.ts",
+        "apps/desktop/src/library/places.ts",
+        "apps/desktop/src/lib/timing.ts",
+        "apps/desktop/src/components/Dialog/Dialog.css",
+        "apps/desktop/src/components/MiddleTruncate/MiddleTruncate.css",
+        "apps/desktop/src/test/setup.ts",
+        "design/tokens/base.tokens.json",
+        "design/tokens/README.md",
+        "apps/desktop/src/tokens/tokens.css",
+        "apps/desktop/src/tokens/tokens.ts"
+      ],
+      "notes": [
+        "4 个提交：token、places 移到 lib、MiddleTruncate 空格、搜索面板",
+        "真实 shell 也会搜出文件夹（已加文件夹图标）；假 shell 只搜文件",
+        "后续可做：共用失败状态、选择栏、对话框外观、e2e helper"
+      ],
+      "links": [
+        "docs/design/handoff/app-shell.md",
+        "docs/specs/ui-architecture.md"
+      ],
+      "prompt": {
+        "template": "land"
+      }
+    },
+    {
+      "id": "feat/ui-first-run",
+      "title": "首次使用",
+      "milestone": "M1",
+      "phase": "m1-w3",
+      "track": "ui",
+      "agent": "claude-code",
+      "size": "M",
+      "effort": "medium",
+      "deps": [
+        "feat/ui-data-m1-hooks",
+        "feat/ui-app-shell"
+      ],
+      "landAfter": [
+        "feat/ui-search-palette",
+        "fix/ui-recently-added-clock"
+      ],
+      "summary": "欢迎页 → 新建或接管资料库 → 第一个学期和课程（逐行失败）；资料库打不开时的界面和重试；原生选文件夹对话框已手动点过",
+      "status": "review",
+      "updated": "2026-10-02",
+      "next": "等你批准合并（在搜索和时钟修复之后）。「放弃未完成的移动」按钮等 feat/core-discard-move",
+      "gates": {
+        "check": "pass",
+        "e2e": "pass",
+        "codeReview": "pass",
+        "securityReview": "na",
+        "simplify": "pass",
+        "designCritique": "pass",
+        "a11y": "pass"
+      },
+      "owns": [
+        "apps/desktop/src/first-run/**",
+        "apps/desktop/src/i18n/locales/en/first-run.json",
+        "e2e/tests/first-run.spec.ts"
+      ],
+      "shared": [
+        "apps/desktop/src/App.tsx",
+        "apps/desktop/src/App.test.tsx",
+        "apps/desktop/src/test/fixtures.ts",
+        "apps/desktop/src/test/render.tsx",
+        "apps/desktop/src/library/test/render.tsx",
+        "apps/desktop/src/data/groups.ts",
+        "apps/desktop/src/library/semester.ts",
+        "apps/desktop/src/data/entries.ts",
+        "apps/desktop/src/library/filters.ts",
+        "apps/desktop/src/data/jobs.ts",
+        "apps/desktop/src/app/windowErrors.ts",
+        "apps/desktop/src/library/feedback.ts",
+        "apps/desktop/src/lib/timing.ts",
+        "e2e/fixtures.ts",
+        "e2e/tests/shell.spec.ts",
+        "design/tokens/base.tokens.json",
+        "design/tokens/README.md",
+        "apps/desktop/src/tokens/tokens.css",
+        "apps/desktop/src/tokens/tokens.ts"
+      ],
+      "notes": [
+        "3 个提交：token（第 8 轮）、共用 helper、首次使用",
+        "token README 的第 8 轮说明可以在搜索合并后挪到上面",
+        "后续可做：界面和假 shell 共用名称规则；删掉 LibraryView 里用不到的「无资料库」分支"
+      ],
+      "links": [
+        "docs/design/handoff/first-run.md",
+        "docs/specs/library-state.md"
+      ],
+      "prompt": {
+        "template": "land"
+      }
+    },
+    {
+      "id": "fix/ui-e2e-subpixel-bounds",
+      "title": "e2e 亚像素容差",
+      "milestone": "M1",
+      "phase": "m1-s3",
+      "track": "verify",
+      "agent": "claude-code",
+      "size": "S",
+      "effort": "low",
+      "deps": [],
+      "landAfter": [
+        "feat/ui-first-run"
+      ],
+      "summary": "新电脑（3440×1440，100%）上窄工具栏量出来是 40.995 px，shell e2e 每次都失败；边界框比较改成 0.05 px 容差",
+      "status": "review",
+      "updated": "2026-10-02",
+      "next": "等你批准合并（在首次使用之后，两者都改 shell.spec.ts）",
+      "gates": {
+        "check": "pass",
+        "e2e": "pass",
+        "codeReview": "pass",
+        "securityReview": "na",
+        "simplify": "na",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "e2e/tests/shell.spec.ts"
+      ],
+      "notes": [
+        "修之前 5/5 失败（40.99506378173828）；修之后 shell spec ×3 12/12"
+      ],
+      "prompt": {
+        "template": "land"
+      }
+    },
+    {
+      "id": "feat/ui-preview",
+      "title": "预览区",
+      "milestone": "M1",
+      "phase": "m1-w3",
+      "track": "ui",
+      "agent": "claude-code",
+      "size": "L",
+      "effort": "high",
+      "deps": [
+        "feat/ui-data-m1-hooks",
+        "feat/core-file-scheme",
+        "feat/ui-search-palette"
+      ],
+      "summary": "图片、PDF（pdf.js）、Markdown（公式、代码高亮、笔记旁的图片）、代码、音视频、HEIC/TIFF、其他文件的卡片；链接只显示地址；每个文件一个沙箱 frame；预览 CSP 加 worker-src blob: 和 wasm-unsafe-eval",
+      "status": "wip",
+      "updated": "2026-10-02",
+      "next": "WIP 检查点（1 个提交）。评审都做过了：跑完整 pnpm check 和 app lock 下的 pnpm e2e，把收尾改动提交，汇报后在搜索之后合并",
+      "gates": {
+        "check": "pass",
+        "e2e": "partial",
+        "codeReview": "pass",
+        "securityReview": "pass",
+        "simplify": "pass",
+        "designCritique": "pass",
+        "a11y": "pass"
+      },
+      "owns": [
+        "apps/desktop/src/preview/**",
+        "apps/desktop/preview.html",
+        "apps/desktop/src/i18n/locales/en/preview.json",
+        "crates/folio-app/src/preview.rs",
+        "e2e/tests/preview-sandbox.spec.ts",
+        "e2e/tests/preview.spec.ts",
+        "e2e/preview-samples.ts"
+      ],
+      "shared": [
+        "apps/desktop/src/app/panes.ts",
+        "apps/desktop/src/library/pane/LibraryPane.tsx",
+        "apps/desktop/src/library/menus/EntryMenu.tsx",
+        "apps/desktop/src/library/LibraryView.test.tsx",
+        "apps/desktop/src/library/states.test.tsx",
+        "apps/desktop/src/components/FileTypeIcon/FileTypeIcon.tsx",
+        "apps/desktop/src/lib/format.ts",
+        "apps/desktop/eslint.config.js",
+        "design/tokens/base.tokens.json",
+        "design/tokens/color.light.tokens.json",
+        "design/tokens/color.dark.tokens.json",
+        "apps/desktop/src/tokens/tokens.css",
+        "apps/desktop/src/tokens/tokens.ts",
+        "docs/specs/ui-architecture.md"
+      ],
+      "notes": [
+        "Library 第三栏通过 PREVIEW_PANE 挂载：props { entry, onBack?, moreMenu?, tagMenu?, actions: { open, showInExplorer, setTags } }",
+        "旧电脑上 GitButler 一直把已删除的 preview/frame.ts 报成未提交；新克隆没有这个问题，不要重建这个文件",
+        "2026-10-02 新电脑组合工作区：pnpm check 全绿，e2e 的预览用例通过"
+      ],
+      "links": [
+        "docs/specs/ui-architecture.md"
+      ],
+      "prompt": [
+        "Folio: finish and land feat/ui-preview (docs/roadmap/roadmap.json). Its reviews are done (design critique, accessibility, /code-review, /security-review, /simplify); the last commit is a WIP checkpoint. I approve landing it once the checks are green.",
+        "1. Read CLAUDE.md §7, every file in .agents/lanes/ and .agents/lanes/feat--ui-preview.md; run `but status` and `but pull --check`. It depends on lib/places.ts from feat/ui-search-palette: if search has not landed yet, stack this branch on it (`but move feat/ui-preview --above feat/ui-search-palette`) or wait for it.",
+        "2. Check what the WIP checkpoint left open in the lane file. Do not recreate the removed apps/desktop/src/preview/frame.ts; its replacement is preview/frame/main.ts.",
+        "3. Take the app lock (CLAUDE.md §7.5), run `pnpm check` and `pnpm e2e`, release the lock. Fix failures with commits on the branch and rerun /code-review on anything new.",
+        "4. Reword the WIP checkpoint commit into a final message (`but reword`), mark the lane done in the roadmap (`pnpm roadmap status feat/ui-preview done`) and commit that entry on the branch.",
+        "5. Land one lane at a time after feat/ui-search-palette: `but land feat/ui-preview --yes`, `but status`, delete the lane file and check the CI run on main. Stop at the first conflict or failure and report it; never use --ai.",
+        "Report to me in Chinese."
+      ]
+    },
+    {
+      "id": "chore/core-webview-accelerator-keys",
+      "title": "关掉 WebView 快捷键",
+      "milestone": "M1",
+      "phase": "m1-w3",
+      "track": "core",
+      "agent": "codex",
+      "reviewer": "claude-code",
+      "size": "S",
+      "effort": "xhigh",
+      "deps": [],
+      "summary": "正式版关掉 WebView2 的浏览器快捷键（刷新、查找、打印）；调试和 e2e 不受影响；页面自己的 Ctrl+K / Ctrl+1 / Ctrl+, 照常",
+      "status": "review",
+      "updated": "2026-10-02",
+      "next": "Codex 做完并已提交（1 个提交）。等一个 Claude Code session 做 /code-review、/security-review、/simplify 和完整检查，然后合并；首帧主题 stack 在它上面",
+      "gates": {
+        "check": "pass",
+        "e2e": "partial",
+        "codeReview": "todo",
+        "securityReview": "todo",
+        "simplify": "todo",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "crates/folio-app/src/webview_settings.rs",
+        "docs/specs/ui-architecture.md#17"
+      ],
+      "shared": [
+        "crates/folio-app/src/lib.rs",
+        "crates/folio-app/Cargo.toml",
+        "Cargo.lock"
+      ],
+      "notes": [
+        "正式版实测：F5 / Ctrl+R 不刷新，Ctrl+F / F3 / Ctrl+P 不出浏览器界面",
+        "Codex 的 code / unsafe / security 自查做完，修了 1 个 P2（导航错误要传回启动）",
+        "评审范围：../folio-agent-work/tasks/chore-core-webview-accelerator-keys/claude-review-handoff.md（已在新电脑恢复）"
+      ],
+      "prompt": {
+        "template": "reviewCodex"
+      }
+    },
+    {
+      "id": "feat/core-first-frame-theme",
+      "title": "首帧跟随主题",
+      "milestone": "M1",
+      "phase": "m1-w3",
+      "track": "core",
+      "agent": "claude-code",
+      "size": "S",
+      "effort": "medium",
+      "deps": [
+        "feat/core-app-settings",
+        "chore/core-webview-accelerator-keys"
+      ],
+      "summary": "主窗口按已存的主题选首帧背景（window_background::starts_dark），App settings 选了浅色或深色时第一帧不闪白（ipc-m1 §22.1）",
+      "status": "wip",
+      "updated": "2026-10-02",
+      "next": "WIP 检查点，stack 在快捷键 lane 上。快捷键合并后：删掉 ipc-m1 §22 状态行里的「后续」那句，跑 pnpm check 和 pnpm e2e，汇报后合并",
+      "gates": {
+        "check": "pass",
+        "e2e": "todo",
+        "codeReview": "todo",
+        "securityReview": "na",
+        "simplify": "todo",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "crates/folio-app/src/window_background.rs"
+      ],
+      "shared": [
+        "crates/folio-app/src/lib.rs",
+        "docs/specs/ipc-m1.md"
+      ],
+      "notes": [
+        "单元测试 the_first_frame_follows_the_stored_theme_else_windows 已在本机设置 lane 里通过"
+      ],
+      "prompt": [
+        "Folio: finish and land feat/core-first-frame-theme (docs/roadmap/roadmap.json). It is stacked on chore/core-webview-accelerator-keys and lands right after it. I approve landing it once the reviews pass and the checks are green.",
+        "1. Read CLAUDE.md §7, every file in .agents/lanes/ and .agents/lanes/feat--core-first-frame-theme.md; run `but status` and `but pull --check`. Start only after chore/core-webview-accelerator-keys has landed (`but pull` then shows this branch on main).",
+        "2. Drop the follow-up sentence from the ipc-m1 §22 status line (this lane delivers it) and commit that on the branch.",
+        "3. /code-review and /simplify on the branch (it touches the privileged layer's window construction: add /security-review if the review finds anything beyond the background colour).",
+        "4. Take the app lock (CLAUDE.md §7.5), run `pnpm check` and `pnpm e2e`, release the lock. Check by hand once with a stored Dark theme that the first frame is dark.",
+        "5. Reword the WIP checkpoint, mark the lane done (`pnpm roadmap status feat/core-first-frame-theme done`), commit that entry, then `but land feat/core-first-frame-theme --yes`, `but status`, delete the lane file and check the CI run on main. Stop at the first conflict or failure; never use --ai.",
+        "Report to me in Chinese."
+      ]
+    },
+    {
+      "id": "feat/core-import",
+      "title": "导入（后端）",
+      "milestone": "M1",
+      "phase": "m1-w3",
+      "track": "core",
+      "agent": "codex",
+      "reviewer": "claude-code",
+      "size": "M",
+      "effort": "max",
+      "deps": [
+        "feat/core-library-ops",
+        "feat/data-browse-queries"
+      ],
+      "summary": "M1 最后 3 个命令：选择文件、原生拖放、check_import；带进度的导入任务（暂存、BLAKE3 校验、崩溃恢复）、同名处理、可选把原文件移进回收站",
+      "status": "wip",
+      "updated": "2026-10-02",
+      "next": "Claude Code 接手评审中（你选了先修再合并）：最后一个提交是 /code-review 修复的 WIP 检查点，检查还没跑过。修完 → 检查 → /security-review → /simplify → 合并",
+      "gates": {
+        "check": "pass",
+        "e2e": "partial",
+        "codeReview": "partial",
+        "securityReview": "todo",
+        "simplify": "todo",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "crates/folio-core/src/library/operations/import/**",
+        "crates/folio-core/src/library/operations/import.rs",
+        "crates/folio-app/src/commands/import.rs",
+        "crates/folio-app/src/commands/import/manifest.rs",
+        "crates/folio-app/src/library/import.rs",
+        "crates/folio-app/src/library/import_tests.rs",
+        "crates/folio-app/capabilities/import.json",
+        "e2e/tests/ipc-planned.spec.ts",
+        "docs/specs/library-import.md"
+      ],
+      "shared": [
+        "crates/folio-core/src/library/mod.rs",
+        "crates/folio-core/src/library/operations/mod.rs",
+        "crates/folio-core/src/library/operations/entries.rs",
+        "crates/folio-core/src/meta/tree.rs",
+        "crates/folio-core/src/library/state.rs",
+        "crates/folio-app/src/library/mod.rs",
+        "crates/folio-app/src/library/worker.rs",
+        "crates/folio-app/src/library/operations.rs",
+        "crates/folio-app/src/jobs.rs",
+        "crates/folio-app/src/commands.rs",
+        "crates/folio-app/src/dialogs.rs",
+        "crates/folio-app/src/ipc.rs",
+        "crates/folio-app/src/lib.rs",
+        "crates/folio-app/tauri.conf.json",
+        "docs/specs/ipc-m1.md",
+        "docs/specs/library-state.md",
+        "docs/adr/ADR-0004-ipc-contract.md"
+      ],
+      "notes": [
+        "4 个提交：核心、shell、合约文档、评审修复（WIP）",
+        "2026-10-02 新电脑组合工作区：pnpm check 全绿（含导入的 37 个核心测试和 14 个 app 测试），e2e 的导入用例通过",
+        "没验证过：手动原生选择框、资源管理器 / 高 DPI 拖放、回收站交互、非 NTFS 卷",
+        "评审范围：../folio-agent-work/tasks/feat-core-import/claude-review-handoff.md 和 codex-review.md（已在新电脑恢复）"
+      ],
+      "prompt": {
+        "template": "reviewCodex",
+        "extra": [
+          "The last commit is a WIP checkpoint of the /code-review fixes: finish those fixes first (the handoff lists them), then run the checks, /security-review and /simplify."
+        ]
+      }
+    },
+    {
+      "id": "docs/docs-roadmap-board",
+      "title": "路线图看板",
+      "milestone": "M1",
+      "phase": "m1-s3",
+      "track": "flow",
+      "agent": "claude-code",
+      "size": "S",
+      "effort": "low",
+      "deps": [],
+      "summary": "把 roadmap.md 改成状态看板，带可复制的提示词（2 个提交）",
+      "status": "done",
+      "updated": "2026-10-02",
+      "landed": "2026-10-02",
+      "gates": {
+        "check": "pass",
+        "e2e": "na",
+        "codeReview": "na",
+        "securityReview": "na",
+        "simplify": "na",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "docs/product/roadmap.md",
+        "docs/specs/library-state.md"
+      ],
+      "prompt": {
+        "template": "landRoadmap"
+      }
+    },
+    {
+      "id": "docs/docs-roadmap-explorer",
+      "title": "交互式路径图",
+      "milestone": "M1",
+      "phase": "m1-s3",
+      "track": "flow",
+      "agent": "claude-code",
+      "size": "M",
+      "effort": "low",
+      "deps": [
+        "docs/docs-roadmap-board"
+      ],
+      "summary": "路线图变成一份数据（docs/roadmap/roadmap.json）+ pnpm roadmap 命令行 + 可交互的路径图（依赖图、并行槽位、看板、合并队列、文件归属），pnpm check 校验数据",
+      "status": "done",
+      "updated": "2026-10-02",
+      "landed": "2026-10-02",
+      "gates": {
+        "check": "pass",
+        "e2e": "na",
+        "codeReview": "pass",
+        "securityReview": "na",
+        "simplify": "todo",
+        "designCritique": "na",
+        "a11y": "partial"
+      },
+      "owns": [
+        "docs/roadmap/**",
+        "docs/product/roadmap.md"
+      ],
+      "shared": [
+        "package.json",
+        ".claude/launch.json",
+        "CLAUDE.md"
+      ],
+      "notes": [
+        "浏览器面板里检查过 8 个视图、深色模式、375px 手机宽度（无横向溢出）、搜索和键盘、复制失败时的降级"
+      ],
+      "links": [
+        "docs/roadmap/README.md"
+      ],
+      "prompt": {
+        "template": "landRoadmap"
+      }
+    },
+    {
+      "id": "chore/build-commit-identity",
+      "title": "提交身份检查",
+      "milestone": "M1",
+      "phase": "m1-s3",
+      "track": "flow",
+      "agent": "claude-code",
+      "size": "S",
+      "effort": "low",
+      "deps": [
+        "docs/docs-roadmap-explorer"
+      ],
+      "summary": "你 10-02 定的：所有提交都是 Sirui Mei <sirui.mei07@gmail.com>，任何 agent 都不能在提交信息里加自己的信息。pnpm check 检查还没合并的提交，新的 Commits workflow 在每次推送到 main 时检查全部历史（包括只改文档的推送）",
+      "status": "done",
+      "updated": "2026-10-02",
+      "landed": "2026-10-02",
+      "gates": {
+        "check": "pass",
+        "e2e": "na",
+        "codeReview": "pass",
+        "securityReview": "na",
+        "simplify": "todo",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "scripts/check-commits.mjs",
+        "scripts/check-commits.test.mjs",
+        ".github/workflows/commits.yml"
+      ],
+      "shared": [
+        "package.json",
+        "CLAUDE.md"
+      ],
+      "notes": [
+        "这台电脑的全局 Git 邮箱已改成 sirui.mei07@gmail.com；fix/ui-e2e-subpixel-bounds 已用它重新提交",
+        "164 个已有提交（main 和所有分支）全部通过"
+      ],
+      "prompt": {
+        "template": "landRoadmap"
+      }
+    },
+    {
+      "id": "docs/docs-device-handoff-2026-10-01",
+      "title": "换电脑交接",
+      "milestone": "M1",
+      "phase": "m1-s3",
+      "track": "flow",
+      "agent": "claude-code",
+      "size": "S",
+      "effort": "low",
+      "deps": [],
+      "summary": "旧电脑的交接文档和不进 Git 的记录（lane 文件、评审交接、上级目录说明、Claude 记忆）；新电脑的恢复记录",
+      "status": "review",
+      "updated": "2026-10-02",
+      "next": "新电脑已恢复完毕：可以合并（留档）或丢弃。CLAUDE.md §1 的新路径在这个 lane 里",
+      "gates": {
+        "check": "pass",
+        "e2e": "na",
+        "codeReview": "na",
+        "securityReview": "na",
+        "simplify": "na",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "docs/agents/device-handoff-2026-10-01.md",
+        "docs/agents/device-handoff-2026-10-01/**"
+      ],
+      "shared": [
+        "CLAUDE.md"
+      ],
+      "links": [
+        "docs/agents/device-handoff-2026-10-01.md"
+      ],
+      "prompt": [
+        "Folio: land docs/docs-device-handoff-2026-10-01 (docs/roadmap/roadmap.json). Docs only; the new device DESKTOP-N7UG6S7 is set up. I approve landing it.",
+        "1. Read CLAUDE.md §7, every file in .agents/lanes/ and .agents/lanes/docs--docs-device-handoff-2026-10-01.md; run `but status` and `but pull --check`.",
+        "2. Run `pnpm check`. Mark it done (`pnpm roadmap status docs/docs-device-handoff-2026-10-01 done`) and commit that entry on the branch.",
+        "3. `but land docs/docs-device-handoff-2026-10-01 --yes`, `but status`, delete the lane file and check the CI run on main. Stop at the first conflict or failure; never use --ai.",
+        "Report to me in Chinese."
+      ]
+    },
+    {
+      "id": "refactor/core-sta-helper",
+      "title": "合并 STA 辅助函数",
+      "milestone": "M1",
+      "phase": "m1-w3",
+      "track": "core",
+      "agent": "codex",
+      "size": "S",
+      "effort": "high",
+      "deps": [
+        "fix/build-ci-access-violation"
+      ],
+      "summary": "dialogs.rs 的 in_sta 和 win::recycle 的 in_apartment 几乎一样：合成 folio-core win 模块里的一个，保留 CI 修复的 MTA 规则",
+      "status": "planned",
+      "hold": "feat/core-import 也在改对话框代码，导入合并后再开最省事",
+      "updated": "2026-10-02",
+      "owns": [
+        "crates/folio-app/src/dialogs.rs",
+        "crates/folio-core/src/win/**"
+      ],
+      "links": [
+        "docs/specs/windows-adapter.md"
+      ],
+      "prompt": [
+        "Folio lane refactor/core-sta-helper (docs/roadmap/roadmap.json, M1 wave 3). Small. Start only when fewer than three sessions are building Rust (count the lane files in .agents/lanes/) and after feat/core-import has landed.",
+        "Two near-identical helpers run work on a single-threaded apartment: `in_sta` in crates/folio-app/src/dialogs.rs and `in_apartment` in folio-core's win::recycle. Keep one, in folio-core's win module, and use it from both, without changing behaviour: the CI fix's rule (docs/specs/windows-adapter.md §4: hold the process MTA so a teardown never unloads a cached WinRT factory) and the Recycle Bin's COM threading stay as they are. The commit \"fix(app): keep COM initialized so cached WinRT factories stay valid\" explains the rule.",
+        "Write the lane file and set the roadmap entry to wip (`pnpm roadmap status refactor/core-sta-helper wip`). Own the two files and the shared helper. Tests for both callers, `pnpm check` and `pnpm e2e` with the app lock (CLAUDE.md §7.5), /code-review, /simplify; set the entry to review and report to me in Chinese. After landing, check that the CI run on main (Windows Server 2022, where the crash showed) is green."
+      ]
+    },
+    {
+      "id": "feat/core-discard-move",
+      "title": "放弃未完成的移动（后端）",
+      "milestone": "M1",
+      "phase": "m1-w3",
+      "track": "core",
+      "agent": "claude-code",
+      "size": "S",
+      "effort": "xhigh",
+      "deps": [
+        "feat/core-app-settings"
+      ],
+      "summary": "移动做到一半崩溃、之后又对不上时：打不开资料库的单独原因，加一个要确认的「放弃这次未完成的移动」命令（合约 + 实现）",
+      "status": "planned",
+      "hold": "和 feat/core-import 都改 library/mod.rs 和 ipc-m1.md；Rust 名额满时等一等",
+      "updated": "2026-10-02",
+      "shared": [
+        "crates/folio-core/src/library/mod.rs",
+        "crates/folio-app/src/commands/library.rs",
+        "crates/folio-app/src/commands/library/manifest.rs",
+        "crates/folio-app/capabilities/library.json",
+        "docs/specs/ipc-m1.md",
+        "apps/desktop/src/ipc/bindings.ts",
+        "apps/desktop/src/ipc/mock/**"
+      ],
+      "links": [
+        "docs/specs/library-scan.md",
+        "docs/specs/library-state.md"
+      ],
+      "prompt": [
+        "Folio lane feat/core-discard-move (docs/roadmap/roadmap.json, M1 wave 3). Contract and implementation in one small lane. Start when fewer than three sessions are building Rust and no other lane regenerates the bindings. feat/core-import edits crates/folio-core/src/library/mod.rs and docs/specs/ipc-m1.md too: read its lane file and keep your hunks there small and at least seven lines from its own.",
+        "Read docs/specs/library-scan.md §7.1 (the move intent and its recovery), docs/specs/library-state.md (recovery, the unavailable reasons, and Sirui's decision of 2026-09-30 on discarding an unfinished move), docs/specs/ipc-m1.md §6 and §20, ADR-0002 §1, and Library::recover_pending in crates/folio-core/src/library/mod.rs with ScanJournal in meta/tree.rs.",
+        "Goal: when the intent of an in-app move that a crash interrupted can no longer be reconciled (its files, folders or metadata changed, or the catalog was recreated), library_status says so with an unavailable reason of its own instead of catalogFailed, and a confirmed command discards the move. Discarding never moves or deletes the user's files and never overwrites an authored metadata file that no longer matches the journal's images; it removes the journal, and a full scan rebuilds the catalog from the disk and the authored metadata. Write the contract into ipc-m1 (§6 and §20), regenerate the bindings and, in the same lane, update the fake shell in apps/desktop/src/ipc/mock/ and its fingerprint (roadmap §4 rule 2). The button belongs to feat/ui-discard-move-action on the first-run lane's library-unavailable screen: describe the reason and the command in your lane file for it.",
+        "Write the lane file and set the roadmap entry to wip (`pnpm roadmap status feat/core-discard-move wip`). Start with engineering:system-design. Contract tests, crash tests (a discard interrupted halfway, a conflicting metadata file), `pnpm check` and `pnpm e2e` with the app lock (CLAUDE.md §7.5), /code-review, /security-review, /simplify; set the entry to review and report to me in Chinese."
+      ]
+    },
+    {
+      "id": "feat/ui-settings",
+      "title": "设置界面",
+      "milestone": "M1",
+      "phase": "m1-w4",
+      "track": "ui",
+      "agent": "claude-code",
+      "size": "M",
+      "effort": "high",
+      "deps": [
+        "feat/core-app-settings",
+        "feat/ui-library-view"
+      ],
+      "summary": "Library settings（学期、课程、标签、忽略规则、重建索引）和 App settings（设备名、外观、减少动态效果）两个对话框；切换外观和减少动态效果立即生效",
+      "status": "planned",
+      "updated": "2026-10-02",
+      "owns": [
+        "apps/desktop/src/settings/**",
+        "apps/desktop/src/i18n/locales/en/settings.json",
+        "e2e/tests/settings-ui.spec.ts"
+      ],
+      "shared": [
+        "apps/desktop/src/app/registry.ts"
+      ],
+      "links": [
+        "docs/design/handoff/app-shell.md",
+        "docs/specs/ipc-m1.md"
+      ],
+      "prompt": [
+        "Folio lane feat/ui-settings (docs/roadmap/roadmap.json, M1 wave 4). What it builds on is on main: the App settings commands and events (feat/core-app-settings, ipc-m1 §22), the semester, course and tag commands, and the Library view. Use frontend-design.",
+        "Read docs/design/handoff/app-shell.md §9 (the two settings dialogs, 25A) and §3–§4 (where the gear and the avatar open them, Ctrl+,), library-actions.md §2 (shared components) and §9.4, docs/specs/ipc-m1.md §6–§8 and §22 (App settings, ignore rules, security), docs/specs/ui-architecture.md §6.3 (layout, theme and motion) and §12, and apps/desktop/src/app/registry.ts.",
+        "Goal: Library settings (library folder read-only with Change…, semesters with New semester…, courses, tags, file types, ignore rules, deleted files, Rebuild search index) and App settings (device name, appearance, reduce motion), each with its saving, validation and failure states. Appearance and reduce motion apply at once through `data-theme` and `data-reduce-motion` (the loose end in roadmap §3.4). Register the dialogs through app/registry.ts with one-line edits; the Library view's own components stay its lane's.",
+        "Write the lane file and set the roadmap entry to wip (`pnpm roadmap status feat/ui-settings wip`). Own apps/desktop/src/settings/** and the settings namespace. Component tests for every state, a Playwright flow, design:design-critique and design:accessibility-review, a reduced-motion check, `pnpm check` and `pnpm e2e` with the app lock (CLAUDE.md §7.5), /code-review, /simplify; set the entry to review and report to me in Chinese."
+      ]
+    },
+    {
+      "id": "feat/ui-import",
+      "title": "导入界面",
+      "milestone": "M1",
+      "phase": "m1-w4",
+      "track": "ui",
+      "agent": "claude-code",
+      "size": "M",
+      "effort": "high",
+      "deps": [
+        "feat/core-import",
+        "feat/ui-library-view"
+      ],
+      "summary": "拖放目标、「Add files」、导入对话框（标签、同名处理、删除原文件）、进度和结果",
+      "status": "planned",
+      "updated": "2026-10-02",
+      "owns": [
+        "apps/desktop/src/import/**",
+        "apps/desktop/src/i18n/locales/en/import.json",
+        "e2e/tests/import.spec.ts"
+      ],
+      "shared": [
+        "apps/desktop/src/app/registry.ts",
+        "apps/desktop/src/library/pane/LibraryPane.tsx"
+      ],
+      "links": [
+        "docs/design/handoff/library-actions.md",
+        "docs/specs/library-import.md"
+      ],
+      "prompt": [
+        "Folio lane feat/ui-import (docs/roadmap/roadmap.json, M1 wave 4). Start after feat/core-import has landed: its commands, the native drop and the import job are then on main. Use frontend-design.",
+        "Read docs/design/handoff/library-actions.md §3 (drop target), §4 (the import dialog, name clashes, behaviour), §5 (progress and results) and §10 (jobs), docs/specs/ipc-m1.md §12–§13, docs/specs/library-import.md (counts, recovery and the single-use choices) and the data hooks in apps/desktop/src/data/ that already wrap the import commands.",
+        "Goal: the drop target over the Library, Add files, the import dialog (tags, one name-clash policy, optionally moving the originals to the Recycle Bin), progress through the activity button and the result with its failures. Choices are single-use: never cache or replay a choice token.",
+        "Write the lane file and set the roadmap entry to wip (`pnpm roadmap status feat/ui-import wip`). Own apps/desktop/src/import/** and the import namespace; the Library pane gets small additive edits. Component tests for every state, a Playwright flow on temporary folders, design:design-critique and design:accessibility-review, a reduced-motion check, `pnpm check` and `pnpm e2e` with the app lock (CLAUDE.md §7.5), /code-review, /simplify; set the entry to review and report to me in Chinese."
+      ]
+    },
+    {
+      "id": "feat/ui-discard-move-action",
+      "title": "「放弃移动」按钮",
+      "milestone": "M1",
+      "phase": "m1-w4",
+      "track": "ui",
+      "agent": "claude-code",
+      "size": "S",
+      "effort": "medium",
+      "deps": [
+        "feat/core-discard-move",
+        "feat/ui-first-run"
+      ],
+      "summary": "资料库打不开的界面上，为新原因加一个要确认的「放弃这次未完成的移动」按钮（文案用 design:ux-copy）",
+      "status": "planned",
+      "updated": "2026-10-02",
+      "owns": [
+        "apps/desktop/src/first-run/**"
+      ],
+      "notes": [
+        "原来写在 feat/ui-first-run 里的未完成项，拆成单独的小 lane（整理时新加，名字可改）"
+      ],
+      "links": [
+        "docs/specs/library-state.md",
+        "docs/design/handoff/first-run.md"
+      ]
+    },
+    {
+      "id": "gate/m1-acceptance",
+      "kind": "gate",
+      "title": "M1 验收 → v0.1",
+      "milestone": "M1",
+      "phase": "m1-acc",
+      "track": "verify",
+      "agent": "claude-code",
+      "size": "L",
+      "effort": "xhigh",
+      "deps": [
+        "fix/ui-recently-added-clock",
+        "feat/ui-search-palette",
+        "feat/ui-first-run",
+        "fix/ui-e2e-subpixel-bounds",
+        "feat/ui-preview",
+        "chore/core-webview-accelerator-keys",
+        "feat/core-first-frame-theme",
+        "feat/core-import",
+        "refactor/core-sta-helper",
+        "feat/core-discard-move",
+        "feat/ui-settings",
+        "feat/ui-import",
+        "feat/ui-discard-move-action"
+      ],
+      "summary": "全部用户流程的 e2e、5 万文件性能复核、冻结 schema 和 .folio 格式的 fixture、engineering:tech-debt、未签名的 NSIS 安装包 → v0.1",
+      "status": "planned",
+      "updated": "2026-10-02"
+    },
+    {
+      "id": "docs/specs-history-format",
+      "title": "历史格式规格",
+      "milestone": "M2",
+      "phase": "m2-spec",
+      "track": "flow",
+      "agent": "claude-code",
+      "size": "M",
+      "effort": "max",
+      "deps": [
+        "gate/m1-acceptance"
+      ],
+      "summary": "remote-format.md（与语言无关的格式说明和 golden vectors，ADR-0003 行动项 2）和 versioning.md（本机对象库、工作区、提交日志、差异、恢复）",
+      "status": "planned",
+      "updated": "2026-10-01",
+      "links": [
+        "docs/adr/ADR-0003-versioning-and-sync.md"
+      ]
+    },
+    {
+      "id": "feat/ipc-m2-contract",
+      "title": "M2 合约",
+      "milestone": "M2",
+      "phase": "m2-spec",
+      "track": "core",
+      "agent": "claude-code",
+      "size": "M",
+      "effort": "xhigh",
+      "deps": [
+        "docs/specs-history-format"
+      ],
+      "summary": "workspace.*、history.*、ai.* 和 AI 设置的合约",
+      "status": "planned",
+      "updated": "2026-10-01"
+    },
+    {
+      "id": "design/design-m2-details",
+      "title": "M2 设计细节",
+      "milestone": "M2",
+      "phase": "m2-spec",
+      "track": "design",
+      "agent": "cowork",
+      "size": "S",
+      "deps": [
+        "gate/m1-acceptance"
+      ],
+      "summary": "窄窗口下的工作区和历史、差异视图的各种状态、恢复确认",
+      "status": "planned",
+      "updated": "2026-10-01"
+    },
+    {
+      "id": "chore/build-deps-m2",
+      "title": "M2 依赖",
+      "milestone": "M2",
+      "phase": "m2-spec",
+      "track": "flow",
+      "agent": "codex",
+      "size": "S",
+      "deps": [
+        "docs/specs-history-format"
+      ],
+      "summary": "差异算法、docx 解析、HTTP 客户端等 crate",
+      "status": "planned",
+      "updated": "2026-10-01"
+    },
+    {
+      "id": "feat/core-object-store",
+      "title": "对象库",
+      "milestone": "M2",
+      "phase": "m2-impl",
+      "track": "core",
+      "agent": "codex",
+      "size": "L",
+      "effort": "max",
+      "deps": [
+        "feat/ipc-m2-contract",
+        "chore/build-deps-m2"
+      ],
+      "summary": "BLAKE3 对象、pack 编解码、本机存储，golden 测试（关键路径）",
+      "status": "planned",
+      "updated": "2026-10-01"
+    },
+    {
+      "id": "feat/core-workspace",
+      "title": "工作区",
+      "milestone": "M2",
+      "phase": "m2-impl",
+      "track": "core",
+      "agent": "codex",
+      "size": "M",
+      "deps": [
+        "feat/core-object-store"
+      ],
+      "summary": "工作区 = 磁盘现状对比上次提交；WorkspaceChanged",
+      "status": "planned",
+      "updated": "2026-10-01"
+    },
+    {
+      "id": "feat/core-commit-history",
+      "title": "提交和历史",
+      "milestone": "M2",
+      "phase": "m2-impl",
+      "track": "core",
+      "agent": "codex",
+      "size": "L",
+      "effort": "max",
+      "deps": [
+        "feat/core-workspace"
+      ],
+      "summary": "提交（有日志，崩溃安全）、模板说明、修改说明、撤销提交、历史和单文件历史",
+      "status": "planned",
+      "updated": "2026-10-01"
+    },
+    {
+      "id": "feat/core-text-extract",
+      "title": "正文抽取",
+      "milestone": "M2",
+      "phase": "m2-impl",
+      "track": "core",
+      "agent": "codex",
+      "size": "M",
+      "deps": [
+        "feat/ipc-m2-contract",
+        "chore/build-deps-m2"
+      ],
+      "summary": "从 md、代码、txt、docx 抽取文字进全文索引（正文搜索）",
+      "status": "planned",
+      "updated": "2026-10-01"
+    },
+    {
+      "id": "feat/core-diff-restore",
+      "title": "差异和恢复",
+      "milestone": "M2",
+      "phase": "m2-impl",
+      "track": "core",
+      "agent": "codex",
+      "size": "M",
+      "deps": [
+        "feat/core-commit-history"
+      ],
+      "summary": "文本和 Word 文字的差异；恢复旧版本 = 产生一条新改动",
+      "status": "planned",
+      "updated": "2026-10-01"
+    },
+    {
+      "id": "feat/core-ai-message",
+      "title": "AI 提交说明",
+      "milestone": "M2",
+      "phase": "m2-impl",
+      "track": "core",
+      "agent": "codex",
+      "size": "M",
+      "effort": "xhigh",
+      "deps": [
+        "feat/ipc-m2-contract",
+        "chore/build-deps-m2"
+      ],
+      "summary": "DeepSeek（兼容 OpenAI）只从特权层请求；Key 存在 Windows 凭据管理器；失败退回模板；要 /security-review",
+      "status": "planned",
+      "updated": "2026-10-01"
+    },
+    {
+      "id": "feat/ui-diff-viewer",
+      "title": "差异组件",
+      "milestone": "M2",
+      "phase": "m2-impl",
+      "track": "ui",
+      "agent": "claude-code",
+      "size": "M",
+      "deps": [
+        "feat/ipc-m2-contract",
+        "design/design-m2-details"
+      ],
+      "summary": "工作区和历史共用的差异组件（在假 shell 上开发，不等核心）",
+      "status": "planned",
+      "updated": "2026-10-01"
+    },
+    {
+      "id": "feat/ui-changes-view",
+      "title": "工作区视图",
+      "milestone": "M2",
+      "phase": "m2-impl",
+      "track": "ui",
+      "agent": "claude-code",
+      "size": "L",
+      "deps": [
+        "feat/ui-diff-viewer"
+      ],
+      "summary": "改动列表、勾选、提交框、Ctrl+Enter、待同步列表",
+      "status": "planned",
+      "updated": "2026-10-01"
+    },
+    {
+      "id": "feat/ui-history-view",
+      "title": "历史视图",
+      "milestone": "M2",
+      "phase": "m2-impl",
+      "track": "ui",
+      "agent": "claude-code",
+      "size": "L",
+      "deps": [
+        "feat/ui-diff-viewer"
+      ],
+      "summary": "历史时间线、文件卡片、单文件历史、恢复",
+      "status": "planned",
+      "updated": "2026-10-01"
+    },
+    {
+      "id": "feat/ui-settings-ai",
+      "title": "AI 设置页",
+      "milestone": "M2",
+      "phase": "m2-impl",
+      "track": "ui",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "feat/ipc-m2-contract",
+        "feat/ui-settings"
+      ],
+      "summary": "AI 设置页（Key、模型、开关）",
+      "status": "planned",
+      "updated": "2026-10-01"
+    },
+    {
+      "id": "gate/m2-acceptance",
+      "kind": "gate",
+      "title": "M2 验收 → v0.2",
+      "milestone": "M2",
+      "phase": "m2-acc",
+      "track": "verify",
+      "agent": "claude-code",
+      "size": "M",
+      "deps": [
+        "feat/core-diff-restore",
+        "feat/core-text-extract",
+        "feat/core-ai-message",
+        "feat/ui-changes-view",
+        "feat/ui-history-view",
+        "feat/ui-settings-ai"
+      ],
+      "summary": "提交和恢复在崩溃注入下不丢数据；你自己用 v0.2 至少一两周",
+      "status": "planned",
+      "updated": "2026-10-01"
+    },
+    {
+      "id": "test/core-icloud-field-test",
+      "title": "iCloud 实测",
+      "milestone": "M3",
+      "phase": "m3-pre",
+      "track": "verify",
+      "agent": "claude-code",
+      "size": "M",
+      "deps": [
+        "docs/specs-history-format"
+      ],
+      "summary": "真实 iCloud 实测（ADR-0003 行动项 4）：冲突副本命名、NFD 文件名、大小写重命名、删除去向、固定文件夹、pack 和 head 记录先后；要你在 iPad 上配合",
+      "status": "planned",
+      "updated": "2026-10-01"
+    },
+    {
+      "id": "test/core-sync-simulation",
+      "title": "同步仿真",
+      "milestone": "M3",
+      "phase": "m3-pre",
+      "track": "verify",
+      "agent": "codex",
+      "size": "L",
+      "effort": "xhigh",
+      "deps": [
+        "docs/specs-history-format"
+      ],
+      "summary": "同步仿真 harness（行动项 3）：最终一致的假云端、两台设备加「iPad」、每个日志步骤注入崩溃；长跑放夜间 CI",
+      "status": "planned",
+      "updated": "2026-10-01"
+    },
+    {
+      "id": "docs/specs-sync",
+      "title": "同步规格",
+      "milestone": "M3",
+      "phase": "m3-spec",
+      "track": "flow",
+      "agent": "claude-code",
+      "size": "M",
+      "effort": "xhigh",
+      "deps": [
+        "test/core-icloud-field-test"
+      ],
+      "summary": "同步的 spec",
+      "status": "planned",
+      "updated": "2026-10-01"
+    },
+    {
+      "id": "feat/ipc-m3-contract",
+      "title": "M3 合约",
+      "milestone": "M3",
+      "phase": "m3-spec",
+      "track": "core",
+      "agent": "claude-code",
+      "size": "M",
+      "effort": "xhigh",
+      "deps": [
+        "docs/specs-sync",
+        "gate/m2-acceptance"
+      ],
+      "summary": "同步的合约",
+      "status": "planned",
+      "updated": "2026-10-01"
+    },
+    {
+      "id": "design/design-sync",
+      "title": "同步设计",
+      "milestone": "M3",
+      "phase": "m3-spec",
+      "track": "design",
+      "agent": "cowork",
+      "size": "M",
+      "deps": [
+        "docs/specs-sync"
+      ],
+      "summary": "工具栏同步状态、进度和结果、冲突处理、创建 / 加入云端仓库、释放空间",
+      "status": "planned",
+      "updated": "2026-10-01"
+    },
+    {
+      "id": "feat/core-remote-store",
+      "title": "云端存储",
+      "milestone": "M3",
+      "phase": "m3-impl",
+      "track": "core",
+      "agent": "codex",
+      "size": "L",
+      "deps": [
+        "feat/ipc-m3-contract",
+        "feat/core-object-store"
+      ],
+      "summary": "云端布局；推送 pack 和 head 记录；拉取并校验；选出规范 head",
+      "status": "planned",
+      "updated": "2026-10-01"
+    },
+    {
+      "id": "feat/core-mirror",
+      "title": "镜像",
+      "milestone": "M3",
+      "phase": "m3-impl",
+      "track": "core",
+      "agent": "codex",
+      "size": "L",
+      "deps": [
+        "feat/core-remote-store"
+      ],
+      "summary": "普通文件夹镜像；覆盖前先导入；识别 iPad / Mac 上的直接修改；不合法的文件名；冲突副本",
+      "status": "planned",
+      "updated": "2026-10-01"
+    },
+    {
+      "id": "feat/core-sync-round",
+      "title": "一轮同步",
+      "milestone": "M3",
+      "phase": "m3-impl",
+      "track": "core",
+      "agent": "codex",
+      "size": "L",
+      "effort": "max",
+      "deps": [
+        "feat/core-mirror",
+        "feat/core-commit-history",
+        "test/core-sync-simulation"
+      ],
+      "summary": "拉取 → 导入直接修改 → rebase → 落地文件（删除进回收站）→ 推送；同步前快照；中断后恢复（关键路径）",
+      "status": "planned",
+      "updated": "2026-10-01"
+    },
+    {
+      "id": "feat/core-merge-conflicts",
+      "title": "冲突合并",
+      "milestone": "M3",
+      "phase": "m3-impl",
+      "track": "core",
+      "agent": "codex",
+      "size": "M",
+      "effort": "xhigh",
+      "deps": [
+        "feat/core-sync-round",
+        "feat/core-diff-restore"
+      ],
+      "summary": "文本三方合并；Word 由你选；其他文件两份都留",
+      "status": "planned",
+      "updated": "2026-10-01"
+    },
+    {
+      "id": "feat/core-placeholders",
+      "title": "占位文件",
+      "milestone": "M3",
+      "phase": "m3-impl",
+      "track": "core",
+      "agent": "codex",
+      "size": "M",
+      "deps": [
+        "feat/core-sync-round"
+      ],
+      "summary": "等待占位文件下载；推送后设为「仅在云端」释放空间",
+      "status": "planned",
+      "updated": "2026-10-01"
+    },
+    {
+      "id": "feat/core-remote-watch",
+      "title": "云端监视",
+      "milestone": "M3",
+      "phase": "m3-impl",
+      "track": "core",
+      "agent": "codex",
+      "size": "S",
+      "deps": [
+        "feat/core-remote-store"
+      ],
+      "summary": "发现云端新记录 → 工具栏显示 ↓N",
+      "status": "planned",
+      "updated": "2026-10-01"
+    },
+    {
+      "id": "feat/core-remote-setup",
+      "title": "创建 / 加入仓库",
+      "milestone": "M3",
+      "phase": "m3-impl",
+      "track": "core",
+      "agent": "codex",
+      "size": "M",
+      "deps": [
+        "feat/core-remote-store"
+      ],
+      "summary": "创建云端仓库；换电脑后加入",
+      "status": "planned",
+      "updated": "2026-10-01"
+    },
+    {
+      "id": "feat/ui-sync-toolbar",
+      "title": "同步工具栏",
+      "milestone": "M3",
+      "phase": "m3-impl",
+      "track": "ui",
+      "agent": "claude-code",
+      "size": "M",
+      "deps": [
+        "feat/ipc-m3-contract",
+        "design/design-sync"
+      ],
+      "summary": "云端状态、↑N ↓N、Sync 按钮、进度和结果",
+      "status": "planned",
+      "updated": "2026-10-01"
+    },
+    {
+      "id": "feat/ui-conflicts",
+      "title": "冲突处理界面",
+      "milestone": "M3",
+      "phase": "m3-impl",
+      "track": "ui",
+      "agent": "claude-code",
+      "size": "M",
+      "deps": [
+        "feat/ipc-m3-contract",
+        "design/design-sync",
+        "feat/ui-diff-viewer"
+      ],
+      "summary": "逐个处理冲突",
+      "status": "planned",
+      "updated": "2026-10-01"
+    },
+    {
+      "id": "feat/ui-remote-setup",
+      "title": "创建 / 加入仓库界面",
+      "milestone": "M3",
+      "phase": "m3-impl",
+      "track": "ui",
+      "agent": "claude-code",
+      "size": "M",
+      "deps": [
+        "feat/ipc-m3-contract",
+        "design/design-sync"
+      ],
+      "summary": "创建 / 加入云端仓库的流程",
+      "status": "planned",
+      "updated": "2026-10-01"
+    },
+    {
+      "id": "gate/m3-acceptance",
+      "kind": "gate",
+      "title": "M3 验收 → v0.3",
+      "milestone": "M3",
+      "phase": "m3-acc",
+      "track": "verify",
+      "agent": "sirui",
+      "size": "L",
+      "deps": [
+        "feat/core-merge-conflicts",
+        "feat/core-placeholders",
+        "feat/core-remote-watch",
+        "feat/core-remote-setup",
+        "feat/ui-sync-toolbar",
+        "feat/ui-conflicts",
+        "feat/ui-remote-setup"
+      ],
+      "summary": "长时间仿真全绿；iCloud 实测通过；两台 Windows 设备加 iPad 的实机测试（旧电脑 g16-strix 可以当第二台）",
+      "status": "planned",
+      "updated": "2026-10-02"
+    },
+    {
+      "id": "feat/ui-office-preview",
+      "title": "Office 预览",
+      "milestone": "M4",
+      "phase": "m4-impl",
+      "track": "ui",
+      "agent": "claude-code",
+      "size": "L",
+      "deps": [
+        "feat/ui-preview",
+        "spike/ui-office-preview",
+        "gate/m2-acceptance"
+      ],
+      "summary": "按 spike 的结论接入 Word / Excel / PPT 预览（M3 期间就可以开始）",
+      "status": "planned",
+      "updated": "2026-10-01"
+    },
+    {
+      "id": "feat/ui-onboarding",
+      "title": "首次使用引导",
+      "milestone": "M4",
+      "phase": "m4-impl",
+      "track": "ui",
+      "agent": "claude-code",
+      "size": "M",
+      "deps": [
+        "gate/m3-acceptance"
+      ],
+      "summary": "首次使用引导",
+      "status": "planned",
+      "updated": "2026-10-01"
+    },
+    {
+      "id": "feat/core-app-integration",
+      "title": "系统集成",
+      "milestone": "M4",
+      "phase": "m4-impl",
+      "track": "core",
+      "agent": "codex",
+      "size": "M",
+      "deps": [
+        "gate/m3-acceptance"
+      ],
+      "summary": "开机启动、快捷键、检查更新的设置",
+      "status": "planned",
+      "updated": "2026-10-01"
+    },
+    {
+      "id": "chore/build-release-pipeline",
+      "title": "发布流水线",
+      "milestone": "M4",
+      "phase": "m4-impl",
+      "track": "flow",
+      "agent": "claude-code",
+      "size": "M",
+      "deps": [
+        "gate/m3-acceptance"
+      ],
+      "summary": "Tauri updater、公开的更新源、打 tag 自动构建 NSIS 并发布",
+      "status": "planned",
+      "updated": "2026-10-01"
+    },
+    {
+      "id": "docs/docs-install-guide",
+      "title": "安装说明",
+      "milestone": "M4",
+      "phase": "m4-impl",
+      "track": "flow",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "chore/build-release-pipeline"
+      ],
+      "summary": "给同学朋友的安装说明，包括 SmartScreen 怎么放行",
+      "status": "planned",
+      "updated": "2026-10-01"
+    },
+    {
+      "id": "test/build-release-candidate",
+      "title": "发布候选测试",
+      "milestone": "M4",
+      "phase": "m4-rc",
+      "track": "verify",
+      "agent": "claude-code",
+      "size": "M",
+      "effort": "xhigh",
+      "deps": [
+        "feat/ui-office-preview",
+        "feat/ui-onboarding",
+        "feat/core-app-integration",
+        "docs/docs-install-guide"
+      ],
+      "summary": "Windows 10 和多显示器缩放；全量无障碍审查；5 万文件 / 100 GB 性能复核；整个 IPC 面的 /security-review；收窄 core:event:allow-listen；engineering:deploy-checklist",
+      "status": "planned",
+      "updated": "2026-10-01"
+    },
+    {
+      "id": "gate/v1-trial",
+      "kind": "gate",
+      "title": "试用 → v1.0",
+      "milestone": "M4",
+      "phase": "m4-ship",
+      "track": "verify",
+      "agent": "sirui",
+      "size": "M",
+      "effort": "medium",
+      "deps": [
+        "test/build-release-candidate"
+      ],
+      "summary": "2～3 位同学试用 → 修问题 → v1.0 上线",
+      "status": "planned",
+      "updated": "2026-10-01"
+    }
+  ],
+  "landingQueue": [
+    {
+      "lane": "fix/ui-recently-added-clock",
+      "why": "main 的 CI 红着（规则 9）；只改测试 helper"
+    },
+    {
+      "lane": "feat/ui-search-palette",
+      "why": "评审都过了；预览依赖它的 lib/places.ts"
+    },
+    {
+      "lane": "feat/ui-first-run",
+      "why": "评审都过了；token README 和测试 helper 排在搜索之后"
+    },
+    {
+      "lane": "fix/ui-e2e-subpixel-bounds",
+      "why": "和首次使用都改 shell.spec.ts；合并后新电脑的 e2e 全绿"
+    },
+    {
+      "lane": "chore/core-webview-accelerator-keys",
+      "why": "先要 Claude Code 评审；首帧主题 stack 在它上面"
+    },
+    {
+      "lane": "feat/core-first-frame-theme",
+      "why": "紧跟快捷键 lane"
+    },
+    {
+      "lane": "feat/ui-preview",
+      "why": "跑完完整检查后合并，必须在搜索之后"
+    },
+    {
+      "lane": "feat/core-import",
+      "why": "修完评审问题、再做 /security-review 和 /simplify；合并后导入界面解锁"
+    },
+    {
+      "lane": "docs/docs-device-handoff-2026-10-01",
+      "why": "留档；随时可以合并或丢弃"
+    }
+  ],
+  "decisions": [
+    {
+      "id": "approve-landing",
+      "when": "每个 lane 汇报后",
+      "item": "批准合并（提示词里已写好「检查通过才合并」）",
+      "type": "approve",
+      "state": "recurring"
+    },
+    {
+      "id": "sync-point-3",
+      "when": "现在",
+      "item": "批准同步点 3：按「合并队列」的顺序一次合并一个",
+      "type": "approve",
+      "state": "open"
+    },
+    {
+      "id": "git-email",
+      "when": "2026-10-02",
+      "item": "提交身份：这台电脑原来的 Git 邮箱是学校邮箱",
+      "type": "decide",
+      "state": "done",
+      "result": "统一为 Sirui Mei <sirui.mei07@gmail.com>；任何 agent 都不能在提交信息里加自己的信息（chore/build-commit-identity 强制检查）"
+    },
+    {
+      "id": "forge-auth",
+      "when": "合并前",
+      "item": "在这台电脑上登录 GitHub：but land 要推送（Git Credential Manager 第一次推送时会弹出登录），GitButler 的 forge 认证在 GitButler 设置里",
+      "type": "manual",
+      "state": "open"
+    },
+    {
+      "id": "codex-device",
+      "when": "下一个 Codex lane 之前",
+      "item": "这台电脑还没装 Codex 和它的 skills / GitButler 指南（AGENTS.md 已改成新路径）",
+      "type": "manual",
+      "state": "open"
+    },
+    {
+      "id": "icloud-upgrade",
+      "when": "越早越好",
+      "item": "把 iCloud for Windows 升到 Microsoft Store 的当前版本（ADR-0003 行动项 5）",
+      "type": "manual",
+      "state": "open"
+    },
+    {
+      "id": "version-plan",
+      "when": "有空时",
+      "item": "版本定义（v1.0 = M4 完成、发给同学朋友）和 M1→M4 的顺序：没单独确认过，按本文执行",
+      "type": "decide",
+      "state": "open"
+    },
+    {
+      "id": "remote-format",
+      "when": "M2 之前",
+      "item": "批准 remote-format.md：云端格式一旦有了真实数据就很难再改",
+      "type": "approve",
+      "state": "locked"
+    },
+    {
+      "id": "second-device",
+      "when": "M3 之前",
+      "item": "双设备测试的第二台 Windows：旧电脑 g16-strix 就可以",
+      "type": "manual",
+      "state": "locked"
+    },
+    {
+      "id": "signing",
+      "when": "M4 之前",
+      "item": "更新源放在哪；要不要代码签名（智能应用控制会拦截未签名的程序，三个方案见 ADR-0001 行动项 6）",
+      "type": "decide",
+      "state": "locked"
+    },
+    {
+      "id": "done-phase0",
+      "when": "阶段 0",
+      "item": "ADR-0004、合并顺序、Tauri 2.12 和窗口手动检查；Codex 只做后端编码",
+      "type": "approve",
+      "state": "done",
+      "result": "已批准；写在 AGENTS.md"
+    },
+    {
+      "id": "done-sync1",
+      "when": "同步点 1",
+      "item": "ADR-0005 界面架构；首次使用和资料库操作的设计；Office spike 的课程文件；PPT 预览程度",
+      "type": "approve",
+      "state": "done",
+      "result": "笔记旁的图片 M1 就做；链接只显示地址；v0.1 方块栏只有 Library；PPT 选 A"
+    },
+    {
+      "id": "done-wave2",
+      "when": "第 2 波",
+      "item": "ADR-0002 的课程编号等修订；移动的崩溃恢复扩展；放弃未完成移动的入口",
+      "type": "approve",
+      "state": "done",
+      "result": "9-29、9-30 已批准"
+    }
+  ],
+  "looseEnds": [
+    {
+      "state": "done",
+      "item": "窗口命令失败的界面错误状态；data-theme 和首帧不闪白（Windows 主题）",
+      "lane": "feat/ui-app-shell"
+    },
+    {
+      "state": "done",
+      "item": "学期和资料库根目录下零散文件的位置",
+      "lane": "feat/ui-library-view"
+    },
+    {
+      "state": "done",
+      "item": "原生选文件夹对话框手动点过一次",
+      "lane": "feat/ui-first-run"
+    },
+    {
+      "state": "open",
+      "item": "首帧跟随 App settings 里选的主题",
+      "lane": "feat/core-first-frame-theme"
+    },
+    {
+      "state": "open",
+      "item": "正式版的浏览器快捷键",
+      "lane": "chore/core-webview-accelerator-keys"
+    },
+    {
+      "state": "open",
+      "item": "搜索高亮只能当文本渲染",
+      "lane": "feat/ui-search-palette"
+    },
+    {
+      "state": "open",
+      "item": "两个重复的 STA 辅助函数",
+      "lane": "refactor/core-sta-helper"
+    },
+    {
+      "state": "open",
+      "item": "移动做到一半崩溃后对不上，资料库打不开（你 9-30 批准加「放弃」入口）",
+      "lane": "feat/core-discard-move"
+    },
+    {
+      "state": "open",
+      "item": "设置里切换外观和减少动态效果",
+      "lane": "feat/ui-settings"
+    },
+    {
+      "state": "open",
+      "item": "共用名称规则（界面和假 shell）；删掉 LibraryView 用不到的「无资料库」分支",
+      "lane": "feat/ui-first-run"
+    },
+    {
+      "state": "open",
+      "item": "共用失败状态、选择栏、对话框外观、e2e helper",
+      "lane": "feat/ui-search-palette"
+    },
+    {
+      "state": "open",
+      "item": "第一个发布 schema 的 fixture",
+      "lane": "gate/m1-acceptance"
+    },
+    {
+      "state": "open",
+      "item": "窗口对所有事件都有 core:event:allow-listen，要收窄",
+      "lane": "test/build-release-candidate"
+    },
+    {
+      "state": "open",
+      "item": "Windows 10、缩放比例不同的多显示器",
+      "lane": "test/build-release-candidate"
+    },
+    {
+      "state": "open",
+      "item": "哈希时每个文件打开三次等性能改进",
+      "lane": "test/build-release-candidate"
+    }
+  ],
+  "risks": [
+    {
+      "level": "high",
+      "risk": "合并积压、并行 lane 改同一段文件",
+      "impact": "分支互相卡住，合并时冲突",
+      "mitigation": "按合并队列一次合并一个；命令和文案已按功能组和视图拆开；共享文件的改动离别人至少 7 行"
+    },
+    {
+      "level": "high",
+      "risk": "iCloud for Windows 的实际行为和文档不一致",
+      "impact": "同步丢改动或出现冲突副本",
+      "mitigation": "M3 实现前先实测和仿真；覆盖前先导入；删除只进回收站"
+    },
+    {
+      "level": "med",
+      "risk": "两台电脑交替开发",
+      "impact": "lane 文件和 app lock 不进 Git，另一台看不到别人占了哪些路径",
+      "mitigation": "同一时间只在一台电脑上开发；换电脑前推送所有分支并更新路径图"
+    },
+    {
+      "level": "med",
+      "risk": "PPT 渲染器还不成熟",
+      "impact": "Office 预览达不到 brief 的描述",
+      "mitigation": "spike 已选方案 A，留了「用默认程序打开」"
+    },
+    {
+      "level": "med",
+      "risk": "未签名分发",
+      "impact": "朋友的电脑拦截安装",
+      "mitigation": "M4 之前定签名方案"
+    },
+    {
+      "level": "med",
+      "risk": "tauri-specta 仍是 rc，版本固定",
+      "impact": "升级 Tauri 时绑定生成可能出问题",
+      "mitigation": "每次升级走单独的依赖 lane，由 export_bindings 测试把关"
+    },
+    {
+      "level": "low",
+      "risk": "共用 target/ 和 dev server",
+      "impact": "并行 session 互相拖慢",
+      "mitigation": "最多 3 个 Rust session；e2e 用 app lock；基准测试找安静的时候跑"
+    },
+    {
+      "level": "low",
+      "risk": "Codex 和 Claude 的规则再次分叉",
+      "impact": "互相看不到占用",
+      "mitigation": "AGENTS.md 只指向 CLAUDE.md；改协作规则的 lane 顺带检查 AGENTS.md"
+    },
+    {
+      "level": "low",
+      "risk": "显示器不同导致 e2e 像素断言失败",
+      "impact": "新电脑上 e2e 红，掩盖真正的问题",
+      "mitigation": "像素比较一律用容差（fix/ui-e2e-subpixel-bounds）"
+    }
+  ],
+  "rules": [
+    "先合并，再开新 lane：review 完的 lane 尽快 land",
+    "合约先行：合约 lane 先 land，核心和界面再并行；重新生成 bindings 时同一个 lane 更新假 shell 和指纹",
+    "stack 只给真实依赖，最多两层",
+    "按目录分所有权：核心 crates/folio-core/src/<模块>/**，界面 apps/desktop/src/<视图>/**",
+    "拆开热点文件：命令按功能组、文案按视图、registry 只改一行、依赖由 chore/build-deps-* 集中装",
+    "并行上限：Rust session 最多 3 个，界面最多 4 个，另加 Cowork；pnpm e2e 用 app lock 排队",
+    "独占操作放在同步点：but land、but pull、装依赖",
+    "每个 lane 同样收尾：pnpm check + pnpm e2e → /code-review（+ /security-review）→ /simplify → 中文汇报 → 你批准 → but land",
+    "CI 红了先修",
+    "Codex lane 一到 review 就开 Claude Code session 评审",
+    "路线图数据随 lane 更新：开工、到 review、合并前各跑一次 pnpm roadmap status，只改自己那一条"
+  ],
+  "prompts": {
+    "land": [
+      "Folio: land {lane} (docs/roadmap/roadmap.json, landing queue). I approve landing it once the checks are green.",
+      "1. Read CLAUDE.md §7, every file in .agents/lanes/ and .agents/lanes/{laneFile}.md; run `but status` and `but pull --check`.",
+      "2. Confirm from the lane file that /code-review, /security-review where it applies, and /simplify are done; if one is missing, run it and fix findings with commits on the branch.",
+      "{extra}",
+      "3. Take the app lock (CLAUDE.md §7.5), run `pnpm check` and `pnpm e2e`, release the lock.",
+      "4. Mark it done in the roadmap (`pnpm roadmap status {lane} done`) and commit that one entry on {lane}.",
+      "5. Land one lane at a time: check that no other lane is landing, then `but land {lane} --yes`, `but status`, delete the lane file and check the CI run on main. Stop at the first conflict or failure and report it; never use --ai.",
+      "Report to me in Chinese."
+    ],
+    "reviewCodex": [
+      "Folio: review and land the Codex lane {lane} (docs/roadmap/roadmap.json). I approve landing it once your reviews pass and the checks are green.",
+      "1. Read CLAUDE.md, every file in .agents/lanes/, .agents/lanes/{laneFile}.md and the review scope in ../folio-agent-work/tasks/{taskDir}/claude-review-handoff.md. Run `but status` and `but pull --check`.",
+      "2. Set the roadmap entry to wip (`pnpm roadmap status {lane} wip --next \"Claude Code review\"`). Take over the lane for review: /code-review (high effort for a large lane), /security-review and /simplify on its commits, following the handoff's focus list. Fix findings with commits on the branch; stop and ask me if a finding needs a product or security decision.",
+      "{extra}",
+      "3. Take the app lock (CLAUDE.md §7.5), run `pnpm check` and `pnpm e2e`, release the lock.",
+      "4. If the lane has not, add its progress line to the ADR and spec items it finishes (for commands: ADR-0004 action item 3 and docs/specs/ipc-m1.md §21). Mark it done (`pnpm roadmap status {lane} done`) and commit that entry on the branch.",
+      "5. Land one lane at a time: check that no other lane is landing, then `but land {lane} --yes`, `but status`, delete the lane file and check the CI run on main. Stop at the first conflict or failure and report it; never use --ai.",
+      "Report to me in Chinese."
+    ],
+    "landRoadmap": [
+      "Folio: land the stack docs/docs-roadmap-board → docs/docs-roadmap-explorer → chore/build-commit-identity (docs/roadmap/README.md). Docs and tooling only. I approve landing it once the checks are green.",
+      "1. Read CLAUDE.md §7, every file in .agents/lanes/ and the three lane files; run `but status` and `but pull --check`.",
+      "2. Run `pnpm roadmap doctor` and mark every lane that has landed since the data was written as done (`pnpm roadmap status <lane> done`); commit that on docs/docs-roadmap-explorer.",
+      "3. Run `pnpm check` (it starts with the commit and roadmap checks); docs and scripts need no e2e.",
+      "4. `but land chore/build-commit-identity --whole-stack --yes`, `but status`, delete the three lane files and check both workflow runs on main (CI and Commits). Stop at the first conflict or failure; never use --ai.",
+      "5. Republish the explorer (docs/roadmap/README.md, Publish) so its link shows main's data.",
+      "Report to me in Chinese."
+    ],
+    "start": [
+      "Folio lane {lane} (docs/roadmap/roadmap.json: {milestone}, {phase}). Goal, from the roadmap: {summary}",
+      "Read CLAUDE.md, every file in .agents/lanes/ and the lane's entry (`pnpm roadmap show {lane}`: what it depends on, what it unblocks, its links). Write the lane file and set the entry to wip (`pnpm roadmap status {lane} wip`).",
+      "Follow the feature pipeline in CLAUDE.md §4.2 for this kind of lane (engineering:system-design first for backend or IPC work; a handoff spec first for UI).",
+      "Finish with `pnpm check` and `pnpm e2e` under the app lock (CLAUDE.md §7.5), /code-review, /security-review if it touches the privileged layer or IPC, and /simplify; set the entry to review and report to me in Chinese."
+    ],
+    "codexPreamble": [
+      "Codex: follow AGENTS.md in the folder above Folio and Folio/CLAUDE.md. Backend coding only: lane file in Folio/.agents/lanes/, specs and ADRs in Folio/docs/, scratch in folio-agent-work/tasks/<lane>/. Map the Claude skill names below to your skills in AGENTS.md §5. Stop at review and write the review scope into folio-agent-work/tasks/<lane>/claude-review-handoff.md; a Claude Code session runs /code-review, /security-review and /simplify before I approve the land."
+    ]
+  },
+  "log": [
+    {
+      "at": "2026-10-01",
+      "by": "Claude Code",
+      "text": "路线图改成状态看板（docs/docs-roadmap-board）；第 3 波 4 个 lane 停在 review"
+    },
+    {
+      "at": "2026-10-02",
+      "by": "Claude Code",
+      "text": "换到新电脑 DESKTOP-N7UG6S7：装好工具链，应用 9 个分支，恢复 lane 文件、评审交接和记忆；组合工作区 pnpm check 全绿，e2e 36/37 → 加 fix/ui-e2e-subpixel-bounds"
+    },
+    {
+      "at": "2026-10-02",
+      "by": "Claude Code",
+      "text": "路线图迁成数据 + 交互式路径图（docs/docs-roadmap-explorer）；资料库视图和本机设置标为已合并；设置界面解锁"
+    }
+  ]
+}

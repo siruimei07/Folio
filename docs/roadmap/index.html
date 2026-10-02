@@ -1,0 +1,1263 @@
+<title>Folio 路径图</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<!--
+  The explorer for docs/roadmap/roadmap.json. `pnpm roadmap build` inlines tools/lib.mjs at the
+  lib placeholder and the data at the data placeholder; `pnpm roadmap serve` does the same on every load.
+  Opened as a raw file it only explains how to run it.
+-->
+<style>
+/* Layout: a sticky signal bar, a row of boards (tabs), and a lane panel that slides in from the right
+   like a departure board. Tracks are the metro lines; lanes are the stations. */
+:root {
+  --bg: #f3f5f8;
+  --surface: #ffffff;
+  --surface-2: #eceff4;
+  --band: #f7f8fa;
+  --band-2: #eef1f5;
+  --ink: #141820;
+  --ink-2: #485062;
+  --muted: #6f7788;
+  --line: #dde2e9;
+  --line-strong: #c3cad5;
+  --accent: #1f5bd8;
+  --accent-soft: #e2eafb;
+  --accent-ink: #ffffff;
+  --down: #7a45c9;
+  --down-soft: #eee6fa;
+  --st-done: #3d8a57;
+  --st-review: #c48500;
+  --st-wip: #2a78d6;
+  --st-ready: #0b8a0b;
+  --st-queued: #cf5f2b;
+  --st-locked: #98a0ad;
+  --st-dropped: #b3b9c3;
+  --g-pass: #0b8a0b;
+  --g-partial: #c48500;
+  --g-fail: #d03b3b;
+  --g-todo: #98a0ad;
+  --g-na: #d3d8df;
+  --t-core: #2a78d6;
+  --t-ui: #eb6834;
+  --t-design: #1baf7a;
+  --t-verify: #eda100;
+  --t-flow: #e87ba4;
+  --risk-high: #d03b3b;
+  --risk-med: #cf5f2b;
+  --risk-low: #98a0ad;
+  --shadow: 0 1px 2px rgb(20 24 32 / 0.06), 0 8px 24px rgb(20 24 32 / 0.08);
+  --font-display: "Barlow Condensed", "Noto Sans SC", "Microsoft YaHei UI", sans-serif;
+  --font-body: "IBM Plex Sans", "Noto Sans SC", "Microsoft YaHei UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+  --step--1: 0.8125rem;
+  --step-0: 0.9375rem;
+  --step-1: 1.125rem;
+  --step-2: 1.5rem;
+  --step-3: 2.125rem;
+  --radius: 6px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1015; --surface: #161a21; --surface-2: #1d222b; --band: #13171d; --band-2: #191e26;
+    --ink: #e8ebf0; --ink-2: #b6bcc8; --muted: #8d94a3; --line: #272d37; --line-strong: #39414e;
+    --accent: #6f9cff; --accent-soft: #1d2a45; --accent-ink: #0d1015; --down: #b28cf0; --down-soft: #2a2140;
+    --st-done: #5cae78; --st-review: #e9ad2c; --st-wip: #5b9cf0; --st-ready: #2fbf2f; --st-queued: #ec8656; --st-locked: #6c7482; --st-dropped: #4f5664;
+    --g-pass: #2fbf2f; --g-partial: #e9ad2c; --g-fail: #ec6767; --g-todo: #6c7482; --g-na: #343b47;
+    --t-core: #3987e5; --t-ui: #d95926; --t-design: #199e70; --t-verify: #c98500; --t-flow: #d55181;
+    --risk-high: #ec6767; --risk-med: #ec8656; --risk-low: #6c7482;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 10px 30px rgb(0 0 0 / 0.35);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1015; --surface: #161a21; --surface-2: #1d222b; --band: #13171d; --band-2: #191e26;
+  --ink: #e8ebf0; --ink-2: #b6bcc8; --muted: #8d94a3; --line: #272d37; --line-strong: #39414e;
+  --accent: #6f9cff; --accent-soft: #1d2a45; --accent-ink: #0d1015; --down: #b28cf0; --down-soft: #2a2140;
+  --st-done: #5cae78; --st-review: #e9ad2c; --st-wip: #5b9cf0; --st-ready: #2fbf2f; --st-queued: #ec8656; --st-locked: #6c7482; --st-dropped: #4f5664;
+  --g-pass: #2fbf2f; --g-partial: #e9ad2c; --g-fail: #ec6767; --g-todo: #6c7482; --g-na: #343b47;
+  --t-core: #3987e5; --t-ui: #d95926; --t-design: #199e70; --t-verify: #c98500; --t-flow: #d55181;
+  --risk-high: #ec6767; --risk-med: #ec8656; --risk-low: #6c7482;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 10px 30px rgb(0 0 0 / 0.35);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { background: var(--bg); color: var(--ink); }
+body { font: 400 var(--step-0)/1.6 var(--font-body); margin: 0; -webkit-font-smoothing: antialiased; }
+button, input { font: inherit; color: inherit; }
+a { color: var(--accent); text-underline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+code, .mono { font-family: var(--font-mono); font-size: 0.86em; }
+:not(pre) > code { background: var(--surface-2); padding: 0.05em 0.35em; border-radius: 3px; overflow-wrap: anywhere; }
+h1, h2, h3 { text-wrap: balance; margin: 0; }
+.wrap { padding-inline: 16px; max-width: 1440px; margin-inline: auto; }
+
+/* Signal bar */
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--surface); border-bottom: 1px solid var(--line); }
+.bar-top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding-block: 10px; }
+.brand { display: flex; align-items: baseline; gap: 10px; margin-right: auto; min-width: 0; }
+.brand b { font: 700 1.75rem/1 var(--font-display); letter-spacing: 0.01em; }
+.brand span { font: 600 1.25rem/1 var(--font-display); color: var(--ink-2); }
+.stage { display: inline-flex; align-items: center; gap: 6px; font-size: var(--step--1); color: var(--ink-2); background: var(--surface-2); border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+.stage::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--st-wip); }
+.updated { font-size: var(--step--1); color: var(--muted); white-space: nowrap; }
+.search { position: relative; flex: 1 1 220px; max-width: 340px; }
+.search input { width: 100%; padding: 6px 10px 6px 30px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--bg); }
+.search::before { content: ""; position: absolute; left: 10px; top: 50%; width: 10px; height: 10px; border: 2px solid var(--muted); border-radius: 50%; transform: translateY(-62%); }
+.search kbd { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font: 500 11px var(--font-mono); color: var(--muted); border: 1px solid var(--line-strong); border-radius: 4px; padding: 0 5px; }
+.results { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius); box-shadow: var(--shadow); padding: 4px; z-index: 30; max-height: 60vh; overflow: auto; }
+.results button { display: flex; gap: 8px; align-items: center; width: 100%; text-align: left; border: 0; background: none; padding: 6px 8px; border-radius: 4px; cursor: pointer; }
+.results button:hover, .results button[aria-selected="true"] { background: var(--accent-soft); }
+.results .mono { color: var(--muted); margin-left: auto; white-space: nowrap; }
+.theme { display: inline-flex; border: 1px solid var(--line-strong); border-radius: var(--radius); overflow: hidden; }
+.theme button { border: 0; background: none; padding: 4px 9px; font-size: var(--step--1); cursor: pointer; color: var(--ink-2); }
+.theme button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+.tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
+.tabs button { border: 0; background: none; padding: 8px 12px 9px; cursor: pointer; color: var(--ink-2); border-bottom: 2px solid transparent; white-space: nowrap; font-weight: 500; }
+.tabs button:hover { color: var(--ink); }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.tabs kbd { font: 500 10px var(--font-mono); color: var(--muted); margin-left: 4px; }
+
+main { padding-block: 20px 64px; }
+section[role="tabpanel"] { display: grid; gap: 20px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px; min-width: 0; }
+.panel > header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; margin-bottom: 12px; }
+.panel h2 { font: 700 1.375rem/1.15 var(--font-display); letter-spacing: 0.01em; }
+.panel h2 small { font: 500 var(--step--1) var(--font-body); color: var(--muted); margin-left: 6px; letter-spacing: 0; }
+.panel header p { margin: 0; color: var(--muted); font-size: var(--step--1); }
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 20px; }
+.grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 16px; }
+.muted { color: var(--muted); }
+.small { font-size: var(--step--1); }
+.scroll-x { overflow-x: auto; min-width: 0; }
+
+/* Status pills and marks */
+.pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; line-height: 1.5; padding: 0 8px 0 6px; border-radius: 999px; white-space: nowrap; color: var(--ink); background: color-mix(in srgb, var(--st) 14%, var(--surface)); border: 1px solid color-mix(in srgb, var(--st) 40%, transparent); }
+.mark { width: 10px; height: 10px; border-radius: 50%; flex: none; background: var(--st); border: 2px solid var(--st); }
+.mark[data-s="ready"], .mark[data-s="queued"] { background: transparent; }
+.mark[data-s="locked"] { background: transparent; border-style: dashed; }
+.mark[data-s="wip"] { box-shadow: 0 0 0 3px color-mix(in srgb, var(--st) 25%, transparent); }
+[data-s="done"] { --st: var(--st-done); } [data-s="review"] { --st: var(--st-review); } [data-s="wip"] { --st: var(--st-wip); }
+[data-s="ready"] { --st: var(--st-ready); } [data-s="queued"] { --st: var(--st-queued); } [data-s="locked"] { --st: var(--st-locked); } [data-s="dropped"] { --st: var(--st-dropped); }
+[data-t="core"] { --t: var(--t-core); } [data-t="ui"] { --t: var(--t-ui); } [data-t="design"] { --t: var(--t-design); } [data-t="verify"] { --t: var(--t-verify); } [data-t="flow"] { --t: var(--t-flow); }
+.track { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--ink-2); white-space: nowrap; }
+.track::before { content: ""; width: 14px; height: 4px; border-radius: 2px; background: var(--t); }
+.tag { font-size: 11.5px; color: var(--ink-2); border: 1px solid var(--line-strong); border-radius: 4px; padding: 0 5px; white-space: nowrap; }
+.id { font-family: var(--font-mono); font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.gates { display: inline-flex; gap: 3px; vertical-align: middle; }
+.gate { width: 16px; height: 16px; border-radius: 3px; display: inline-grid; place-items: center; font: 600 10px/1 var(--font-mono); color: var(--surface); background: var(--g); }
+.gate[data-g="pass"] { --g: var(--g-pass); } .gate[data-g="partial"] { --g: var(--g-partial); } .gate[data-g="fail"] { --g: var(--g-fail); }
+.gate[data-g="todo"] { --g: transparent; color: var(--g-todo); box-shadow: inset 0 0 0 1.5px var(--g-todo); }
+.gate[data-g="na"] { --g: transparent; color: var(--g-na); box-shadow: inset 0 0 0 1px var(--g-na); }
+.effort { display: inline-flex; align-items: center; gap: 5px; font: 500 11.5px var(--font-mono); color: var(--ink-2); white-space: nowrap; border: 1px solid var(--line-strong); border-radius: 4px; padding: 0 6px 0 4px; }
+.effort i { display: inline-flex; gap: 1.5px; }
+.effort i b { width: 3px; height: 9px; border-radius: 1px; background: var(--line-strong); }
+.effort i b.on { background: var(--accent); }
+.btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line-strong); background: var(--surface); border-radius: var(--radius); padding: 3px 10px; font-size: var(--step--1); cursor: pointer; color: var(--ink); white-space: nowrap; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.chip { border: 1px solid var(--line-strong); background: var(--surface); border-radius: 999px; padding: 2px 11px; font-size: var(--step--1); cursor: pointer; color: var(--ink-2); }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.filters { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+.filters .group { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.filters .label { font-size: 12px; color: var(--muted); margin-right: 2px; }
+.lane-link { border: 0; background: none; padding: 0; cursor: pointer; text-align: left; color: var(--ink); font-weight: 500; }
+.lane-link:hover { color: var(--accent); text-decoration: underline; }
+
+/* Now */
+.hero { display: grid; gap: 8px; }
+.hero h1 { font: 700 var(--step-3)/1.05 var(--font-display); letter-spacing: 0.005em; }
+.hero ul { margin: 0; padding-left: 1.2em; max-width: 78ch; color: var(--ink-2); }
+.hero li + li { margin-top: 4px; }
+.statusbar { display: flex; height: 14px; gap: 2px; margin-top: 6px; }
+.statusbar span { background: var(--st); border-radius: 2px; min-width: 3px; }
+.statusbar span:first-child { border-radius: 4px 2px 2px 4px; } .statusbar span:last-child { border-radius: 2px 4px 4px 2px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--ink-2); margin-top: 8px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend b { font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 600; }
+.queue { list-style: none; margin: 0; padding: 0; counter-reset: q; display: grid; }
+.queue li { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 4px 12px; padding: 10px 0; border-top: 1px solid var(--line); align-items: start; counter-increment: q; }
+.queue li:first-child { border-top: 0; }
+.queue li::before { content: counter(q); font: 700 1.375rem/1.1 var(--font-display); color: var(--muted); text-align: right; }
+.queue .why { font-size: var(--step--1); color: var(--ink-2); }
+.queue .actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.row { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; min-width: 0; }
+.slots { display: grid; gap: 12px; }
+.slot-row { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 10px; align-items: start; }
+.slot-row > div:first-child b { display: block; font-weight: 600; }
+.slot-row > div:first-child span { font-size: 12px; color: var(--muted); }
+.slot-boxes { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.slot { border: 1px dashed var(--line-strong); border-radius: var(--radius); padding: 6px 8px; min-height: 48px; font-size: var(--step--1); color: var(--muted); display: grid; align-content: center; }
+.slot.full { border-style: solid; border-color: color-mix(in srgb, var(--st-wip) 45%, transparent); background: color-mix(in srgb, var(--st-wip) 8%, var(--surface)); color: var(--ink); }
+.slot.full .id { font-size: 11px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 10px; }
+.card { border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; background: var(--surface); display: grid; gap: 6px; min-width: 0; cursor: pointer; text-align: left; }
+.card:hover { border-color: var(--line-strong); box-shadow: var(--shadow); }
+.card .title { font-weight: 600; }
+.card .next { font-size: var(--step--1); color: var(--ink-2); }
+.decisions { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.decisions li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; }
+.decisions .when { font-size: 12px; color: var(--muted); grid-column: 2; }
+.kind { font-size: 11.5px; padding: 0 6px; border-radius: 4px; border: 1px solid var(--line-strong); color: var(--ink-2); height: fit-content; white-space: nowrap; }
+.chain { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.chain .sep { color: var(--muted); }
+.log { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: var(--step--1); }
+.log time { font-variant-numeric: tabular-nums; color: var(--muted); margin-right: 8px; }
+
+/* Graph */
+.graph-wrap { position: relative; overflow: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); max-height: 72vh; cursor: grab; touch-action: pan-x pan-y; }
+.graph-wrap.dragging { cursor: grabbing; }
+.graph-wrap svg { display: block; }
+svg text { font-family: var(--font-body); fill: var(--ink); }
+.g-band { fill: var(--band); } .g-band.alt { fill: var(--band-2); }
+.g-phase { font: 700 15px var(--font-display); fill: var(--ink-2); letter-spacing: 0.02em; }
+.g-phase-sub { font-size: 11px; fill: var(--muted); }
+.g-track { font: 700 14px var(--font-display); fill: var(--ink); }
+.g-track-hint { font-size: 10.5px; fill: var(--muted); }
+.g-sync { stroke: var(--line-strong); stroke-dasharray: 4 4; }
+.g-trackline { stroke: var(--t); stroke-width: 3; stroke-linecap: round; opacity: 0.85; }
+.edge { fill: none; stroke: var(--line-strong); stroke-width: 1.5; }
+.edge.done { stroke: var(--line); }
+.edge.crit { stroke: var(--accent); stroke-width: 2.5; }
+.node { cursor: pointer; }
+.node circle.hit { fill: transparent; }
+.node .shape { stroke-width: 2.5; }
+.node text { font-size: 12.5px; }
+.node .sub { font: 10.5px var(--font-mono); fill: var(--muted); }
+.node.crit .ring { stroke: var(--accent); stroke-width: 2; fill: none; }
+.node:focus-visible { outline: none; }
+.node:focus-visible .shape, .node:hover .shape { filter: drop-shadow(0 0 3px var(--accent)); }
+.node.sel .label { font-weight: 700; }
+.has-sel .node:not(.rel), .has-sel .edge:not(.rel) { opacity: 0.18; }
+.has-sel .edge.up { stroke: var(--accent); stroke-width: 2.5; opacity: 1; }
+.has-sel .edge.down { stroke: var(--down); stroke-width: 2.5; opacity: 1; }
+.pulse { fill: var(--st-wip); opacity: 0.25; transform-origin: center; transform-box: fill-box; animation: pulse 2.2s ease-out infinite; }
+@keyframes pulse { 0% { transform: scale(0.6); opacity: 0.45; } 100% { transform: scale(1.9); opacity: 0; } }
+.graph-tools { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: space-between; }
+.zoom { display: inline-flex; gap: 4px; }
+.keyline { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-2); }
+.keyline i { width: 18px; height: 3px; border-radius: 2px; background: var(--k); }
+
+/* Parallel matrix */
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); }
+th, td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+th { font-weight: 600; color: var(--ink-2); white-space: nowrap; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.matrix th.phase { min-width: 150px; font: 700 14px var(--font-display); color: var(--ink); }
+.matrix th.phase small { display: block; font: 400 11px var(--font-body); color: var(--muted); }
+.matrix th.phase.sync, .matrix td.sync { background: var(--band); }
+.matrix th.trk { position: sticky; left: 0; background: var(--surface); z-index: 1; min-width: 110px; }
+.matrix .cell { display: grid; gap: 4px; }
+.mini { display: flex; gap: 6px; align-items: center; border: 0; background: none; padding: 2px 0; cursor: pointer; text-align: left; color: var(--ink); font-size: 12.5px; line-height: 1.35; }
+.mini:hover { color: var(--accent); }
+.chart-head { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.swatch { width: 12px; height: 12px; border-radius: 3px; background: var(--t); display: inline-block; }
+.axis text { font-size: 11px; fill: var(--muted); }
+.axis line { stroke: var(--line); }
+.bar-seg:hover, .bar-seg:focus-visible { filter: brightness(1.12); outline: none; }
+
+/* Board */
+.board { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(250px, 1fr); gap: 12px; overflow-x: auto; padding-bottom: 6px; }
+.col { display: grid; align-content: start; gap: 8px; min-width: 0; }
+.col > h3 { display: flex; align-items: center; gap: 8px; font: 700 1.125rem/1.2 var(--font-display); padding: 2px 2px 6px; border-bottom: 2px solid var(--st); }
+.col > h3 b { margin-left: auto; font: 600 var(--step--1) var(--font-body); color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* Milestones */
+.line { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); position: relative; margin: 8px 0 4px; }
+.line::before { content: ""; position: absolute; left: 10%; right: 10%; top: 14px; height: 4px; background: var(--line-strong); border-radius: 2px; }
+.stop { position: relative; display: grid; justify-items: center; gap: 4px; text-align: center; padding-inline: 4px; border: 0; background: none; cursor: pointer; color: var(--ink); }
+.stop .dot { width: 32px; height: 32px; border-radius: 50%; border: 4px solid var(--st); background: var(--surface); display: grid; place-items: center; font: 700 13px var(--font-display); }
+.stop[data-s="done"] .dot { background: var(--st); color: var(--surface); }
+.stop[data-s="wip"] .dot { box-shadow: 0 0 0 6px color-mix(in srgb, var(--st) 22%, transparent); }
+.stop b { font: 700 1.0625rem/1.15 var(--font-display); }
+.stop span { font-size: 12px; color: var(--muted); }
+.ms { display: grid; gap: 12px; }
+.ms-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.ms-head h3 { font: 700 var(--step-2)/1.1 var(--font-display); }
+.ms ul { margin: 0; padding-left: 1.2em; color: var(--ink-2); font-size: var(--step--1); }
+.clickrow { cursor: pointer; }
+.clickrow:hover td { background: var(--band); }
+
+/* Files */
+.conflict { color: var(--g-fail); font-weight: 600; white-space: nowrap; }
+.role { font-size: 11px; color: var(--muted); }
+.risk { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; }
+.rules { margin: 0; padding-left: 1.6em; display: grid; gap: 4px; }
+.rules li::marker { font: 700 1rem var(--font-display); color: var(--muted); }
+
+/* Maintain */
+.cmds { display: grid; gap: 6px; }
+.cmd { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; border: 1px solid var(--line); border-radius: var(--radius); padding: 6px 10px; }
+.cmd code { font-size: 12.5px; overflow-wrap: anywhere; }
+.cmd span { grid-column: 1 / -1; font-size: 12.5px; color: var(--ink-2); }
+pre { margin: 0; font: 12px/1.55 var(--font-mono); white-space: pre-wrap; overflow-wrap: anywhere; background: var(--band-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; max-height: 360px; overflow: auto; }
+.steps { margin: 0; padding-left: 1.4em; display: grid; gap: 4px; }
+
+/* Drawer */
+.drawer { position: fixed; z-index: 40; top: 0; right: 0; bottom: 0; width: min(560px, 100%); background: var(--surface); border-left: 1px solid var(--line-strong); box-shadow: var(--shadow); display: grid; grid-template-rows: auto minmax(0, 1fr); padding-top: env(safe-area-inset-top, 0px); transition: transform 0.18s ease-out; }
+.drawer[hidden] { display: none !important; }
+.drawer > header { padding: 14px 16px 12px; border-bottom: 1px solid var(--line); display: grid; gap: 6px; }
+.drawer h2 { font: 700 1.75rem/1.1 var(--font-display); padding-right: 84px; }
+.drawer h2:focus { outline: none; }
+.drawer .close { position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); right: 12px; }
+.drawer .body { overflow: auto; padding: 14px 16px calc(24px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 16px; align-content: start; }
+.drawer h3 { font: 700 1rem/1.2 var(--font-display); letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.drawer .next { background: var(--accent-soft); border-radius: var(--radius); padding: 8px 10px; }
+.drawer .hold { background: color-mix(in srgb, var(--st-queued) 12%, var(--surface)); border-radius: var(--radius); padding: 8px 10px; }
+.deplist { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.deplist li { display: flex; gap: 8px; align-items: center; min-width: 0; }
+.gatelist { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.gatelist div { display: flex; gap: 8px; align-items: center; font-size: var(--step--1); }
+.paths { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font: 12px/1.5 var(--font-mono); overflow-wrap: anywhere; }
+.scrim { position: fixed; inset: 0; z-index: 35; background: rgb(10 12 16 / 0.35); }
+.tip { position: fixed; z-index: 50; pointer-events: none; max-width: 320px; background: var(--ink); color: var(--surface); border-radius: var(--radius); padding: 6px 9px; font-size: 12.5px; line-height: 1.45; box-shadow: var(--shadow); }
+.tip b { display: block; }
+.tip .mono { opacity: 0.75; }
+.toast { position: fixed; z-index: 60; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--surface); padding: 6px 14px; border-radius: 999px; font-size: var(--step--1); }
+.empty { padding: 40px 16px; text-align: center; color: var(--ink-2); }
+.empty code { background: var(--surface-2); padding: 2px 6px; border-radius: 4px; }
+
+@media (max-width: 760px) {
+  .bar { position: static; }
+  .brand { flex-wrap: wrap; row-gap: 6px; }
+  .brand > span { white-space: nowrap; }
+  .brand b { font-size: 1.5rem; }
+  .updated { display: none; }
+  .search { max-width: none; order: 5; flex-basis: 100%; }
+  .slot-row { grid-template-columns: 1fr; }
+  .queue li { grid-template-columns: 28px minmax(0, 1fr); }
+  .queue .actions { grid-column: 2; justify-content: flex-start; }
+  .line { grid-template-columns: repeat(5, minmax(64px, 1fr)); overflow-x: auto; }
+  .stop span { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pulse { animation: none; opacity: 0; }
+  .drawer { transition: none; }
+}
+</style>
+
+<div class="bar">
+  <div class="wrap bar-top">
+    <div class="brand"><b>Folio</b><span>路径图</span><span class="stage" id="stage"></span></div>
+    <span class="updated" id="updated"></span>
+    <div class="search" role="search">
+      <input id="q" type="search" placeholder="搜索 lane、分支、路径…" aria-label="搜索 lane" autocomplete="off" aria-controls="results" aria-expanded="false">
+      <kbd>/</kbd>
+      <div class="results" id="results" role="listbox" hidden></div>
+    </div>
+    <div class="theme" role="group" aria-label="外观">
+      <button type="button" id="theme-system" data-theme-choice="system">系统</button>
+      <button type="button" id="theme-light" data-theme-choice="light">浅色</button>
+      <button type="button" id="theme-dark" data-theme-choice="dark">深色</button>
+    </div>
+  </div>
+  <div class="wrap"><nav class="tabs" id="tabs" role="tablist" aria-label="视图"></nav></div>
+</div>
+
+<main class="wrap" id="main"></main>
+<div class="empty wrap" id="no-data" hidden>
+  <p>这是路径图的模板，没有数据。在 Folio 目录里运行 <code>pnpm roadmap serve</code>，再打开 <code>http://localhost:5199</code>；发布用的单文件由 <code>pnpm roadmap build</code> 生成。</p>
+</div>
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" aria-labelledby="drawer-title" hidden></aside>
+<div class="tip" id="tip" role="tooltip" hidden></div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+/*@lib*/
+const DATA = /*@data*/null;
+
+(() => {
+  'use strict';
+  if (!DATA) {
+    document.getElementById('no-data').hidden = false;
+    document.querySelector('.bar').hidden = true;
+    return;
+  }
+
+  // ---------- Derived data ----------
+  const D = DATA;
+  const LANES = byId(D);
+  const DEPENDENTS = dependents(D);
+  const SHOWN = new Map(D.lanes.map((l) => [l.id, displayStatus(l, LANES)]));
+  const TRACK = new Map(D.tracks.map((t) => [t.id, t]));
+  const AGENT = new Map(D.agents.map((a) => [a.id, a]));
+  const PHASE = new Map(D.phases.map((p, index) => [p.id, { ...p, index }]));
+  const MILESTONE = new Map(D.milestones.map((m) => [m.id, m]));
+  const ORDER = ['wip', 'review', 'ready', 'queued', 'locked', 'done', 'dropped'];
+  const FOCUS_GATE = D.lanes.find((l) => l.kind === 'gate' && l.milestone === D.now.focus);
+  const CRITICAL = FOCUS_GATE ? criticalPath(D, FOCUS_GATE.id).path : [];
+  const CRIT = new Set(CRITICAL);
+  const GATE_LABEL = { pass: '通过', partial: '部分通过', fail: '失败', todo: '待做', na: '不适用' };
+  const GATE_GLYPH = { pass: '✓', partial: '½', fail: '✕', todo: '', na: '–' };
+  const DECISION_KIND = { approve: '批准', decide: '决定', manual: '手动' };
+  const RISK_LABEL = { high: '高', med: '中', low: '低' };
+  const latest = [D.meta.updated?.slice(0, 10) ?? '', ...D.lanes.map((l) => l.updated), ...D.log.map((x) => x.at)].sort().pop();
+  const byStatus = (a, b) => DISPLAY[SHOWN.get(a.id)].order - DISPLAY[SHOWN.get(b.id)].order || a.id.localeCompare(b.id);
+
+  // ---------- Tiny DOM helpers (text always via textContent) ----------
+  function h(tag, props, ...children) {
+    const el = document.createElement(tag);
+    applyProps(el, props);
+    append(el, children);
+    return el;
+  }
+  function s(tag, props, ...children) {
+    const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    applyProps(el, props);
+    append(el, children);
+    return el;
+  }
+  function applyProps(el, props) {
+    for (const [key, value] of Object.entries(props ?? {})) {
+      if (value === undefined || value === null || value === false) continue;
+      if (key.startsWith('on')) el.addEventListener(key.slice(2), value);
+      else if (key === 'class') el.setAttribute('class', value);
+      else if (key === 'text') el.textContent = value;
+      else el.setAttribute(key, value === true ? '' : value);
+    }
+  }
+  function append(el, children) {
+    for (const child of children.flat(Infinity)) {
+      if (child === null || child === undefined || child === false) continue;
+      el.append(child instanceof Node ? child : document.createTextNode(String(child)));
+    }
+  }
+  const $ = (sel) => document.querySelector(sel);
+  const store = {
+    get(key, fallback) {
+      try {
+        const value = localStorage.getItem(`folio-roadmap:${key}`);
+        return value === null ? fallback : JSON.parse(value);
+      } catch {
+        return fallback;
+      }
+    },
+    set(key, value) {
+      try {
+        localStorage.setItem(`folio-roadmap:${key}`, JSON.stringify(value));
+      } catch {
+        /* storage blocked: the setting lasts for this visit only */
+      }
+    },
+  };
+
+  // ---------- Shared pieces ----------
+  /** Text with `code` spans, as the data writes commands and paths. */
+  const rich = (text) => String(text ?? '').split('`').map((part, i) => (i % 2 ? h('code', {}, part) : part));
+  /** Shortens a graph label to about `max` px: CJK and full-width glyphs count double. */
+  function fit(text, max = 146) {
+    let width = 0;
+    let out = '';
+    for (const ch of text) {
+      width += /[⺀-￿]/.test(ch) ? 12.5 : 7;
+      if (width > max) return `${out}…`;
+      out += ch;
+    }
+    return out;
+  }
+  const pill =(status) => h('span', { class: 'pill', 'data-s': status }, h('span', { class: 'mark', 'data-s': status }), DISPLAY[status].label);
+  const statusOf = (lane) => SHOWN.get(lane.id);
+  /** Recommended model and reasoning effort, with a five-step meter. */
+  function effortTag(lane) {
+    const level = effortFor(lane);
+    const n = EFFORTS.indexOf(level) + 1;
+    return h('span', { class: 'effort', title: `推荐 ${D.meta.model}，推理强度 ${level}${lane.effort ? '' : '（按规模和轨道的默认值）'}` },
+      h('i', { 'aria-hidden': 'true' }, EFFORTS.map((_, i) => h('b', { class: i < n ? 'on' : null }))), `${D.meta.model} · ${level}`);
+  }
+  const trackTag = (id) => h('span', { class: 'track', 'data-t': id }, TRACK.get(id)?.label ?? id);
+  const agentName = (id) => AGENT.get(id)?.label ?? id;
+  const phaseLabel = (id) => PHASE.get(id)?.label ?? id;
+  const laneLink = (lane, text) => h('button', { type: 'button', class: 'lane-link', onclick: () => openLane(lane.id) }, text ?? lane.title);
+  function gatesRow(lane) {
+    if (!lane.gates) return null;
+    return h('span', { class: 'gates', 'aria-label': '检查' },
+      Object.entries(GATES).map(([key, label]) => {
+        const state = lane.gates[key] ?? 'na';
+        return h('span', { class: 'gate', 'data-g': state, title: `${label}：${GATE_LABEL[state]}`, 'aria-label': `${label} ${GATE_LABEL[state]}` }, GATE_GLYPH[state]);
+      }));
+  }
+  function githubPath(lane, path) {
+    const clean = path.replace(/#.*$/, '').replace(/\*.*$/, '').replace(/\/$/, '');
+    const ref = lane && ['wip', 'review'].includes(lane.status) ? lane.id : 'main';
+    return `${D.meta.repo}/blob/${ref}/${clean}`;
+  }
+  function toast(text) {
+    const el = $('#toast');
+    el.textContent = text;
+    el.hidden = false;
+    clearTimeout(toast.timer);
+    toast.timer = setTimeout(() => (el.hidden = true), 1800);
+  }
+  function copy(text, fallbackNode) {
+    const done = () => toast('已复制');
+    const fail = () => {
+      if (fallbackNode) {
+        const range = document.createRange();
+        range.selectNodeContents(fallbackNode);
+        const sel = getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        toast('已选中，按 Ctrl+C 复制');
+      } else toast('这个窗口不允许复制');
+    };
+    try {
+      navigator.clipboard.writeText(text).then(done, fail);
+    } catch {
+      fail();
+    }
+  }
+  function promptBlock(lane) {
+    const text = composePrompt(D, lane);
+    if (!text) return null;
+    const pre = h('pre', {}, text);
+    return h('div', { class: 'prompt' },
+      h('div', { class: 'row', style: 'justify-content: space-between; margin-bottom: 6px' },
+        h('span', { class: 'row small muted' }, lane.prompt ? '新开 session，选' : '通用开工提示词；新开 session，选', effortTag(lane), '，再粘贴'),
+        h('button', { type: 'button', class: 'btn primary', onclick: () => copy(text, pre) }, '复制提示词')),
+      pre);
+  }
+  const tip = $('#tip');
+  function showTip(event, lines) {
+    tip.replaceChildren(...lines.map((line, i) => (i === 0 ? h('b', {}, line) : h('div', {}, line))));
+    tip.hidden = false;
+    const x = Math.min(event.clientX + 14, innerWidth - tip.offsetWidth - 8);
+    const y = Math.min(event.clientY + 14, innerHeight - tip.offsetHeight - 8);
+    tip.style.left = `${Math.max(8, x)}px`;
+    tip.style.top = `${Math.max(8, y)}px`;
+  }
+  const hideTip = () => (tip.hidden = true);
+  function tipFor(el, lines) {
+    el.addEventListener('pointermove', (e) => showTip(e, lines()));
+    el.addEventListener('pointerleave', hideTip);
+    el.addEventListener('focus', () => {
+      const r = el.getBoundingClientRect();
+      showTip({ clientX: r.right, clientY: r.bottom }, lines());
+    });
+    el.addEventListener('blur', hideTip);
+  }
+  function statusBar(lanes) {
+    const counts = ORDER.map((st) => [st, lanes.filter((l) => statusOf(l) === st).length]).filter(([, n]) => n);
+    const bar = h('div', { class: 'statusbar', role: 'img', 'aria-label': counts.map(([st, n]) => `${DISPLAY[st].label} ${n}`).join('，') },
+      counts.map(([st, n]) => {
+        const seg = h('span', { 'data-s': st, style: `flex: ${n}` });
+        tipFor(seg, () => [`${DISPLAY[st].label}：${n} 个 lane`]);
+        return seg;
+      }));
+    const legend = h('div', { class: 'legend' }, counts.map(([st, n]) => h('span', {}, h('span', { class: 'mark', 'data-s': st }), DISPLAY[st].label, h('b', {}, n))));
+    return [bar, legend];
+  }
+
+  // ---------- State and routing ----------
+  const TABS = [
+    { id: 'now', label: '现在', render: renderNow },
+    { id: 'graph', label: '依赖图', render: renderGraph },
+    { id: 'parallel', label: '并行', render: renderParallel },
+    { id: 'board', label: '看板', render: renderBoard },
+    { id: 'milestones', label: '里程碑', render: renderMilestones },
+    { id: 'files', label: '文件归属', render: renderFiles },
+    { id: 'decisions', label: '决策与风险', render: renderDecisions },
+    { id: 'maintain', label: '给 agent', render: renderMaintain },
+  ];
+  const state = {
+    tab: 'now',
+    lane: null,
+    graph: { milestone: store.get('graph-milestone', D.now.focus), hideDone: store.get('graph-hide-done', false), critical: true, zoom: store.get('graph-zoom', 1) },
+    board: { milestone: 'all', track: 'all', agent: 'all', showDone: false },
+    parallel: { milestone: 'all', table: false },
+    files: { sharedOnly: true, includePlanned: false },
+  };
+
+  function setHash() {
+    const token = state.lane ? `lane-${anchor(state.lane)}` : state.tab;
+    history.replaceState(null, '', `#${token}`);
+  }
+  function readHash() {
+    const token = location.hash.slice(1);
+    if (token.startsWith('lane-')) {
+      const lane = D.lanes.find((l) => anchor(l.id) === token.slice(5));
+      if (lane) {
+        openLane(lane.id, { keepHash: true });
+        return;
+      }
+    }
+    if (TABS.some((t) => t.id === token)) selectTab(token, { keepHash: true });
+  }
+
+  function renderTabs() {
+    $('#tabs').replaceChildren(...TABS.map((tab, i) =>
+      h('button', {
+        type: 'button', role: 'tab', id: `tab-${tab.id}`, 'aria-selected': String(state.tab === tab.id), 'aria-controls': 'panel',
+        tabindex: state.tab === tab.id ? '0' : '-1', onclick: () => selectTab(tab.id),
+      }, tab.label, h('kbd', {}, String(i + 1)))));
+  }
+  function selectTab(id, { keepHash } = {}) {
+    if (state.tab !== id) scrollTo(0, 0);
+    state.tab = id;
+    renderTabs();
+    const tab = TABS.find((t) => t.id === id);
+    const panel = h('section', { role: 'tabpanel', id: 'panel', 'aria-labelledby': `tab-${id}` });
+    $('#main').replaceChildren(panel);
+    tab.render(panel);
+    if (!keepHash) setHash();
+  }
+  function rerender() {
+    const scroll = $('.graph-wrap');
+    const pos = scroll ? [scroll.scrollLeft, scroll.scrollTop] : null;
+    selectTab(state.tab, { keepHash: true });
+    const again = $('.graph-wrap');
+    if (pos && again) [again.scrollLeft, again.scrollTop] = pos;
+  }
+
+  // ---------- Now ----------
+  function renderNow(root) {
+    const active = D.lanes.filter((l) => l.status !== 'dropped');
+    root.append(
+      h('div', { class: 'panel hero' },
+        h('span', { class: 'small muted' }, `${MILESTONE.get(D.now.focus)?.title ?? ''} · ${D.lanes.length} 个 lane`),
+        h('h1', {}, D.now.stage),
+        h('ul', {}, D.now.summary.map((line) => h('li', {}, rich(line)))),
+        statusBar(active)),
+      h('div', { class: 'grid-2' },
+        h('div', { class: 'panel' },
+          h('header', {}, h('h2', {}, '合并队列', h('small', {}, '一次合并一个')), h('p', {}, '格子是检查：pnpm check、e2e、code review、security review、simplify、设计评审、无障碍')),
+          queueList()),
+        h('div', { style: 'display: grid; gap: 20px; align-content: start' },
+          h('div', { class: 'panel' },
+            h('header', {}, h('h2', {}, '并行槽位'), h('p', {}, '进行中的 lane 占用的 session 名额')),
+            slotsPanel()),
+          h('div', { class: 'panel' },
+            h('header', {}, h('h2', {}, '需要你')),
+            decisionList(D.decisions.filter((d) => d.state === 'open' || d.state === 'recurring'))))),
+      h('div', { class: 'panel' },
+        h('header', {}, h('h2', {}, '现在可以开', h('small', {}, '依赖都合并了')), h('p', {}, '⏳ 表示依赖已满足，但有理由先等一等')),
+        h('div', { class: 'cards' }, D.lanes.filter((l) => ['ready', 'queued'].includes(statusOf(l))).sort(byStatus).map(laneCard))),
+      h('div', { class: 'grid-2' },
+        h('div', { class: 'panel' },
+          h('header', {}, h('h2', {}, '关键路径'), h('p', {}, `到 ${FOCUS_GATE?.title ?? ''} 最长的一串未完成工作（按规模加权）`)),
+          h('div', { class: 'chain' }, CRITICAL.flatMap((id, i) => [i ? h('span', { class: 'sep' }, '→') : null, h('span', { class: 'row' }, h('span', { class: 'mark', 'data-s': SHOWN.get(id) }), laneLink(LANES.get(id)))]))),
+        h('div', { class: 'panel' },
+          h('header', {}, h('h2', {}, '最近更新')),
+          h('ul', { class: 'log' }, [...D.log].reverse().slice(0, 6).map((entry) => h('li', {}, h('time', {}, entry.at), entry.text, h('span', { class: 'muted' }, ` · ${entry.by}`)))))));
+  }
+  function queueList() {
+    return h('ol', { class: 'queue' }, D.landingQueue.map((entry) => {
+      const lane = LANES.get(entry.lane);
+      const text = composePrompt(D, lane);
+      return h('li', {},
+        h('div', { style: 'display: grid; gap: 3px; min-width: 0' },
+          h('div', { class: 'row' }, pill(statusOf(lane)), laneLink(lane), gatesRow(lane)),
+          h('div', { class: 'row' }, h('span', { class: 'id' }, lane.id), effortTag(lane)),
+          h('span', { class: 'why' }, rich(entry.why))),
+        h('div', { class: 'actions' },
+          text ? h('button', { type: 'button', class: 'btn', onclick: () => copy(text) }, '复制提示词') : null,
+          h('button', { type: 'button', class: 'btn', onclick: () => openLane(lane.id) }, '详情')));
+    }));
+  }
+  function slotsPanel() {
+    const wip = D.lanes.filter((l) => statusOf(l) === 'wip');
+    const ready = D.lanes.filter((l) => statusOf(l) === 'ready');
+    const groups = [
+      { label: 'Rust 写入', hint: '核心 / shell，Claude Code 和 Codex 合计', limit: D.limits.rustSessions, lanes: wip.filter((l) => l.track === 'core'), next: ready.filter((l) => l.track === 'core') },
+      { label: '界面', hint: '每个视图一个目录', limit: D.limits.uiSessions, lanes: wip.filter((l) => l.track === 'ui'), next: ready.filter((l) => l.track === 'ui') },
+      { label: 'Cowork', hint: '设计', limit: D.limits.coworkSessions, lanes: wip.filter((l) => l.track === 'design'), next: ready.filter((l) => l.track === 'design') },
+      { label: '文档 / 验证', hint: '不占上面的名额', limit: null, lanes: wip.filter((l) => ['flow', 'verify'].includes(l.track)), next: [] },
+    ];
+    const lock = D.runtime.appLock;
+    return h('div', { class: 'slots' },
+      groups.map((g) => {
+        const boxes = g.lanes.map((lane) => h('button', { type: 'button', class: 'slot full card', onclick: () => openLane(lane.id) },
+          h('span', { class: 'row' }, h('span', { class: 'mark', 'data-s': 'wip' }), h('b', {}, lane.title)), h('span', { class: 'id' }, `${lane.id} · ${agentName(lane.agent)}`)));
+        const free = g.limit === null ? 0 : Math.max(0, g.limit - g.lanes.length);
+        for (let i = 0; i < free; i += 1)
+          boxes.push(h('div', { class: 'slot' }, g.next[i] ? h('span', {}, '空位 · 可以开 ', laneLink(g.next[i])) : '空位'));
+        return h('div', { class: 'slot-row' },
+          h('div', {}, h('b', {}, g.limit === null ? g.label : `${g.label} ${g.lanes.length}/${g.limit}`), h('span', {}, g.hint)),
+          h('div', { class: 'slot-boxes' }, boxes.length ? boxes : h('div', { class: 'slot' }, '没有')));
+      }),
+      h('div', { class: 'slot-row' },
+        h('div', {}, h('b', {}, 'app lock 1'), h('span', {}, 'pnpm e2e / build:app 排队')),
+        h('div', { class: 'slot-boxes' }, h('div', { class: lock ? 'slot full' : 'slot' }, lock || '空闲（.agents/locks/app 不存在时）'))));
+  }
+  function laneCard(lane) {
+    const st = statusOf(lane);
+    return h('button', { type: 'button', class: 'card', onclick: () => openLane(lane.id) },
+      h('div', { class: 'row' }, pill(st), h('span', { class: 'title' }, lane.title)),
+      h('span', { class: 'id' }, lane.id),
+      h('div', { class: 'row' }, trackTag(lane.track), h('span', { class: 'tag' }, lane.size), lane.status !== 'done' ? effortTag(lane) : null, h('span', { class: 'small muted' }, `${agentName(lane.agent)} · ${phaseLabel(lane.phase)}`)),
+      lane.next || lane.hold ? h('span', { class: 'next' }, lane.hold ? ['等：', rich(lane.hold)] : rich(lane.next)) : h('span', { class: 'next' }, rich(lane.summary)),
+      gatesRow(lane));
+  }
+  function decisionList(items) {
+    if (!items.length) return h('p', { class: 'muted small' }, '没有');
+    return h('ul', { class: 'decisions' }, items.map((d) => h('li', {},
+      h('span', { class: 'kind' }, DECISION_KIND[d.type]),
+      h('span', {}, rich(d.item), d.result ? h('span', { class: 'muted' }, ' → ', rich(d.result)) : null),
+      h('span', { class: 'when' }, d.when))));
+  }
+
+  // ---------- Graph ----------
+  const G = { COL: 196, ROW: 44, LEFT: 132, TOP: 64, GAP: 14 };
+  function graphLanes() {
+    const g = state.graph;
+    return D.lanes.filter((l) => (g.milestone === 'all' || l.milestone === g.milestone) && !(g.hideDone && l.status === 'done'));
+  }
+  function layout(lanes) {
+    const visible = new Set(lanes.map((l) => l.id));
+    const depth = new Map();
+    const local = (lane) => {
+      if (depth.has(lane.id)) return depth.get(lane.id);
+      depth.set(lane.id, 0);
+      let d = 0;
+      for (const dep of lane.deps) {
+        const other = LANES.get(dep);
+        if (other && visible.has(dep) && other.phase === lane.phase) d = Math.max(d, local(other) + 1);
+      }
+      depth.set(lane.id, d);
+      return d;
+    };
+    lanes.forEach(local);
+    const phases = D.phases.filter((p) => lanes.some((l) => l.phase === p.id));
+    const columns = [];
+    let col = 0;
+    for (const phase of phases) {
+      const inPhase = lanes.filter((l) => l.phase === phase.id);
+      const width = Math.max(...inPhase.map((l) => depth.get(l.id))) + 1;
+      columns.push({ phase, start: col, width, count: inPhase.length });
+      col += width;
+    }
+    const colOf = new Map();
+    for (const c of columns) for (const l of lanes) if (l.phase === c.phase.id) colOf.set(l.id, c.start + depth.get(l.id));
+    const cells = new Map();
+    for (const l of lanes) {
+      const key = `${colOf.get(l.id)}|${l.track}`;
+      if (!cells.has(key)) cells.set(key, []);
+      cells.get(key).push(l);
+    }
+    const rows = new Map(D.tracks.map((t) => [t.id, 0]));
+    for (const [key, list] of cells) {
+      list.sort(byStatus);
+      const track = key.split('|')[1];
+      rows.set(track, Math.max(rows.get(track), list.length));
+    }
+    const tracks = D.tracks.filter((t) => rows.get(t.id) > 0);
+    const trackY = new Map();
+    let y = G.TOP;
+    for (const t of tracks) {
+      trackY.set(t.id, { y, rows: rows.get(t.id) });
+      y += rows.get(t.id) * G.ROW + G.GAP;
+    }
+    const pos = new Map();
+    for (const [key, list] of cells) {
+      const [c, track] = key.split('|');
+      list.forEach((l, i) => pos.set(l.id, { x: G.LEFT + Number(c) * G.COL + 22, y: trackY.get(track).y + i * G.ROW + G.ROW / 2 }));
+    }
+    return { columns, tracks, trackY, pos, width: G.LEFT + col * G.COL + 24, height: y + 8 };
+  }
+  function nodeShape(lane, st) {
+    const color = `var(--st-${st})`;
+    if (lane.kind === 'gate') {
+      const filled = st === 'done';
+      return s('rect', { class: 'shape', x: -8, y: -8, width: 16, height: 16, transform: 'rotate(45)', rx: 2, fill: filled ? color : 'var(--surface)', stroke: color, 'stroke-dasharray': st === 'locked' ? '3 2' : null });
+    }
+    const filled = ['done', 'review', 'wip', 'dropped'].includes(st);
+    return s('circle', { class: 'shape', r: 8, fill: filled ? color : 'var(--surface)', stroke: color, 'stroke-dasharray': st === 'locked' ? '3 2.5' : null });
+  }
+  function renderGraph(root) {
+    const g = state.graph;
+    const milestoneChips = ['all', ...D.milestones.map((m) => m.id)].map((id) =>
+      h('button', { type: 'button', class: 'chip', 'aria-pressed': String(g.milestone === id), onclick: () => { g.milestone = id; store.set('graph-milestone', id); rerender(); } }, id === 'all' ? '全部' : MILESTONE.get(id).short));
+    const lanes = graphLanes();
+    const L = layout(lanes);
+    const svg = s('svg', { width: Math.round(L.width * g.zoom), height: Math.round(L.height * g.zoom), viewBox: `0 0 ${L.width} ${L.height}`, role: 'group', 'aria-label': `依赖图：${lanes.length} 个 lane` });
+    // Phase bands and headers
+    L.columns.forEach((c, i) => {
+      const x = G.LEFT + c.start * G.COL;
+      const w = c.width * G.COL;
+      svg.append(s('rect', { class: i % 2 ? 'g-band alt' : 'g-band', x, y: 0, width: w, height: L.height }));
+      if (c.phase.kind !== 'wave') svg.append(s('line', { class: 'g-sync', x1: x + 1, x2: x + 1, y1: 44, y2: L.height }));
+      svg.append(s('text', { class: 'g-phase', x: x + 12, y: 24 }, `${c.phase.kind === 'sync' ? '◆ ' : c.phase.kind === 'gate' ? '◇ ' : ''}${c.phase.label}`));
+      const done = lanes.filter((l) => l.phase === c.phase.id && l.status === 'done').length;
+      svg.append(s('text', { class: 'g-phase-sub', x: x + 12, y: 42 }, `${MILESTONE.get(c.phase.milestone).short} · ${done}/${c.count} 完成`));
+    });
+    // Track labels and lines
+    for (const t of L.tracks) {
+      const { y, rows } = L.trackY.get(t.id);
+      svg.append(
+        s('line', { class: 'g-trackline', 'data-t': t.id, x1: 14, x2: 14, y1: y + 6, y2: y + rows * G.ROW - 6 }),
+        s('text', { class: 'g-track', x: 24, y: y + 20 }, t.label),
+        s('text', { class: 'g-track-hint', x: 24, y: y + 35 }, t.hint),
+        s('line', { x1: 0, x2: L.width, y1: y + rows * G.ROW + G.GAP / 2, y2: y + rows * G.ROW + G.GAP / 2, stroke: 'var(--line)' }));
+    }
+    // Edges
+    const sel = state.lane && L.pos.has(state.lane) ? state.lane : null;
+    const up = sel ? upstream(D, sel) : new Set();
+    const down = sel ? downstream(D, sel) : new Set();
+    const edges = s('g', {});
+    for (const lane of lanes) {
+      const to = L.pos.get(lane.id);
+      for (const dep of lane.deps) {
+        const from = L.pos.get(dep);
+        if (!from) continue;
+        const dx = Math.max(40, (to.x - from.x) / 2);
+        const isUp = sel && (lane.id === sel || up.has(lane.id)) && (up.has(dep));
+        const isDown = sel && (dep === sel || down.has(dep)) && down.has(lane.id);
+        const crit = g.critical && CRIT.has(lane.id) && CRIT.has(dep);
+        const cls = ['edge', LANES.get(dep).status === 'done' && lane.status === 'done' ? 'done' : '', crit ? 'crit' : '', isUp ? 'up rel' : '', isDown ? 'down rel' : ''].join(' ');
+        edges.append(s('path', { class: cls, d: `M${from.x + 9},${from.y} C${from.x + dx},${from.y} ${to.x - dx},${to.y} ${to.x - 9},${to.y}` }));
+      }
+    }
+    svg.append(edges);
+    // Nodes
+    for (const lane of lanes) {
+      const p = L.pos.get(lane.id);
+      const st = statusOf(lane);
+      const rel = sel && (lane.id === sel || up.has(lane.id) || down.has(lane.id));
+      const title = fit(lane.title);
+      const node = s('g', {
+        class: ['node', rel ? 'rel' : '', lane.id === sel ? 'sel' : '', g.critical && CRIT.has(lane.id) ? 'crit' : ''].join(' '),
+        transform: `translate(${p.x},${p.y})`, tabindex: '0', role: 'button', 'aria-label': `${lane.title}，${DISPLAY[st].label}，${lane.id}`,
+        onclick: () => openLane(lane.id),
+        onkeydown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLane(lane.id); } },
+      },
+      s('circle', { class: 'hit', r: 16 }),
+      st === 'wip' ? s('circle', { class: 'pulse', r: 9 }) : null,
+      g.critical && CRIT.has(lane.id) ? s('circle', { class: 'ring', r: 13 }) : null,
+      nodeShape(lane, st),
+      s('text', { class: 'label', x: 15, y: -1 }, title),
+      s('text', { class: 'sub', x: 15, y: 13 }, `${lane.size} · ${agentName(lane.agent)}`));
+      tipFor(node, () => [lane.title, `${DISPLAY[st].label} · ${lane.id}`, `${D.meta.model} · ${effortFor(lane)}`, lane.next ?? lane.hold ?? lane.summary]);
+      svg.append(node);
+    }
+    if (sel) svg.classList.add('has-sel');
+    const wrap = h('div', { class: 'graph-wrap' }, svg);
+    enableDrag(wrap);
+    const zoomTo = (z) => { g.zoom = Math.min(1.6, Math.max(0.35, Math.round(z * 100) / 100)); store.set('graph-zoom', g.zoom); rerender(); };
+    root.append(h('div', { class: 'panel', style: 'display: grid; gap: 12px' },
+      h('header', {}, h('h2', {}, '依赖图', h('small', {}, `${lanes.length} 个 lane`)), h('p', {}, '横向是波次和同步点（◆），纵向是轨道；同一列里的 lane 可以并行。点一个 lane 看它等谁（蓝）、解锁谁（紫）。拖动画布可以平移。')),
+      h('div', { class: 'graph-tools' },
+        h('div', { class: 'filters' },
+          h('div', { class: 'group' }, h('span', { class: 'label' }, '里程碑'), milestoneChips),
+          h('div', { class: 'group' },
+            h('button', { type: 'button', class: 'chip', 'aria-pressed': String(g.hideDone), onclick: () => { g.hideDone = !g.hideDone; store.set('graph-hide-done', g.hideDone); rerender(); } }, '隐藏已完成'),
+            h('button', { type: 'button', class: 'chip', 'aria-pressed': String(g.critical), onclick: () => { g.critical = !g.critical; rerender(); } }, '关键路径'),
+            sel ? h('button', { type: 'button', class: 'chip', onclick: () => { closeLane(); } }, '取消选中') : null)),
+        h('div', { class: 'zoom' },
+          h('button', { type: 'button', class: 'btn', 'aria-label': '缩小', onclick: () => zoomTo(g.zoom - 0.15) }, '−'),
+          h('button', { type: 'button', class: 'btn', onclick: () => zoomTo(1) }, `${Math.round(g.zoom * 100)}%`),
+          h('button', { type: 'button', class: 'btn', 'aria-label': '放大', onclick: () => zoomTo(g.zoom + 0.15) }, '+'),
+          h('button', { type: 'button', class: 'btn', onclick: () => zoomTo(($('#main').clientWidth - 40) / L.width) }, '适应宽度'))),
+      wrap,
+      h('div', { class: 'legend' },
+        ORDER.filter((st) => st !== 'dropped').map((st) => h('span', {}, h('span', { class: 'mark', 'data-s': st }), DISPLAY[st].label)),
+        h('span', {}, '◇ 验收关'),
+        h('span', { class: 'keyline', style: '--k: var(--accent)' }, h('i'), '关键路径 / 它等的'),
+        h('span', { class: 'keyline', style: '--k: var(--down)' }, h('i'), '它解锁的'))));
+    if (sel) requestAnimationFrame(() => {
+      const p = L.pos.get(sel);
+      wrap.scrollTo({ left: p.x * g.zoom - wrap.clientWidth / 2, top: p.y * g.zoom - wrap.clientHeight / 2 });
+    });
+  }
+  function enableDrag(el) {
+    let start = null;
+    el.addEventListener('pointerdown', (e) => {
+      if (e.pointerType !== 'mouse' || e.button !== 0 || e.target.closest('.node')) return;
+      start = { x: e.clientX, y: e.clientY, left: el.scrollLeft, top: el.scrollTop };
+      el.classList.add('dragging');
+      el.setPointerCapture(e.pointerId);
+    });
+    el.addEventListener('pointermove', (e) => {
+      if (!start) return;
+      el.scrollLeft = start.left - (e.clientX - start.x);
+      el.scrollTop = start.top - (e.clientY - start.y);
+    });
+    const end = () => { start = null; el.classList.remove('dragging'); };
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
+  }
+
+  // ---------- Parallel ----------
+  function renderParallel(root) {
+    const p = state.parallel;
+    const lanes = D.lanes.filter((l) => p.milestone === 'all' || l.milestone === p.milestone);
+    const phases = D.phases.filter((ph) => lanes.some((l) => l.phase === ph.id));
+    const chips = ['all', ...D.milestones.map((m) => m.id)].map((id) =>
+      h('button', { type: 'button', class: 'chip', 'aria-pressed': String(p.milestone === id), onclick: () => { p.milestone = id; rerender(); } }, id === 'all' ? '全部' : MILESTONE.get(id).short));
+    const matrix = h('table', { class: 'matrix' },
+      h('thead', {}, h('tr', {}, h('th', { class: 'trk' }, '轨道'), phases.map((ph) => {
+        const n = lanes.filter((l) => l.phase === ph.id).length;
+        return h('th', { class: `phase${ph.kind !== 'wave' ? ' sync' : ''}`, scope: 'col' }, `${ph.kind === 'sync' ? '◆ ' : ph.kind === 'gate' ? '◇ ' : ''}${ph.label}`, h('small', {}, `${MILESTONE.get(ph.milestone).short} · ${n} 个`));
+      }))),
+      h('tbody', {}, D.tracks.map((t) => h('tr', {},
+        h('th', { class: 'trk', scope: 'row' }, trackTag(t.id)),
+        phases.map((ph) => h('td', { class: ph.kind !== 'wave' ? 'sync' : null },
+          h('div', { class: 'cell' }, lanes.filter((l) => l.phase === ph.id && l.track === t.id).sort(byStatus).map((l) =>
+            h('button', { type: 'button', class: 'mini', onclick: () => openLane(l.id), title: l.id }, h('span', { class: 'mark', 'data-s': statusOf(l) }), l.title)))))))));
+    root.append(
+      h('div', { class: 'panel' },
+        h('header', {}, h('h2', {}, '现在的并行槽位'), h('p', {}, `上限：Rust ${D.limits.rustSessions} 个 session（Claude Code 和 Codex 合计）、界面 ${D.limits.uiSessions} 个、Cowork ${D.limits.coworkSessions} 个；pnpm e2e 同时只能 ${D.limits.e2eRunners} 个（app lock）`)),
+        slotsPanel()),
+      h('div', { class: 'panel' },
+        h('header', {}, h('h2', {}, '波次 × 轨道'), h('p', {}, '同一列的 lane 属于同一波，可以并行；◆ 同步点集中合并、装依赖，◇ 是验收关。')),
+        h('div', { class: 'filters', style: 'margin-bottom: 10px' }, h('div', { class: 'group' }, h('span', { class: 'label' }, '里程碑'), chips)),
+        h('div', { class: 'scroll-x' }, matrix)),
+      h('div', { class: 'panel' }, parallelChart(phases, lanes)));
+  }
+  function parallelChart(phases, lanes) {
+    const p = state.parallel;
+    const counts = phases.map((ph) => ({ ph, by: D.tracks.map((t) => ({ t, n: lanes.filter((l) => l.phase === ph.id && l.track === t.id).length })) }));
+    const max = Math.max(1, ...counts.map((c) => c.by.reduce((a, b) => a + b.n, 0)));
+    const step = max > 10 ? 5 : 2;
+    const top = Math.ceil(max / step) * step;
+    const band = 46;
+    const W = 48 + phases.length * band + 8;
+    const H = 230;
+    const plotH = 150;
+    const y0 = 20 + plotH;
+    const scale = (n) => (n / top) * plotH;
+    const svg = s('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': '每个波次的 lane 数，按轨道堆叠' });
+    const axis = s('g', { class: 'axis' });
+    for (let v = 0; v <= top; v += step) {
+      const y = y0 - scale(v);
+      axis.append(s('line', { x1: 40, x2: W - 4, y1: y, y2: y }), s('text', { x: 34, y: y + 4, 'text-anchor': 'end' }, v));
+    }
+    svg.append(axis);
+    counts.forEach(({ ph, by }, i) => {
+      const x = 48 + i * band + (band - 22) / 2;
+      let y = y0;
+      const segs = by.filter((b) => b.n);
+      segs.forEach((b, k) => {
+        // The 2px surface gap comes out of the segment below it, so the stack ends at its value.
+        const hgt = scale(b.n) - (k ? 2 : 0);
+        const isTop = k === segs.length - 1;
+        const r = isTop ? 4 : 0;
+        const yTop = y - hgt;
+        const path = isTop
+          ? `M${x},${y} V${yTop + r} Q${x},${yTop} ${x + r},${yTop} H${x + 22 - r} Q${x + 22},${yTop} ${x + 22},${yTop + r} V${y} Z`
+          : `M${x},${y} V${yTop} H${x + 22} V${y} Z`;
+        const seg = s('path', { class: 'bar-seg', d: path, fill: `var(--t-${b.t.id})`, tabindex: '0', 'aria-label': `${ph.label}，${b.t.label}：${b.n} 个 lane` });
+        tipFor(seg, () => [`${b.n} 个 lane`, `${ph.label} · ${b.t.label}`]);
+        svg.append(seg);
+        y = yTop - 2;
+      });
+      const total = by.reduce((a, b) => a + b.n, 0);
+      svg.append(s('text', { x: x + 11, y: y - 4, 'text-anchor': 'middle', style: 'font-size: 11px; fill: var(--ink-2); font-variant-numeric: tabular-nums' }, total));
+      const label = ph.label.replace(/^M\d /, '').replace('（M2 期间）', '');
+      svg.append(s('text', { x: x + 11, y: y0 + 14, 'text-anchor': 'end', transform: `rotate(-40 ${x + 11} ${y0 + 14})`, style: 'font-size: 11px; fill: var(--muted)' }, `${MILESTONE.get(ph.milestone).short} ${label}`.slice(0, 12)));
+    });
+    const legend = h('div', { class: 'legend' }, D.tracks.map((t) => h('span', { 'data-t': t.id }, h('span', { class: 'swatch' }), t.label)));
+    const table = h('table', {},
+      h('thead', {}, h('tr', {}, h('th', {}, '波次'), D.tracks.map((t) => h('th', { class: 'num' }, t.label)), h('th', { class: 'num' }, '合计'))),
+      h('tbody', {}, counts.map(({ ph, by }) => h('tr', {}, h('th', { scope: 'row' }, `${MILESTONE.get(ph.milestone).short} · ${ph.label}`), by.map((b) => h('td', { class: 'num' }, b.n)), h('td', { class: 'num' }, by.reduce((a, b) => a + b.n, 0))))));
+    return [
+      h('div', { class: 'chart-head' },
+        h('header', {}, h('h2', {}, '每波的并行度', h('small', {}, '按轨道堆叠'))),
+        h('button', { type: 'button', class: 'chip', 'aria-pressed': String(p.table), onclick: () => { p.table = !p.table; rerender(); } }, '表格')),
+      legend,
+      p.table ? h('div', { class: 'scroll-x' }, table) : h('div', { class: 'scroll-x' }, svg),
+    ];
+  }
+
+  // ---------- Board ----------
+  function renderBoard(root) {
+    const b = state.board;
+    const q = $('#q').value.trim().toLowerCase();
+    const lanes = D.lanes.filter((l) =>
+      (b.milestone === 'all' || l.milestone === b.milestone) &&
+      (b.track === 'all' || l.track === b.track) &&
+      (b.agent === 'all' || l.agent === b.agent || l.reviewer === b.agent) &&
+      (!q || `${l.id} ${l.title} ${l.summary}`.toLowerCase().includes(q)));
+    const group = (label, key, options) => h('div', { class: 'group' }, h('span', { class: 'label' }, label),
+      [['all', '全部'], ...options].map(([id, text]) => h('button', { type: 'button', class: 'chip', 'aria-pressed': String(b[key] === id), onclick: () => { b[key] = id; rerender(); } }, text)));
+    const cols = ORDER.filter((st) => st !== 'dropped' && (st !== 'done' || b.showDone));
+    root.append(h('div', { class: 'panel', style: 'display: grid; gap: 12px' },
+      h('header', {}, h('h2', {}, '看板', h('small', {}, `${lanes.length} 个 lane${q ? `，搜索「${q}」` : ''}`))),
+      h('div', { class: 'filters' },
+        group('里程碑', 'milestone', D.milestones.map((m) => [m.id, m.short])),
+        group('轨道', 'track', D.tracks.map((t) => [t.id, t.label])),
+        group('谁', 'agent', D.agents.map((a) => [a.id, a.label])),
+        h('button', { type: 'button', class: 'chip', 'aria-pressed': String(b.showDone), onclick: () => { b.showDone = !b.showDone; rerender(); } }, '显示已完成')),
+      h('div', { class: 'board' }, cols.map((st) => {
+        const list = lanes.filter((l) => statusOf(l) === st).sort(byStatus);
+        return h('div', { class: 'col' },
+          h('h3', { 'data-s': st }, h('span', { class: 'mark', 'data-s': st }), DISPLAY[st].label, h('b', {}, list.length)),
+          list.length ? list.map(laneCard) : h('p', { class: 'muted small' }, '没有'));
+      }))));
+  }
+
+  // ---------- Milestones ----------
+  function renderMilestones(root) {
+    const stateToStatus = { done: 'done', active: 'wip', locked: 'locked' };
+    root.append(h('div', { class: 'panel' },
+      h('header', {}, h('h2', {}, '到 v1.0 的四段路')),
+      h('div', { class: 'line' }, D.milestones.map((m) => {
+        const lanes = D.lanes.filter((l) => l.milestone === m.id);
+        const done = lanes.filter((l) => l.status === 'done').length;
+        return h('button', { type: 'button', class: 'stop', 'data-s': stateToStatus[m.state], onclick: () => document.getElementById(`ms-${m.id}`)?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }) },
+          h('span', { class: 'dot' }, m.id), h('b', {}, m.short === m.id ? m.title.replace(/^M\d /, '') : m.short), h('span', {}, `${done}/${lanes.length} · ${m.version.split('，')[0]}`));
+      }))));
+    for (const m of D.milestones) {
+      const lanes = D.lanes.filter((l) => l.milestone === m.id).sort(byStatus);
+      root.append(h('div', { class: 'panel ms', id: `ms-${m.id}` },
+        h('div', { class: 'ms-head' }, h('h3', {}, m.title), pill(stateToStatus[m.state]), h('span', { class: 'muted small' }, `${m.version}${m.date ? ` · ${m.date}` : ''}`)),
+        h('p', { style: 'margin: 0' }, m.outcome),
+        statusBar(lanes),
+        h('div', {}, h('b', { class: 'small' }, '验收'), h('ul', {}, m.acceptance.map((a) => h('li', {}, a)))),
+        h('div', { class: 'scroll-x' }, h('table', {},
+          h('thead', {}, h('tr', {}, ['状态', 'Lane', '波次', '轨道', '谁', '规模', '推理强度', '更新'].map((x) => h('th', {}, x)))),
+          h('tbody', {}, lanes.map((l) => h('tr', { class: 'clickrow', onclick: () => openLane(l.id) },
+            h('td', {}, pill(statusOf(l))),
+            h('td', {}, laneLink(l), h('div', { class: 'id' }, l.id)),
+            h('td', { class: 'small' }, phaseLabel(l.phase)),
+            h('td', {}, trackTag(l.track)),
+            h('td', { class: 'small' }, agentName(l.agent)),
+            h('td', {}, l.size),
+            h('td', {}, l.status === 'done' ? h('span', { class: 'muted small' }, '—') : effortTag(l)),
+            h('td', { class: 'small muted', style: 'font-variant-numeric: tabular-nums' }, l.updated))))))));
+    }
+  }
+
+  // ---------- Files ----------
+  function renderFiles(root) {
+    const f = state.files;
+    const q = $('#q').value.trim().toLowerCase();
+    const map = new Map();
+    for (const lane of D.lanes) {
+      if (lane.status === 'done' || lane.status === 'dropped') continue;
+      if (!f.includePlanned && lane.status === 'planned') continue;
+      for (const [role, list] of [['拥有', lane.owns ?? []], ['共用', lane.shared ?? []]])
+        for (const path of list) {
+          const key = path.replace(/#.*$/, '');
+          if (!map.has(key)) map.set(key, []);
+          map.get(key).push({ lane, role });
+        }
+    }
+    let rows = [...map].map(([path, users]) => ({ path, users, active: users.filter((u) => ['wip', 'review'].includes(u.lane.status)).length }));
+    if (f.sharedOnly) rows = rows.filter((r) => r.users.length > 1);
+    if (q) rows = rows.filter((r) => r.path.toLowerCase().includes(q) || r.users.some((u) => u.lane.id.includes(q)));
+    rows.sort((a, b) => b.active - a.active || b.users.length - a.users.length || a.path.localeCompare(b.path));
+    root.append(h('div', { class: 'panel', style: 'display: grid; gap: 12px' },
+      h('header', {}, h('h2', {}, '文件归属', h('small', {}, `${rows.length} 个路径`)), h('p', {}, '两个以上进行中或待合并的 lane 碰同一个文件时，改动要离别人至少 7 行（GitButler 的 hunk 规则），合并按队列一次一个。')),
+      h('div', { class: 'filters' },
+        h('button', { type: 'button', class: 'chip', 'aria-pressed': String(f.sharedOnly), onclick: () => { f.sharedOnly = !f.sharedOnly; rerender(); } }, '只看多人共用'),
+        h('button', { type: 'button', class: 'chip', 'aria-pressed': String(f.includePlanned), onclick: () => { f.includePlanned = !f.includePlanned; rerender(); } }, '包括还没开的 lane')),
+      h('div', { class: 'scroll-x' }, h('table', {},
+        h('thead', {}, h('tr', {}, h('th', {}, '路径'), h('th', {}, 'Lane'), h('th', {}, ''))),
+        h('tbody', {}, rows.map((r) => h('tr', {},
+          h('td', { class: 'mono', style: 'overflow-wrap: anywhere; min-width: 220px' }, r.path),
+          h('td', {}, h('div', { style: 'display: grid; gap: 3px' }, r.users.map((u) => h('div', { class: 'row' }, h('span', { class: 'mark', 'data-s': statusOf(u.lane) }), laneLink(u.lane, u.lane.id), h('span', { class: 'role' }, u.role))))),
+          h('td', {}, r.active > 1 ? h('span', { class: 'conflict' }, `${r.active} 个活跃 lane`) : null))))))));
+  }
+
+  // ---------- Decisions and risks ----------
+  function renderDecisions(root) {
+    const by = (st) => D.decisions.filter((d) => d.state === st);
+    root.append(
+      h('div', { class: 'grid-2' },
+        h('div', { class: 'panel' }, h('header', {}, h('h2', {}, '需要你')), decisionList([...by('open'), ...by('recurring')])),
+        h('div', { class: 'panel' }, h('header', {}, h('h2', {}, '以后要决定'), h('p', {}, '到时候才解锁')), decisionList(by('locked')))),
+      h('div', { class: 'panel' }, h('header', {}, h('h2', {}, '已经决定')), decisionList(by('done'))),
+      h('div', { class: 'panel' },
+        h('header', {}, h('h2', {}, '风险')),
+        h('div', { class: 'scroll-x' }, h('table', {},
+          h('thead', {}, h('tr', {}, ['等级', '风险', '影响', '对策'].map((x) => h('th', {}, x)))),
+          h('tbody', {}, D.risks.map((r) => h('tr', {},
+            h('td', { style: 'white-space: nowrap' }, h('span', { class: 'risk', style: `background: var(--risk-${r.level})` }), RISK_LABEL[r.level]),
+            h('td', {}, r.risk), h('td', { class: 'small' }, r.impact), h('td', { class: 'small' }, r.mitigation))))))),
+      h('div', { class: 'grid-2' },
+        h('div', { class: 'panel' }, h('header', {}, h('h2', {}, '规则', h('small', {}, 'roadmap.md §4 的编号'))), h('ol', { class: 'rules' }, D.rules.map((r) => h('li', {}, r)))),
+        h('div', { class: 'panel' },
+          h('header', {}, h('h2', {}, '零散待办'), h('p', {}, 'roadmap.md §3.4 引用的条目')),
+          h('div', { class: 'scroll-x' }, h('table', {},
+            h('tbody', {}, D.looseEnds.map((item) => {
+              const lane = LANES.get(item.lane);
+              return h('tr', {}, h('td', {}, h('span', { class: 'mark', 'data-s': item.state === 'done' ? 'done' : statusOf(lane) })), h('td', {}, item.item), h('td', {}, laneLink(lane, lane.id)));
+            })))))));
+  }
+
+  // ---------- For agents ----------
+  function renderMaintain(root) {
+    const cmd = (code, note) => h('div', { class: 'cmd' }, h('code', {}, code), h('button', { type: 'button', class: 'btn', onclick: () => copy(code) }, '复制'), h('span', {}, note));
+    const promptPre = (lines) => h('pre', {}, lines.join('\n'));
+    root.append(
+      h('div', { class: 'grid-2' },
+        h('div', { class: 'panel' },
+          h('header', {}, h('h2', {}, '怎么更新'), h('p', {}, '数据只有一份：docs/roadmap/roadmap.json。每个 lane 只改自己那一条，pnpm check 会校验。')),
+          h('div', { class: 'cmds' },
+            cmd('pnpm roadmap next', 'session 开始时看一眼：合并队列、进行中、可以开、需要 Sirui 的事'),
+            cmd('pnpm roadmap show feat/ui-settings', '一个 lane 的全部信息：等谁、解锁谁、检查、路径'),
+            cmd('pnpm roadmap prompt feat/ui-settings', '打印可复制的提示词'),
+            cmd('pnpm roadmap status feat/ui-settings wip --next "…"', '开工、到 review、合并前各一次；done 会记日期并移出合并队列'),
+            cmd('pnpm roadmap gate feat/ui-settings check=pass e2e=pass', '记录检查结果'),
+            cmd('pnpm roadmap note feat/ui-settings "…"', '给 lane 加一条备注'),
+            cmd('pnpm roadmap doctor', '对照 .agents/lanes/ 和 Git 分支找出不一致'),
+            cmd('pnpm roadmap serve', '在 http://localhost:5199 打开本页（每次刷新重建）'),
+            cmd('pnpm roadmap build', '生成 docs/roadmap/dist/explorer.html，用来发布'))),
+        h('div', { style: 'display: grid; gap: 20px; align-content: start' },
+          h('div', { class: 'panel' },
+            h('header', {}, h('h2', {}, '发布这一页')),
+            h('ol', { class: 'steps small' },
+              h('li', {}, '改完数据：pnpm roadmap check'),
+              h('li', {}, 'pnpm roadmap build'),
+              h('li', {}, `用 Artifact 工具发布 docs/roadmap/dist/explorer.html${D.meta.explorer ? `，url = ${D.meta.explorer}` : ''}（先 read 一次这个 url）`)),
+            D.meta.explorer ? h('p', { class: 'small' }, '当前地址：', h('a', { href: D.meta.explorer, target: '_blank', rel: 'noopener' }, D.meta.explorer)) : null),
+          h('div', { class: 'panel' },
+            h('header', {}, h('h2', {}, '设备')),
+            h('div', { style: 'display: grid; gap: 10px' }, D.runtime.devices.map((d) => h('div', { class: 'small' },
+              h('div', { class: 'row' }, h('b', {}, d.id), h('span', { class: 'tag' }, d.role === 'current' ? '现在用' : '以前用'), h('span', { class: 'muted' }, `自 ${d.since}`)),
+              h('div', { class: 'mono' }, d.path),
+              h('div', {}, d.toolchain),
+              h('div', { class: 'muted' }, d.verified),
+              h('div', { class: 'muted' }, d.notes))))))),
+      h('div', { class: 'grid-2' },
+        h('div', { class: 'panel' }, h('header', {}, h('h2', {}, '通用开工提示词'), h('p', {}, '没写专用提示词的 lane 用它，{lane} 等由页面填好')), promptPre(D.prompts.start)),
+        h('div', { class: 'panel' }, h('header', {}, h('h2', {}, '给 Codex 的开头'), h('p', {}, 'Codex 的 planned lane 会自动加在提示词前面')), promptPre(D.prompts.codexPreamble))),
+      h('div', { class: 'panel' },
+        h('header', {}, h('h2', {}, '更新记录')),
+        h('ul', { class: 'log' }, [...D.log].reverse().map((entry) => h('li', {}, h('time', {}, entry.at), entry.text, h('span', { class: 'muted' }, ` · ${entry.by}`))))));
+  }
+
+  // ---------- Lane drawer ----------
+  const drawer = $('#drawer');
+  const scrim = $('#scrim');
+  let lastFocus = null;
+  function openLane(id, { keepHash } = {}) {
+    const lane = LANES.get(id);
+    if (!lane) return;
+    if (drawer.hidden) lastFocus = document.activeElement;
+    state.lane = id;
+    const st = statusOf(lane);
+    const deps = lane.deps.map((d) => LANES.get(d));
+    const unblocks = (DEPENDENTS.get(id) ?? []).map((d) => LANES.get(d));
+    const readyAfter = lane.status === 'done' ? [] : unlocks(D, id);
+    const list = (items, empty) => items.length
+      ? h('ul', { class: 'deplist' }, items.map((l) => h('li', {}, pill(statusOf(l)), laneLink(l), h('span', { class: 'id' }, l.id))))
+      : h('p', { class: 'muted small', style: 'margin: 0' }, empty);
+    const paths = (label, items) => items?.length ? h('div', {}, h('h3', {}, label), h('ul', { class: 'paths' }, items.map((p) => h('li', {}, h('a', { href: githubPath(lane, p), target: '_blank', rel: 'noopener' }, p))))) : null;
+    const idCode = h('code', {}, lane.id);
+    drawer.replaceChildren(
+      h('header', {},
+        h('div', { class: 'row' }, pill(st), CRIT.has(id) ? h('span', { class: 'tag' }, '关键路径') : null, lane.kind === 'gate' ? h('span', { class: 'tag' }, '验收关') : null),
+        h('h2', { id: 'drawer-title', tabindex: '-1' }, lane.title),
+        h('div', { class: 'row' }, idCode, lane.kind !== 'gate' ? h('button', { type: 'button', class: 'btn', onclick: () => copy(lane.id, idCode) }, '复制分支名') : null),
+        h('div', { class: 'row small muted' },
+          h('span', {}, `${MILESTONE.get(lane.milestone).short} · ${phaseLabel(lane.phase)}`), trackTag(lane.track), h('span', { class: 'tag' }, `规模 ${lane.size}`), effortTag(lane),
+          h('span', {}, `${agentName(lane.agent)}${lane.reviewer ? ` · 评审 ${agentName(lane.reviewer)}` : ''}`), h('span', {}, `更新 ${lane.updated}`), lane.landed ? h('span', {}, `合并 ${lane.landed}`) : null),
+        h('button', { type: 'button', class: 'btn close', onclick: closeLane, 'aria-label': '关闭' }, '关闭 Esc')),
+      h('div', { class: 'body' },
+        h('p', { style: 'margin: 0' }, rich(lane.summary)),
+        lane.next ? h('div', { class: 'next' }, h('b', {}, '下一步：'), rich(lane.next)) : null,
+        lane.hold ? h('div', { class: 'hold' }, h('b', {}, '先等：'), rich(lane.hold)) : null,
+        lane.gates ? h('div', {}, h('h3', {}, '检查'), h('div', { class: 'gatelist' }, Object.entries(GATES).map(([key, label]) => {
+          const g = lane.gates[key] ?? 'na';
+          return h('div', {}, h('span', { class: 'gate', 'data-g': g }, GATE_GLYPH[g]), label, h('span', { class: 'muted' }, GATE_LABEL[g]));
+        }))) : null,
+        h('div', {}, h('h3', {}, `等这些（${deps.length}）`), list(deps, '不等任何 lane')),
+        lane.landAfter?.length ? h('div', {}, h('h3', {}, '合并顺序排在这些之后'), list(lane.landAfter.map((x) => LANES.get(x)), '')) : null,
+        h('div', {}, h('h3', {}, `它解锁（${unblocks.length}）`), list(unblocks, '没有 lane 直接等它'),
+          readyAfter.length ? h('p', { class: 'small', style: 'margin: 6px 0 0' }, `合并后马上可以开：${readyAfter.map((x) => LANES.get(x).title).join('、')}`) : null),
+        lane.notes?.length ? h('div', {}, h('h3', {}, '备注'), h('ul', { style: 'margin: 0; padding-left: 1.2em' }, lane.notes.map((n) => h('li', { class: 'small' }, rich(n))))) : null,
+        paths('拥有', lane.owns),
+        paths('共用文件', lane.shared),
+        paths('相关文档', lane.links),
+        promptBlock(lane),
+        lane.kind !== 'gate' && lane.status !== 'planned' ? h('p', { class: 'small muted', style: 'margin: 0' },
+          `lane 文件：.agents/lanes/${laneFile(lane.id)}.md · `,
+          ['wip', 'review'].includes(lane.status) ? h('a', { href: `${D.meta.repo}/compare/main...${lane.id}`, target: '_blank', rel: 'noopener' }, '在 GitHub 上对比') : null) : null));
+    drawer.hidden = false;
+    scrim.hidden = innerWidth > 1100;
+    if (!keepHash) setHash();
+    if (state.tab === 'graph') rerender();
+    drawer.querySelector('#drawer-title').focus({ preventScroll: true });
+  }
+  function closeLane() {
+    if (drawer.hidden) return;
+    drawer.hidden = true;
+    scrim.hidden = true;
+    state.lane = null;
+    setHash();
+    if (state.tab === 'graph') rerender();
+    if (lastFocus && document.contains(lastFocus)) lastFocus.focus({ preventScroll: true });
+  }
+  scrim.addEventListener('click', closeLane);
+
+  // ---------- Search ----------
+  const q = $('#q');
+  const results = $('#results');
+  let active = -1;
+  function search() {
+    const text = q.value.trim().toLowerCase();
+    if (['board', 'files'].includes(state.tab)) rerender();
+    if (!text) {
+      results.hidden = true;
+      q.setAttribute('aria-expanded', 'false');
+      return;
+    }
+    const hits = D.lanes.filter((l) => `${l.id} ${l.title} ${l.summary} ${(l.owns ?? []).join(' ')} ${(l.shared ?? []).join(' ')}`.toLowerCase().includes(text)).sort(byStatus).slice(0, 10);
+    active = hits.length ? 0 : -1;
+    results.replaceChildren(...(hits.length ? hits.map((l, i) => h('button', { type: 'button', role: 'option', 'aria-selected': String(i === active), onclick: () => pick(l.id) },
+      h('span', { class: 'mark', 'data-s': statusOf(l) }), l.title, h('span', { class: 'mono' }, l.id))) : [h('div', { class: 'small muted', style: 'padding: 6px 8px' }, '没有匹配的 lane')]));
+    results.hidden = false;
+    q.setAttribute('aria-expanded', 'true');
+  }
+  function pick(id) {
+    results.hidden = true;
+    q.setAttribute('aria-expanded', 'false');
+    openLane(id);
+  }
+  q.addEventListener('input', search);
+  q.addEventListener('keydown', (e) => {
+    const options = [...results.querySelectorAll('[role="option"]')];
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!options.length) return;
+      active = (active + (e.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length;
+      options.forEach((o, i) => o.setAttribute('aria-selected', String(i === active)));
+    } else if (e.key === 'Enter' && options[active]) {
+      e.preventDefault();
+      options[active].click();
+    } else if (e.key === 'Escape') {
+      results.hidden = true;
+      q.blur();
+    }
+  });
+  q.addEventListener('blur', () => setTimeout(() => (results.hidden = true), 150));
+
+  // ---------- Theme ----------
+  function applyTheme(choice) {
+    if (choice === 'system') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', choice);
+    for (const b of document.querySelectorAll('[data-theme-choice]')) b.setAttribute('aria-pressed', String(b.dataset.themeChoice === choice));
+    store.set('theme', choice);
+  }
+  for (const b of document.querySelectorAll('[data-theme-choice]')) b.addEventListener('click', () => applyTheme(b.dataset.themeChoice));
+  const savedTheme = store.get('theme', 'system');
+  if (savedTheme === 'system') applyTheme('system'); else applyTheme(savedTheme);
+
+  // ---------- Keyboard ----------
+  document.addEventListener('keydown', (e) => {
+    const typing = e.target.closest('input, textarea, [contenteditable]');
+    if (e.key === 'Escape' && !typing) closeLane();
+    if (typing || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === '/') {
+      e.preventDefault();
+      q.focus();
+    } else if (/^[1-8]$/.test(e.key)) {
+      selectTab(TABS[Number(e.key) - 1].id);
+    } else if ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && e.target.getAttribute('role') === 'tab') {
+      const i = TABS.findIndex((t) => t.id === state.tab);
+      const next = TABS[(i + (e.key === 'ArrowRight' ? 1 : -1) + TABS.length) % TABS.length];
+      selectTab(next.id);
+      document.getElementById(`tab-${next.id}`).focus();
+    }
+  });
+  addEventListener('hashchange', readHash);
+
+  // ---------- Start ----------
+  $('#stage').textContent = D.now.stage;
+  $('#updated').textContent = `数据更新于 ${latest}`;
+  selectTab('now', { keepHash: true });
+  readHash();
+})();
+</script>
