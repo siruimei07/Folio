@@ -400,10 +400,11 @@ with every `size.*` and `space.*` token in pixels (`SIZE.narrowBreakpoint`, `SIZ
 stored settings through `get_app_settings`, loaded while the strings load, then every
 `AppSettingsChanged`, so `feat/ui-settings` only calls `update_app_settings`) and calls
 `watchLayout()`. The shell builds the main window itself (`create: false` in `tauri.conf.json`)
-with `color.surface.app` of the stored theme, or of Windows' app mode for System, as the window
-and WebView2 background (`crates/folio-app/src/window_background.rs`, whose test keeps the
-colours equal to the tokens), and repaints it when App settings change the theme, so a dark
-first frame never flashes white.
+with the stored theme as the window's theme, which WebView2 gives the page as
+`prefers-color-scheme`, and with that theme's `color.surface.app` as the window and WebView2
+background (`crates/folio-app/src/window_background.rs`, whose test keeps the colours equal to
+the tokens). The background follows every change of the window's theme, so a dark first frame
+never flashes white, and the page has its theme before `data-theme` is set.
 
 ### 6.4 Keyboard shortcuts
 

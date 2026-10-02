@@ -1026,14 +1026,17 @@ type UpdateAppSettings = {                // null: keep the stored value
   `startAppearance` (`apps/desktop/src/app/appearance.ts`) applies the stored values, then every
   `AppSettingsChanged`; when the settings cannot be read, Windows' settings apply and the log has
   why (`appearance.load`). `main.tsx` loads them while it loads the strings.
-- **No white flash.** The shell builds the window with the background of the stored theme, or
-  of Windows' app mode for System (`window_background::is_dark`): creating the webview
-  dispatches window messages, so a colour set after building could be painted too late. A new
-  theme in App settings repaints it. Repainting and the event follow a saved change, one update
-  at a time, so events arrive in the order of the saves; if either fails, the log has it and the
-  command still succeeds. Not covered: with System, a change of Windows' app mode while Folio
-  runs restyles the page but leaves the window background until the next start, which shows
-  only while the window is resized.
+- **No white flash.** The shell builds the window with the stored theme as the window's theme
+  and with that theme's background (`window_background`): Light and Dark fix the window's
+  theme; System leaves it to Windows, which makes the window dark in dark app mode unless high
+  contrast is on. Creating the webview dispatches window messages, so a theme or colour set
+  after building could be painted too late. WebView2's `prefers-color-scheme` follows the
+  window's theme, so the page has the stored theme from its first frame, before
+  `startAppearance` sets `data-theme`. A new theme in App settings becomes the window's theme,
+  and the background follows every change of the window's theme, from App settings or, with
+  System, from Windows. Setting the theme and the event follow a saved change, one update at a
+  time, so events arrive in the order of the saves; if either fails, the log has it and the
+  command still succeeds. The window's theme also colours its DWM border.
 
 ### 22.2 Ignore rules
 

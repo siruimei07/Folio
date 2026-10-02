@@ -1111,6 +1111,44 @@
       ]
     },
     {
+      "id": "fix/core-window-theme",
+      "title": "窗口主题跟随设置",
+      "milestone": "M1",
+      "phase": "m1-w3",
+      "track": "core",
+      "agent": "claude-code",
+      "size": "S",
+      "effort": "high",
+      "deps": [
+        "feat/core-first-frame-theme"
+      ],
+      "summary": "主窗口按已存的主题设 tao 窗口主题（浅色/深色固定，跟随系统为 none），WebView2 的 prefers-color-scheme 从第一帧起跟随 App settings，而不是 Windows 的应用模式；改主题时同步设窗口主题，窗口背景跟随每次 ThemeChanged（跟随系统时 Windows 切换模式也会重绘）",
+      "status": "done",
+      "updated": "2026-10-02",
+      "landed": "2026-10-02",
+      "gates": {
+        "check": "pass",
+        "e2e": "pass",
+        "codeReview": "pass",
+        "securityReview": "pass",
+        "simplify": "pass",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "crates/folio-app/src/window_background.rs"
+      ],
+      "shared": [
+        "crates/folio-app/src/webview_settings.rs",
+        "crates/folio-app/src/commands/settings.rs",
+        "crates/folio-app/src/lib.rs",
+        "apps/desktop/src/app/appearance.ts",
+        "docs/specs/ipc-m1.md",
+        "docs/specs/ui-architecture.md",
+        "e2e/tests/settings.spec.ts"
+      ]
+    },
+    {
       "id": "feat/core-import",
       "title": "导入（后端）",
       "milestone": "M1",

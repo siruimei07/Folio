@@ -46,14 +46,15 @@ pub async fn update_app_settings(
         let _order = ANNOUNCING.lock().unwrap_or_else(PoisonError::into_inner);
         let (before, after) = update(&state, request)?;
         let settings = app_settings(&after);
-        if after.theme != before.theme {
-            let background = window_background::for_theme(after.theme);
-            if let Err(error) = window.set_background_color(Some(background)) {
-                diagnostics::report(
-                    window.app_handle(),
-                    &format!("window background not updated: {error}"),
-                );
-            }
+        // The page's `prefers-color-scheme` and the window background follow the window's theme
+        // (`window_background::follow_theme`).
+        if after.theme != before.theme
+            && let Err(error) = window.set_theme(window_background::window_theme(after.theme))
+        {
+            diagnostics::report(
+                window.app_handle(),
+                &format!("window theme not updated: {error}"),
+            );
         }
         if after != before {
             let event = AppSettingsChanged {

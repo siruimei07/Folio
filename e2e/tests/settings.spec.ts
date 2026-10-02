@@ -19,8 +19,11 @@ import { expect, test } from '../fixtures';
 
 // Settings through the real shell (docs/specs/ipc-m1.md §22).
 
-test('App settings persist and set the root before the first render', async ({ folio }) => {
+test('App settings persist and set the root and the window theme before the first render', async ({ folio }) => {
   const { page, dataDir } = folio;
+  // Playwright emulates a light `prefers-color-scheme` on every page it attaches to; without it,
+  // WebView2 reports the window's theme.
+  await page.emulateMedia({ colorScheme: null });
   const defaults = await invoke<AppSettings>(page, 'get_app_settings');
   expect(defaults).toMatchObject({ theme: 'system', reduceMotion: 'system' });
   // Windows names every computer.
@@ -29,31 +32,40 @@ test('App settings persist and set the root before the first render', async ({ f
     request: { deviceName: '  ', theme: 'dark', reduceMotion: null },
   })).toMatchObject({ code: 'NameEmpty' });
 
+  // System leaves the window's theme to Windows. The test stores the other mode, so only the
+  // stored theme can explain what WebView2 reports.
+  const windowsDark = await prefersDark(page);
+  const theme = windowsDark ? 'light' : 'dark';
   const saved = await invoke<AppSettings>(page, 'update_app_settings', {
-    request: { deviceName: ' E2E PC ', theme: 'dark', reduceMotion: 'on' },
+    request: { deviceName: ' E2E PC ', theme, reduceMotion: 'on' },
   });
-  expect(saved).toEqual({ deviceName: 'E2E PC', theme: 'dark', reduceMotion: 'on' });
-  // The window's root follows AppSettingsChanged.
-  await expect.poll(() => rootAppearance(page)).toEqual({ theme: 'dark', reduceMotion: 'on' });
+  expect(saved).toEqual({ deviceName: 'E2E PC', theme, reduceMotion: 'on' });
+  // The window's root follows AppSettingsChanged, and WebView2 the window's new theme.
+  await expect.poll(() => rootAppearance(page)).toEqual({ theme, reduceMotion: 'on' });
+  await expect.poll(() => prefersDark(page)).toBe(!windowsDark);
   expect(JSON.parse(await readFile(path.join(dataDir, 'settings.json'), 'utf8')) as unknown).toMatchObject({
     format_version: 1,
     library_root: null,
     device_name: 'E2E PC',
-    theme: 'dark',
+    theme,
     reduce_motion: 'on',
   });
 
   // main.tsx applies the stored appearance before React renders anything, so it is on the root
-  // as soon as the app has rendered.
+  // as soon as the app has rendered. The shell builds the window with the stored theme, which
+  // WebView2 has before the page loads; nothing sets the theme after a restart.
   const restarted = await folio.restart();
+  await restarted.emulateMedia({ colorScheme: null });
   await restarted.waitForFunction("(document.getElementById('root')?.childElementCount ?? 0) > 0");
-  expect(await rootAppearance(restarted)).toEqual({ theme: 'dark', reduceMotion: 'on' });
+  expect(await rootAppearance(restarted)).toEqual({ theme, reduceMotion: 'on' });
+  expect(await prefersDark(restarted)).toBe(!windowsDark);
   expect(await invoke<AppSettings>(restarted, 'get_app_settings')).toEqual(saved);
 
   await invoke(restarted, 'update_app_settings', {
     request: { deviceName: null, theme: 'system', reduceMotion: 'system' },
   });
   await expect.poll(() => rootAppearance(restarted)).toEqual({ theme: null, reduceMotion: null });
+  await expect.poll(() => prefersDark(restarted)).toBe(windowsDark);
 });
 
 test.describe('ignore rules', () => {
@@ -116,6 +128,10 @@ function rootAppearance(page: BrowserPage): Promise<{ theme: string | null; redu
     theme: document.documentElement.dataset.theme ?? null,
     reduceMotion: document.documentElement.dataset.reduceMotion ?? null,
   })`);
+}
+
+function prefersDark(page: BrowserPage): Promise<boolean> {
+  return page.evaluate<boolean>("matchMedia('(prefers-color-scheme: dark)').matches");
 }
 
 async function rootNames(page: BrowserPage): Promise<string[]> {

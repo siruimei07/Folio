@@ -4,7 +4,8 @@
 //
 // Both are App settings → Appearance, which the shell stores (ipc-m1 §22): `startAppearance`
 // applies the stored choice before the first render and every change after it. The shell has
-// already painted the window background in the stored theme, so the first frame matches.
+// already painted the window background in the stored theme and gives the page that theme as
+// `prefers-color-scheme`, so the first frame matches even before `data-theme` is set.
 
 import { type AppSettings, ipc, shellEvents } from '../ipc';
 import { reportUiError } from './log';

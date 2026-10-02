@@ -1,10 +1,15 @@
-//! The main window's colour before the page paints its first frame. WebView2 shows its default
-//! background, white, until then, which flashes in dark mode (roadmap §3.4, feat/ui-app-shell).
-//! The window is built from its configuration (`create: false` in tauri.conf.json) with the app
-//! background of the theme stored in App settings → Appearance (ipc-m1 §22), or of the mode
-//! Windows asks apps to use; the page's own theme then takes over (design/tokens/README.md
-//! "Modes"). It has to be set when the window is built: creating the webview dispatches window
-//! messages, so the window can paint before the setup code that built it goes on.
+//! The main window's theme, and its colour before the page paints its first frame. WebView2 shows
+//! its default background, white, until then, which flashes in dark mode (roadmap §3.4,
+//! feat/ui-app-shell).
+//!
+//! The window is built from its configuration (`create: false` in tauri.conf.json) with the theme
+//! stored in App settings → Appearance (ipc-m1 §22): Light and Dark fix the window's theme, System
+//! leaves it to Windows. tauri-runtime-wry builds the webview with its window's theme as
+//! `prefers-color-scheme` and passes every change of it on, so the page has the stored theme
+//! before it sets `data-theme` (design/tokens/README.md "Modes"). The background is the app
+//! background of the same theme. Both have to be set when the window is built: creating the
+//! webview dispatches window messages, so the window can paint before the setup code that built
+//! it goes on. After that, the background follows every change of the window's theme.
 
 #![allow(
     unsafe_code,
@@ -13,38 +18,74 @@
 
 use folio_core::library::state::Theme;
 use tauri::window::Color;
+use tauri::{Manager, WebviewWindow, WindowEvent};
 use windows::Win32::Foundation::ERROR_SUCCESS;
 use windows::Win32::System::Registry::{HKEY_CURRENT_USER, RRF_RT_REG_DWORD, RegGetValueW};
 use windows::core::w;
+
+use crate::diagnostics;
 
 /// `color.surface.app` of the light and dark modes (design/tokens/color.*.tokens.json), the body
 /// background of the page. A test keeps them equal to the tokens.
 const LIGHT: Color = Color(0xf3, 0xf2, 0xf0, 0xff);
 const DARK: Color = Color(0x15, 0x13, 0x12, 0xff);
 
-/// The background for the window and its webview before the page has painted.
-pub(crate) fn first_frame(dark: bool) -> Color {
-    if dark { DARK } else { LIGHT }
-}
-
-/// The background of a theme from App settings, when it changes.
-pub(crate) fn for_theme(theme: Theme) -> Color {
-    first_frame(is_dark(theme))
-}
-
-/// Whether a theme from App settings is dark: Windows' app mode decides for System.
-pub(crate) fn is_dark(theme: Theme) -> bool {
+/// The window's theme for a theme from App settings; `None` leaves it to Windows.
+pub(crate) fn window_theme(theme: Theme) -> Option<tauri::Theme> {
     match theme {
-        Theme::System => apps_use_dark_mode(),
-        Theme::Light => false,
-        Theme::Dark => true,
+        Theme::System => None,
+        Theme::Light => Some(tauri::Theme::Light),
+        Theme::Dark => Some(tauri::Theme::Dark),
     }
 }
 
-/// Whether Windows asks apps for dark mode (Settings → Personalization → Colors → "Choose your
-/// app mode"): the value WebView2's `prefers-color-scheme` follows. Light when it cannot be read,
-/// as Windows itself defaults.
-fn apps_use_dark_mode() -> bool {
+/// The background for the window and its webview before the page has painted. For System it is
+/// a guess from Windows' app mode, which `follow_theme` checks once the window exists.
+pub(crate) fn for_theme(theme: Theme) -> Color {
+    background(window_theme(theme).unwrap_or_else(app_mode))
+}
+
+/// Repaints the background whenever the window's theme changes: a new theme in App settings, or
+/// Windows' mode while the theme is System. Also repaints it at once if the window was built with
+/// another background than its theme's: with System, tao picks the theme itself and counts high
+/// contrast as light.
+pub(crate) fn follow_theme(window: &WebviewWindow, built: Color) {
+    let target = window.clone();
+    window.on_window_event(move |event| {
+        if let WindowEvent::ThemeChanged(theme) = event {
+            repaint(&target, *theme);
+        }
+    });
+    match window.theme() {
+        Ok(theme) if background(theme) != built => repaint(window, theme),
+        Ok(_) => {}
+        Err(error) => diagnostics::report(
+            window.app_handle(),
+            &format!("window theme unreadable: {error}"),
+        ),
+    }
+}
+
+fn repaint(window: &WebviewWindow, theme: tauri::Theme) {
+    if let Err(error) = window.set_background_color(Some(background(theme))) {
+        diagnostics::report(
+            window.app_handle(),
+            &format!("window background not updated: {error}"),
+        );
+    }
+}
+
+fn background(theme: tauri::Theme) -> Color {
+    if theme == tauri::Theme::Dark {
+        DARK
+    } else {
+        LIGHT
+    }
+}
+
+/// The mode Windows asks apps to use (Settings → Personalization → Colors → "Choose your app
+/// mode"). Light when it cannot be read, as Windows itself defaults.
+fn app_mode() -> tauri::Theme {
     let mut light: u32 = 1;
     let mut size = std::mem::size_of::<u32>() as u32;
     // SAFETY: the output buffer is a live u32 and `size` gives its exact byte capacity.
@@ -59,7 +100,11 @@ fn apps_use_dark_mode() -> bool {
             Some(&mut size),
         )
     };
-    result == ERROR_SUCCESS && light == 0
+    if result == ERROR_SUCCESS && light == 0 {
+        tauri::Theme::Dark
+    } else {
+        tauri::Theme::Light
+    }
 }
 
 #[cfg(test)]
@@ -80,10 +125,7 @@ mod tests {
     fn first_frame_matches_the_app_background_tokens() {
         let light = include_str!("../../../design/tokens/color.light.tokens.json");
         let dark = include_str!("../../../design/tokens/color.dark.tokens.json");
-        assert_eq!(first_frame(false), surface_app(light));
-        assert_eq!(first_frame(true), surface_app(dark));
         assert_eq!(for_theme(Theme::Light), surface_app(light));
         assert_eq!(for_theme(Theme::Dark), surface_app(dark));
-        assert_eq!(for_theme(Theme::System), first_frame(apps_use_dark_mode()));
     }
 }

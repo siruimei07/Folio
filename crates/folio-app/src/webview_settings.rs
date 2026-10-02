@@ -5,18 +5,24 @@
     reason = "WebView2 COM calls on the controller's UI thread; the unsafe block states why it is sound"
 )]
 
+use folio_core::library::state::Theme;
 use tauri::utils::config::WindowConfig;
 use tauri::{Url, WebviewUrl};
+
+use crate::window_background;
 
 pub fn build_main(
     app: &tauri::App,
     mut config: WindowConfig,
-    dark: bool,
+    theme: Theme,
 ) -> Result<tauri::WebviewWindow, Box<dyn std::error::Error>> {
     let navigation = defer_navigation(&mut config)?;
+    let background = window_background::for_theme(theme);
     let main = tauri::WebviewWindowBuilder::from_config(app.handle(), &config)?
-        .background_color(crate::window_background::first_frame(dark))
+        .theme(window_background::window_theme(theme))
+        .background_color(background)
         .build()?;
+    window_background::follow_theme(&main, background);
     if let Some(url) = navigation {
         navigate_release(&main, url)?;
     }
