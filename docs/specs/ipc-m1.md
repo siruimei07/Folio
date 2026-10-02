@@ -981,11 +981,7 @@ Folio when Windows starts" and updates come with their own contracts.
 
 - Status: implemented with the contract in lane `feat/core-app-settings` (2026-10-01). Types in
   `crates/folio-app/src/ipc/settings.rs`, commands in `crates/folio-app/src/commands/settings.rs`
-  and `crates/folio-app/src/library/ignore.rs`, storage in `folio_core::library::state`. The
-  window's first frame in the stored theme (`window_background::starts_dark`, §22.1 "No white
-  flash") lands in a follow-up commit after `chore/core-webview-accelerator-keys`, which rewrites
-  the same window setup; until then the first frame follows Windows' app mode and the page
-  applies the stored theme before its first render.
+  and `crates/folio-app/src/library/ignore.rs`, storage in `folio_core::library::state`.
 
 ### 22.1 App settings
 
@@ -1031,7 +1027,7 @@ type UpdateAppSettings = {                // null: keep the stored value
   `AppSettingsChanged`; when the settings cannot be read, Windows' settings apply and the log has
   why (`appearance.load`). `main.tsx` loads them while it loads the strings.
 - **No white flash.** The shell builds the window with the background of the stored theme, or
-  of Windows' app mode for System (`window_background::starts_dark`): creating the webview
+  of Windows' app mode for System (`window_background::is_dark`): creating the webview
   dispatches window messages, so a colour set after building could be painted too late. A new
   theme in App settings repaints it. Repainting and the event follow a saved change, one update
   at a time, so events arrive in the order of the saves; if either fails, the log has it and the

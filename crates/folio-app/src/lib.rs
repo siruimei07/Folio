@@ -119,7 +119,8 @@ pub fn run() {
             tauri::async_runtime::spawn_blocking(move || library.initialize());
 
             // Built here rather than from the configuration at start-up, so its first frame has
-            // the app background of Windows' app mode instead of WebView2's white.
+            // the app background of the stored theme or Windows' app mode instead of WebView2's
+            // white.
             let config = app
                 .config()
                 .app
@@ -128,7 +129,11 @@ pub fn run() {
                 .find(|window| window.label == "main")
                 .ok_or("tauri.conf.json declares no main window")?
                 .clone();
-            let dark = window_background::apps_use_dark_mode();
+            // Without readable settings Windows decides; `library_status` reports the failure.
+            let theme = app.state::<library::LibraryState>().settings();
+            let dark = window_background::is_dark(
+                theme.map(|settings| settings.theme).unwrap_or_default(),
+            );
             let main = webview_settings::build_main(app, config, dark)?;
             if let Err(error) = window_chrome::install(&main) {
                 // The title bar still works without it; only the snap layouts flyout is lost.

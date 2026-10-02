@@ -1078,15 +1078,15 @@
         "chore/core-webview-accelerator-keys"
       ],
       "summary": "主窗口按已存的主题选首帧背景（window_background::starts_dark），App settings 选了浅色或深色时第一帧不闪白（ipc-m1 §22.1）",
-      "status": "wip",
+      "status": "done",
       "updated": "2026-10-02",
-      "next": "WIP 检查点，stack 在快捷键 lane 上。快捷键合并后：删掉 ipc-m1 §22 状态行里的「后续」那句，跑 pnpm check 和 pnpm e2e，汇报后合并",
+      "landed": "2026-10-02",
       "gates": {
         "check": "pass",
-        "e2e": "todo",
-        "codeReview": "todo",
+        "e2e": "pass",
+        "codeReview": "pass",
         "securityReview": "na",
-        "simplify": "todo",
+        "simplify": "pass",
         "designCritique": "na",
         "a11y": "na"
       },

@@ -1,9 +1,10 @@
 //! The main window's colour before the page paints its first frame. WebView2 shows its default
 //! background, white, until then, which flashes in dark mode (roadmap §3.4, feat/ui-app-shell).
 //! The window is built from its configuration (`create: false` in tauri.conf.json) with the app
-//! background of the mode Windows asks apps to use; the page's own theme then takes over
-//! (design/tokens/README.md "Modes"), and a new theme in App settings → Appearance repaints the
-//! window (ipc-m1 §22).
+//! background of the theme stored in App settings → Appearance (ipc-m1 §22), or of the mode
+//! Windows asks apps to use; the page's own theme then takes over (design/tokens/README.md
+//! "Modes"). It has to be set when the window is built: creating the webview dispatches window
+//! messages, so the window can paint before the setup code that built it goes on.
 
 #![allow(
     unsafe_code,
@@ -31,7 +32,8 @@ pub(crate) fn for_theme(theme: Theme) -> Color {
     first_frame(is_dark(theme))
 }
 
-fn is_dark(theme: Theme) -> bool {
+/// Whether a theme from App settings is dark: Windows' app mode decides for System.
+pub(crate) fn is_dark(theme: Theme) -> bool {
     match theme {
         Theme::System => apps_use_dark_mode(),
         Theme::Light => false,
@@ -42,7 +44,7 @@ fn is_dark(theme: Theme) -> bool {
 /// Whether Windows asks apps for dark mode (Settings → Personalization → Colors → "Choose your
 /// app mode"): the value WebView2's `prefers-color-scheme` follows. Light when it cannot be read,
 /// as Windows itself defaults.
-pub(crate) fn apps_use_dark_mode() -> bool {
+fn apps_use_dark_mode() -> bool {
     let mut light: u32 = 1;
     let mut size = std::mem::size_of::<u32>() as u32;
     // SAFETY: the output buffer is a live u32 and `size` gives its exact byte capacity.
