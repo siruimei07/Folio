@@ -573,6 +573,22 @@
       },
       "$description": "Search dialog width."
     },
+    "search-dialog-top": {
+      "$type": "dimension",
+      "$value": {
+        "value": 84,
+        "unit": "px"
+      },
+      "$description": "The search dialog's distance from the top of the window (app-shell §8)."
+    },
+    "search-input-row": {
+      "$type": "dimension",
+      "$value": {
+        "value": 52,
+        "unit": "px"
+      },
+      "$description": "The search dialog's input row (app-shell §8)."
+    },
     "settings-dialog-width": {
       "$type": "dimension",
       "$value": {

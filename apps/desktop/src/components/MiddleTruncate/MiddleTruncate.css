@@ -2,7 +2,8 @@
   display: flex;
   min-width: 0;
   overflow: hidden;
-  white-space: nowrap;
+  /* `pre`, not `nowrap`: the halves are flex items, which would drop a space at the cut. */
+  white-space: pre;
 }
 
 .middle-truncate__head {

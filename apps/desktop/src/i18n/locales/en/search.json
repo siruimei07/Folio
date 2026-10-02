@@ -1,1 +1,34 @@
-{}
+{
+  "label": "Search",
+  "placeholder": "Search files, courses, tags",
+  "results": "Search results",
+  "groups": {
+    "names": "File names",
+    "contents": "Contents"
+  },
+  "keys": {
+    "arrows": "↑ ↓",
+    "enter": "Enter",
+    "esc": "Esc"
+  },
+  "hints": {
+    "select": "Select",
+    "preview": "Preview",
+    "close": "Close"
+  },
+  "count_one": "{{count, number}} result",
+  "count_other": "{{count, number}} results",
+  "countMore": "{{count, number}}+ results",
+  "idle": "Find a file by its name, or by a word inside it.",
+  "loadingMore": "Loading more results…",
+  "empty": {
+    "title": "No matches for “{{text}}”",
+    "text": "Check the spelling, or search for a word from inside the file."
+  },
+  "tooLong": {
+    "title": "This search is too long",
+    "text": "Search with up to {{max, number}} characters. This one has {{count, number}}."
+  },
+  "failed": "Search didn't work",
+  "tryAgain": "Try again"
+}

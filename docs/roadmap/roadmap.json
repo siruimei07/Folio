@@ -766,9 +766,9 @@
         "fix/ui-recently-added-clock"
       ],
       "summary": "输入即出结果、分组、高亮只当文本渲染、方向键和回车（在资料库里选中并预览）、空 / 过长 / 出错状态",
-      "status": "review",
+      "status": "done",
       "updated": "2026-10-02",
-      "next": "等你批准合并；预览依赖它的 lib/places.ts，要先合并它",
+      "landed": "2026-10-02",
       "gates": {
         "check": "pass",
         "e2e": "pass",
@@ -2112,10 +2112,6 @@
     }
   ],
   "landingQueue": [
-    {
-      "lane": "feat/ui-search-palette",
-      "why": "评审都过了；预览依赖它的 lib/places.ts"
-    },
     {
       "lane": "feat/ui-first-run",
       "why": "评审都过了；token README 和测试 helper 排在搜索之后"

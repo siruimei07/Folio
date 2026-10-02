@@ -17,6 +17,9 @@ export const ACTIVITY_LINGER_MS = 10_000;
 /** How long a region waits for data before it shows skeleton rows (UI architecture §13). */
 export const LOADING_DELAY_MS = 150;
 
+/** The pause in typing after which search asks for the text (UI architecture §9). */
+export const SEARCH_PAUSE_MS = 120;
+
 /** Characters typed within this long find a row by its name together (UI architecture §7.2). */
 export const TYPEAHEAD_MS = 500;
 

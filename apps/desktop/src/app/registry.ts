@@ -8,6 +8,7 @@ import type { ComponentType } from 'react';
 
 import { LibraryView } from '../library/LibraryView';
 import { SemesterControl } from '../library/SemesterControl';
+import { SearchDialog } from '../search/SearchDialog';
 import type { DialogKind, DialogParams, ViewId } from './navigation';
 
 export interface ViewDefinition {
@@ -39,7 +40,7 @@ export type DialogRegistry = { [K in DialogKind]?: ComponentType<DialogComponent
  * The dialogs the navigation store opens. Registering `search` shows the toolbar's search button
  * and Ctrl+K; `librarySettings` the rail's gear and Ctrl+,; `appSettings` the avatar.
  */
-export const DIALOGS: DialogRegistry = {};
+export const DIALOGS: DialogRegistry = { search: SearchDialog };
 
 /** Toolbar controls a lane provides; `compact` in the narrow window's 40 px bar. */
 export interface ToolbarControlProps {

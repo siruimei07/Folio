@@ -1,0 +1,224 @@
+/* The search dialog (app-shell handoff §8); its scrim and place come from the `search` scrim. */
+
+.search-palette {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: var(--size-search-dialog);
+  max-width: 100%;
+  min-height: 0;
+  overflow: hidden;
+  border: var(--border-width) solid var(--color-border-default);
+  border-radius: var(--radius-dialog);
+  background: var(--color-surface-panel);
+  box-shadow: var(--shadow-overlay);
+}
+
+.search-palette__field {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-10);
+  box-sizing: border-box;
+  height: var(--size-search-input-row);
+  padding: 0 var(--space-16);
+  border-bottom: var(--border-width) solid var(--color-border-default);
+}
+
+.search-palette__icon {
+  flex: none;
+  color: var(--color-text-tertiary);
+}
+
+/* The caret marks focus here: the field is the dialog's only text control and always has it. */
+.search-palette__input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: var(--font-size-search-input);
+}
+
+.search-palette__input::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.search-palette__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto;
+}
+
+.search-palette__hint {
+  margin: 0;
+  padding: var(--space-14) var(--space-16);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-label);
+}
+
+.search-palette__body > .state-block {
+  overflow-wrap: anywhere;
+}
+
+.search-results {
+  padding: var(--space-4) var(--space-6) var(--space-6);
+  outline: none;
+}
+
+.search-results__header {
+  padding: var(--space-10) var(--space-10) var(--space-4);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-strong);
+}
+
+/* A hit: icon, name and place on the first line; a content match's text below the name. */
+.search-hit {
+  position: relative;
+  display: grid;
+  grid-template-areas:
+    'icon name place'
+    '. snippet snippet';
+  grid-template-columns: var(--size-icon) minmax(0, 1fr) fit-content(40%);
+  align-items: center;
+  gap: var(--space-2) var(--space-8);
+  box-sizing: border-box;
+  min-height: var(--size-row);
+  padding: var(--space-6) var(--space-10);
+  border-radius: var(--radius-row);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-body);
+  line-height: var(--font-line-height-body);
+  cursor: default;
+  outline: none;
+  transition: background-color var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.search-hit > .file-type-icon,
+.search-hit__folder {
+  grid-area: icon;
+}
+
+.search-hit__folder {
+  color: var(--color-text-secondary);
+}
+
+.search-hit__name {
+  grid-area: name;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The description holds the place and the snippet; each takes its own cell of the row. */
+.search-hit__about {
+  display: contents;
+}
+
+.search-hit__place {
+  grid-area: place;
+  min-width: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-label);
+}
+
+.search-hit__place-cut {
+  display: flex;
+  min-width: 0;
+}
+
+.search-hit__snippet {
+  display: -webkit-box;
+  grid-area: snippet;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-small);
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.search-hit[data-hovered] {
+  background: var(--color-surface-hover);
+}
+
+/* The active row (moved to with ↑ ↓ while the field keeps focus): selected background and bar. */
+.search-hit[data-focused] {
+  background: var(--color-surface-selected);
+}
+
+.search-hit[data-focused]::before {
+  position: absolute;
+  top: var(--size-selection-bar-inset);
+  bottom: var(--size-selection-bar-inset);
+  left: 0;
+  width: var(--size-selection-bar-width);
+  border-radius: 0 var(--radius-indicator) var(--radius-indicator) 0;
+  background: var(--color-selection-indicator);
+  content: '';
+}
+
+.search-mark {
+  border-radius: var(--radius-indicator);
+  background: var(--color-search-highlight);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-strong);
+  box-decoration-break: clone;
+}
+
+.search-results__more {
+  padding: var(--space-8) var(--space-10);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-small);
+  text-align: center;
+}
+
+.search-palette__footer {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  padding: var(--space-8) var(--space-16);
+  border-top: var(--border-width) solid var(--color-border-default);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-small);
+}
+
+.search-palette__keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4) var(--space-14);
+}
+
+.search-palette__key {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.search-palette__count {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Windows contrast themes replace backgrounds: keep the highlights and the active row visible. */
+@media (forced-colors: active) {
+  .search-mark {
+    background: Mark;
+    color: MarkText;
+    forced-color-adjust: none;
+  }
+
+  .search-hit[data-focused] {
+    outline: var(--focus-ring-width) solid Highlight;
+    outline-offset: calc(-1 * var(--focus-ring-width));
+  }
+}

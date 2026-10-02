@@ -37,6 +37,8 @@ export const SIZE = {
   historyTimeColumn: 64,
   resizeHandle: 8,
   searchDialog: 640,
+  searchDialogTop: 84,
+  searchInputRow: 52,
   settingsDialogWidth: 820,
   settingsDialogHeight: 640,
   settingsNav: 220,

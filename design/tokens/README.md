@@ -84,6 +84,9 @@ grid), `tag-dot-gap`, `illustration-width` and `illustration-height` (the desk i
 virtualiser); and `radius.row-inset` for what sits 1 px inside a row (the
 inline name field, a drop target's outline, a tile's thumbnail area).
 
+Round 7 (2026-10-01, lane `feat/ui-search-palette`) added `size.search-dialog-top` and
+`search-input-row` (app-shell §8).
+
 The generator refuses, naming the file and token: colour files whose paths or types differ, a path
 in both `base` and a colour file, two paths with one CSS name, path segments that are not lower-case
 kebab names, a `$type` or unit outside the tables above, an alias to a missing token, to another

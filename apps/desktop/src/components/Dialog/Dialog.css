@@ -11,7 +11,12 @@
   background: var(--color-overlay-modal-scrim);
 }
 
+/* Search (app-shell §8): a darker scrim, the dialog 84 px from the top of the window. */
 .modal-overlay[data-scrim='search'] {
+  align-items: flex-start;
+  padding-top: calc(
+    var(--size-search-dialog-top) - var(--window-bar-height, calc(var(--title-bar-height) + var(--border-width)))
+  );
   background: var(--color-overlay-scrim);
 }
 

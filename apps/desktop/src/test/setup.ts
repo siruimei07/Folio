@@ -23,6 +23,16 @@ vi.stubGlobal(
   },
 );
 
+// jsdom has no IntersectionObserver; React Aria's "load more" sentinels (search) need it to exist.
+vi.stubGlobal(
+  'IntersectionObserver',
+  class {
+    observe = vi.fn();
+    unobserve = vi.fn();
+    disconnect = vi.fn();
+  },
+);
+
 // jsdom has no matchMedia. `(width < Npx)`, the app's layout query, follows `window.innerWidth`
 // (tests set it and dispatch `resize`); every other query, such as reduced motion, does not match.
 function matchWidth(query: string): boolean {

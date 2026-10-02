@@ -80,6 +80,8 @@
   --size-history-time-column: 64px;
   --size-resize-handle: 8px;
   --size-search-dialog: 640px;
+  --size-search-dialog-top: 84px;
+  --size-search-input-row: 52px;
   --size-settings-dialog-width: 820px;
   --size-settings-dialog-height: 640px;
   --size-settings-nav: 220px;
