@@ -3,6 +3,7 @@
 
 mod entries;
 mod groups;
+pub mod import;
 mod tags;
 
 use std::path::PathBuf;
@@ -85,6 +86,8 @@ pub enum OperationError {
     /// Another program still held the item after the retries.
     #[error("{} is open in another program", path.display())]
     InUse { path: PathBuf },
+    #[error("{} is not available locally", path.display())]
+    NotLocal { path: PathBuf },
     #[error("could not change {}: {source}", path.display())]
     Io {
         path: PathBuf,

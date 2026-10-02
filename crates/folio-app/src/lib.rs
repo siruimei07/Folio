@@ -4,10 +4,9 @@
 mod commands;
 mod diagnostics;
 mod dialogs;
+mod error;
 mod file_scheme;
-// Public: the IPC contract is this crate's interface to the UI (docs/specs/ipc-m1.md).
-pub mod error;
-pub mod ipc;
+mod ipc;
 mod jobs;
 mod library;
 mod open;
@@ -58,6 +57,20 @@ pub fn run() {
             },
         )
         .on_window_event(|window, event| {
+            if window.label() == "main"
+                && let tauri::WindowEvent::DragDrop(event) = event
+            {
+                match window.scale_factor() {
+                    Ok(scale) => window
+                        .app_handle()
+                        .state::<library::LibraryState>()
+                        .native_drop(event, scale),
+                    Err(error) => diagnostics::report(
+                        window.app_handle(),
+                        &format!("native drop scale failed: {error}"),
+                    ),
+                }
+            }
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
                 let (app, window) = (window.app_handle().clone(), window.clone());
@@ -105,6 +118,8 @@ pub fn run() {
                         library::Event::Catalog(event) => event.emit(&handle),
                         library::Event::Job(job) => JobChanged { job }.emit(&handle),
                         library::Event::Problems(total) => ProblemsChanged { total }.emit(&handle),
+                        library::Event::FilesDropped(event) => event.emit_to(&handle, "main"),
+                        library::Event::DropHover(event) => event.emit_to(&handle, "main"),
                         library::Event::Error(error) => {
                             diagnostics::report(&handle, &error);
                             return;

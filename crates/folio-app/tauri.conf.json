@@ -20,7 +20,7 @@
         "minHeight": 320,
         "center": true,
         "decorations": false,
-        "dragDropEnabled": false
+        "dragDropEnabled": true
       }
     ],
     "security": {

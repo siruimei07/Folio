@@ -9,21 +9,20 @@
 //! live in the group's test-only module for the bindings: Tauri never registers them.
 //! `runtime_commands_are_declared_and_granted` keeps the lists in step.
 //!
-//! The modules are public because, until their commands are implemented, the bindings are what
-//! uses most of their types. Once all planned commands are implemented, make them private again
-//! (here and in `lib.rs`), so that dead-code warnings come back.
+//! All M1 commands are implemented. The contract stays crate-local, so unused contract types
+//! trigger dead-code warnings as the shell changes.
 
-pub mod entries;
-pub mod events;
-pub mod groups;
-pub mod import;
-pub mod jobs;
-pub mod library;
-pub mod log;
-pub mod problems;
-pub mod search;
-pub mod tags;
-pub mod types;
+pub(crate) mod entries;
+pub(crate) mod events;
+pub(crate) mod groups;
+pub(crate) mod import;
+pub(crate) mod jobs;
+pub(crate) mod library;
+pub(crate) mod log;
+pub(crate) mod problems;
+pub(crate) mod search;
+pub(crate) mod tags;
+pub(crate) mod types;
 
 use tauri_specta::{Builder, collect_commands, collect_events};
 
@@ -286,7 +285,7 @@ mod tests {
     }
 
     #[test]
-    fn main_window_does_not_publish_native_drag_paths() {
+    fn native_drops_enable_no_asset_protocol_or_filesystem_plugin() {
         let config: serde_json::Value =
             serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
         let main = config["app"]["windows"]
@@ -295,6 +294,16 @@ mod tests {
             .iter()
             .find(|window| window["label"] == "main")
             .unwrap();
-        assert_eq!(main["dragDropEnabled"], false);
+        assert_eq!(main["dragDropEnabled"], true);
+        assert_ne!(config["app"]["security"]["assetProtocol"]["enable"], true);
+        let manifest = include_str!("../Cargo.toml");
+        assert!(!manifest.contains("tauri-plugin-fs"));
+        assert!(!manifest.contains("protocol-asset"));
+        assert!(!include_str!("lib.rs").contains("tauri_plugin_fs"));
+        assert!(
+            permissions()
+                .iter()
+                .all(|(_, id)| !id.starts_with("fs:") && !id.starts_with("asset:"))
+        );
     }
 }

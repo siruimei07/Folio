@@ -1,0 +1,11 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "import",
+  "description": "Shell-owned import choices and import jobs for the main window.",
+  "windows": ["main"],
+  "permissions": [
+    "allow-pick-import-files",
+    "allow-check-import",
+    "allow-import-files"
+  ]
+}

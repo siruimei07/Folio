@@ -433,10 +433,7 @@ fn entry_row(catalog: &Catalog, entry: Entry) -> Result<EntryRow, OperationError
                 id: entry.id.to_string(),
                 path: entry.record.path.to_string(),
                 name: entry.record.path.name().to_owned(),
-                kind: match entry.record.kind {
-                    folio_core::meta::EntryKind::File => types::EntryKind::File,
-                    folio_core::meta::EntryKind::Folder => types::EntryKind::Folder,
-                },
+                kind: entry.record.kind.into(),
                 class: match entry.record.class {
                     folio_core::meta::FileClass::Text => types::FileClass::Text,
                     folio_core::meta::FileClass::Word => types::FileClass::Word,
@@ -496,6 +493,7 @@ pub(super) fn operation_error(error: OperationError) -> AppError {
         }
         OperationError::Library(error) => errors::library(error).error,
         OperationError::InUse { .. } => AppError::InUse(detail),
+        OperationError::NotLocal { .. } => AppError::NotLocal(detail),
         OperationError::Io { source, .. } => errors::io(source),
         OperationError::Recycle(error) => match error.failure {
             RecycleFailure::NotFound => AppError::NotFound(detail),

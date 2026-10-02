@@ -40,10 +40,7 @@ fn row(row: queries::Row) -> EntryRow {
         id: row.entry.id.to_string(),
         name: record.path.name().to_owned(),
         path: record.path.into(),
-        kind: match record.kind {
-            folio_core::meta::EntryKind::File => types::EntryKind::File,
-            folio_core::meta::EntryKind::Folder => types::EntryKind::Folder,
-        },
+        kind: record.kind.into(),
         class: match record.class {
             folio_core::meta::FileClass::Text => types::FileClass::Text,
             folio_core::meta::FileClass::Word => types::FileClass::Word,

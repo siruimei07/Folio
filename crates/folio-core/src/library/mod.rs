@@ -526,16 +526,17 @@ impl Library {
         }
     }
 
-    /// Reconciles a durable in-app move before a scan's disk walk or another operation.
+    /// Reconciles durable import and in-app move intents before a scan or another operation.
     /// The caller serializes the whole call with scans/operations and publishes this report
     /// immediately, even if its subsequent scan or operation fails or is cancelled.
     pub fn recover_pending(&self, catalog: &Catalog) -> Result<CommittedScan, LibraryError> {
+        let imported = self.recover_import(catalog)?;
         // Most calls find no journal: skip the writer transaction and the metadata checks. Only
         // writers serialized with this call publish one, and anything else gets the full path.
         if std::fs::symlink_metadata(self.layout.scan_journal_file())
             .is_err_and(|error| error.kind() == io::ErrorKind::NotFound)
         {
-            return Ok(CommittedScan::default());
+            return Ok(imported);
         }
         let mut report = catalog.write_with(|tx| -> Result<_, LibraryError> {
             state::validate_metadata(self.root())?;
@@ -700,6 +701,7 @@ impl Library {
             }
             report.report.problems.push(self.journal_problem(error));
         }
+        report.merge(imported);
         Ok(report)
     }
 

@@ -1,6 +1,7 @@
 //! Machine-local library selection and the lifetime of its background worker.
 
 mod errors;
+mod import;
 mod operations;
 mod problems;
 mod worker;
@@ -40,6 +41,8 @@ pub(crate) enum Event {
     Job(Job),
     Problems(u32),
     Error(String),
+    FilesDropped(crate::ipc::events::FilesDropped),
+    DropHover(crate::ipc::events::DropHover),
 }
 
 type Sink = Arc<dyn Fn(Event) + Send + Sync>;
@@ -53,6 +56,7 @@ struct Inner {
     state: Mutex<State>,
     ready: Condvar,
     choices: Mutex<HashMap<String, Choice>>,
+    import_choices: Mutex<HashMap<String, import::Choice>>,
     closing: AtomicBool,
     closed: AtomicBool,
     emit: Sink,
@@ -85,6 +89,7 @@ impl LibraryState {
             }),
             ready: Condvar::new(),
             choices: Mutex::new(HashMap::new()),
+            import_choices: Mutex::new(HashMap::new()),
             closing: AtomicBool::new(false),
             closed: AtomicBool::new(false),
             emit,
@@ -369,6 +374,7 @@ impl LibraryState {
             state.session = Some(session.clone());
         }
         lock(&self.0.choices).clear();
+        lock(&self.0.import_choices).clear();
         (self.0.emit)(Event::Library(status));
         session.activate();
         opened

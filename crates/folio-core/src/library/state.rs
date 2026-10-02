@@ -210,6 +210,7 @@ pub fn validate_metadata(root: &Path) -> Result<(), MetaError> {
         let journal = layout.scan_journal_file();
         if metadata_directory(journal.parent().expect("journal has a parent"))? {
             metadata_file(&journal)?;
+            metadata_file(&layout.import_journal_file())?;
         }
     }
     Ok(())

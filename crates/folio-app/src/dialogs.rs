@@ -1,4 +1,4 @@
-//! Shell-owned folder choices and registered Windows sync roots (ADR-0004).
+//! Shell-owned file/folder choices and registered Windows sync roots (ADR-0004).
 
 #![allow(
     unsafe_code,
@@ -18,10 +18,13 @@ use windows::Win32::System::Com::{
 };
 use windows::Win32::System::WinRT::{RO_INIT_SINGLETHREADED, RoInitialize, RoUninitialize};
 use windows::Win32::UI::Shell::{
-    FOS_DONTADDTORECENT, FOS_FORCEFILESYSTEM, FOS_NOCHANGEDIR, FOS_PATHMUSTEXIST, FOS_PICKFOLDERS,
-    FileOpenDialog, IFileOpenDialog, SIGDN_FILESYSPATH,
+    FOS_ALLOWMULTISELECT, FOS_DONTADDTORECENT, FOS_FILEMUSTEXIST, FOS_FORCEFILESYSTEM,
+    FOS_NOCHANGEDIR, FOS_PATHMUSTEXIST, FOS_PICKFOLDERS, FileOpenDialog, IFileOpenDialog,
+    IShellItem, SIGDN_FILESYSPATH,
 };
 use windows::core::{HRESULT, PWSTR};
+
+use folio_core::library::operations::MAX_BATCH;
 
 use crate::error::AppError;
 use crate::ipc::library::SyncProvider;
@@ -67,18 +70,110 @@ pub fn pick_folder(owner: Option<isize>) -> Result<Option<PathBuf>, AppError> {
 
         // SAFETY: Show succeeded, so GetResult returns a live shell item on this apartment.
         let item = unsafe { dialog.GetResult() }.map_err(native_error)?;
-        // SAFETY: the item is live. GetDisplayName allocates a null-terminated CoTaskMem string.
-        let name =
-            TaskMemString(unsafe { item.GetDisplayName(SIGDN_FILESYSPATH) }.map_err(native_error)?);
-        if name.0.is_null() {
-            return Err(AppError::Internal(
-                "folder dialog returned a null path".into(),
-            ));
-        }
-        // SAFETY: GetDisplayName's string remains allocated until `name` drops after this copy.
-        let path = PathBuf::from(OsString::from_wide(unsafe { name.0.as_wide() }));
-        absolute_path(path).map(Some)
+        item_path(&item).map(Some)
     })
+}
+
+/// Blocks until the native file dialog closes; folders enter through native drops instead.
+/// Call from a blocking worker without state locks. The owner is a shell-owned window handle,
+/// and selected paths stay in the shell until it validates them and issues a source token.
+pub fn pick_import_files(owner: Option<isize>) -> Result<Option<Vec<PathBuf>>, AppError> {
+    #[cfg(debug_assertions)]
+    if let Some(paths) = std::env::var_os("FOLIO_TEST_IMPORT_FILES") {
+        return import_paths_override(&paths);
+    }
+
+    in_sta(move || {
+        // SAFETY: this thread has an STA; the returned interface stays here until dropped.
+        let dialog: IFileOpenDialog =
+            unsafe { CoCreateInstance(&FileOpenDialog, None, CLSCTX_INPROC_SERVER) }
+                .map_err(native_error)?;
+        // SAFETY: the interface is live in its creating apartment.
+        let options = unsafe { dialog.GetOptions() }.map_err(native_error)?;
+        // SAFETY: the interface is live in its creating apartment; options are documented flags.
+        unsafe {
+            dialog.SetOptions(
+                options
+                    | FOS_ALLOWMULTISELECT
+                    | FOS_FILEMUSTEXIST
+                    | FOS_FORCEFILESYSTEM
+                    | FOS_PATHMUSTEXIST
+                    | FOS_NOCHANGEDIR
+                    | FOS_DONTADDTORECENT,
+            )
+        }
+        .map_err(native_error)?;
+
+        // SAFETY: HWND is an opaque shell-owned handle, not dereferenced here; Show accepts null.
+        if let Err(error) = unsafe { dialog.Show(owner.map(|handle| HWND(handle as *mut _))) } {
+            return if error.code() == HRESULT::from_win32(ERROR_CANCELLED.0) {
+                Ok(None)
+            } else {
+                Err(native_error(error))
+            };
+        }
+
+        // SAFETY: Show succeeded; the selected-item array stays in this apartment.
+        let items = unsafe { dialog.GetResults() }.map_err(native_error)?;
+        // SAFETY: the array is live in its creating apartment.
+        let count = unsafe { items.GetCount() }.map_err(native_error)?;
+        check_import_selection_count(count)?;
+        let mut paths = Vec::with_capacity(count as usize);
+        for index in 0..count {
+            // SAFETY: index is below the array's count; each item drops in this apartment.
+            let item = unsafe { items.GetItemAt(index) }.map_err(native_error)?;
+            paths.push(item_path(&item)?);
+        }
+        Ok(Some(paths))
+    })
+}
+
+fn check_import_selection_count(count: u32) -> Result<(), AppError> {
+    if count == 0 {
+        return Err(AppError::Internal(
+            "file dialog returned no selection".into(),
+        ));
+    }
+    if count as usize > MAX_BATCH {
+        // The user's choice exceeded the limit, as in `choose_import`.
+        return Err(AppError::InvalidArgument(
+            "invalid import selection size".into(),
+        ));
+    }
+    Ok(())
+}
+
+/// Uses the OS-native path-list format, so test sources may include folders and non-Unicode
+/// names without adding a production deserializer or mutating the process environment in tests.
+#[cfg(any(debug_assertions, test))]
+fn import_paths_override(value: &std::ffi::OsStr) -> Result<Option<Vec<PathBuf>>, AppError> {
+    if value.is_empty() {
+        return Ok(None);
+    }
+    let paths: Vec<_> = std::env::split_paths(value)
+        .take(MAX_BATCH + 1)
+        .map(absolute_path)
+        .collect::<Result<_, _>>()?;
+    if paths.len() > MAX_BATCH {
+        return Err(AppError::Internal("too many import choices".into()));
+    }
+    Ok(Some(paths))
+}
+
+fn item_path(item: &IShellItem) -> Result<PathBuf, AppError> {
+    // SAFETY: callers keep this live shell item in its creating apartment. GetDisplayName
+    // allocates a null-terminated CoTaskMem string, owned only by this guard.
+    let name =
+        TaskMemString(unsafe { item.GetDisplayName(SIGDN_FILESYSPATH) }.map_err(native_error)?);
+    if name.0.is_null() {
+        return Err(AppError::Internal(
+            "shell dialog returned a null path".into(),
+        ));
+    }
+    // SAFETY: GetDisplayName's string remains allocated until `name` drops after this copy.
+    absolute_path(PathBuf::from(OsString::from_wide(unsafe {
+        name.0.as_wide()
+    })))
 }
 
 /// Classifies a canonical folder using Windows' registered sync roots, including legacy
@@ -116,7 +211,7 @@ pub fn sync_provider(root: &Path) -> Result<Option<SyncProvider>, AppError> {
 fn absolute_path(path: PathBuf) -> Result<PathBuf, AppError> {
     if !path.is_absolute() || path.as_os_str().encode_wide().any(|unit| unit == 0) {
         return Err(AppError::Internal(
-            "folder choice must be an absolute path without NUL".into(),
+            "shell choice must be an absolute path without NUL".into(),
         ));
     }
     Ok(path)
@@ -218,13 +313,84 @@ impl Drop for TaskMemString {
 
 fn native_error(error: windows::core::Error) -> AppError {
     AppError::Internal(format!(
-        "Windows folder selection or sync-root lookup: {error}"
+        "Windows file/folder selection or sync-root lookup: {error}"
     ))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn empty_import_override_means_cancelled() {
+        assert_eq!(
+            import_paths_override(std::ffi::OsStr::new("")).unwrap(),
+            None
+        );
+    }
+
+    #[test]
+    fn import_override_rejects_relative_nul_and_empty_segments() {
+        for invalid in [
+            "relative",
+            r"C:relative",
+            r"\relative",
+            "C:\\chosen\0other",
+            ";",
+            r"C:\chosen;;C:\other",
+        ] {
+            assert!(
+                matches!(
+                    import_paths_override(std::ffi::OsStr::new(invalid)),
+                    Err(AppError::Internal(_))
+                ),
+                "accepted invalid override: {invalid:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn import_override_keeps_multiple_files_and_folders_in_order() {
+        let dir = tempfile::tempdir().unwrap();
+        let paths = vec![
+            dir.path().join("first.txt"),
+            dir.path().join("课程 notes.txt"),
+            dir.path().join("folder;with separator"),
+        ];
+        std::fs::write(&paths[0], b"first").unwrap();
+        std::fs::write(&paths[1], b"notes").unwrap();
+        std::fs::create_dir(&paths[2]).unwrap();
+        let encoded = std::env::join_paths(&paths).unwrap();
+        assert_eq!(import_paths_override(&encoded).unwrap(), Some(paths));
+    }
+
+    #[test]
+    fn native_import_selection_count_reports_the_user_limit_as_invalid_input() {
+        assert!(check_import_selection_count(MAX_BATCH as u32).is_ok());
+        assert!(matches!(
+            check_import_selection_count(MAX_BATCH as u32 + 1),
+            Err(AppError::InvalidArgument(_))
+        ));
+        assert!(matches!(
+            check_import_selection_count(0),
+            Err(AppError::Internal(_))
+        ));
+    }
+
+    #[test]
+    fn import_override_enforces_the_batch_limit() {
+        let paths = vec![PathBuf::from(r"C:\chosen.txt"); MAX_BATCH];
+        let at_limit = std::env::join_paths(&paths).unwrap();
+        assert_eq!(
+            import_paths_override(&at_limit).unwrap().unwrap().len(),
+            MAX_BATCH
+        );
+        let over_limit = std::env::join_paths(paths.iter().chain(paths.first())).unwrap();
+        assert!(matches!(
+            import_paths_override(&over_limit),
+            Err(AppError::Internal(_))
+        ));
+    }
 
     #[test]
     fn folder_choices_reject_relative_or_nul_paths() {

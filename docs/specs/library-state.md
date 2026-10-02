@@ -6,12 +6,11 @@ Tauri 2.12 upgrade and roadmap step 0.5 are on `origin/main` at `ce27ffd`.
 
 ## Command ownership
 
-Each feature owns its handlers, test-only planned declarations, runtime registration and build
+Each feature owns its handlers, runtime registration and build
 manifest list under `crates/folio-app/src/commands/`, and its capability in `capabilities/`.
-The composition layer wires the known M1 groups once. Export paths remain stable as a group
-replaces a stub with its handler. Browse, operations, file scheme and import lanes only change
-their group files. Planned functions compile only in tests and remain absent from the runtime
-manifest and capabilities. The runtime/declaration/grant equality and no-default-sets tests
+The composition layer wires the known M1 groups once. All M1 commands now resolve to runtime
+handlers; the export builder retains the fixed contract order, without planned stubs. The
+contract modules are crate-local again. The runtime/declaration/grant equality and no-default-sets tests
 remain mandatory. All grants target `main`; the page receives no filesystem/dialog plugin.
 
 The operations lane additionally owns `folio-core::library::operations`, course metadata and
@@ -20,6 +19,13 @@ typed results plus `CommittedScan` deltas; its list calls emit no change. The op
 hooks and `library_status` retry build on landed `feat/core-file-scheme` (main 1ebd2ad),
 reusing its guarded `with_entry` transition pattern. This approval does not transfer
 browse/search query or generated-binding ownership.
+
+The import group owns `pick_import_files`, `check_import`, `import_files` and its main-window
+grants. Native dialogs/drops grant expiring single-use import choices; only their opaque tokens
+cross command input. `check_import` is read-only. Enqueue validates with a read-only preflight
+under the transition, consumes only after queue publication, and rechecks rebuilding/recovery/
+closing under the pending-work lock. The worker validates again before copying. Core owns
+verified publication and guarded recovery under `operations::import`; see [library-import](library-import.md).
 
 ## State and threads
 
@@ -42,7 +48,7 @@ produce `Unavailable`, with the reason decided where opening failed (ipc-m1 §6)
 settings file means `None`. Settings failures are explicit
 `DataDirUnavailable` errors, never silently treated as first run.
 
-One session serializes scans, scoped rescans, hashing and rebuilding on a blocking worker. The
+One session serializes scans, scoped rescans, hashing, imports and rebuilding on a blocking worker. The
 watcher callback only merges pending work and wakes the worker. This prevents two disk walks
 from committing stale snapshots in reverse order. Reads and cancellation remain available;
 SQLite's existing WAL readers and single writer remain the storage boundary. No new runtime,
@@ -63,7 +69,7 @@ The worker and commands share a session operation mutex through each complete di
 metadata edit and catalog commit. WAL list reads remain available during rebuilding. Failed
 disk/metadata reconciliation queues a full scan and blocks further writes until it succeeds;
 a write refused meanwhile asks for that scan again if the user cancelled it. An ambiguous
-journal fails the session closed. Before work or a mutation, explicit move-intent
+journal fails the session closed. Before work or a mutation, verified import and explicit move-intent
 recovery commits and publishes its own report, so a later failed scan cannot hide that commit.
 All command work runs through the existing blocking-task boundary. Pending event wakeups
 hold the worker's wait mutex. A write takes its session under the transition but waits for
@@ -133,12 +139,18 @@ validation and access.
 
 ## Jobs, commits and problems
 
-Jobs have random identifiers, one active job per kind, cancellable flags and the existing
+Jobs have random identifiers, one running job per kind, cancellable flags and the existing
 queued/running/done/failed/cancelled union. Return active jobs before the last 20 finished jobs.
+Imports queue in submission order; other kinds keep one queued/running job each.
 Emit transitions immediately; progress events are limited to one every 250 ms. Cancelling an
 unknown/finished job is `NotFound`; a non-cancellable job is `InvalidArgument`. Cancelling a
 queued job finishes it as cancelled at once, and the worker skips it; a running job stops at
 its next check. The worker moves a job to running when it starts the work.
+
+Import progress uses file counts, byte-based permille and source-relative display names with
+the same throttle. Cancellation retains committed files and incomplete originals; a durable
+per-file publication/tag commit finishes before stopping. Replacement and optional original
+removal use the existing Recycle Bin adapter. No recovery path repeats a destructive recycle.
 
 Scan control checks cancellation between visited entries and before starting a catalog
 transaction. Once metadata journal publication starts, finish or roll back the transaction
@@ -185,8 +197,9 @@ always marks the app closed so the final exit request is not held back.
 - Core regressions cover pre-commit cancellation, committed removed/moved identities, actual
   scopes, metadata deltas and stale identities after rebuild. Existing scan/hash tests remain.
 - Temporary-folder e2e creates through the real IPC surface with the debug dialog double,
-  observes an outside change via `CatalogChanged`, and closes with active work. Planned-command
-  and least-privilege regressions remain enabled.
+  observes an outside change via `CatalogChanged`, and closes with active work. Import IPC tests
+  copy with tags, keep both on clashes and reject token replay and page-supplied paths. Unknown-
+  command and least-privilege regressions remain enabled.
 - Run targeted checks, then coordinated `pnpm check` and app-locked `pnpm e2e`. Combined-workspace
   results are identified as such. Coordinate generated bindings with their current owner and
   verify that this lane leaves the existing IPC types and exported bindings unchanged.

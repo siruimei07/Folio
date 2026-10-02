@@ -49,9 +49,10 @@ impl Registry {
 
     pub fn queue(&self, kind: JobKind, cancellable: bool) -> Result<Ticket, AppError> {
         let mut records = lock(&self.jobs);
-        if records
-            .iter()
-            .any(|record| record.job.kind == kind && active(&record.job.status))
+        if kind != JobKind::Import
+            && records
+                .iter()
+                .any(|record| record.job.kind == kind && active(&record.job.status))
         {
             return Err(AppError::Busy(format!(
                 "{kind:?} is already queued or running"
@@ -162,6 +163,12 @@ impl Registry {
     }
 
     pub fn progress(&self, ticket: &Ticket, done: u64, total: Option<u64>) -> Result<(), AppError> {
+        self.report_progress(ticket, progress(done, total))
+    }
+
+    /// Import jobs also report bytes and the current source-relative name, under the same
+    /// throttle and state checks as scans and hashing.
+    pub fn report_progress(&self, ticket: &Ticket, progress: Progress) -> Result<(), AppError> {
         let mut records = lock(&self.jobs);
         let record = records
             .iter_mut()
@@ -172,9 +179,7 @@ impl Registry {
                 "a job reported progress without running".to_owned(),
             ));
         }
-        record.job.status = JobStatus::Running {
-            progress: progress(done, total),
-        };
+        record.job.status = JobStatus::Running { progress };
         let now = Instant::now();
         if record
             .last_progress
@@ -301,6 +306,55 @@ mod tests {
                 .iter()
                 .all(|job| matches!(job.status, JobStatus::Done { .. }))
         );
+    }
+
+    #[test]
+    fn imports_queue_independently_and_keep_full_throttled_progress() {
+        let events = Arc::new(Mutex::new(Vec::new()));
+        let capture = events.clone();
+        let registry = Registry::new(Arc::new(move |job| lock(&capture).push(job)));
+        let first = registry.queue(JobKind::Import, true).unwrap();
+        let second = registry.queue(JobKind::Import, true).unwrap();
+        assert_eq!(
+            registry
+                .list()
+                .iter()
+                .map(|job| job.id.as_str())
+                .collect::<Vec<_>>(),
+            [first.id.as_str(), second.id.as_str()]
+        );
+        registry.start(&first).unwrap();
+        registry
+            .report_progress(
+                &first,
+                Progress {
+                    done: 2,
+                    total: Some(4),
+                    permille: Some(500),
+                    current: Some("folder/current.txt".into()),
+                },
+            )
+            .unwrap();
+        let jobs = registry.list();
+        let JobStatus::Running { progress } = &jobs[0].status else {
+            panic!("{jobs:?}");
+        };
+        assert_eq!(
+            (
+                progress.done,
+                progress.total,
+                progress.permille,
+                progress.current.as_deref()
+            ),
+            (2, Some(4), Some(500), Some("folder/current.txt"))
+        );
+        // The initial Running event and stored progress share the existing 250ms throttle.
+        assert_eq!(lock(&events).len(), 3);
+        registry.cancel(&second.id).unwrap();
+        assert!(!registry.start(&second).unwrap());
+        assert!(registry.busy(JobKind::Import));
+        registry.finish(&first, Ok(None)).unwrap();
+        assert!(!registry.busy(JobKind::Import));
     }
 
     #[test]

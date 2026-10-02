@@ -29,11 +29,3 @@ async fn blocking<T: Send + 'static>(
         .await
         .map_err(|error| AppError::Internal(format!("{what} worker failed: {error}")))?
 }
-
-/// What a stub would answer. No call reaches one: Tauri's ACL rejects commands it was not given.
-#[cfg(test)]
-fn planned<T>(command: &str, _request: impl Sized) -> Result<T, AppError> {
-    Err(AppError::Internal(format!(
-        "`{command}` is declared for the bindings only"
-    )))
-}

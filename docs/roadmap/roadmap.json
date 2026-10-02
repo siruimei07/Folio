@@ -1164,15 +1164,15 @@
         "feat/data-browse-queries"
       ],
       "summary": "M1 最后 3 个命令：选择文件、原生拖放、check_import；带进度的导入任务（暂存、BLAKE3 校验、崩溃恢复）、同名处理、可选把原文件移进回收站",
-      "status": "wip",
+      "status": "done",
       "updated": "2026-10-02",
-      "next": "Claude Code 接手评审中（你选了先修再合并）：最后一个提交是 /code-review 修复的 WIP 检查点，检查还没跑过。修完 → 检查 → /security-review → /simplify → 合并",
+      "landed": "2026-10-02",
       "gates": {
         "check": "pass",
-        "e2e": "partial",
-        "codeReview": "partial",
-        "securityReview": "todo",
-        "simplify": "todo",
+        "e2e": "pass",
+        "codeReview": "pass",
+        "securityReview": "pass",
+        "simplify": "pass",
         "designCritique": "na",
         "a11y": "na"
       },

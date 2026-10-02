@@ -5,6 +5,7 @@ use std::thread::JoinHandle;
 use std::time::{Duration, Instant, SystemTime};
 
 use folio_core::catalog::{self, Catalog};
+use folio_core::library::operations::import as import_core;
 use folio_core::library::operations::{OperationError, Outcome};
 use folio_core::library::{self as core, CommittedScan, EntryChangeKind, Library, ScanCoverage};
 use folio_core::meta::MetaTree;
@@ -92,6 +93,7 @@ struct Pending {
     startup: Option<Ticket>,
     rescan: Option<Rescan>,
     rebuild: Option<Ticket>,
+    imports: std::collections::VecDeque<(Ticket, import_core::Request)>,
     hash: Option<(Instant, Ticket)>,
     failure: Option<Failure>,
 }
@@ -100,6 +102,7 @@ enum Work {
     Scan(Rescan, Option<Ticket>),
     Hash(Ticket),
     Rebuild(Ticket),
+    Import(Ticket, import_core::Request),
     Failed(Failure),
 }
 
@@ -255,12 +258,8 @@ impl Session {
         if self.stopped.load(Ordering::Acquire) {
             return Err(AppError::NoLibrary("the library is unavailable".to_owned()));
         }
-        let recovering = self.recovering.load(Ordering::Acquire);
-        let rebuilding = self.jobs.busy(JobKind::Rebuild);
-        if recovering || rebuilding {
-            // The reconciling scan is a job the user may cancel. Ask for it again, so that
-            // writes are not blocked until some other full scan happens to complete.
-            if recovering && !rebuilding && !self.jobs.busy(JobKind::Scan) {
+        if let Some(rescan) = self.writes_blocked() {
+            if rescan {
                 self.watch(WatchEvent::Rescan(Rescan::Full));
             }
             return Err(AppError::Busy(
@@ -302,15 +301,29 @@ impl Session {
         }
     }
 
+    /// `Some` while reconciliation or a rebuild blocks writes; `true` asks for the full scan
+    /// again. The reconciling scan is a job the user may cancel, so writes are not blocked
+    /// until some other full scan happens to complete.
+    fn writes_blocked(&self) -> Option<bool> {
+        let recovering = self.recovering.load(Ordering::Acquire);
+        let rebuilding = self.jobs.busy(JobKind::Rebuild);
+        (recovering || rebuilding)
+            .then(|| recovering && !rebuilding && !self.jobs.busy(JobKind::Scan))
+    }
+
     pub(super) fn reconcile_error(&self, error: &OperationError) {
         if matches!(
             error,
             OperationError::DiskChanged { .. } | OperationError::RecoveryRequired { .. }
         ) {
-            self.recovering.store(true, Ordering::Release);
-            self.watch(WatchEvent::Rescan(Rescan::Full));
+            self.require_reconciliation();
             self.send(Event::Error(error.to_string()));
         }
+    }
+
+    fn require_reconciliation(&self) {
+        self.recovering.store(true, Ordering::Release);
+        self.watch(WatchEvent::Rescan(Rescan::Full));
     }
 
     fn recover(&self) -> Result<(), Failure> {
@@ -319,7 +332,8 @@ impl Session {
             .recover_pending(&self.catalog)
             .map_err(|error| match &error {
                 core::LibraryError::Meta(folio_core::meta::MetaError::Invalid { path, .. })
-                    if *path == self.library.layout().scan_journal_file() =>
+                    if *path == self.library.layout().scan_journal_file()
+                        || *path == self.library.layout().import_journal_file() =>
                 {
                     Failure::own(AppError::Internal(error.to_string()))
                 }
@@ -395,6 +409,29 @@ impl Session {
         let ticket = self.jobs.queue(JobKind::Rebuild, true)?;
         let id = ticket.id.clone();
         pending.rebuild = Some(ticket);
+        self.wake.notify_one();
+        Ok(id)
+    }
+
+    /// The caller holds the library transition through read-only preflight and token use.
+    pub(super) fn queue_import(&self, request: import_core::Request) -> Result<String, AppError> {
+        let mut pending = lock(&self.pending);
+        if self.stopped.load(Ordering::Acquire) {
+            return Err(AppError::NoLibrary("library is closing".into()));
+        }
+        if let Some(rescan) = self.writes_blocked() {
+            // `watch` takes `pending`, which this call already holds.
+            if rescan {
+                pending.rescan = Some(Rescan::Full);
+                self.wake.notify_one();
+            }
+            return Err(AppError::Busy(
+                "catalog is reconciling or rebuilding".into(),
+            ));
+        }
+        let ticket = self.jobs.queue(JobKind::Import, true)?;
+        let id = ticket.id.clone();
+        pending.imports.push_back((ticket, request));
         self.wake.notify_one();
         Ok(id)
     }
@@ -490,6 +527,12 @@ impl Session {
                         self.queue_hash(Duration::ZERO)?;
                     }
                 }
+                Work::Import(ticket, request) => {
+                    if !self.jobs.start(&ticket).map_err(Failure::own)? {
+                        continue;
+                    }
+                    self.import_files(&ticket, &request)?;
+                }
             }
         }
     }
@@ -516,6 +559,14 @@ impl Session {
                 }
                 if let Some(ticket) = pending.rebuild.take() {
                     return Ok(Some(Work::Rebuild(ticket)));
+                }
+                if self.recovering.load(Ordering::Acquire) {
+                    if !pending.imports.is_empty() && pending.rescan.is_none() {
+                        // A queued write needs reconciliation even if its previous scan was cancelled.
+                        pending.rescan = Some(Rescan::Full);
+                    }
+                } else if let Some((ticket, request)) = pending.imports.pop_front() {
+                    return Ok(Some(Work::Import(ticket, request)));
                 }
                 if let Some(rescan) = pending.rescan.take() {
                     // A full scan is a job. Queue it under `pending`, like a rebuild: shutdown
@@ -601,6 +652,69 @@ impl Session {
             changes: count(changes),
             problems: count(problems as u64),
         }))
+    }
+
+    fn import_files(&self, ticket: &Ticket, request: &import_core::Request) -> Result<(), Failure> {
+        // A foreground write can require recovery after `next` selected this import but before
+        // the worker acquired `operation`. Apply the same guard as every other write.
+        if let Some(rescan) = self.writes_blocked() {
+            if rescan {
+                self.watch(WatchEvent::Rescan(Rescan::Full));
+            }
+            self.jobs
+                .finish(
+                    ticket,
+                    Err(AppError::Busy(
+                        "catalog is reconciling or rebuilding".into(),
+                    )),
+                )
+                .map_err(Failure::own)?;
+            return Ok(());
+        }
+        let report = self.library.import_files(
+            &self.catalog,
+            request,
+            &folio_core::win::WindowsRecycleBin,
+            now_ns(),
+            &ticket.cancel,
+            &mut |progress| {
+                let permille = (progress.total_bytes > 0).then(|| {
+                    ((u128::from(progress.bytes) * 1_000 / u128::from(progress.total_bytes))
+                        .min(1_000)) as u32
+                });
+                if let Err(error) = self.jobs.report_progress(
+                    ticket,
+                    crate::ipc::jobs::Progress {
+                        done: progress.done,
+                        total: Some(progress.total),
+                        permille,
+                        current: Some(progress.current),
+                    },
+                ) {
+                    self.send(Event::Error(error.to_string()));
+                }
+            },
+            &mut |committed| self.committed(committed),
+        );
+        let result = match report {
+            Ok(report) => {
+                // The uncapped flag covers every failure; the job result carries the details.
+                if report.needs_reconciliation {
+                    self.require_reconciliation();
+                }
+                (!report.cancelled).then(|| JobResult::Import(super::import::result(report)))
+            }
+            Err(error) => {
+                self.reconcile_error(&error);
+                self.jobs
+                    .finish(ticket, Err(super::operations::operation_error(error)))
+                    .map_err(Failure::own)?;
+                return Ok(());
+            }
+        };
+        self.jobs.finish(ticket, Ok(result)).map_err(Failure::own)?;
+        self.queue_hash(Duration::ZERO)?;
+        Ok(())
     }
 
     /// Hashes the pending files for a started job, and retries files that were too fresh.
@@ -864,6 +978,142 @@ mod tests {
     }
 
     #[test]
+    fn import_queue_is_fifo_and_rejects_rebuild_recovery_and_shutdown() {
+        let (dir, session) = inactive_session();
+        let source = dir.path().join("queued.txt");
+        std::fs::write(&source, b"source").unwrap();
+        let request = import_core::Request {
+            sources: vec![import_core::Source::select(source).unwrap()],
+            target: folio_core::library::operations::EntryRef {
+                id: catalog::EntryId(1),
+                path: folio_core::paths::RelPath::parse("Fall/Course").unwrap(),
+            },
+            tags: Default::default(),
+            on_conflict: import_core::Conflict::KeepBoth,
+            delete_originals: false,
+        };
+        let ids: Vec<_> = (0..3)
+            .map(|_| session.queue_import(request.clone()).unwrap())
+            .collect();
+        session.jobs.cancel(&ids[1]).unwrap();
+        let queued: Vec<_> = lock(&session.pending).imports.drain(..).collect();
+        assert_eq!(
+            queued
+                .iter()
+                .map(|(ticket, _)| &ticket.id)
+                .collect::<Vec<_>>(),
+            ids.iter().collect::<Vec<_>>()
+        );
+        let mut started = Vec::new();
+        for (ticket, _) in queued {
+            if session.jobs.start(&ticket).unwrap() {
+                started.push(ticket.id.clone());
+                session.jobs.finish(&ticket, Ok(None)).unwrap();
+            }
+        }
+        assert_eq!(started, [ids[0].clone(), ids[2].clone()]);
+        let rebuild = session.rebuild().unwrap();
+        assert!(matches!(
+            session.queue_import(request.clone()),
+            Err(AppError::Busy(_))
+        ));
+        session.jobs.cancel(&rebuild).unwrap();
+        session.recovering.store(true, Ordering::Release);
+        assert!(matches!(
+            session.queue_import(request.clone()),
+            Err(AppError::Busy(_))
+        ));
+        assert!(matches!(lock(&session.pending).rescan, Some(Rescan::Full)));
+        session.shutdown().unwrap();
+        assert!(matches!(
+            session.queue_import(request),
+            Err(AppError::NoLibrary(_))
+        ));
+    }
+
+    #[test]
+    fn queued_imports_wait_for_reconciliation_even_after_a_scan_is_cancelled() {
+        let (dir, session) = inactive_session();
+        // Drive the actual scheduler synchronously, without a live watcher or worker racing it.
+        session.shutdown().unwrap();
+        session.stopped.store(false, Ordering::Release);
+        session.active.store(true, Ordering::Release);
+        let source = dir.path().join("queued.txt");
+        std::fs::write(&source, b"source").unwrap();
+        let id = session
+            .queue_import(import_core::Request {
+                sources: vec![import_core::Source::select(source).unwrap()],
+                target: folio_core::library::operations::EntryRef {
+                    id: catalog::EntryId(1),
+                    path: folio_core::paths::RelPath::parse("Fall/Course").unwrap(),
+                },
+                tags: Default::default(),
+                on_conflict: import_core::Conflict::KeepBoth,
+                delete_originals: false,
+            })
+            .unwrap();
+        session.reconcile_error(&OperationError::DiskChanged {
+            path: folio_core::paths::RelPath::parse("Fall/Course/old.txt").unwrap(),
+            source: Box::new(OperationError::NotFound),
+        });
+        let Work::Scan(Rescan::Full, Some(cancelled)) = session.next().unwrap().unwrap() else {
+            panic!("a queued import ran before reconciliation");
+        };
+        assert!(!session.jobs.start(&cancelled).unwrap());
+        let Work::Scan(rescan @ Rescan::Full, Some(scan)) = session.next().unwrap().unwrap() else {
+            panic!("a cancelled scan let a queued import bypass reconciliation");
+        };
+        assert!(session.jobs.start(&scan).unwrap());
+        let result = session.scan(&rescan, &scan.cancel, Some(&scan)).unwrap();
+        assert!(result.is_some());
+        session.jobs.finish(&scan, Ok(result)).unwrap();
+        let Work::Import(import, _) = session.next().unwrap().unwrap() else {
+            panic!("the queued import did not resume after reconciliation");
+        };
+        assert_eq!(import.id, id);
+        session.shutdown().unwrap();
+    }
+
+    #[test]
+    fn an_import_selected_before_recovery_rechecks_the_write_guard_before_copying() {
+        let (dir, session) = inactive_session();
+        let source = dir.path().join("retained.txt");
+        std::fs::write(&source, b"source").unwrap();
+        let request = import_core::Request {
+            sources: vec![import_core::Source::select(source.clone()).unwrap()],
+            target: folio_core::library::operations::EntryRef {
+                id: catalog::EntryId(1),
+                path: folio_core::paths::RelPath::parse("Fall/Course").unwrap(),
+            },
+            tags: Default::default(),
+            on_conflict: import_core::Conflict::KeepBoth,
+            delete_originals: false,
+        };
+        session.queue_import(request.clone()).unwrap();
+        let (ticket, request) = lock(&session.pending).imports.pop_front().unwrap();
+        assert!(session.jobs.start(&ticket).unwrap());
+        // A foreground operation requires reconciliation while this import waits for the lock.
+        session.reconcile_error(&OperationError::DiskChanged {
+            path: request.target.path.clone(),
+            source: Box::new(OperationError::NotFound),
+        });
+        let _operation = lock(&session.operation);
+        session.import_files(&ticket, &request).unwrap();
+        drop(_operation);
+        assert!(session.jobs.list().iter().any(|job| job.id == ticket.id
+            && matches!(
+                &job.status,
+                crate::ipc::jobs::JobStatus::Failed {
+                    error: AppError::Busy(_)
+                }
+            )));
+        assert!(matches!(lock(&session.pending).rescan, Some(Rescan::Full)));
+        assert_eq!(std::fs::read(&source).unwrap(), b"source");
+        assert!(!session.root().join("Fall/Course/retained.txt").exists());
+        session.shutdown().unwrap();
+    }
+
+    #[test]
     fn rebuilding_and_recovery_reject_writes_before_running_them() {
         let (_dir, session) = inactive_session();
         let rebuild = session.jobs.queue(JobKind::Rebuild, true).unwrap();
@@ -1021,6 +1271,137 @@ mod tests {
             }
         ));
         assert_eq!(std::fs::read(path).unwrap(), bytes);
+        session.shutdown().unwrap();
+    }
+
+    #[test]
+    fn import_recovery_reports_in_use_and_settles_the_intent_on_retry() {
+        use folio_core::fs::{DirEntry, FileSystem, Metadata};
+        use std::io::{self, Read};
+        use std::path::PathBuf;
+
+        struct LockedDestination {
+            base: WindowsFileSystem,
+            destination: PathBuf,
+            locked: AtomicBool,
+        }
+
+        impl FileSystem for LockedDestination {
+            fn read_dir(&self, folder: &Path) -> io::Result<Vec<DirEntry>> {
+                self.base.read_dir(folder)
+            }
+
+            fn metadata(&self, path: &Path) -> io::Result<Metadata> {
+                self.base.metadata(path)
+            }
+
+            fn open(&self, path: &Path) -> io::Result<Box<dyn Read + '_>> {
+                if path == self.destination && self.locked.load(Ordering::Relaxed) {
+                    return Err(io::Error::from_raw_os_error(32));
+                }
+                self.base.open(path)
+            }
+        }
+
+        let (dir, mut session) = inactive_session();
+        // Join the inactive worker before replacing its adapter; recovery itself stays real.
+        session.shutdown().unwrap();
+        let root = session.library.root().to_owned();
+        std::fs::create_dir_all(root.join("Fall/Course")).unwrap();
+        session.library.scan(&session.catalog, None, 10).unwrap();
+        let target = session
+            .catalog
+            .read(|tx| {
+                catalog::entry(
+                    tx,
+                    &folio_core::paths::RelPath::parse("Fall/Course").unwrap(),
+                )
+            })
+            .unwrap()
+            .unwrap();
+        let source = dir.path().join("source.md");
+        std::fs::write(&source, b"verified").unwrap();
+        let request = import_core::Request {
+            sources: vec![import_core::Source::select(source).unwrap()],
+            target: folio_core::library::operations::EntryRef::from(&target),
+            tags: Default::default(),
+            on_conflict: import_core::Conflict::KeepBoth,
+            delete_originals: false,
+        };
+        session.catalog.write(|tx| -> Result<(), catalog::CatalogError> {
+            tx.execute_batch("CREATE TRIGGER stop_import BEFORE INSERT ON entries WHEN NEW.path = 'Fall/Course/source.md' BEGIN SELECT RAISE(ABORT, 'leave a published import intent'); END;")?;
+            Ok(())
+        }).unwrap();
+        assert!(matches!(
+            session.library.import_files(
+                &session.catalog,
+                &request,
+                &folio_core::win::WindowsRecycleBin,
+                12,
+                &AtomicBool::new(false),
+                &mut |_| {},
+                &mut |_| {},
+            ),
+            Err(OperationError::RecoveryRequired { .. })
+        ));
+        session
+            .catalog
+            .write(|tx| -> Result<(), catalog::CatalogError> {
+                tx.execute_batch("DROP TRIGGER stop_import")?;
+                Ok(())
+            })
+            .unwrap();
+        let adapter = Arc::new(LockedDestination {
+            base: WindowsFileSystem::open(&root).unwrap(),
+            destination: root.join("Fall/Course/source.md"),
+            locked: AtomicBool::new(true),
+        });
+        Arc::get_mut(&mut session).unwrap().library = Library::new(&root, adapter.clone());
+        let journal = session.library.layout().import_journal_file();
+        let intent = std::fs::read(&journal).unwrap();
+        let failure = session.recover().unwrap_err();
+        assert!(matches!(failure.error, AppError::InUse(_)));
+        assert_eq!(std::fs::read(&journal).unwrap(), intent);
+        adapter.locked.store(false, Ordering::Relaxed);
+        session.recover().unwrap();
+        assert!(!journal.exists());
+        assert_eq!(
+            std::fs::read(adapter.destination.clone()).unwrap(),
+            b"verified"
+        );
+        assert!(
+            session
+                .catalog
+                .read(|tx| {
+                    catalog::entry(
+                        tx,
+                        &folio_core::paths::RelPath::parse("Fall/Course/source.md").unwrap(),
+                    )
+                })
+                .unwrap()
+                .is_some()
+        );
+    }
+
+    #[test]
+    fn a_malformed_import_journal_stops_writes_and_preserves_the_evidence() {
+        let (_dir, session) = inactive_session();
+        let journal = session.library.layout().import_journal_file();
+        std::fs::create_dir_all(journal.parent().unwrap()).unwrap();
+        let bytes = br#"{"format_version":1,"stage":"../outside"}"#;
+        std::fs::write(&journal, bytes).unwrap();
+        assert!(matches!(
+            session.mutate::<()>(|_, _| panic!("write despite malformed import journal")),
+            Err(AppError::Internal(_))
+        ));
+        assert!(matches!(
+            session.status(),
+            LibraryStatus::Unavailable {
+                reason: Unavailable::CatalogFailed,
+                ..
+            }
+        ));
+        assert_eq!(std::fs::read(journal).unwrap(), bytes);
         session.shutdown().unwrap();
     }
 

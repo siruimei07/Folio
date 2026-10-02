@@ -468,6 +468,17 @@ impl MetaTree {
         layout: &Layout,
         intent: Option<MoveIntent>,
     ) -> Result<Option<String>, MetaError> {
+        let import = layout.import_journal_file();
+        match fs::symlink_metadata(&import) {
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+            Err(error) => return Err(io_error(&import)(error)),
+            Ok(_) => {
+                return Err(MetaError::Invalid {
+                    path: import,
+                    reason: "settle the import intent before changing metadata".to_owned(),
+                });
+            }
+        }
         let ops = std::mem::take(&mut self.ops);
         let renames = if intent.is_none() {
             // Ordinary scans keep their idempotent case renames before the journal.

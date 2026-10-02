@@ -205,9 +205,21 @@ pages of one revision consistent.
      `capabilities/browse.json`, main window only). Pages and events carry the catalog's commit
      stamp (§15.2); search snippets come from a browse-local FTS5 function. Contract tests,
      `/code-review` and `/security-review` passed, bindings unchanged. Remaining: items 4–6.
+   - 2026-10-02, `feat/core-import` (§21 item 4): the three import commands and individual
+     main-window grants, native choices/drops, FIFO jobs and verified-copy recovery are
+     implemented locally. Codex code/security/unsafe/simplify reviews, `pnpm check` and
+     app-locked `pnpm e2e` (40/40) passed; bindings are byte-identical. Separate Claude Code
+     audit remains pending; the lane has not landed.
 4. [x] Operations lane: amend ADR-0002 and library core §4.2 for the course code, optional badge
    text and colour, 1–3 character badges, and palette keys for preset tags (spec §20).
 5. [ ] Preview lane: the `folio-file` scheme, the main window's CSP sources, and an e2e test that
    the preview frame cannot load the scheme.
 6. [ ] Import lane: shell-side drop handling, `dragDropEnabled`, and the replacement for the test
    `main_window_does_not_publish_native_drag_paths` (spec §17).
+   - 2026-10-01, `feat/core-import`: native choices/drop handling, per-command grants, FIFO import
+     jobs and guarded verified publication are implemented locally. The replacement regression
+     keeps the asset protocol/filesystem plugin off; unknown commands still have no grant.
+     `imported` includes replaced/renamed files (spec §12). Rust checks and 24 app-locked e2e
+     tests passed in the combined workspace. The latest `pnpm check` remains blocked by the
+     concurrent UI lane's lint errors. Completion awaits that gate and the separate Claude Code
+     `/code-review`, `/security-review`, `/simplify` handoff; this record does not approve landing.

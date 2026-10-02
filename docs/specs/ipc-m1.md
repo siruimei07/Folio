@@ -602,6 +602,14 @@ type ImportFiles = {
   and `folders` count the same top-level items.
 - `target` is a folder: the current course, or a folder in it (brief §13).
 - The job's result is an `ImportResult` (§13).
+- `ImportResult.imported` counts successfully committed **files**, including replaced and
+  renamed files; `replaced` and `renamed` are subsets of `imported`, not extra additions. Folders
+  are counted in the check but are not files in the result (library-actions handoff §16 item 2,
+  settled by `feat/core-import`).
+- `check_import` is repeatable and does not consume the source token. A successfully queued
+  `import_files` consumes it once; validation or `Busy` failures leave it available. Selected
+  source identities are checked again when the job starts. Conflicts use library-relative paths.
+- Implementation and recovery boundaries: [library-import.md](library-import.md).
 
 ## 13. Jobs
 
@@ -964,6 +972,11 @@ events, `Theme`, `ReduceMotion`, the limit and the constant `DEFAULT_IGNORE_RULE
    and the `library_status` retry (§6).
 4. **Import** (`feat/core-import`): dialogs, drops, `check_import` with `ImportName`, the import
    job.
+   - **Review checkpoint (2026-10-02):** commands and main-window grants are implemented;
+     native choices/drop tokens, FIFO verified-copy jobs and intent recovery are covered.
+     F2/F10 are fixed, F3/F5/F7/F9 verified. Codex reviews, `pnpm check` and app-locked
+     `pnpm e2e` (40/40) passed; bindings are byte-identical. Separate Claude Code audit is
+     pending; the lane has not landed.
 5. **Preview** (`feat/core-file-scheme`): the `folio-file` scheme with its failure codes (§11.2),
    thumbnails, `open_entry`, `reveal_entry`, the CSP sources.
 6. **Windows adapter**: the watcher's scoped scans feed `CatalogChanged` (library scan §12).

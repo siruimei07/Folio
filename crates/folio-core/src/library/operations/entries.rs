@@ -344,7 +344,7 @@ impl Library {
             .map_err(|source| io_error(native, source))
     }
 
-    fn native_length(&self, path: &RelPath) -> Result<(), OperationError> {
+    pub(super) fn native_length(&self, path: &RelPath) -> Result<(), OperationError> {
         let native = path.to_native(self.root());
         if !native.is_absolute() {
             return Err(OperationError::InvalidArgument(

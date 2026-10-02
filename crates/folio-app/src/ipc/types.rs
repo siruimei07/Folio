@@ -81,6 +81,15 @@ pub enum EntryKind {
     Folder,
 }
 
+impl From<folio_core::meta::EntryKind> for EntryKind {
+    fn from(kind: folio_core::meta::EntryKind) -> Self {
+        match kind {
+            folio_core::meta::EntryKind::File => Self::File,
+            folio_core::meta::EntryKind::Folder => Self::Folder,
+        }
+    }
+}
+
 /// What a file is, from its extension (library core §4.2): whether its versions are kept.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]

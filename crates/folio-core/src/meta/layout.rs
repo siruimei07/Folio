@@ -76,6 +76,12 @@ impl Layout {
             .join("scan.json")
     }
 
+    /// The intent of one verified import copy (docs/specs/library-import.md); never synced, and
+    /// never pending together with the scan journal.
+    pub fn import_journal_file(&self) -> PathBuf {
+        self.scan_journal_file().with_file_name("import.json")
+    }
+
     /// The path of the file that holds tags in `file`.
     pub fn tag_file_path(&self, file: &TagFile) -> Result<PathBuf, MetaError> {
         let mut path = self.meta_dir();
