@@ -1,9 +1,11 @@
 // Fixtures built for one view test: a library of a test's own, or the small library with more
 // entries. Feature folders never import the fake shell (eslint.config.js), so they build their
 // fixtures here.
+import type { SyncProvider } from '../ipc';
 import { presetTags, SeedBuilder } from '../ipc/mock/fixtures/build';
-import type { Fixture, LibrarySeed, SeedEntry } from '../ipc/mock/fixtures/types';
-import { scenarioFixture } from '../ipc/mock/scenarios';
+import { type FolderKind, folderScript } from '../ipc/mock/fixtures/first-run';
+import type { Fixture, FolderScript, LibrarySeed, SeedEntry } from '../ipc/mock/fixtures/types';
+import { type ScenarioOptions, scenarioFixture } from '../ipc/mock/scenarios';
 import { NOW } from './data';
 
 const DAY = 86_400_000;
@@ -48,4 +50,19 @@ export function smallLibraryWith(...entries: (Partial<SeedEntry> & { path: strin
     });
   }
   return fixture;
+}
+
+/** What the folder dialog answers with: a folder holding `kind` (first-run handoff §4.2). */
+export function folderChoice(kind: FolderKind, syncRoot: SyncProvider | null = null): FolderScript {
+  return folderScript(kind, NOW, syncRoot);
+}
+
+/** No library yet, or one that cannot be opened, with the folder dialog's answers in order. */
+export function startFixture(
+  scenario: 'first-run' | 'unavailable',
+  options: ScenarioOptions & { choices?: (FolderScript | null)[] } = {},
+): Fixture {
+  const { choices, ...rest } = options;
+  const { fixture } = scenarioFixture(scenario, NOW, rest);
+  return choices === undefined ? fixture : { ...fixture, folderChoices: choices };
 }

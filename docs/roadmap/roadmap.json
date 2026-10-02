@@ -827,9 +827,9 @@
         "fix/ui-recently-added-clock"
       ],
       "summary": "欢迎页 → 新建或接管资料库 → 第一个学期和课程（逐行失败）；资料库打不开时的界面和重试；原生选文件夹对话框已手动点过",
-      "status": "review",
+      "status": "done",
       "updated": "2026-10-02",
-      "next": "等你批准合并（在搜索和时钟修复之后）。「放弃未完成的移动」按钮等 feat/core-discard-move",
+      "landed": "2026-10-02",
       "gates": {
         "check": "pass",
         "e2e": "pass",
@@ -2112,10 +2112,6 @@
     }
   ],
   "landingQueue": [
-    {
-      "lane": "feat/ui-first-run",
-      "why": "评审都过了；token README 和测试 helper 排在搜索之后"
-    },
     {
       "lane": "fix/ui-e2e-subpixel-bounds",
       "why": "和首次使用都改 shell.spec.ts；合并后新电脑的 e2e 全绿"

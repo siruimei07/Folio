@@ -1,0 +1,877 @@
+/* The first run and the full-window states (first-run handoff §2–§10). */
+
+.first-run {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+}
+
+.first-run__body {
+  flex: 1;
+  min-height: 0;
+  box-sizing: border-box;
+  overflow-y: auto;
+  background: var(--color-surface-app);
+}
+
+/* ---- Welcome (§3, 28B): two columns; below the breakpoint one centred column. */
+
+.first-run__body[data-layout='welcome'] {
+  display: flex;
+  padding: var(--size-first-run-inset) var(--size-welcome-inset-end) var(--size-first-run-inset)
+    var(--size-welcome-inset-start);
+}
+
+.welcome {
+  display: flex;
+  flex: 1;
+  gap: var(--size-welcome-gap);
+  min-height: 100%;
+}
+
+.welcome__column {
+  display: flex;
+  flex: none;
+  width: var(--size-welcome-column);
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-32);
+}
+
+.welcome__head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-12);
+}
+
+.welcome__icon {
+  flex: none;
+}
+
+.welcome__title {
+  margin: 0;
+  font-size: var(--font-size-display);
+  font-weight: var(--font-weight-strong);
+  line-height: var(--font-line-height-heading);
+}
+
+.welcome__intro {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.welcome__choices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+.welcome__open {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-label);
+}
+
+.welcome__footer {
+  margin: 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-small);
+}
+
+.welcome__art {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: var(--border-width) solid var(--color-border-default);
+  border-radius: var(--radius-panel);
+  background-color: var(--color-surface-app);
+  background-image: radial-gradient(var(--color-pattern-dots) var(--border-width), transparent var(--border-width));
+  background-size: var(--space-14) var(--space-14);
+}
+
+.welcome__art .desk-illustration {
+  width: var(--size-welcome-illustration-width);
+  max-width: 100%;
+  height: var(--size-welcome-illustration-height);
+}
+
+:root[data-layout='narrow'] .first-run__body[data-layout='welcome'] {
+  padding: var(--size-first-run-inset) var(--space-16);
+}
+
+:root[data-layout='narrow'] .welcome {
+  justify-content: center;
+}
+
+:root[data-layout='narrow'] .welcome__column {
+  width: min(var(--size-first-run-content), 100%);
+}
+
+:root[data-layout='narrow'] .welcome__art {
+  display: none;
+}
+
+/* A choice card (§3): one button with a tile, the title and text, and a chevron. */
+.choice-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-14);
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--space-16);
+  border: var(--border-width) solid var(--color-border-default);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface-panel);
+  color: var(--color-text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: default;
+  transition: border-color var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.choice-card[data-hovered] {
+  border-color: var(--color-border-strong);
+}
+
+.choice-card[data-pressed] {
+  background: var(--color-surface-hover);
+}
+
+.choice-card__tile {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--size-state-tile);
+  height: var(--size-state-tile);
+  border: var(--border-width) solid var(--color-accent-soft);
+  border-radius: var(--radius-panel);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-default);
+}
+
+.choice-card__words {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.choice-card__title {
+  font-size: var(--font-size-heading);
+  font-weight: var(--font-weight-strong);
+  line-height: var(--font-line-height-heading);
+}
+
+.choice-card__text {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-label);
+}
+
+.choice-card__chevron {
+  flex: none;
+  color: var(--color-text-tertiary);
+}
+
+/* A link button inside a line of text: "Open your library…", "Start a new library". */
+.link-button {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: var(--size-control-compact);
+  padding: 0 var(--space-6);
+  border: 0;
+  border-radius: var(--radius-row);
+  background: transparent;
+  color: var(--color-accent-default);
+  font: inherit;
+  font-weight: var(--font-weight-strong);
+  cursor: default;
+}
+
+.link-button[data-hovered] {
+  background: var(--color-surface-hover);
+}
+
+/* ---- Steps (§4.1): a centred column below the title bar; the page scrolls. */
+
+.first-run__body[data-layout='step'] {
+  padding: 0 var(--space-16) var(--space-32);
+}
+
+.step {
+  display: flex;
+  width: var(--size-first-run-content);
+  max-width: 100%;
+  box-sizing: border-box;
+  flex-direction: column;
+  gap: var(--space-24);
+  margin: 0 auto;
+  padding-top: var(--size-first-run-top);
+  animation: rise-in var(--motion-duration-base) var(--motion-easing-standard);
+}
+
+.step[data-tall] {
+  padding-top: var(--size-first-run-inset);
+}
+
+.step__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.step__count {
+  margin: 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-strong);
+}
+
+.step__title {
+  margin: 0;
+  font-size: var(--font-size-display);
+  font-weight: var(--font-weight-strong);
+  line-height: var(--font-line-height-heading);
+}
+
+.step__intro,
+.step__mismatch,
+.step__note-line,
+.step__empty {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.step__mismatch,
+.step__note-line,
+.step__empty {
+  font-size: var(--font-size-label);
+}
+
+.step__mismatch {
+  margin-bottom: calc(var(--space-12) - var(--space-24));
+}
+
+.step__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.step__label {
+  margin: 0;
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-regular);
+}
+
+.step__select {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* The select of app-shell §9, with its label above it as in the other step fields. */
+.step__select .select {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-6);
+}
+
+.step__select .select__label {
+  color: var(--color-text-primary);
+}
+
+.step__select .select__button {
+  flex: none;
+  width: var(--size-first-run-field);
+  height: var(--size-dialog-control);
+}
+
+.step__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+}
+
+.step__footer-start,
+.step__footer-end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.step__footer-end {
+  justify-content: flex-end;
+}
+
+/* A spinner inside a button takes the button's text colour. */
+.first-run .button .spinner {
+  color: inherit;
+}
+
+.step__later {
+  margin: 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-small);
+}
+
+/* "Skip for now": transparent, secondary text, the hover surface. */
+.ghost-button {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: var(--size-dialog-control);
+  padding: 0 var(--space-16);
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-strong);
+  cursor: default;
+}
+
+.ghost-button[data-hovered] {
+  background: var(--color-surface-hover);
+}
+
+/* The folder card (§4.1). */
+.folder-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  padding: var(--space-12) var(--space-12) var(--space-12) var(--space-14);
+  border: var(--border-width) solid var(--color-border-default);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface-panel);
+}
+
+.folder-card__tile {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--size-folder-tile);
+  height: var(--size-folder-tile);
+  border: var(--border-width) solid var(--color-border-default);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-secondary);
+}
+
+.folder-card__words {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.folder-card__path {
+  display: flex;
+  min-width: 0;
+  font-weight: var(--font-weight-strong);
+}
+
+.folder-card__meta {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-label);
+}
+
+/* The take-over map (§4.2). */
+.folder-map {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  margin: 0;
+  padding: var(--space-8) var(--space-14);
+  border: var(--border-width) solid var(--color-border-default);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface-panel);
+}
+
+.folder-map__caption {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-strong);
+}
+
+.folder-map__rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.folder-map__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  height: var(--size-control);
+}
+
+/* Each level indents by space.18; the row sets --depth. */
+.folder-map__row {
+  padding-left: calc(var(--space-18) * var(--depth, 0));
+}
+
+.folder-map__name {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.folder-map__icon {
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+.folder-map__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folder-map__role {
+  flex: none;
+  width: var(--size-map-role-column);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-small);
+}
+
+.folder-map__role strong {
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-strong);
+}
+
+/* A note (§4.1). */
+.note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  margin: 0;
+  padding: var(--space-10) var(--space-12);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-label);
+}
+
+.note__icon {
+  flex: none;
+  margin-top: var(--space-2);
+  color: var(--color-text-tertiary);
+}
+
+/* Fields (§4.1, app-shell §9). */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.field__label {
+  font-size: var(--font-size-label);
+}
+
+.field__input,
+.course-row__input {
+  box-sizing: border-box;
+  height: var(--size-dialog-control);
+  padding: 0 var(--space-10);
+  border: var(--border-width) solid var(--color-input-border);
+  border-bottom-color: var(--color-input-border-bottom);
+  border-radius: var(--radius-control);
+  background: var(--color-input-background);
+  color: var(--color-text-primary);
+  font: inherit;
+  outline: none;
+}
+
+.field__input::placeholder,
+.course-row__input::placeholder {
+  color: var(--color-text-tertiary);
+  opacity: 1;
+}
+
+.field__input:focus-visible,
+.course-row__input:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.field__input[aria-invalid='true'],
+.course-row__input[aria-invalid='true'] {
+  border-bottom-color: var(--color-feedback-danger);
+}
+
+.field[data-width='short'] .field__input {
+  width: var(--size-first-run-field);
+}
+
+.field__help {
+  margin: 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-small);
+}
+
+.field .field-error {
+  margin: 0;
+}
+
+/* ---- Course rows (§5.1, CourseRowsEditor). */
+
+.course-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.course-rows__headings {
+  display: flex;
+  gap: var(--space-8);
+  padding-left: calc(var(--size-badge) + var(--space-8));
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-strong);
+}
+
+.course-rows__code-heading {
+  flex: none;
+  width: var(--size-course-code-field);
+}
+
+.course-rows__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.course-row__fields {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.course-row .field-error {
+  margin: var(--space-6) 0 0 calc(var(--size-badge) + var(--space-8));
+}
+
+.course-row__placeholder {
+  flex: none;
+  box-sizing: border-box;
+  width: var(--size-badge);
+  height: var(--size-badge);
+  border: var(--border-badge) dashed var(--color-border-strong);
+  border-radius: var(--radius-badge);
+}
+
+.course-row__code {
+  flex: none;
+  width: var(--size-course-code-field);
+}
+
+.course-row__name,
+.course-row__folder {
+  flex: 1;
+  min-width: 0;
+}
+
+.course-row__folder {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.course-row__input[readonly] {
+  background: var(--color-input-background-readonly);
+}
+
+.course-row__done {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-control-compact);
+  height: var(--size-control-compact);
+  color: var(--color-feedback-success);
+}
+
+.course-rows__add {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-6);
+  margin-top: var(--space-4);
+}
+
+.course-rows__help {
+  margin: 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-small);
+}
+
+/* The colour button and its popover (§5.1). */
+.colour-button {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  box-sizing: border-box;
+  width: var(--size-colour-button);
+  height: var(--size-dialog-control);
+  padding: 0;
+  border: var(--border-width) solid var(--color-input-border);
+  border-radius: var(--radius-control);
+  background: var(--color-input-background);
+  cursor: default;
+  outline: none;
+}
+
+.colour-button[data-hovered] {
+  border-color: var(--color-border-strong);
+}
+
+.colour-button[data-focus-visible] {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.colour-button[data-disabled] {
+  background: var(--color-input-background-readonly);
+}
+
+.colour-button__dot {
+  width: var(--size-colour-dot);
+  height: var(--size-colour-dot);
+  border-radius: var(--radius-pill);
+  background: var(--swatch-dot);
+}
+
+.colour-button__chevron {
+  color: var(--color-text-tertiary);
+}
+
+.colour-popover__dialog {
+  outline: none;
+}
+
+.colour-popover__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding: var(--space-10);
+}
+
+.colour-popover__caption {
+  margin: 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-strong);
+}
+
+.colour-popover__swatches {
+  display: grid;
+  grid-template-columns: repeat(5, var(--size-swatch));
+  gap: var(--space-4);
+}
+
+.swatch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-swatch);
+  height: var(--size-swatch);
+  border-radius: var(--radius-control);
+  cursor: default;
+}
+
+.swatch[data-hovered] {
+  background: var(--color-surface-hover);
+}
+
+.swatch[data-focus-visible] {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: 0;
+}
+
+.swatch__dot {
+  width: var(--size-swatch-dot);
+  height: var(--size-swatch-dot);
+  border-radius: var(--radius-pill);
+  background: var(--swatch-dot);
+}
+
+/* The selected colour: a gap in the panel colour, then a ring in the text colour. */
+.swatch[data-selected] .swatch__dot {
+  box-shadow:
+    0 0 0 var(--focus-ring-width) var(--color-surface-panel),
+    0 0 0 calc(var(--focus-ring-width) * 2) var(--color-text-primary);
+}
+
+.colour-popover__footer {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-small);
+}
+
+/* The scan strip (§5.2). */
+.scan-strip {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding: var(--space-12) var(--space-14);
+  border: var(--border-width) solid var(--color-border-default);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface-panel);
+}
+
+.scan-strip__line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.scan-strip__lead {
+  font-weight: var(--font-weight-strong);
+}
+
+.scan-strip__count {
+  margin-left: auto;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.scan-strip__done {
+  flex: none;
+  color: var(--color-feedback-success);
+}
+
+.scan-strip__help {
+  margin: 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-small);
+}
+
+/* ---- Full-window states (§7): a centred column, a little above the middle. */
+
+.first-run__body[data-layout='state'] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16) var(--space-16) calc(var(--space-16) + var(--size-unavailable-offset));
+}
+
+.state-page {
+  display: flex;
+  width: var(--size-first-run-content);
+  max-width: 100%;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-20);
+}
+
+.state-page__tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--size-state-tile);
+  height: var(--size-state-tile);
+  border: var(--border-width) solid var(--tone-border);
+  border-radius: var(--radius-panel);
+  background: var(--tone-soft);
+  color: var(--tone);
+}
+
+.state-page__title {
+  margin: 0;
+  font-size: var(--font-size-display);
+  font-weight: var(--font-weight-strong);
+  line-height: var(--font-line-height-heading);
+}
+
+/* The title takes focus only so screen readers read it; it is not a control. */
+.state-page__title:focus {
+  outline: none;
+}
+
+.state-page__text {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.state-page__path {
+  position: relative;
+  display: flex;
+  width: 100%;
+  align-items: center;
+}
+
+.state-page__path-icon {
+  position: absolute;
+  left: var(--space-10);
+  color: var(--color-text-secondary);
+}
+
+.state-page__path-input {
+  width: 100%;
+  box-sizing: border-box;
+  height: var(--size-dialog-control);
+  padding: 0 var(--space-10) 0 calc(var(--space-10) + var(--size-icon) + var(--space-8));
+  border: var(--border-width) solid var(--color-input-border);
+  border-radius: var(--radius-control);
+  background: var(--color-input-background-readonly);
+  color: var(--color-text-primary);
+  font: inherit;
+  text-overflow: ellipsis;
+  outline: none;
+}
+
+.state-page__path-input:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.state-page .banner {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.state-page__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+.state-page__link {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-label);
+}
+
+.opening {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-label);
+}

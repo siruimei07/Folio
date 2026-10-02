@@ -89,6 +89,18 @@ export function useJobActive(kind: JobKind): boolean {
   return data ?? false;
 }
 
+/** Whether the job `id` has ended (done, failed or cancelled); its progress re-renders nothing. */
+export function useJobEnded(id: string): boolean {
+  const { data } = useQuery({
+    ...jobsQuery(useLibraryId()),
+    select: (jobs) => {
+      const job = jobs.find((candidate) => candidate.id === id);
+      return job !== undefined && !isActiveJob(job);
+    },
+  });
+  return data ?? false;
+}
+
 /** One job, while the list holds it. */
 export function useJob(id: string | null): Job | undefined {
   const { data } = useQuery({

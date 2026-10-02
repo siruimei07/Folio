@@ -7,6 +7,9 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 import { type Browser, type Page, test as base, chromium } from '@playwright/test';
 
+import firstRun from '../apps/desktop/src/i18n/locales/en/first-run.json' with { type: 'json' };
+import type { FolderChoice, LibraryOpened } from '../apps/desktop/src/ipc/bindings';
+
 export { expect } from '@playwright/test';
 
 /** The debug build produced by `pnpm build:app`. Override with FOLIO_APP_PATH. */
@@ -151,4 +154,22 @@ async function stop(child: ChildProcess): Promise<void> {
 
 function hasExited(child: ChildProcess): boolean {
   return child.exitCode !== null || child.signalCode !== null;
+}
+
+/** Calls a command in the page, as the UI's IPC module does; a command error rejects. */
+export function invoke<T>(page: Page, command: string, args: Record<string, unknown> = {}): Promise<T> {
+  return page.evaluate<T>(`window.__TAURI_INTERNALS__.invoke(${JSON.stringify(command)}, ${JSON.stringify(args)})`);
+}
+
+/**
+ * Makes the isolated library folder (`libraryFolder: true`) this machine's library through IPC,
+ * with the preset tags the first run names, and resolves once it has opened. The window then
+ * shows the Library instead of the first run.
+ */
+export async function createLibrary(page: Page, name = 'E2E library'): Promise<LibraryOpened> {
+  const choice = await invoke<FolderChoice | null>(page, 'pick_library_folder');
+  if (!choice) throw new Error('The isolated folder choice was cancelled');
+  return invoke<LibraryOpened>(page, 'create_library', {
+    request: { folder: choice.token, name, presetTags: firstRun.presetTags },
+  });
 }

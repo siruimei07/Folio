@@ -93,6 +93,12 @@ kebab names, a `$type` or unit outside the tables above, an alias to a missing t
 type or in a cycle, and a `hex` that differs from its `components`. Every token needs its own
 `$type`; groups do not pass theirs down.
 
+Round 8 (2026-10-01, lane `feat/ui-first-run`) added the first run's sizes (first-run handoff
+§3–§7): `size.first-run-top`, `first-run-inset`, `welcome-inset-start`, `welcome-inset-end`,
+`welcome-gap`, `welcome-column`, `welcome-illustration-width` and `-height`, `app-icon-large`,
+`folder-tile`, `first-run-field`, `course-code-field`, `colour-button`, `colour-dot`, `icon-tiny`,
+`swatch`, `swatch-dot`, `map-role-column` and `unavailable-offset`.
+
 ## Modes
 
 App settings → Appearance → Theme offers Light, Dark and System (default System). The app sets

@@ -28,3 +28,12 @@ export const TYPEAHEAD_MS = 500;
  * has passed without a double-click (library-actions §7.1).
  */
 export const DOUBLE_CLICK_MS = 500;
+
+/** How long the window shows only the title bar before "Opening your library…" (first-run §2). */
+export const OPENING_DELAY_MS = 400;
+
+/** Screen readers hear the first run's scan strip at most this often (first-run handoff §9). */
+export const SCAN_ANNOUNCE_MS = 5000;
+
+/** How long the first run waits for LibraryStateChanged after a library opens before it asks. */
+export const LIBRARY_EVENT_WAIT_MS = 1000;

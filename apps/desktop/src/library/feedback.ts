@@ -6,9 +6,9 @@ import i18n from 'i18next';
 
 import { reportUiError } from '../app/log';
 import { showToast } from '../app/toasts';
-import { copyDetails } from '../app/windowErrors';
+import { copyErrorDetails } from '../app/windowErrors';
 import { IpcFailure } from '../data/errors';
-import { formatIpcError, type IpcError, type ItemFailure } from '../ipc';
+import type { IpcError, ItemFailure } from '../ipc';
 import { type FailedItem, openLibraryDialog } from './state';
 
 /** Codes that point at a bug or a broken state: the toast offers "Copy details", and the log has it. */
@@ -47,9 +47,7 @@ export function showGone(error: IpcError): void {
 }
 
 /** "Copy details" of a failure: what failed, then the error as the log has it. */
-export function copyFailure(title: string, error: IpcError): void {
-  copyDetails([title, formatIpcError(error)].join('\n'));
-}
+export const copyFailure = copyErrorDetails;
 
 /**
  * An error toast for a failed command: the title says what failed, the body the code's message.

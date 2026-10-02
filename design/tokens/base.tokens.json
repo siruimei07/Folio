@@ -741,6 +741,158 @@
       },
       "$description": "Content column of the welcome screen, the first-run steps and full-window states."
     },
+    "first-run-top": {
+      "$type": "dimension",
+      "$value": {
+        "value": 64,
+        "unit": "px"
+      },
+      "$description": "Distance from the title bar to a first-run step page (first-run §4.1)."
+    },
+    "first-run-inset": {
+      "$type": "dimension",
+      "$value": {
+        "value": 40,
+        "unit": "px"
+      },
+      "$description": "Welcome screen padding at top and bottom; distance from the title bar to the taller step pages (first-run §3, §4.1)."
+    },
+    "welcome-inset-start": {
+      "$type": "dimension",
+      "$value": {
+        "value": 96,
+        "unit": "px"
+      },
+      "$description": "Welcome screen padding on the left (first-run §3)."
+    },
+    "welcome-inset-end": {
+      "$type": "dimension",
+      "$value": {
+        "value": 48,
+        "unit": "px"
+      },
+      "$description": "Welcome screen padding on the right (first-run §3)."
+    },
+    "welcome-gap": {
+      "$type": "dimension",
+      "$value": {
+        "value": 64,
+        "unit": "px"
+      },
+      "$description": "Gap between the welcome screen's two columns (first-run §3)."
+    },
+    "welcome-column": {
+      "$type": "dimension",
+      "$value": {
+        "value": 500,
+        "unit": "px"
+      },
+      "$description": "The welcome screen's left column: title and the two choices (first-run §3)."
+    },
+    "welcome-illustration-width": {
+      "$type": "dimension",
+      "$value": {
+        "value": 360,
+        "unit": "px"
+      },
+      "$description": "The desk illustration on the welcome screen's right panel (first-run §3)."
+    },
+    "welcome-illustration-height": {
+      "$type": "dimension",
+      "$value": {
+        "value": 255,
+        "unit": "px"
+      },
+      "$description": "The desk illustration on the welcome screen's right panel (first-run §3)."
+    },
+    "app-icon-large": {
+      "$type": "dimension",
+      "$value": {
+        "value": 48,
+        "unit": "px"
+      },
+      "$description": "The app icon above the welcome title (first-run §3)."
+    },
+    "folder-tile": {
+      "$type": "dimension",
+      "$value": {
+        "value": 36,
+        "unit": "px"
+      },
+      "$description": "The folder tile of a first-run folder card (first-run §4.1)."
+    },
+    "first-run-field": {
+      "$type": "dimension",
+      "$value": {
+        "value": 240,
+        "unit": "px"
+      },
+      "$description": "The semester field and the semester select of first-run step 2 (first-run §5)."
+    },
+    "course-code-field": {
+      "$type": "dimension",
+      "$value": {
+        "value": 104,
+        "unit": "px"
+      },
+      "$description": "The course code input of a course row (first-run §5.1)."
+    },
+    "colour-button": {
+      "$type": "dimension",
+      "$value": {
+        "value": 46,
+        "unit": "px"
+      },
+      "$description": "Width of a course row's colour button (first-run §5.1)."
+    },
+    "colour-dot": {
+      "$type": "dimension",
+      "$value": {
+        "value": 12,
+        "unit": "px"
+      },
+      "$description": "The colour dot in a course row's colour button (first-run §5.1)."
+    },
+    "icon-tiny": {
+      "$type": "dimension",
+      "$value": {
+        "value": 12,
+        "unit": "px"
+      },
+      "$description": "The chevron of a course row's colour button (first-run §5.1)."
+    },
+    "swatch": {
+      "$type": "dimension",
+      "$value": {
+        "value": 28,
+        "unit": "px"
+      },
+      "$description": "A swatch button in the colour popover (first-run §5.1)."
+    },
+    "swatch-dot": {
+      "$type": "dimension",
+      "$value": {
+        "value": 18,
+        "unit": "px"
+      },
+      "$description": "The dot inside a colour popover swatch (first-run §5.1)."
+    },
+    "map-role-column": {
+      "$type": "dimension",
+      "$value": {
+        "value": 250,
+        "unit": "px"
+      },
+      "$description": "The role column of the take-over map (first-run §4.2)."
+    },
+    "unavailable-offset": {
+      "$type": "dimension",
+      "$value": {
+        "value": 60,
+        "unit": "px"
+      },
+      "$description": "Extra space below the centred column of the library-unavailable screen (first-run §7)."
+    },
     "state-block-width": {
       "$type": "dimension",
       "$value": {

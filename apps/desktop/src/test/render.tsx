@@ -14,6 +14,7 @@ import type { ReactElement, ReactNode } from 'react';
 import { I18nProvider } from 'react-aria-components';
 import { onTestFinished, vi } from 'vitest';
 
+import { useToasts } from '../app/toasts';
 import { createQueryClient } from '../data/client';
 import { DataProvider } from '../data/DataProvider';
 import { changeLibrary } from '../data/library';
@@ -120,4 +121,9 @@ export function renderAppHook<Result, Props = undefined>(
   const { shell, client, wrapper } = setUpApp(appOptions);
   const rendered = renderHook(hook, { wrapper, initialProps: initialProps as Props });
   return { ...rendered, shell, client };
+}
+
+/** The texts of the toasts on screen. */
+export function toastTexts(): string[] {
+  return useToasts.getState().toasts.filter((toast) => !toast.leaving).map((toast) => [toast.title, toast.body].filter(Boolean).join(' — '));
 }

@@ -31,6 +31,9 @@ import {
 } from './paged';
 import { useLibraryId } from './session';
 
+/** No tag filter and no time window: every file (ipc-m1 §9.1). */
+export const NO_FILTER: EntryFilter = { tags: null, addedAfterMs: null };
+
 /** The children of a folder (`null`: the library root), folders first. */
 export function useChildren(
   folder: EntryRef | null,

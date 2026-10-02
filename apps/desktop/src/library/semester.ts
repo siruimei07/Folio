@@ -4,19 +4,9 @@
 // semester in the user's order that is not archived.
 import { useEffect } from 'react';
 
-import { useFiles } from '../data/entries';
-import { useSemesters } from '../data/groups';
+import { useDefaultSemester, useSemesters } from '../data/groups';
 import { setCurrentSemester, useCurrentSemester } from '../data/session';
 import type { Semester } from '../ipc';
-import { NO_FILTER } from './filters';
-
-const NEWEST_FIRST = { key: 'modified', descending: true } as const;
-const FIRST_PAGE = { start: 0, end: 0 };
-
-function fallback(semesters: readonly Semester[]): Semester | null {
-  const open = semesters.filter((semester) => !semester.archived);
-  return open.at(-1) ?? semesters.at(-1) ?? null;
-}
 
 export interface CurrentSemester {
   semesters: readonly Semester[] | undefined;
@@ -32,18 +22,8 @@ export function useCurrentSemesterInfo(): CurrentSemester {
   const semesters = query.data;
   const known = semesters?.find((semester) => semester.folder.path === chosen) ?? null;
   const needsDefault = semesters !== undefined && semesters.length > 0 && known === null;
-  const newest = useFiles(null, NO_FILTER, NEWEST_FIRST, FIRST_PAGE, { enabled: needsDefault });
-
-  let semester = known;
-  if (semester === null && semesters !== undefined && newest.status !== 'pending') {
-    const total = newest.total ?? 0;
-    for (let index = 0; index < Math.min(total, 200) && semester === null; index++) {
-      const path = newest.rowAt(index)?.path;
-      const top = path?.split('/')[0];
-      if (path?.includes('/') === true) semester = semesters.find((candidate) => candidate.folder.path === top) ?? null;
-    }
-    semester ??= fallback(semesters);
-  }
+  const fallback = useDefaultSemester(semesters, needsDefault);
+  const semester = known ?? fallback ?? null;
 
   // Keep the default, so the view does not change when newer files arrive.
   const path = semester?.folder.path ?? null;

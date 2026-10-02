@@ -69,9 +69,5 @@ export function rowNames(semester = FALL): string[] {
     .map((row) => row.getAttribute('aria-label') ?? row.textContent);
 }
 
-/** The texts of the toasts on screen. */
-export function toastTexts(): string[] {
-  return useToasts.getState().toasts.filter((toast) => !toast.leaving).map((toast) => [toast.title, toast.body].filter(Boolean).join(' — '));
-}
-
 export { libraryFixture, smallLibraryWith } from '../../test/fixtures';
+export { toastTexts } from '../../test/render';

@@ -4,7 +4,7 @@
 
 import i18n from 'i18next';
 
-import { formatIpcError, setWindowFailureHandler, type WindowFailure } from '../ipc';
+import { formatIpcError, type IpcError, setWindowFailureHandler, type WindowFailure } from '../ipc';
 import { copyText } from './clipboard';
 import { reportUiError } from './log';
 import { showToast } from './toasts';
@@ -20,6 +20,11 @@ export function copyDetails(details: string): void {
         : { key: 'copyDetails', tone: 'danger', title: i18n.t('shell:copyDetails.failed') },
     );
   });
+}
+
+/** "Copy details" of a failure: what failed, then the error as the log has it. */
+export function copyErrorDetails(title: string, error: IpcError): void {
+  copyDetails([title, formatIpcError(error)].join('\n'));
 }
 
 export function showWindowFailure({ command, source, error }: WindowFailure): void {

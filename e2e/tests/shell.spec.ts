@@ -2,18 +2,29 @@ import { access, readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import AxeBuilder from '@axe-core/playwright';
+import type { Page } from '@playwright/test';
 
 import libraryStrings from '../../apps/desktop/src/i18n/locales/en/library.json' with { type: 'json' };
 import shell from '../../apps/desktop/src/i18n/locales/en/shell.json' with { type: 'json' };
 import titlebar from '../../apps/desktop/src/i18n/locales/en/titlebar.json' with { type: 'json' };
-import { expect, test } from '../fixtures';
+import { createLibrary, expect, test } from '../fixtures';
 
 // The window shell (docs/design/handoff/app-shell.md §2–§4, ui-architecture §6): title bar, toolbar,
 // rail and content region, on the real shell. Strings run in the page because this package has no
 // DOM types.
 
+// The shell shows once a library is open; before that, the first run (first-run handoff §2).
+test.use({ libraryFolder: true });
+
+/** Opens a library in the isolated folder, so the shell shows. */
+async function openLibrary(page: Page): Promise<void> {
+  await createLibrary(page);
+  await expect(page.getByRole('navigation', { name: shell.rail.label })).toBeVisible();
+}
+
 test('shows the Library on the rail and in the content region, and passes axe', async ({ folio }) => {
   const { page } = folio;
+  await openLibrary(page);
   const rail = page.getByRole('navigation', { name: shell.rail.label });
   const library = rail.getByRole('button', { name: shell.rail.library });
   await expect(library).toHaveAttribute('aria-current', 'page');
@@ -42,6 +53,7 @@ test('shows the Library on the rail and in the content region, and passes axe', 
 
 test('puts the toolbar into one 40 px bar below 760 px and back', async ({ folio }) => {
   const { page } = folio;
+  await openLibrary(page);
   const bar = page.getByRole('banner');
   await expect(bar).toHaveAttribute('data-variant', 'standard');
 
@@ -62,6 +74,7 @@ test('follows Windows for dark mode and reduced motion until the app has its own
   folio,
 }) => {
   const { page } = folio;
+  await openLibrary(page);
   // The token in milliseconds: Chromium may print "0ms" as "0s".
   const read = () =>
     page.evaluate(`(() => {

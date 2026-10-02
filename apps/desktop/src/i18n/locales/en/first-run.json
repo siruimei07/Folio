@@ -1,1 +1,284 @@
-{}
+{
+  "documentTitle": {
+    "welcome": "Welcome to Folio",
+    "page": "{{page}} — Folio"
+  },
+  "opening": "Opening your library…",
+  "pickFailed": "Folio couldn't open the folder dialog",
+  "welcome": {
+    "title": "Welcome to Folio",
+    "intro": "Your course files in one library: semesters and courses, tags, quick search and a preview for every file. It stays an ordinary folder on this computer.",
+    "newLibrary": {
+      "title": "Start a new library",
+      "text": "Choose an empty folder. Folio adds a folder for each semester and course as you create them."
+    },
+    "existing": {
+      "title": "Use a folder you already have",
+      "text": "Choose the folder that holds your semester folders. Nothing is moved or renamed."
+    },
+    "openLead": "Used Folio on this computer before?",
+    "open": "Open your library…",
+    "footer": "Folio works offline. It doesn't collect usage data."
+  },
+  "step": {
+    "one": "Step 1 of 2",
+    "two": "Step 2 of 2",
+    "back": "Back",
+    "change": "Change…",
+    "chooseAnother": "Choose another folder…",
+    "chooseFolder": "Choose folder…",
+    "useAnyway": "Use it anyway",
+    "tryAgain": "Try again"
+  },
+  "folder": {
+    "notEmpty": "This folder isn't empty, so Folio can use it as it is.",
+    "isEmpty": "This folder is empty, so Folio starts a new library in it.",
+    "counts": "{{folders}} and {{files}} at the top level",
+    "folders_one": "{{count, number}} folder",
+    "folders_other": "{{count, number}} folders",
+    "files_one": "{{count, number}} file",
+    "files_other": "{{count, number}} files",
+    "noFolders": "no folders",
+    "noFiles": "no files",
+    "empty": {
+      "title": "Start a new library",
+      "intro": "Folio keeps your library in this folder. Semester and course folders go inside it.",
+      "meta": "Empty folder",
+      "note": "Folio adds a hidden .folio folder here for your tags and course settings. Everything else stays ordinary files that open without Folio.",
+      "submit": "Create library"
+    },
+    "folders": {
+      "title": "Use this folder as your library",
+      "intro": "Folio works with the folders you already have.",
+      "note": "Folio adds a hidden .folio folder here for your tags and course settings. Nothing is moved or renamed.",
+      "submit": "Use this folder"
+    },
+    "library": {
+      "title": "Open your library",
+      "meta": "Folio library “{{name}}”",
+      "bannerTitle": "This folder is already a Folio library",
+      "bannerText": "Open it to pick up where you left off. Its tags, courses and settings are inside it.",
+      "submit": "Open library"
+    },
+    "insideLibrary": {
+      "title": "Choose another folder",
+      "meta": "Inside a Folio library",
+      "bannerTitle": "This folder is inside another library",
+      "bannerText": "{{root}} is a Folio library, and a library can't hold another one. Choose that folder to open it, or a folder outside it."
+    },
+    "incomplete": {
+      "title": "Finish setting up this library",
+      "meta": "Setup didn't finish",
+      "metaCounts": "Setup didn't finish · {{counts}}",
+      "bannerTitle": "Folio started a library here but didn't finish",
+      "bannerText": "Its hidden .folio folder has no library file, maybe because the disk was full or Folio closed. Folio can finish now and keep what's already there, like your tags.",
+      "submit": "Finish setup"
+    },
+    "notALibrary": {
+      "title": "Choose another folder"
+    },
+    "creating": "Creating…",
+    "opening": "Opening…",
+    "map": {
+      "label": "How Folio reads your folders · example",
+      "library": "Library",
+      "libraryRole": "the folder you chose",
+      "semesterName": "Fall 2026",
+      "semester": "Semester",
+      "semesterRole": "each folder at the top",
+      "courseName": "Calculus of Several Variables",
+      "course": "Course",
+      "courseRole": "each folder in a semester",
+      "folderName": "Problem sets",
+      "folder": "Folder",
+      "folderRole": "anything deeper",
+      "roleLine": "<strong>{{role}}</strong> · {{detail}}"
+    },
+    "topFiles_one": "The file at the top level stays where it is. Search finds it.",
+    "topFiles_other": "The {{count, number}} files at the top level stay where they are. Search finds them.",
+    "sync": {
+      "iCloud": "This folder is in iCloud Drive",
+      "oneDrive": "This folder is in OneDrive",
+      "dropbox": "This folder is in Dropbox",
+      "other": "This folder is in a cloud folder",
+      "text": "iCloud can change or re-download files while Folio uses them, which leaves conflict copies. Keep your library outside iCloud, OneDrive and Dropbox. A later version of Folio backs it up to iCloud for you."
+    }
+  },
+  "name": {
+    "label": "Library name",
+    "help": "Shown in Library settings. It doesn't change the folder's name.",
+    "errors": {
+      "NameEmpty": "Enter a name for the library.",
+      "NameTooLong": "Use 128 characters or fewer.",
+      "NameInvalidCharacter": "Remove line breaks and other control characters."
+    }
+  },
+  "presetTags": {
+    "notes": "Notes",
+    "slides": "Slides",
+    "homework": "Homework",
+    "exam": "Exams",
+    "reference": "Reference"
+  },
+  "errors": {
+    "alreadyALibrary": {
+      "title": "This folder is part of a Folio library",
+      "text": "This folder is already a Folio library, or is inside one. Open that library instead, or choose another folder."
+    },
+    "accessDenied": {
+      "title": "Folio can't write to this folder",
+      "text": "Windows didn't allow it. Choose a folder in your user folder, such as Documents, or on another drive."
+    },
+    "choiceExpired": {
+      "title": "Choose the folder again",
+      "text": "A folder choice lasts 10 minutes, and this one ran out. Nothing was created."
+    },
+    "notALibrary": {
+      "title": "This folder isn't a Folio library",
+      "text": "It has no .folio folder. Choose the folder that has one, or go back and start a new library."
+    },
+    "newerFormat": {
+      "title": "This library needs a newer Folio",
+      "text": "A newer version of Folio saved it. Update Folio, then open it again. Your files are fine."
+    },
+    "diskFull": {
+      "title": "The disk is full",
+      "text": "Free up some space on {{drive}}, then try again.",
+      "textNoDrive": "Free up some space on the disk, then try again."
+    },
+    "failed": {
+      "title": "Folio couldn't set up the library here",
+      "text": "Something went wrong while writing to the folder. Try again, or choose another folder."
+    }
+  },
+  "courses": {
+    "title": "Add your semester and courses",
+    "intro": "Folio makes a folder for the semester and one inside it for each course.",
+    "introNoFolders": "This folder has no semester folders yet.",
+    "semesterLabel": "Semester",
+    "semesterHelp": "For example Fall 2026 or Winter 2027.",
+    "label": "Courses",
+    "codeHeading": "Code (optional)",
+    "nameHeading": "Course name",
+    "folderHeading": "Folder name",
+    "codePlaceholder": "Code",
+    "namePlaceholder": "Course name",
+    "codeLabel": "Course {{number}} code",
+    "nameLabel": "Course {{number}} name",
+    "folderLabel": "Course {{number}} folder",
+    "colourLabel": "Course {{number}} colour: {{colour}}",
+    "remove": "Remove course {{number}}",
+    "created": "Course {{number}} created",
+    "add": "Add course",
+    "help": "Press Enter in a name to add another row. You can change colours and badge letters later in Library settings.",
+    "skip": "Skip for now",
+    "submit_one": "Create {{count, number}} course",
+    "submit_other": "Create {{count, number}} courses",
+    "submitSemester": "Create semester",
+    "submitMore_one": "Create {{count, number}} more course",
+    "submitMore_other": "Create {{count, number}} more courses",
+    "creating_one": "Creating {{count, number}} course…",
+    "creating_other": "Creating {{count, number}} courses…",
+    "creatingSemester": "Creating semester…",
+    "semesterDefault": {
+      "fall": "Fall {{year}}",
+      "winter": "Winter {{year}}",
+      "summer": "Summer {{year}}"
+    }
+  },
+  "colour": {
+    "caption": "Colour",
+    "footer": "{{colour}} · badge “{{badge}}”",
+    "footerNoBadge": "{{colour}}",
+    "names": {
+      "red": "Red",
+      "orange": "Orange",
+      "amber": "Amber",
+      "green": "Green",
+      "teal": "Teal",
+      "blue": "Blue",
+      "indigo": "Indigo",
+      "violet": "Violet",
+      "pink": "Pink",
+      "stone": "Stone"
+    }
+  },
+  "fields": {
+    "semester": {
+      "NameEmpty": "Enter a semester name.",
+      "NameInvalidCharacter": "A semester name can't contain \\ / : * ? \" < > | because it becomes a folder name.",
+      "AlreadyExists": "There's already a semester called {{name}}."
+    },
+    "course": {
+      "NameEmpty": "Enter a course name.",
+      "NameInvalidCharacter": "A course name can't contain \\ / : * ? \" < > | because it becomes a folder name.",
+      "AlreadyExists": "Another course in {{semester}} already has this name.",
+      "AlreadyExistsHere": "Another course in this semester already has this name."
+    },
+    "folder": {
+      "NameTrailingDotOrSpace": "A folder name can't end with a dot or a space.",
+      "NameReserved": "Windows reserves this name, like CON or NUL. Choose another.",
+      "NameTooLong": "This name is too long for a folder. Shorten it.",
+      "PathTooLong": "The folder's full path would be too long for Windows. Use a shorter name."
+    },
+    "code": {
+      "NameTooLong": "Use 32 characters or fewer.",
+      "NameInvalidCharacter": "Remove line breaks and other control characters."
+    }
+  },
+  "review": {
+    "title": "Check your semesters and courses",
+    "intro": "Add course codes if you like: they go before course names and in paths.",
+    "reading": "Reading your library…",
+    "soFar": "{{done, number}} files so far",
+    "ofTotal": "{{done, number}} of {{total, number}} files",
+    "progress": "Reading your library",
+    "readingHelp": "You can finish now. Folio keeps reading in the background and shows its progress in the toolbar.",
+    "read_one": "Read {{count, number}} file",
+    "read_other": "Read {{count, number}} files",
+    "readDone": "Folio has read your library",
+    "stopped": "Folio stopped reading your library",
+    "semesterLabel": "Semester to show first",
+    "semesterHelp": "Each folder at the top level is a semester: {{names}}.",
+    "more": "{{count, number}} more",
+    "coursesIn": "Courses in {{semester}} · {{count, number}}",
+    "noCourses": "Folio hasn't found course folders in {{semester}} yet.",
+    "laterNote": "You can change all of this later in Library settings.",
+    "finish": "Finish",
+    "finishing": "Finishing…"
+  },
+  "unavailable": {
+    "pathLabel": "Library folder",
+    "locate": "Locate library…",
+    "tryAgain": "Try again",
+    "trying": "Trying again…",
+    "or": "Or",
+    "startNew": "Start a new library",
+    "restart": "Restart Folio to try again.",
+    "missing": {
+      "title": "Can't find your library",
+      "text": "Folio keeps your library in the folder below, but it isn't there. If you moved or renamed it, show Folio where it is now. If it's on a drive that isn't connected, connect the drive and try again."
+    },
+    "notALibrary": {
+      "title": "Your library's settings are missing",
+      "text": "The folder below is still there, but its hidden .folio folder is missing or damaged, so Folio can't find your tags and course settings. If you have a copy of that folder, put it back and try again."
+    },
+    "newerFormat": {
+      "title": "This library needs a newer Folio",
+      "text": "A newer version of Folio saved this library. Update Folio, then open it again. Your files are fine."
+    },
+    "accessDenied": {
+      "title": "Folio can't open your library",
+      "text": "Windows denied access to the folder below. Check that you can open it in File Explorer, then try again."
+    },
+    "catalogFailed": {
+      "title": "Folio can't open its search index",
+      "text": "Your files are fine, but the index Folio keeps on this computer couldn't be opened. This happens when another copy of Folio is running or the disk is full. Close other copies of Folio, then try again."
+    }
+  },
+  "cantStart": {
+    "title": "Folio can't start",
+    "dataDir": "It can't find a place on this computer to keep its data. Restart Folio. If this keeps happening, copy the details and send them to the developer.",
+    "transport": "This window can't reach the rest of Folio. Restart Folio."
+  }
+}

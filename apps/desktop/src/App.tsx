@@ -8,10 +8,12 @@ import { Shell, type ShellProps } from './app/Shell';
 import { installShortcuts } from './app/shortcuts';
 import { ToastRegion } from './app/ToastRegion';
 import { installWindowFailureToasts } from './app/windowErrors';
+import { StartGate } from './first-run/StartGate';
 
 /**
- * The app: React Aria in the UI language (its own hidden labels follow it), the window shell, the
- * toasts and the live regions. The keyboard shortcuts and the window command failures are
+ * The app: React Aria in the UI language (its own hidden labels follow it), the window shell once
+ * a library is open (the first run and the unavailable library before that), the toasts and the
+ * live regions. The keyboard shortcuts and the window command failures are
  * app-wide, so they start here.
  */
 export function App(props: ShellProps) {
@@ -22,7 +24,9 @@ export function App(props: ShellProps) {
   return (
     <I18nProvider locale={i18n.language}>
       <ErrorBoundary source="shell">
-        <Shell {...props} />
+        <StartGate>
+          <Shell {...props} />
+        </StartGate>
       </ErrorBoundary>
       <ToastRegion />
       <Announcer />
