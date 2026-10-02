@@ -62,9 +62,11 @@ architecture §11). It serves two layers:
   console can drive it through `window.__FOLIO_FAKE_SHELL__` (`finishJobs()`, `dropFiles()`,
   `setProblems()`, `makeUnavailable()`). `.claude/launch.json` has `desktop-vite` (starts the
   dev server) and `desktop-browser-pane` (attaches to a running one; CLAUDE.md §7.5).
-- **View tests.** `renderApp(ui, { scenario, fixture, fail })` and `renderAppHook(hook, …)` give a
-  fresh query client, the providers and a fake shell; `src/test/virtual.ts` gives elements a box
-  so virtualised lists render rows in jsdom.
+- **View tests.** `renderApp(ui, { scenario, fixture, fail, now })` and `renderAppHook(hook, …)`
+  give a fresh query client, the providers and a fake shell; `src/test/virtual.ts` gives elements
+  a box so virtualised lists render rows in jsdom. `now` is the time the fixtures count from, the
+  fake shell dates new entries with and `Date` starts at (it keeps running), so dates the UI works
+  out, such as "Recently added", match the fixtures whatever the real time.
 
 Fixtures: `small` (hand-written), `large` (50,000 entries from a seeded generator), `first-run`
 (no library; the folder dialog answers with each kind of folder), plus `read-only`,

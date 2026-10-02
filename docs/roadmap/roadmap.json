@@ -720,9 +720,9 @@
       "effort": "low",
       "deps": [],
       "summary": "main 的 CI 是红的：3 个资料库视图测试按真实时钟数「最近添加」。renderApp 的 now 现在也启动 Date；生产代码不变",
-      "status": "review",
+      "status": "done",
       "updated": "2026-10-02",
-      "next": "第一个合并（规则 9：CI 红了先修）。只需 pnpm check，不用 e2e",
+      "landed": "2026-10-02",
       "gates": {
         "check": "pass",
         "e2e": "na",
@@ -2112,10 +2112,6 @@
     }
   ],
   "landingQueue": [
-    {
-      "lane": "fix/ui-recently-added-clock",
-      "why": "main 的 CI 红着（规则 9）；只改测试 helper"
-    },
     {
       "lane": "feat/ui-search-palette",
       "why": "评审都过了；预览依赖它的 lib/places.ts"

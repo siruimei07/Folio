@@ -12,7 +12,7 @@ import { render, renderHook } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import type { ReactElement, ReactNode } from 'react';
 import { I18nProvider } from 'react-aria-components';
-import { onTestFinished } from 'vitest';
+import { onTestFinished, vi } from 'vitest';
 
 import { createQueryClient } from '../data/client';
 import { DataProvider } from '../data/DataProvider';
@@ -29,7 +29,10 @@ export interface RenderAppOptions
   fixture?: Fixture;
   /** Commands that fail with a code, besides the scenario's own. */
   fail?: Failure[];
-  /** The time fixtures count from and new entries get; defaults to the clock at render. */
+  /**
+   * The time fixtures count from, new entries get and `Date` starts at (it keeps running); defaults
+   * to the clock at render.
+   */
   now?: number;
   /** The box every element reports, so virtualised lists render rows; `false` keeps jsdom's 0 × 0. */
   layout?: Size | false;
@@ -41,15 +44,26 @@ export function restoreStandInShell(): void {
   mockIPC(() => undefined, { shouldMockEvents: true });
 }
 
+/**
+ * Starts the page's clock at `now` until the test ends, so dates the UI works out ("Recently
+ * added") match the fixtures. Only `Date` is faked and it keeps running, so timers and elapsed
+ * times behave as with the real clock; a test's own fake timers only move to `now`.
+ */
+function startClockAt(now: number): void {
+  if (vi.isFakeTimers()) {
+    vi.setSystemTime(now);
+    return;
+  }
+  vi.useFakeTimers({ toFake: ['Date'], now, shouldAdvanceTime: true });
+  onTestFinished(() => {
+    vi.useRealTimers();
+  });
+}
+
 /** The fake shell, a query client and the providers; everything is undone when the test ends. */
-function setUpApp({
-  scenario,
-  fixture,
-  fail = [],
-  now = Date.now(),
-  layout,
-  ...options
-}: RenderAppOptions) {
+function setUpApp({ scenario, fixture, fail = [], now: start, layout, ...options }: RenderAppOptions) {
+  if (start !== undefined) startClockAt(start);
+  const now = start ?? Date.now();
   const named = fixture ? { fixture, failures: [] } : scenarioFixture(scenario ?? 'small', now);
   const shell = installFakeShell({
     ...options,
