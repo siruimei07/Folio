@@ -62,10 +62,11 @@ test('puts the toolbar into one 40 px bar below 760 px and back', async ({ folio
   await page.setViewportSize({ width: 600, height: 400 });
   await expect(page.locator('html')).toHaveAttribute('data-layout', 'narrow');
   await expect(bar).toHaveAttribute('data-variant', 'narrow');
-  expect((await bar.boundingBox())?.height).toBe(41);
+  // To within 0.05 px: some displays lay the bar out at 40.995 px.
+  expect((await bar.boundingBox())?.height).toBeCloseTo(41, 1);
   // The caption buttons stay at the right edge, where the snap layouts overlay follows them.
   const close = await bar.getByRole('button', { name: titlebar.close }).boundingBox();
-  expect(close?.x).toBe(600 - 46);
+  expect(close?.x).toBeCloseTo(600 - 46, 1);
 
   await page.setViewportSize({ width: 1000, height: 700 });
   await expect(page.locator('html')).toHaveAttribute('data-layout', 'wide');
