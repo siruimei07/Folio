@@ -1126,11 +1126,17 @@ inside the page), `katex` fonts and CSS.
 4. Whether Tauri exposes WebView2's browser accelerator keys setting (`feat/ui-app-shell`, §6.4).
    Checked 2026-09-30: no. wry 0.57 has `with_browser_accelerator_keys`, but tauri-runtime-wry 2.12
    does not pass it through and Tauri's config has no key for it (zoom keys are already off,
-   `zoomHotkeysEnabled: false`). The shell can set `ICoreWebView2Settings3::
-   SetAreBrowserAcceleratorKeysEnabled(false)` in release builds through
-   `WebviewWindow::with_webview` and the controller, before the first navigation; that needs
-   `webview2-com` as a direct dependency (already in the lockfile through wry). Handed to a backend
-   lane (Codex): release builds only, since debug builds and e2e keep DevTools.
+   `zoomHotkeysEnabled: false`). Settled 2026-10-01 by `chore/core-webview-accelerator-keys`
+   (`folio-app/src/webview_settings.rs`, with `webview2-com` at the version wry already locks):
+   release builds open the main window at `about:blank`, which the runtime does not navigate to,
+   turn the keys off in `WebviewWindow::with_webview`
+   (`ICoreWebView2Settings3::SetAreBrowserAcceleratorKeysEnabled(false)`), then navigate to the
+   app page natively, so a failure of either stops startup. Debug builds and e2e keep the keys
+   for DevTools. Checked with native key presses in a release build (2026-10-01, WebView2 154):
+   F5 and Ctrl+R did not reload, Ctrl+F, F3 and Ctrl+P opened no find or print UI, and Ctrl+K,
+   Ctrl+1 and Ctrl+, reached the page; the debug build still reloads, finds and prints. CDP key
+   injection does not trigger browser actions even in debug builds, so only native input shows
+   this.
 
 ## 18. Next lanes and changes to other documents
 

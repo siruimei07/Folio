@@ -17,6 +17,8 @@ mod thumbnail;
 mod window_background;
 mod window_chrome;
 
+mod webview_settings;
+
 use std::sync::Arc;
 use tauri::Manager;
 use tauri_specta::Event;
@@ -127,9 +129,7 @@ pub fn run() {
                 .ok_or("tauri.conf.json declares no main window")?
                 .clone();
             let dark = window_background::apps_use_dark_mode();
-            let main = tauri::WebviewWindowBuilder::from_config(app.handle(), &config)?
-                .background_color(window_background::first_frame(dark))
-                .build()?;
+            let main = webview_settings::build_main(app, config, dark)?;
             if let Err(error) = window_chrome::install(&main) {
                 // The title bar still works without it; only the snap layouts flyout is lost.
                 diagnostics::report(app.handle(), &format!("snap layouts unavailable: {error}"));
@@ -167,12 +167,12 @@ fn drain_then(app: &tauri::AppHandle, then: impl FnOnce() + Send + 'static) {
 
 #[cfg(test)]
 mod tests {
-    /// The workspace pins `windows` and `windows-core` to the versions Tauri locks (Cargo.toml),
-    /// so each compiles once. A Tauri upgrade that moves them must move the pins too.
+    /// The workspace pins `windows`, `windows-core` and `webview2-com` to the versions Tauri locks
+    /// (Cargo.toml), so each compiles once. A Tauri upgrade that moves them must move the pins too.
     #[test]
     fn windows_crates_follow_tauri() {
         let lock = include_str!("../../../Cargo.lock");
-        for name in ["windows", "windows-core"] {
+        for name in ["windows", "windows-core", "webview2-com"] {
             let entry = format!("name = \"{name}\"");
             let versions = lock.lines().filter(|line| *line == entry).count();
             assert_eq!(

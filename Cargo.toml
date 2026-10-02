@@ -37,6 +37,8 @@ windows-sys = "0.61.2"
 # windows-core by name, so it is a direct dependency too.
 windows = "=0.62.2"
 windows-core = "=0.62.2"
+# WebView2's COM interfaces, at the version wry already uses (the same test checks it).
+webview2-com = "=0.39.1"
 # Tauri: the exact requirements below hold only these two crates; Cargo.lock holds the rest of the
 # family (tauri-runtime, tauri-utils, wry), so update them with `cargo update -p <crate> --precise`,
 # never a bare `cargo update`. The Tauri CLI refuses to build when @tauri-apps/api is on another
