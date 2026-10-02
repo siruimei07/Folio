@@ -19,9 +19,9 @@ import { courseCode, courseNameAfterCode } from '../../lib/courses';
 import { nameOf, parentOf } from '../../lib/paths';
 import { SIZE } from '../../tokens/tokens';
 import { useAddFiles } from '../addFiles';
-import { displayName } from '../commands';
+import { displayName, useLibraryCommands } from '../commands';
 import { NO_FILTER } from '../filters';
-import { EntryMenu } from '../menus/EntryMenu';
+import { EntryMenu, TagsSubmenu } from '../menus/EntryMenu';
 import { prefixOf } from '../places';
 import { usePreferences } from '../preferences';
 import { useOpenQuickFilter } from '../quick';
@@ -175,19 +175,22 @@ function QuickPane({ view, onBack }: { view: QuickView; onBack?: () => void }) {
   );
 }
 
-/** A file: the preview pane of `feat/ui-preview` once it lands, its empty state until then. */
+/** A file: the preview pane of `feat/ui-preview`, with the Library's actions and menus. */
 function FilePane({ entry, onBack }: { entry: EntryRef; onBack?: () => void }) {
   const { t } = useTranslation('library');
   const row = useEntry(entry).data;
+  const commands = useLibraryCommands();
   if (PREVIEW_PANE === null) return <EmptyPreview title={t('pane.empty.title')} text={t('pane.empty.text')} />;
   const Preview = PREVIEW_PANE;
-  const target = row === undefined ? null : targetOf(row);
+  const targets = row === undefined ? null : [targetOf(row)];
   return (
     <ErrorBoundary source="preview" kind="preview">
       <Preview
         entry={entry}
         onBack={onBack}
-        moreMenu={target === null ? undefined : <EntryMenu targets={[target]} region="pane" more />}
+        moreMenu={targets === null ? undefined : <EntryMenu targets={targets} region="pane" more />}
+        tagMenu={targets === null ? undefined : <TagsSubmenu targets={targets} />}
+        actions={commands}
       />
     </ErrorBoundary>
   );

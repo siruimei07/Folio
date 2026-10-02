@@ -94,6 +94,12 @@ export const SIZE = {
   iconThumbnail: 34,
   illustrationWidth: 240,
   illustrationHeight: 170,
+  document: 620,
+  documentPaddingBlock: 28,
+  documentPaddingInline: 40,
+  codeGutter: 44,
+  iconCard: 44,
+  pagePill: 26,
   folderPicker: 320,
   treeSeparator: 13,
 } as const;

@@ -1,0 +1,121 @@
+/* The preview frame's document (UI architecture §10.2): tokens from its own origin, the theme
+   from the render message (data-theme on the root), and the text and code view. */
+@import '../../tokens/tokens.css';
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--color-surface-panel);
+  color: var(--color-text-primary);
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-body);
+  line-height: var(--font-line-height-body);
+}
+
+:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+#preview {
+  min-height: 100%;
+}
+
+/* PDF pages sit on the sunken surface; text, code and notes on the panel (app-shell §5). */
+#preview[data-renderer='pdf'] {
+  height: 100%;
+  background: var(--color-surface-sunken);
+}
+
+/* Text and code: 13 px Cascadia Mono on 22 px lines, numbers in a gutter that stays while the
+   lines scroll sideways. The document scrolls, so the keyboard scrolls it as soon as the frame
+   has focus. */
+.lines {
+  display: flex;
+  width: max-content;
+  min-width: 100%;
+  box-sizing: border-box;
+  padding-block: var(--space-12);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-code);
+  line-height: var(--font-line-height-code);
+}
+
+.lines pre {
+  margin: 0;
+  font: inherit;
+}
+
+.lines__gutter {
+  position: sticky;
+  left: 0;
+  flex: none;
+  box-sizing: border-box;
+  min-width: var(--size-code-gutter);
+  padding-inline: var(--space-8) var(--space-16);
+  background: var(--color-surface-panel);
+  color: var(--color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  user-select: none;
+}
+
+.lines__text {
+  flex: 1;
+  padding-inline-end: var(--space-24);
+  white-space: pre;
+  tab-size: 4;
+}
+
+/* highlight.js classes on the four syntax colours (color.syntax.*); the rest stays text colour. */
+.hljs-keyword,
+.hljs-literal,
+.hljs-selector-tag,
+.hljs-section,
+.hljs-name,
+.hljs-doctag,
+.hljs-meta .hljs-keyword {
+  color: var(--color-syntax-keyword);
+}
+
+.hljs-string,
+.hljs-regexp,
+.hljs-symbol,
+.hljs-char,
+.hljs-template-variable,
+.hljs-addition,
+.hljs-meta .hljs-string {
+  color: var(--color-syntax-string);
+}
+
+.hljs-title,
+.hljs-function,
+.hljs-type,
+.hljs-built_in,
+.hljs-attr,
+.hljs-attribute,
+.hljs-number,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-variable.language_ {
+  color: var(--color-syntax-function);
+}
+
+.hljs-comment,
+.hljs-quote,
+.hljs-meta,
+.hljs-deletion {
+  color: var(--color-syntax-comment);
+}
+
+.hljs-emphasis {
+  font-style: italic;
+}
+
+.hljs-strong {
+  font-weight: var(--font-weight-strong);
+}

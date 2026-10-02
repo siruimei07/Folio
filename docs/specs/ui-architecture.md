@@ -133,9 +133,9 @@ apps/desktop/src/
                          file-types.ts (extension → class, icon, renderer)
   library/               Library view
   search/                Ctrl+K palette
-  preview/               PreviewPane, PreviewFrame (the only <iframe>), ImagePreview, MediaPreview,
-                         protocol.ts
-    frame/               runs inside the frame: frame.ts (entry), text.ts, code.ts, markdown.ts, pdf.ts
+  preview/               PreviewPane, PreviewHeader, PreviewBody, PreviewFrame (the only <iframe>),
+                         protocol.ts, kinds.ts (§10.6)
+    frame/               runs inside the frame: main.ts (entry), text.ts, highlight.ts, markdown.ts, pdf.ts
   settings/              library/ and app/ dialogs
   import/                drop target, import dialog, progress
   first-run/             welcome, new library, take over, first semester and courses
@@ -803,6 +803,62 @@ resolve_paths({ base: EntryRef; paths: string[] }) → (EntryRow | null)[]   // 
   (scrolling, text selection, `Ctrl+C`).
 - Esc inside the frame moves focus back to the preview header.
 
+### 10.6 As built (`feat/ui-preview`, 2026-10-01)
+
+- **Pane.** `preview/PreviewPane.tsx` is `PREVIEW_PANE` in `app/panes.ts`. Its props: `entry`,
+  `onBack`, `moreMenu`, `tagMenu` (the host's Tags menu for "+ Tag") and `actions`
+  (`open`, `showInExplorer`, `setTags`): the host passes its own commands, so the toasts of
+  library-actions §9.3 exist once. The Library passes `useLibraryCommands()` and its
+  `TagsSubmenu`. The header follows app-shell §5 without "View history of this file" (M2); a
+  narrow window keeps Open and More. A read-only library shows tags without remove buttons or
+  "+ Tag". The body remounts for every id, path, version and "Try again".
+- **Kinds** by extension live in `preview/kinds.ts` (`previewKindOf`, `codeLanguageOf`,
+  `imageTypeOf`), on top of `lib/file-types.ts`. Audio and video Chromium cannot play (wma, aiff,
+  avi, wmv, mpg) get the card; so does a media file that fails to decode. Folding these tables
+  into `lib/file-types.ts` as one table per extension is left for a later cleanup.
+- **HEIC and TIFF** (HEIC checked 2026-10-01 with a file from Windows' own HEIF encoder):
+  WebView2 154 cannot decode them in `<img>`. The 256 px thumbnail the scheme makes through WIC
+  shows, with "Reduced preview from Windows" and "Open with default app"; when Windows has no
+  thumbnail (no HEIF extension, say) the scheme answers `NoThumbnail` and the card shows.
+- **Protocol** (`preview/protocol.ts`, validated on both sides, unknown keys refused) adds to
+  §10.3: `render.strings`, the few words the frame shows (its document title, image placeholder
+  notes, the label of the text), since the frame has no UI strings; an `appearance` message when
+  the app's theme or reduced motion changes while a file shows. Esc arrives as a `shortcut`
+  message, and `isForwardedPress` (Esc, or Ctrl with one character or Enter) decides on both
+  sides which presses travel, so a misbehaving frame can press no other key in the window. PDF
+  zoom is `fit-width` or a percentage. The size limits are in the protocol, so the frame checks
+  them too. The frame starts while the window fetches the bytes; `render` goes once both are
+  ready.
+- **Text and code** show the line numbers as one text node in a sticky gutter and the text as one
+  `<pre>`, highlighted spans or plain, instead of one element per line: a 5 MB log costs a handful
+  of elements, and selecting text never takes numbers.
+- **PDF.** The worker is the bundled `pdf.worker.mjs` behind Vite's `?worker&inline` (a `blob:`
+  URL; Vite's `data:` fallback is refused by `worker-src blob:`). The frame waits up to 3 s for its
+  `ready` and otherwise imports the worker module, so pdf.js runs on the frame's thread. CMaps,
+  standard fonts and the three decoders (`openjpeg`, `jbig2`, `qcms_bg`; not `quickjs-eval`, the
+  PDF JavaScript engine) are bundled as lazily imported `data:` modules (`?url&inline` globs) that
+  a `BinaryDataFactory` decodes; `iccUrl` stays unset (pdf.js reads that profile with a
+  synchronous fetch, which the CSP refuses). Zoom starts at pdf.js's `auto` (the panel's width,
+  at most 125 %, a whole page for landscape pages).
+  Measured 2026-10-01 in the debug build, WebView2 154, a 300-page 100 MB scanned PDF with an
+  ICC-profiled image per page: the `blob:` worker starts in the sandboxed frame; the first page
+  renders 1.46 s after the click (three runs, 1.46–1.49 s); the window's longest frame gap during
+  the load is 90–95 ms. The frame runs in its own renderer process (another site), so a frame
+  thread kept busy for 2 s left the window's longest frame gap at 6 ms: the fallback cannot block
+  the window. An e2e probe checks that a worker in the frame starts from `blob:` only, compiles
+  WebAssembly, and reaches neither the network, IPC, the `folio-file` scheme, other scripts nor
+  `eval`.
+- **Maths** (§17 item 2): Temml with Cambria Math renders aligned environments, `pmatrix`,
+  `cases`, `\mathbb`, sums, integrals and fractions on a real midterm review cleanly in both
+  themes; KaTeX is not needed. `Temml-Local.css` comes along for `\cancel`, boxes and script
+  letters. Temml loads only for notes with `$`, `\(`, `\[` or a ` ```math ` fence, and the
+  grammars only for fenced code (each block up to the code renderer's 1 MB).
+- **Images next to a note** follow §10.4; the frame sends the raw paths, the window decodes them
+  (`notePath`), and a path that names a catalogued file that is not an image (a PDF, say) gets
+  `missing`, so its bytes never reach the frame.
+- **Loading** shows skeleton rows over the frame (not instead of it: a hidden frame would not
+  render its first page) until `rendered`.
+
 ## 11. Fake shell for the browser pane and tests
 
 ### 11.1 Design
@@ -1053,8 +1109,10 @@ inside the page), `katex` fonts and CSS.
 
 1. pdf.js in the sandboxed frame: whether WebView2 starts a `blob:` worker there; time to first page
    on a 300-page scanned PDF; the fake-worker fallback's effect on the window (`feat/ui-preview`).
+   Settled 2026-10-01: the worker starts; first page in 1.5 s; the fallback cannot block the window (§10.6).
 2. Temml's output on real course notes (aligned environments, matrices, `\mathbb`) with Cambria
    Math; KaTeX with its own fonts is the fallback if it falls short (`feat/ui-preview`).
+   Settled 2026-10-01: Temml is enough; no KaTeX (§10.6).
 3. The filtered-tree cap of 5,000 matches (`feat/ui-library-view`, §8.2).
 4. Whether Tauri exposes WebView2's browser accelerator keys setting (`feat/ui-app-shell`, §6.4).
    Checked 2026-09-30: no. wry 0.57 has `with_browser_accelerator_keys`, but tauri-runtime-wry 2.12

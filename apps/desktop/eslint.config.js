@@ -25,7 +25,7 @@ const FEATURES = [
 
 // The code that runs inside the sandboxed preview frame, the only place that may parse file
 // content as HTML (ui-architecture §14 rule 1).
-const FRAME = ['src/preview/frame.ts', 'src/preview/frame/**'];
+const FRAME = ['src/preview/frame/**'];
 
 // Dates, times and numbers follow the UI language, never the Windows locale (src/i18n/README.md).
 const LOCALE_RULE = {

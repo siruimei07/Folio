@@ -1,0 +1,171 @@
+/* A Markdown note (app-shell §5): on the panel, a 620 px text column with 28 / 40 px of space,
+   H1 22 px and H2 16 px at 600, lists at the reading line height, formulas in the maths font.
+   The note follows the app's theme. A narrow preview keeps more of its width for text: the space
+   shrinks with the frame's width down to the narrow window's 14 / 18 px. */
+
+.note {
+  box-sizing: content-box;
+  max-width: var(--size-document);
+  padding: clamp(var(--space-14), 3.5vw, var(--size-document-padding-block))
+    clamp(var(--space-18), 5vw, var(--size-document-padding-inline));
+  overflow-wrap: break-word;
+}
+
+.note > :first-child {
+  margin-top: 0;
+}
+
+.note > :last-child {
+  margin-bottom: 0;
+}
+
+.note p,
+.note ul,
+.note ol,
+.note blockquote,
+.note pre,
+.note table,
+.note details,
+.note hr {
+  margin: 0 0 var(--space-12);
+}
+
+.note h1,
+.note h2,
+.note h3,
+.note h4,
+.note h5,
+.note h6 {
+  margin: var(--space-20) 0 var(--space-8);
+  font-weight: var(--font-weight-strong);
+  line-height: var(--font-line-height-heading);
+}
+
+.note h1 {
+  font-size: var(--font-size-document-title);
+}
+
+.note h2 {
+  font-size: var(--font-size-document-heading);
+}
+
+.note h3,
+.note h4,
+.note h5,
+.note h6 {
+  font-size: var(--font-size-body);
+}
+
+.note ul,
+.note ol {
+  padding-inline-start: var(--space-24);
+  line-height: var(--font-line-height-reading);
+}
+
+.note li > ul,
+.note li > ol {
+  margin-bottom: 0;
+}
+
+.note a {
+  color: var(--color-accent-default);
+  text-decoration: underline;
+  text-underline-offset: var(--space-2);
+}
+
+.note blockquote {
+  padding-inline-start: var(--space-12);
+  border-inline-start: var(--space-2) solid var(--color-border-strong);
+  color: var(--color-text-secondary);
+}
+
+.note code {
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-badge-mini);
+  background: var(--color-surface-sunken);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-code);
+}
+
+.note pre {
+  overflow-x: auto;
+  padding: var(--space-12) var(--space-14);
+  border: var(--border-width) solid var(--color-border-default);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-sunken);
+  line-height: var(--font-line-height-code);
+}
+
+.note pre code {
+  padding: 0;
+  background: none;
+}
+
+.note table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+}
+
+.note th,
+.note td {
+  padding: var(--space-4) var(--space-10);
+  border: var(--border-width) solid var(--color-border-default);
+  text-align: start;
+}
+
+.note th {
+  background: var(--color-surface-sunken);
+  font-weight: var(--font-weight-strong);
+}
+
+.note hr {
+  border: 0;
+  border-top: var(--border-width) solid var(--color-border-default);
+}
+
+.note img {
+  max-width: 100%;
+  height: auto;
+}
+
+.note summary {
+  cursor: pointer;
+}
+
+/* Formulas: MathML Core with the system maths font (Cambria Math). */
+.note math {
+  font-family: var(--font-family-math);
+}
+
+.note math[display='block'],
+.note math.tml-display {
+  margin: var(--space-12) 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* An image next to the note while it loads, one that is not there, or one on the web. */
+.note-image {
+  display: inline-flex;
+  max-width: 100%;
+  box-sizing: border-box;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-8) var(--space-12);
+  border: var(--border-width) dashed var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-sunken);
+  vertical-align: middle;
+}
+
+.note-image__alt {
+  color: var(--color-text-secondary);
+}
+
+.note-image__note {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-small);
+  overflow-wrap: anywhere;
+}

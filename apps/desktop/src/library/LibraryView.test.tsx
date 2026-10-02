@@ -149,12 +149,12 @@ describe('the tree', () => {
     expect([...useLibraryView.getState().panel.entries.values()].map((entry) => entry.path)).toEqual([MAT]);
   });
 
-  it('shows a file on a click; until the preview pane lands, the empty preview', async () => {
+  it('shows a file on a click in the preview pane', async () => {
     const { user } = renderLibrary();
     await user.click(await findRow('MAT232'));
     await user.click(await findRow('week 2 notes.md'));
     expect(useLibraryView.getState().active).toMatchObject({ kind: 'file', entry: { path: `${MAT}/week 2 notes.md` } });
-    expect(screen.getByText('Select a file to preview')).toBeInTheDocument();
+    expect(await screen.findByRole('group', { name: 'Preview of week 2 notes.md' })).toBeInTheDocument();
   });
 
   it('opens a script in an editor on a double-click, and says why', async () => {

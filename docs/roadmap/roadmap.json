@@ -929,12 +929,12 @@
         "feat/ui-search-palette"
       ],
       "summary": "图片、PDF（pdf.js）、Markdown（公式、代码高亮、笔记旁的图片）、代码、音视频、HEIC/TIFF、其他文件的卡片；链接只显示地址；每个文件一个沙箱 frame；预览 CSP 加 worker-src blob: 和 wasm-unsafe-eval",
-      "status": "wip",
+      "status": "done",
       "updated": "2026-10-02",
-      "next": "WIP 检查点（1 个提交）。评审都做过了：跑完整 pnpm check 和 app lock 下的 pnpm e2e，把收尾改动提交，汇报后在搜索之后合并",
+      "landed": "2026-10-02",
       "gates": {
         "check": "pass",
-        "e2e": "partial",
+        "e2e": "pass",
         "codeReview": "pass",
         "securityReview": "pass",
         "simplify": "pass",
@@ -2123,10 +2123,6 @@
     {
       "lane": "feat/core-first-frame-theme",
       "why": "紧跟快捷键 lane"
-    },
-    {
-      "lane": "feat/ui-preview",
-      "why": "跑完完整检查后合并，必须在搜索之后"
     },
     {
       "lane": "feat/core-import",

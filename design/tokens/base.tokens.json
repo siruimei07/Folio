@@ -1029,6 +1029,54 @@
       },
       "$description": "Height of the desk illustration of the empty preview (app-shell 9C)."
     },
+    "document": {
+      "$type": "dimension",
+      "$value": {
+        "value": 620,
+        "unit": "px"
+      },
+      "$description": "Width of a Markdown note's text column in the preview (app-shell §5)."
+    },
+    "document-padding-block": {
+      "$type": "dimension",
+      "$value": {
+        "value": 28,
+        "unit": "px"
+      },
+      "$description": "Space above and below a Markdown note in the preview (app-shell §5)."
+    },
+    "document-padding-inline": {
+      "$type": "dimension",
+      "$value": {
+        "value": 40,
+        "unit": "px"
+      },
+      "$description": "Space left and right of a Markdown note in the preview (app-shell §5)."
+    },
+    "code-gutter": {
+      "$type": "dimension",
+      "$value": {
+        "value": 44,
+        "unit": "px"
+      },
+      "$description": "The line-number column of text and code previews."
+    },
+    "icon-card": {
+      "$type": "dimension",
+      "$value": {
+        "value": 44,
+        "unit": "px"
+      },
+      "$description": "The file-type icon of the preview card for files Folio does not show (app-shell §5)."
+    },
+    "page-pill": {
+      "$type": "dimension",
+      "$value": {
+        "value": 26,
+        "unit": "px"
+      },
+      "$description": "Height of the PDF preview's page and zoom pill (\"1 / 4 · 100%\")."
+    },
     "folder-picker": {
       "$type": "dimension",
       "$value": {

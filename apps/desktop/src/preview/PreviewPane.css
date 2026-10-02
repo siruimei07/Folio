@@ -1,0 +1,284 @@
+/* The preview of a file (app-shell handoff §5): header, tag row, and the body by type. Images and
+   video sit on the dark backdrop, cards and errors on the sunken surface, notes and code on the
+   panel, PDF pages on the sunken surface with the page and zoom pill. */
+
+.preview {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.preview-header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-8);
+  box-sizing: border-box;
+  height: var(--size-panel-header);
+  padding: 0 var(--space-8) 0 var(--space-12);
+  border-bottom: var(--border-width) solid var(--color-border-default);
+  background: var(--color-surface-panel);
+}
+
+.preview-header__title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-regular);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preview-header__title:focus-visible {
+  outline-offset: calc(-1 * var(--focus-ring-width));
+}
+
+.preview-header__path {
+  color: var(--color-text-tertiary);
+}
+
+.preview-header__name {
+  font-weight: var(--font-weight-strong);
+}
+
+.preview-header__actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.preview-tags {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-6);
+  padding: var(--space-8) var(--space-12);
+  border-bottom: var(--border-width) solid var(--color-border-default);
+  background: var(--color-surface-panel);
+}
+
+.preview-tags .tag-chip-list {
+  gap: var(--space-6);
+}
+
+/* The dashed "+ Tag" chip. */
+.tag-chip.preview-tags__add {
+  gap: var(--space-4);
+  border-style: dashed;
+  border-color: var(--color-border-strong);
+}
+
+.preview-tags__meta {
+  margin-inline-start: auto;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-caption);
+  white-space: nowrap;
+}
+
+.preview-body {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Cards, failures and audio: centred on the sunken surface. */
+.preview-state {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  background: var(--color-surface-sunken);
+}
+
+.preview-card {
+  display: flex;
+  max-width: var(--size-state-block-width);
+  box-sizing: border-box;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-10);
+  margin: auto;
+  padding: var(--space-16);
+  text-align: center;
+}
+
+.preview-card > p {
+  margin: 0;
+}
+
+.preview-card__name {
+  font-weight: var(--font-weight-strong);
+  overflow-wrap: anywhere;
+}
+
+.preview-card__note {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-small);
+}
+
+.preview-card .button {
+  margin-top: var(--space-4);
+}
+
+.preview-card__thumbnail {
+  max-width: 100%;
+  border-radius: var(--radius-control);
+  box-shadow: var(--shadow-page);
+}
+
+/* The card shrinks to its content, so the player gets the card's full width itself. */
+.preview-audio {
+  width: var(--size-state-block-width);
+  max-width: 100%;
+}
+
+/* Images and video: centred on the dark backdrop, never larger than the pane. */
+.preview-backdrop {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: var(--space-16);
+  background: var(--color-surface-backdrop);
+}
+
+.preview-image,
+.preview-video {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* The frame fills the body; its own document draws the background. */
+.preview-frame-host {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  background: var(--color-surface-panel);
+}
+
+.preview-frame-host[data-renderer='pdf'] {
+  background: var(--color-surface-sunken);
+}
+
+.preview-frame {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* While the file loads: skeleton rows over the frame, on the frame's own background. */
+.preview-loading {
+  position: absolute;
+  inset: 0;
+  background: inherit;
+}
+
+.preview-frame:focus-visible {
+  outline-offset: calc(-1 * var(--focus-ring-width));
+}
+
+/* "1 / 4 · 100%": floats over the bottom of the pages, in the primary button colours. */
+.pdf-pill {
+  position: absolute;
+  bottom: var(--space-14);
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  box-sizing: border-box;
+  height: var(--size-page-pill);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-button-primary);
+  box-shadow: var(--shadow-menu);
+  color: var(--color-text-on-primary);
+  font-size: var(--font-size-small);
+  font-variant-numeric: tabular-nums;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.pdf-pill__button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-target-min);
+  height: var(--size-target-min);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: inherit;
+  transition: background-color var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.pdf-pill__button[data-hovered] {
+  background: var(--color-button-primary-hover);
+}
+
+.pdf-pill__button[data-disabled] {
+  color: var(--color-text-tertiary);
+}
+
+.pdf-pill__text {
+  padding: 0 var(--space-4);
+}
+
+.pdf-pill__divider {
+  width: var(--border-width);
+  height: var(--space-12);
+  margin: 0 var(--space-4);
+  background: currentColor;
+}
+
+/* Where a clicked link is in the frame: the address popover's anchor. */
+.link-anchor {
+  position: absolute;
+  pointer-events: none;
+}
+
+.link-popover {
+  max-width: var(--size-state-block-width);
+}
+
+.link-popover__dialog {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-8);
+  padding: var(--space-12);
+  outline: none;
+}
+
+.link-popover__dialog > p {
+  margin: 0;
+}
+
+.link-popover__address {
+  max-height: calc(4 * var(--font-size-body) * var(--font-line-height-body));
+  overflow: auto;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-small);
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.link-popover__note {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-small);
+}

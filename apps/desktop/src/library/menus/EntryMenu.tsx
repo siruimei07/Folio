@@ -59,7 +59,7 @@ interface TagsSubmenuProps {
  * Choosing an unchecked or mixed tag adds it to all, a checked one removes it from all. Space and
  * clicks keep the menu open, Enter closes it (React Aria's multiple-selection menus).
  */
-function TagsSubmenu({ targets }: TagsSubmenuProps) {
+export function TagsSubmenu({ targets }: TagsSubmenuProps) {
   const { t } = useTranslation('library');
   const tags = useTags().data ?? NO_TAG_LIST;
   const commands = useLibraryCommands();

@@ -1,0 +1,29 @@
+/* PDF pages (app-shell §5): white pages on the sunken surface, light in dark mode too, with room
+   below the last page for the window's page and zoom pill. Loaded after pdf.js's viewer CSS. */
+
+/* pdf.js sets `color-scheme: light dark` on the root; the app's theme decides instead. */
+:root {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+.pdf {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  --page-margin: var(--space-16) auto 0;
+  --pdfViewer-padding-bottom: calc(var(--size-page-pill) + 2 * var(--space-14));
+  --page-bg-color: var(--color-surface-page);
+}
+
+.pdf:focus-visible {
+  outline-offset: calc(-1 * var(--focus-ring-width));
+}
+
+/* The page's shadow sits on its paint, inside pdf.js's transparent page border. */
+.pdf .page .canvasWrapper {
+  box-shadow: var(--shadow-page);
+}

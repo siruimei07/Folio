@@ -137,6 +137,12 @@
   --size-icon-thumbnail: 34px;
   --size-illustration-width: 240px;
   --size-illustration-height: 170px;
+  --size-document: 620px;
+  --size-document-padding-block: 28px;
+  --size-document-padding-inline: 40px;
+  --size-code-gutter: 44px;
+  --size-icon-card: 44px;
+  --size-page-pill: 26px;
   --size-folder-picker: 320px;
   --size-tree-separator: 13px;
   --radius-panel: 10px;
@@ -181,6 +187,7 @@
   --color-surface-chrome: #fbfaf9;
   --color-surface-modal: #f7f6f4;
   --color-surface-page: #ffffff;
+  --color-surface-backdrop: #262321;
   --color-surface-hover: #f4f2ef;
   --color-surface-selected: #e2f0ed;
   --color-border-default: #e0dcd8;
@@ -299,6 +306,7 @@
   --caption-close-hover-color: #ffffff;
   --shadow-overlay: 0px 18px 44px 0px rgb(28 25 23 / 0.16), 0px 2px 8px 0px rgb(28 25 23 / 0.07);
   --shadow-menu: 0px 8px 24px 0px rgb(28 25 23 / 0.14), 0px 1px 3px 0px rgb(28 25 23 / 0.08);
+  --shadow-page: 0px 1px 3px 0px rgb(28 25 23 / 0.12), 0px 0px 0px 1px rgb(28 25 23 / 0.06);
 }
 
 /* Theme "Dark", or "System" while Windows uses dark mode. */
@@ -310,6 +318,7 @@
   --color-surface-chrome: #1b1918;
   --color-surface-modal: #191716;
   --color-surface-page: #f7f5f2;
+  --color-surface-backdrop: #0e0d0c;
   --color-surface-hover: #262321;
   --color-surface-selected: #16302d;
   --color-border-default: #332f2c;
@@ -428,6 +437,7 @@
   --caption-close-hover-color: #ffffff;
   --shadow-overlay: 0px 18px 44px 0px rgb(0 0 0 / 0.55), 0px 2px 8px 0px rgb(0 0 0 / 0.35);
   --shadow-menu: 0px 8px 24px 0px rgb(0 0 0 / 0.5), 0px 1px 3px 0px rgb(0 0 0 / 0.35);
+  --shadow-page: 0px 1px 3px 0px rgb(0 0 0 / 0.5), 0px 0px 0px 1px rgb(0 0 0 / 0.35);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -439,6 +449,7 @@
     --color-surface-chrome: #1b1918;
     --color-surface-modal: #191716;
     --color-surface-page: #f7f5f2;
+    --color-surface-backdrop: #0e0d0c;
     --color-surface-hover: #262321;
     --color-surface-selected: #16302d;
     --color-border-default: #332f2c;
@@ -557,6 +568,7 @@
     --caption-close-hover-color: #ffffff;
     --shadow-overlay: 0px 18px 44px 0px rgb(0 0 0 / 0.55), 0px 2px 8px 0px rgb(0 0 0 / 0.35);
     --shadow-menu: 0px 8px 24px 0px rgb(0 0 0 / 0.5), 0px 1px 3px 0px rgb(0 0 0 / 0.35);
+    --shadow-page: 0px 1px 3px 0px rgb(0 0 0 / 0.5), 0px 0px 0px 1px rgb(0 0 0 / 0.35);
   }
 }
 

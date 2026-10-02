@@ -56,6 +56,15 @@
         },
         "$description": "Paper of PDF, Word and slide previews (stays light in dark mode)."
       },
+      "backdrop": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.0549, 0.051, 0.0471],
+          "hex": "#0e0d0c"
+        },
+        "$description": "Behind images and video in the preview: dark in both modes, so photos and slides read as lit."
+      },
       "hover": {
         "$type": "color",
         "$value": {
@@ -1247,6 +1256,60 @@
         }
       ],
       "$description": "Context menus, popovers and toasts: a lower elevation than dialogs."
+    },
+    "page": {
+      "$type": "shadow",
+      "$value": [
+        {
+          "color": {
+            "colorSpace": "srgb",
+            "components": [0, 0, 0],
+            "alpha": 0.5,
+            "hex": "#000000"
+          },
+          "offsetX": {
+            "value": 0,
+            "unit": "px"
+          },
+          "offsetY": {
+            "value": 1,
+            "unit": "px"
+          },
+          "blur": {
+            "value": 3,
+            "unit": "px"
+          },
+          "spread": {
+            "value": 0,
+            "unit": "px"
+          }
+        },
+        {
+          "color": {
+            "colorSpace": "srgb",
+            "components": [0, 0, 0],
+            "alpha": 0.35,
+            "hex": "#000000"
+          },
+          "offsetX": {
+            "value": 0,
+            "unit": "px"
+          },
+          "offsetY": {
+            "value": 0,
+            "unit": "px"
+          },
+          "blur": {
+            "value": 0,
+            "unit": "px"
+          },
+          "spread": {
+            "value": 1,
+            "unit": "px"
+          }
+        }
+      ],
+      "$description": "A page of a PDF preview on the sunken surface."
     }
   }
 }

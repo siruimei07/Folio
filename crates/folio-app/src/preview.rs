@@ -5,9 +5,9 @@
 //! window, and Tauri rejects its IPC requests. This scheme gives the frame its own Content
 //! Security Policy, which blocks fetch-class network requests, and lets it load its scripts
 //! across that opaque origin. No CSP directive covers WebRTC, so the frame removes its
-//! constructors before it handles a file (`apps/desktop/src/preview/frame.ts`). The scheme serves
-//! only built files, never files from the library. The embedder must retain the strict sandbox:
-//! Tauri considers this app-registered scheme local.
+//! constructors before it handles a file (`apps/desktop/src/preview/frame/seal.ts`). The scheme
+//! serves only built files, never files from the library. The embedder must retain the strict
+//! sandbox: Tauri considers this app-registered scheme local.
 
 use std::borrow::Cow;
 
@@ -24,10 +24,13 @@ pub const SCHEME: &str = "folio-preview";
 const PAGE: &str = "/preview.html";
 
 /// No `connect-src`, so fetch cannot reach IPC or the network. This does not restrict WebRTC.
-/// Renderers write inline styles. The dev-server ancestor is added only under Tauri's dev cfg.
-const CSP: &str = "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; \
-    img-src 'self' blob: data:; font-src 'self' blob: data:; base-uri 'none'; \
-    form-action 'none'; frame-ancestors http://tauri.localhost";
+/// Renderers write inline styles. pdf.js runs its worker from a `blob:` URL, since the frame's
+/// opaque origin cannot start one from a URL, and decodes JPEG 2000, JBIG2 and ICC colour with
+/// WebAssembly: `'wasm-unsafe-eval'` allows compiling WebAssembly and nothing else (no `eval`).
+/// The worker inherits this policy. The dev-server ancestor is added only under Tauri's dev cfg.
+const CSP: &str = "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; \
+    style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self' blob: data:; \
+    worker-src blob:; base-uri 'none'; form-action 'none'; frame-ancestors http://tauri.localhost";
 
 /// Answers a request for the preview page or one of the built scripts and styles it loads.
 pub fn respond<R: Runtime>(
@@ -128,6 +131,23 @@ mod tests {
             assert_eq!(csp.contains("http://localhost:5173"), cfg!(dev));
             assert_eq!(response.headers()[X_CONTENT_TYPE_OPTIONS], "nosniff");
             assert!(!response.headers().contains_key(ACCESS_CONTROL_ALLOW_ORIGIN));
+        }
+    }
+
+    #[test]
+    fn the_policy_admits_the_pdf_worker_and_wasm_but_no_network_or_eval() {
+        let directives: Vec<&str> = CSP.split(';').map(str::trim).collect();
+        assert!(directives.contains(&"default-src 'none'"));
+        assert!(directives.contains(&"script-src 'self' 'wasm-unsafe-eval'"));
+        assert!(directives.contains(&"worker-src blob:"));
+        for absent in [
+            "connect-src",
+            "'unsafe-eval'",
+            "child-src",
+            "frame-src",
+            "object-src",
+        ] {
+            assert!(!CSP.contains(absent), "{absent}");
         }
     }
 

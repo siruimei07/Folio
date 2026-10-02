@@ -3,9 +3,9 @@ import type { Frame, Page } from '@playwright/test';
 import { expect, test } from '../fixtures';
 
 // ADR-0001 security baseline: previews render untrusted files in a sandboxed frame that the
-// folio-preview scheme serves (crates/folio-app/src/preview.rs). The app shows no previews yet,
-// so these tests embed the frame the way the window will. Strings run in the page because this
-// package has no DOM types.
+// folio-preview scheme serves (crates/folio-app/src/preview.rs). These tests embed the frame the
+// way PreviewFrame does, without a library (preview.spec.ts drives the pane itself). Strings run
+// in the page because this package has no DOM types.
 
 const previewUrl = 'http://folio-preview.localhost/preview.html';
 
@@ -25,12 +25,57 @@ async function embedPreview(page: Page): Promise<Frame> {
 test('the preview frame renders what the window sends it', async ({ folio }) => {
   const frame = await embedPreview(folio.page);
   const reply = folio.page.evaluate(`new Promise((resolve) => {
-    window.addEventListener('message', (event) => resolve(event.data), { once: true });
+    window.addEventListener('message', (event) => {
+      if (event.data.kind === 'rendered' || event.data.kind === 'failed') resolve(event.data);
+    });
     const bytes = new TextEncoder().encode('线性代数 notes').buffer;
-    document.querySelector('iframe').contentWindow.postMessage({ kind: 'text', bytes }, '*', [bytes]);
+    const strings = { title: 'Preview of notes.txt', imageLoading: 'Loading', imageMissing: 'Missing',
+      imageRemote: 'On the web', code: 'Contents of notes.txt' };
+    document.querySelector('iframe').contentWindow.postMessage({ kind: 'render', renderer: 'text', bytes,
+      language: null, theme: 'light', reduceMotion: false, strings }, '*', [bytes]);
   })`);
   await expect(reply).resolves.toEqual({ kind: 'rendered' });
-  await expect(frame.locator('pre')).toHaveText('线性代数 notes');
+  await expect(frame.locator('.lines__text')).toHaveText('线性代数 notes');
+});
+
+test('workers and WebAssembly stay inside the preview frame', async ({ folio }, testInfo) => {
+  const frame = await embedPreview(folio.page);
+  // pdf.js needs a worker from a blob: URL and WebAssembly decoders (UI architecture §10.4): the
+  // preview CSP admits exactly those. A worker inherits the frame's CSP, so it reaches neither the
+  // network, Tauri's IPC, the folio-file scheme nor other scripts, and cannot eval.
+  const wasm = '[0, 97, 115, 109, 1, 0, 0, 0]';
+  const inWorker = (body: string) =>
+    `(async () => { try { postMessage('allowed: ' + JSON.stringify(await (${body}))); } catch (error) { postMessage('blocked: ' + error); } })()`;
+  const probes = (await frame.evaluate(`(async () => {
+    const run = (url) => new Promise((resolve) => {
+      let worker;
+      try { worker = new Worker(url); } catch (error) { resolve('blocked: ' + error.message); return; }
+      const timer = setTimeout(() => resolve('blocked: no answer in 3 s'), 3000);
+      worker.onmessage = (event) => { clearTimeout(timer); resolve(event.data); };
+      worker.onerror = (event) => { clearTimeout(timer); resolve('blocked: ' + (event.message || 'error event')); };
+    });
+    const blob = (source) => run(URL.createObjectURL(new Blob([source], { type: 'text/javascript' })));
+    return {
+      blobWorker: await blob("postMessage('started')"),
+      dataWorker: await run('data:text/javascript,postMessage(1)'),
+      network: await blob(${JSON.stringify(inWorker("fetch('https://example.com/', { mode: 'no-cors' }).then((r) => r.type)"))}),
+      ipc: await blob(${JSON.stringify(inWorker("fetch('http://ipc.localhost/app_info', { method: 'POST', body: '{}' }).then((r) => r.status)"))}),
+      fileScheme: await blob(${JSON.stringify(inWorker("fetch('http://folio-file.localhost/content/1/a.txt').then((r) => r.status)"))}),
+      importScript: await blob(${JSON.stringify(inWorker("new Promise((resolve) => { importScripts('https://example.com/x.js'); resolve('imported'); })"))}),
+      workerEval: await blob(${JSON.stringify(inWorker("Promise.resolve().then(() => eval('1 + 1'))"))}),
+      workerWasm: await blob(${JSON.stringify(inWorker(`WebAssembly.compile(new Uint8Array(${wasm})).then(() => 'compiled')`))}),
+      frameWasm: await WebAssembly.compile(new Uint8Array(${wasm})).then(() => 'allowed', (error) => 'blocked: ' + error),
+      frameEval: (() => { try { return 'allowed: ' + eval('1 + 1'); } catch (error) { return 'blocked: ' + error.message; } })(),
+    };
+  })()`)) as Record<string, string>;
+  testInfo.annotations.push({ type: 'probes', description: JSON.stringify(probes) });
+
+  expect(probes.blobWorker).toBe('started');
+  expect(probes.workerWasm).toBe('allowed: "compiled"');
+  expect(probes.frameWasm).toBe('allowed');
+  for (const probe of ['dataWorker', 'network', 'ipc', 'fileScheme', 'importScript', 'workerEval', 'frameEval']) {
+    expect(probes[probe], probe).toMatch(/^blocked/);
+  }
 });
 
 test('the preview frame cannot reach the shell, the window or the network', async ({

@@ -74,7 +74,8 @@ export function formatMoment(ms: number, now: number, language: string): string 
   return isSameDay(ms, now) ? formatTime(ms, language) : formatShortDate(ms, language);
 }
 
-function isSameDay(a: number, b: number): boolean {
+/** Whether two moments fall on the same calendar day here. */
+export function isSameDay(a: number, b: number): boolean {
   if (Math.abs(a - b) >= DAY_MS) return false;
   const first = new Date(a);
   const second = new Date(b);

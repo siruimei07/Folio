@@ -289,7 +289,7 @@ describe('the narrow window', () => {
     expect(useLibraryView.getState().covered).toBe(false);
   });
 
-  it('never leaves the list covered by a column without Back', async () => {
+  it('covers the list with a file’s preview, which has Back', async () => {
     window.innerWidth = 600;
     window.dispatchEvent(new Event('resize'));
     const { user } = renderLibrary();
@@ -299,7 +299,9 @@ describe('the narrow window', () => {
     if (file === undefined) throw new Error('Recently added shows files');
     await user.click(file);
     await user.keyboard('{Enter}');
-    // No preview pane yet: the file's column has no Back, so the list shows again.
+    const preview = await within(pane).findByRole('group', { name: /^Preview of / });
+    expect(document.querySelector('.library-view')).toHaveAttribute('data-covered');
+    await user.click(within(preview).getByRole('button', { name: 'Back' }));
     await waitFor(() => {
       expect(document.querySelector('.library-view')).not.toHaveAttribute('data-covered');
     });
