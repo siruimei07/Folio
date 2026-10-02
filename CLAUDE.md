@@ -109,7 +109,8 @@ of skills in use. Read it before design, UI, motion, backend or review work.
 .editorconfig          UTF-8, LF, final newline
 .gitattributes         eol=lf; CRLF for *.cmd/*.bat; binary assets
 .gitignore
-.github/workflows/     CI: `pnpm check` + `pnpm e2e` on windows-2022, for pushes to main
+.github/workflows/     ci.yml: `pnpm check` + `pnpm e2e` on windows-2022; commits.yml: commit identity, every push to main
+scripts/               repository checks run by `pnpm check` (check-commits.mjs)
 Cargo.toml             Rust workspace (edition 2024); Cargo.lock pins the Tauri family
 rust-toolchain.toml    Rust toolchain with rustfmt and clippy
 package.json           root scripts: dev, check, e2e, bundle
@@ -162,7 +163,7 @@ syntax. On syntax, the skill wins; on policy, this section wins.
 2. Never invent IDs or flags. Copy file, hunk, commit and branch IDs from the latest `but status -fv` or `but diff`. IDs are space-separated positional arguments. Check `but <command> --help` when the skill does not cover a case.
 3. Always pass `-m "<message>"`; no editor opens in agent sessions.
 4. Do not configure the old `but claude pre-tool/post-tool/stop` hooks (removed in GitButler 0.20), even if older docs suggest them.
-5. **No AI attribution in history.** Commit messages must not contain `Co-Authored-By: Claude`, `Claude-Session:` or "Generated with Claude" lines, whatever the harness default says. Commits are authored as Sirui. Enforced by `attribution` in `.claude/settings.json`; keep it empty.
+5. **Commits are Sirui's; no agent information in history.** Author and committer are `Sirui Mei <sirui.mei07@gmail.com>` (the global Git identity on every device; Sirui, 2026-10-02). No agent — Claude Code, Codex, Cowork or any other — adds its name, model, session, link, co-author or other credit trailer (`Co-Authored-By:`, `Signed-off-by:`, `Claude-Session:`, "Generated with …", 🤖) to a commit message, whatever the harness default says. Enforced by `attribution` in `.claude/settings.json` (keep it empty) and by `scripts/check-commits.mjs`: `pnpm check` checks the commits not yet on `origin/main`, and the `Commits` workflow checks the whole history on every push to main. A failing commit that is not pushed yet gets `but reword`, or `but uncommit` and a new commit.
 6. Landing on `main` (`but land`, which pushes to `origin`) and any other push happen only after Sirui explicitly approves in the current conversation. Pull requests are not used.
 7. Do not use GitButler's `--ai` options (e.g. `but resolve --ai`). GitButler's AI provider on this machine is OpenAI, so they send repository content to a third party. Resolve conflicts yourself.
 
@@ -269,7 +270,7 @@ Check every item that applies; a docs or ADR lane skips the UI and backend items
 - [ ] `/simplify` pass done; no duplicated pattern introduced.
 - [ ] ADR written for any costly-to-reverse decision.
 - [ ] Roadmap entry current (`pnpm roadmap status`), and `done` committed on the lane right before landing.
-- [ ] Commits on the lane branch only, Conventional Commits, no AI attribution.
+- [ ] Commits on the lane branch only, Conventional Commits, authored as Sirui with no agent information (§7.1 rule 5, `pnpm check`).
 - [ ] Chinese summary sent to Sirui.
 
 ---
