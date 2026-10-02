@@ -1,0 +1,33 @@
+/* Text inputs (app-shell handoff §9 "Fields"; library-actions §2.1): 34 px, the input tokens, the
+   bottom edge in the danger colour while invalid, read-only on its own surface. Every typed field
+   of a page or dialog carries `text-input`, so the look exists once. */
+.text-input {
+  box-sizing: border-box;
+  height: var(--size-dialog-control);
+  padding: 0 var(--space-10);
+  border: var(--border-width) solid var(--color-input-border);
+  border-bottom-color: var(--color-input-border-bottom);
+  border-radius: var(--radius-control);
+  background: var(--color-input-background);
+  color: var(--color-text-primary);
+  font: inherit;
+  outline: none;
+}
+
+.text-input::placeholder {
+  color: var(--color-text-tertiary);
+  opacity: 1;
+}
+
+.text-input:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.text-input[aria-invalid='true'] {
+  border-bottom-color: var(--color-feedback-danger);
+}
+
+.text-input[readonly] {
+  background: var(--color-input-background-readonly);
+}

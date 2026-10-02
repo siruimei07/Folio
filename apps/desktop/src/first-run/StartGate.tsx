@@ -9,7 +9,7 @@ import { CoursesStep } from './CoursesStep';
 import { FolderStep } from './FolderStep';
 import { Frame } from './Frame';
 import { ReviewStep } from './ReviewStep';
-import { type CoursesPage, endFlow, useFirstRun } from './state';
+import { type CoursesPage, endFlow, useFirstRun } from '../app/startFlow';
 import { CantStart, Unavailable } from './Unavailable';
 import { Welcome } from './Welcome';
 

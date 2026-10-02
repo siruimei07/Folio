@@ -158,18 +158,6 @@
     "semesterLabel": "Semester",
     "semesterHelp": "For example Fall 2026 or Winter 2027.",
     "label": "Courses",
-    "codeHeading": "Code (optional)",
-    "nameHeading": "Course name",
-    "folderHeading": "Folder name",
-    "codePlaceholder": "Code",
-    "namePlaceholder": "Course name",
-    "codeLabel": "Course {{number}} code",
-    "nameLabel": "Course {{number}} name",
-    "folderLabel": "Course {{number}} folder",
-    "colourLabel": "Course {{number}} colour: {{colour}}",
-    "remove": "Remove course {{number}}",
-    "created": "Course {{number}} created",
-    "add": "Add course",
     "help": "Press Enter in a name to add another row. You can change colours and badge letters later in Library settings.",
     "skip": "Skip for now",
     "submit_one": "Create {{count, number}} course",
@@ -184,23 +172,6 @@
       "fall": "Fall {{year}}",
       "winter": "Winter {{year}}",
       "summer": "Summer {{year}}"
-    }
-  },
-  "colour": {
-    "caption": "Colour",
-    "footer": "{{colour}} · badge “{{badge}}”",
-    "footerNoBadge": "{{colour}}",
-    "names": {
-      "red": "Red",
-      "orange": "Orange",
-      "amber": "Amber",
-      "green": "Green",
-      "teal": "Teal",
-      "blue": "Blue",
-      "indigo": "Indigo",
-      "violet": "Violet",
-      "pink": "Pink",
-      "stone": "Stone"
     }
   },
   "fields": {

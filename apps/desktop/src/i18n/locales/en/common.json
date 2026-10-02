@@ -21,5 +21,35 @@
     "megabytes": "{{value}} MB",
     "gigabytes": "{{value}} GB",
     "terabytes": "{{value}} TB"
+  },
+  "courseRows": {
+    "codeHeading": "Code (optional)",
+    "nameHeading": "Course name",
+    "folderHeading": "Folder name",
+    "codePlaceholder": "Code",
+    "namePlaceholder": "Course name",
+    "codeLabel": "Course {{number}} code",
+    "nameLabel": "Course {{number}} name",
+    "colourLabel": "Course {{number}} colour: {{colour}}",
+    "remove": "Remove course {{number}}",
+    "created": "Course {{number}} created",
+    "add": "Add course"
+  },
+  "colour": {
+    "caption": "Colour",
+    "footer": "{{colour}} · badge “{{badge}}”",
+    "footerNoBadge": "{{colour}}",
+    "names": {
+      "red": "Red",
+      "orange": "Orange",
+      "amber": "Amber",
+      "green": "Green",
+      "teal": "Teal",
+      "blue": "Blue",
+      "indigo": "Indigo",
+      "violet": "Violet",
+      "pink": "Pink",
+      "stone": "Stone"
+    }
   }
 }

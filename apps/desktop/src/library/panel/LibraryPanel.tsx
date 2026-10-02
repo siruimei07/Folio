@@ -27,7 +27,7 @@ import { KEYS } from '../menus/EntryMenu';
 import { EntriesView } from '../pane/EntriesView';
 import { courseIn } from '../places';
 import { type PanelMode, setPanelMode, usePreferences } from '../preferences';
-import type { CurrentSemester } from '../semester';
+import type { CurrentSemester } from '../../data/semester';
 import { setFilter, useLibraryView } from '../state';
 import { BrowseTree, FilteredTree } from '../tree/LibraryTree';
 import { LibraryBanners } from './LibraryBanners';

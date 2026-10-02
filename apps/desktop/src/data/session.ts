@@ -66,7 +66,8 @@ export function sawRevision(revision: number): void {
 export function setCurrentSemester(path: string | null): void {
   useSession.setState((state) => {
     const libraryId = state.libraryId;
-    if (libraryId === null) return state;
+    // Unchanged: no new object, so no subscriber hears of it (several views keep the default).
+    if (libraryId === null || (state.semesters[libraryId] ?? null) === path) return state;
     const others = Object.fromEntries(
       Object.entries(state.semesters).filter(([library]) => library !== libraryId),
     );

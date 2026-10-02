@@ -47,8 +47,10 @@ interface ImportCheckRequest {
 }
 
 export const keys = {
-  /** `library_status`; the only key outside a library. */
+  /** `library_status`; outside a library, like the App settings. */
   libraryStatus: () => ['app', 'libraryStatus'] as const,
+  /** `get_app_settings`: this computer's settings, whatever library is open (ipc-m1 §22.1). */
+  appSettings: () => ['app', 'appSettings'] as const,
   /** Every query of every library. */
   libraries: () => ['lib'] as const,
   /** Every query of one library. */
@@ -78,6 +80,8 @@ export const keys = {
   jobs: (libraryId: string) => ['lib', libraryId, 'jobs'] as const,
   /** Pages of problems; `usePagedList` appends the page index. */
   problems: (libraryId: string) => ['lib', libraryId, 'problems'] as const,
+  /** The library's `.folio/ignore` (ipc-m1 §22.2). */
+  ignoreRules: (libraryId: string) => ['lib', libraryId, 'ignoreRules'] as const,
 };
 
 /** The reference in the key of a query that asks for nothing (it has no entry yet). */
@@ -113,6 +117,7 @@ export type LibraryQuery =
   | { kind: 'importCheck'; target: EntryRef }
   | { kind: 'jobs' }
   | { kind: 'problems' }
+  | { kind: 'ignoreRules' }
   | { kind: 'unknown' };
 
 /** The query a library key names. Keys come only from `keys`, so their shapes are known. */
@@ -139,6 +144,7 @@ export function readKey(queryKey: QueryKey): LibraryQuery {
     case 'tags':
     case 'jobs':
     case 'problems':
+    case 'ignoreRules':
       return { kind };
     default:
       return { kind: 'unknown' };

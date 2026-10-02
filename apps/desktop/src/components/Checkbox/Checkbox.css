@@ -1,0 +1,45 @@
+/* Checkbox (library-actions handoff §12): a 15 px box in a 24 px hit area. */
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+  font-size: var(--font-size-label);
+  cursor: default;
+  outline: none;
+}
+
+.checkbox__hit {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-target-min);
+  height: var(--size-target-min);
+}
+
+.checkbox__box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--size-checkbox);
+  height: var(--size-checkbox);
+  border: var(--border-width) solid var(--color-toggle-off);
+  border-radius: var(--radius-badge-mini);
+  background: var(--color-input-background);
+  color: var(--color-text-on-button-accent);
+}
+
+.checkbox[data-selected] .checkbox__box {
+  border-color: var(--color-toggle-on);
+  background: var(--color-toggle-on);
+}
+
+.checkbox[data-focus-visible] .checkbox__box {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.checkbox[data-disabled] {
+  color: var(--color-text-tertiary);
+}

@@ -6,7 +6,7 @@
 // The contract is docs/specs/ipc-m1.md. Commands it plans but the shell does not implement yet
 // are typed here, and calling one resolves to a `Transport` error (spec §3).
 export type * from './bindings';
-export { commands as ipc, LIMITS } from './bindings';
+export { DEFAULT_IGNORE_RULES, commands as ipc, LIMITS } from './bindings';
 export { formatIpcError, type IpcError, isIpcError } from './errors';
 export { shellEvents } from './events';
 export {

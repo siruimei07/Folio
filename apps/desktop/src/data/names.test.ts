@@ -1,10 +1,11 @@
-// What the first run checks and fills in before it asks the shell (first-run handoff §1, §8).
+// What pages check and fill in before they ask the shell (first-run handoff §1, §8).
 import { describe, expect, it } from 'vitest';
 
 import {
+  checkBadge,
   checkCourseCode,
   checkFolderName,
-  checkLibraryName,
+  checkDisplayName,
   driveOf,
   hasInvalidFolderCharacter,
   lastName,
@@ -15,15 +16,15 @@ import {
 
 describe('names', () => {
   it('checks a library name: 1–128 characters without control characters', () => {
-    expect(checkLibraryName('University of Toronto')).toBeNull();
-    expect(checkLibraryName('  ')).toBe('NameEmpty');
-    expect(checkLibraryName('a\nb')).toBe('NameInvalidCharacter');
-    expect(checkLibraryName('\u0085')).toBe('NameInvalidCharacter');
-    expect(checkLibraryName('x'.repeat(128))).toBeNull();
-    expect(checkLibraryName('x'.repeat(129))).toBe('NameTooLong');
+    expect(checkDisplayName('University of Toronto')).toBeNull();
+    expect(checkDisplayName('  ')).toBe('NameEmpty');
+    expect(checkDisplayName('a\nb')).toBe('NameInvalidCharacter');
+    expect(checkDisplayName('\u0085')).toBe('NameInvalidCharacter');
+    expect(checkDisplayName('x'.repeat(128))).toBeNull();
+    expect(checkDisplayName('x'.repeat(129))).toBe('NameTooLong');
     // Characters, not UTF-16 units: 128 emoji fit.
-    expect(checkLibraryName('📚'.repeat(128))).toBeNull();
-    expect(checkLibraryName('大学')).toBeNull();
+    expect(checkDisplayName('📚'.repeat(128))).toBeNull();
+    expect(checkDisplayName('大学')).toBeNull();
   });
 
   it('checks a folder name as Windows does (library core §3)', () => {
@@ -88,5 +89,15 @@ describe('names', () => {
     const all = ['red', 'orange', 'amber', 'green', 'teal', 'blue', 'indigo', 'violet', 'pink', 'stone'];
     expect(nextColor(all)).toBe('red');
     expect(nextColor([...all, 'red'])).toBe('orange');
+  });
+
+  it('checks a course badge: empty is the default, else 1–3 graphemes without spaces', () => {
+    expect(checkBadge('  ')).toBeNull();
+    expect(checkBadge('Cal')).toBeNull();
+    expect(checkBadge('线代')).toBeNull();
+    expect(checkBadge('👩‍🔬AB')).toBeNull();
+    expect(checkBadge('Calc')).toBe('NameTooLong');
+    expect(checkBadge('C a')).toBe('NameInvalidCharacter');
+    expect(checkBadge('a\tb')).toBe('NameInvalidCharacter');
   });
 });

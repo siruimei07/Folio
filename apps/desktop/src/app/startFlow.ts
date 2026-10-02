@@ -1,14 +1,18 @@
 // Where the first run is (first-run handoff §2). The start gate shows what `library_status` says,
 // except while this store holds a page of the flow: step 1 for a chosen folder (from the welcome
-// screen, or from the unavailable screen's "Start a new library"), and step 2, which runs with the
-// new library already open. The flow ends where it says so: Back, a library opened, step 2 done;
-// it never infers that from the status, since only its own commands open a library.
+// screen, the unavailable screen's "Start a new library", or Library settings' "Change…"), and
+// step 2, which runs with the new library already open. The flow ends where it says so: Back, a
+// library opened, step 2 done; it never infers that from the status, since only its own commands
+// open a library. In app/, so that settings can start step 1 without importing the first run.
 import { create } from 'zustand';
 
 import type { FolderChoice, IpcError } from '../ipc';
 
-/** Which choice opened the folder dialog (§3): the next page depends on the folder, not on it. */
-export type Intent = 'new' | 'existing' | 'open';
+/**
+ * Which choice opened the folder dialog (§3): the next page depends on the folder, not on it.
+ * `change` is Library settings' "Change…", which expects no particular kind of folder.
+ */
+export type Intent = 'new' | 'existing' | 'open' | 'change';
 
 export interface FolderPage {
   page: 'folder';

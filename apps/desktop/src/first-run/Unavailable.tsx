@@ -16,8 +16,8 @@ import { SIZE } from '../tokens/tokens';
 import { useOpenChosen, usePickFolder } from './choose';
 import { useStepFailure } from './failures';
 import { Frame } from './Frame';
-import { showFolder } from './state';
-import { PendingButton } from './Step';
+import { showFolder } from '../app/startFlow';
+import { PendingButton } from '../components/Button/PendingButton';
 
 interface StatePageProps {
   tone: 'warning' | 'danger';

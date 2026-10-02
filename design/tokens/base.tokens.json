@@ -1092,6 +1092,62 @@
         "unit": "px"
       },
       "$description": "Height of the Library tree's separator row: space.6 above and below a border.width line (app-shell §5)."
+    },
+    "switch-width": {
+      "$type": "dimension",
+      "$value": {
+        "value": 36,
+        "unit": "px"
+      },
+      "$description": "Width of a switch track (app-shell §9)."
+    },
+    "switch-height": {
+      "$type": "dimension",
+      "$value": {
+        "value": 20,
+        "unit": "px"
+      },
+      "$description": "Height of a switch track (app-shell §9)."
+    },
+    "switch-knob": {
+      "$type": "dimension",
+      "$value": {
+        "value": 14,
+        "unit": "px"
+      },
+      "$description": "Diameter of a switch knob: the track height less 3 px on each side."
+    },
+    "checkbox": {
+      "$type": "dimension",
+      "$value": {
+        "value": 15,
+        "unit": "px"
+      },
+      "$description": "A checkbox square; its hit area is size.target-min (library-actions §12)."
+    },
+    "settings-nav-item": {
+      "$type": "dimension",
+      "$value": {
+        "value": 36,
+        "unit": "px"
+      },
+      "$description": "Height of a settings navigation item (app-shell §9)."
+    },
+    "settings-code-column": {
+      "$type": "dimension",
+      "$value": {
+        "value": 60,
+        "unit": "px"
+      },
+      "$description": "Width of the course code column in Settings → Courses (app-shell §9)."
+    },
+    "settings-rules": {
+      "$type": "dimension",
+      "$value": {
+        "value": 220,
+        "unit": "px"
+      },
+      "$description": "Minimum height of the ignore rules text area in Library settings."
     }
   },
   "radius": {

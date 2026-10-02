@@ -1,20 +1,20 @@
-import '../components/palette.css';
+import '../inputs.css';
+import './CourseRows.css';
 
-import { Check, ChevronDown, Plus, X } from 'lucide-react';
-import { type KeyboardEvent, type MouseEvent, useState } from 'react';
+import { Check, Plus, X } from 'lucide-react';
+import type { KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button as AriaButton, Dialog, DialogTrigger, RadioButton, RadioField, RadioGroup } from 'react-aria-components';
 
-import { Button } from '../components/Button/Button';
-import { CourseBadge } from '../components/CourseBadge/CourseBadge';
-import { FieldError } from '../components/FieldError/FieldError';
-import { IconButton } from '../components/IconButton/IconButton';
-import { Popover } from '../components/Popover/Popover';
-import { courseBadgeText } from '../lib/courses';
-import { isPaletteColor, PALETTE, type PaletteColor } from '../lib/palette';
-import { SIZE } from '../tokens/tokens';
+import { courseBadgeText } from '../../lib/courses';
+import type { PaletteColor } from '../../lib/palette';
+import { SIZE } from '../../tokens/tokens';
+import { Button } from '../Button/Button';
+import { ColourButton } from '../ColourButton/ColourButton';
+import { CourseBadge } from '../CourseBadge/CourseBadge';
+import { FieldError } from '../FieldError/FieldError';
+import { IconButton } from '../IconButton/IconButton';
 
-/** One course of step 2 (first-run handoff §5): a new one, or a folder the scan found. */
+/** One course row (first-run handoff §5): a new one, or a folder the scan found. */
 export interface CourseRow {
   /** Stable while the row lives: a counter for new rows, the folder path for found ones. */
   key: string;
@@ -37,85 +37,6 @@ export function rowInputId(prefix: string, key: string, field: RowField): string
   return `${prefix}-${key}-${field}`;
 }
 
-interface ColourButtonProps {
-  number: number;
-  row: CourseRow;
-  onChange: (color: PaletteColor) => void;
-  isDisabled: boolean;
-}
-
-/**
- * A row's colour (§5.1): the button with the colour's dot, and its popover, a radio group of the
- * ten palette colours. Arrow keys move and select; Enter, Space or a click closes it, and Esc
- * closes it; focus returns to the button.
- */
-function ColourButton({ number, row, onChange, isDisabled }: ColourButtonProps) {
-  const { t } = useTranslation('first-run');
-  const [open, setOpen] = useState(false);
-  const colourName = (color: PaletteColor) => t(`colour.names.${color}`);
-  const badge = row.name.trim() === '' ? '' : courseBadgeText({ abbr: null, name: row.name.trim() });
-  // Arrow keys only move the selection; Enter, Space or a click on a swatch, the selected one
-  // too, closes. Captured, because the radios' own press handling stops these events.
-  const onKeyDownCapture = (event: KeyboardEvent<HTMLElement>) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      setOpen(false);
-    }
-  };
-  const onClickCapture = (event: MouseEvent<HTMLElement>) => {
-    if (event.target instanceof Element && event.target.closest('label') !== null) setOpen(false);
-  };
-  return (
-    <DialogTrigger isOpen={open} onOpenChange={setOpen}>
-      <AriaButton
-        className="colour-button"
-        aria-label={t('courses.colourLabel', { number, colour: colourName(row.color) })}
-        isDisabled={isDisabled}
-      >
-        <span className="colour-button__dot" data-palette={row.color} aria-hidden />
-        <ChevronDown aria-hidden size={SIZE.iconTiny} className="colour-button__chevron" />
-      </AriaButton>
-      <Popover placement="bottom end">
-        <Dialog className="colour-popover__dialog" aria-label={t('colour.caption')}>
-          {/* Not a control: it only sees the keys that close the popover. */}
-          <div className="colour-popover__content" onKeyDownCapture={onKeyDownCapture} onClickCapture={onClickCapture}>
-            <p className="colour-popover__caption" aria-hidden>
-              {t('colour.caption')}
-            </p>
-            <RadioGroup
-              className="colour-popover__swatches"
-              aria-label={t('colour.caption')}
-              value={row.color}
-              onChange={(value) => {
-                if (isPaletteColor(value)) onChange(value);
-              }}
-            >
-              {PALETTE.map((color) => (
-                <RadioField
-                  key={color}
-                  value={color}
-                  aria-label={colourName(color)}
-                  // The popover opens on the selected colour (§9).
-                  autoFocus={color === row.color}
-                >
-                  <RadioButton className="swatch">
-                    <span className="swatch__dot" data-palette={color} title={colourName(color)} />
-                  </RadioButton>
-                </RadioField>
-              ))}
-            </RadioGroup>
-            <p className="colour-popover__footer">
-              {badge === ''
-                ? t('colour.footerNoBadge', { colour: colourName(row.color) })
-                : t('colour.footer', { colour: colourName(row.color), badge })}
-            </p>
-          </div>
-        </Dialog>
-      </Popover>
-    </DialogTrigger>
-  );
-}
-
 export interface CourseRowsProps {
   rows: readonly CourseRow[];
   /** new: names typed, rows added and removed (§5.1); found: names are folders (§5.2). */
@@ -129,6 +50,8 @@ export interface CourseRowsProps {
   onEnter: (key: string, field: RowField) => void;
   onRemove?: (key: string) => void;
   onAdd?: () => void;
+  /** Under "Add course": how rows are added and what can change later. */
+  help?: string;
   /** Waiting for the shell: the fields are read-only and the buttons do nothing. */
   busy: boolean;
 }
@@ -136,10 +59,21 @@ export interface CourseRowsProps {
 /**
  * Course rows (CourseRowsEditor, first-run handoff §5.1): badge preview, code, name, colour and
  * remove, under the column headings. Step 2 uses it for a new library and for a folder taken
- * over; "New semester…" and "Add courses" (library-actions §8) are to reuse it.
+ * over; "New semester…" and "Add courses" (library-actions §8) reuse it.
  */
-export function CourseRows({ rows, mode, idPrefix, onChange, onBlur, onEnter, onRemove, onAdd, busy }: CourseRowsProps) {
-  const { t } = useTranslation('first-run');
+export function CourseRows({
+  rows,
+  mode,
+  idPrefix,
+  onChange,
+  onBlur,
+  onEnter,
+  onRemove,
+  onAdd,
+  help,
+  busy,
+}: CourseRowsProps) {
+  const { t } = useTranslation('common');
   const onKey = (key: string, field: RowField) => (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key !== 'Enter' || event.nativeEvent.isComposing) return;
     event.preventDefault();
@@ -148,8 +82,8 @@ export function CourseRows({ rows, mode, idPrefix, onChange, onBlur, onEnter, on
   return (
     <div className="course-rows">
       <div className="course-rows__headings" aria-hidden>
-        <span className="course-rows__code-heading">{t('courses.codeHeading')}</span>
-        <span>{mode === 'new' ? t('courses.nameHeading') : t('courses.folderHeading')}</span>
+        <span className="course-rows__code-heading">{t('courseRows.codeHeading')}</span>
+        <span>{mode === 'new' ? t('courseRows.nameHeading') : t('courseRows.folderHeading')}</span>
       </div>
       <ol className="course-rows__list">
         {rows.map((row, index) => {
@@ -169,10 +103,10 @@ export function CourseRows({ rows, mode, idPrefix, onChange, onBlur, onEnter, on
                 )}
                 <input
                   id={codeId}
-                  className="course-row__input course-row__code"
+                  className="text-input course-row__input course-row__code"
                   value={row.code}
-                  placeholder={t('courses.codePlaceholder')}
-                  aria-label={t('courses.codeLabel', { number })}
+                  placeholder={t('courseRows.codePlaceholder')}
+                  aria-label={t('courseRows.codeLabel', { number })}
                   aria-invalid={row.codeError !== null || undefined}
                   // A found row's code is described by its folder, which names the course (§5.2).
                   aria-describedby={
@@ -192,10 +126,10 @@ export function CourseRows({ rows, mode, idPrefix, onChange, onBlur, onEnter, on
                 {mode === 'new' ? (
                   <input
                     id={nameId}
-                    className="course-row__input course-row__name"
+                    className="text-input course-row__input course-row__name"
                     value={row.name}
-                    placeholder={t('courses.namePlaceholder')}
-                    aria-label={t('courses.nameLabel', { number })}
+                    placeholder={t('courseRows.namePlaceholder')}
+                    aria-label={t('courseRows.nameLabel', { number })}
                     aria-invalid={row.nameError !== null || undefined}
                     aria-describedby={row.nameError !== null ? `${nameId}-error` : undefined}
                     readOnly={locked}
@@ -213,8 +147,9 @@ export function CourseRows({ rows, mode, idPrefix, onChange, onBlur, onEnter, on
                   </span>
                 )}
                 <ColourButton
-                  number={number}
-                  row={row}
+                  label={t('courseRows.colourLabel', { number, colour: t(`colour.names.${row.color}`) })}
+                  color={row.color}
+                  badge={row.name.trim() === '' ? '' : courseBadgeText({ abbr: null, name: row.name.trim() })}
                   isDisabled={locked}
                   onChange={(color) => {
                     onChange(row.key, { color });
@@ -224,12 +159,12 @@ export function CourseRows({ rows, mode, idPrefix, onChange, onBlur, onEnter, on
                   (row.done ? (
                     <span className="course-row__done">
                       <Check aria-hidden size={SIZE.iconSmall} />
-                      <span className="visually-hidden">{t('courses.created', { number })}</span>
+                      <span className="visually-hidden">{t('courseRows.created', { number })}</span>
                     </span>
                   ) : (
                     <IconButton
                       icon={X}
-                      label={t('courses.remove', { number })}
+                      label={t('courseRows.remove', { number })}
                       isDisabled={busy}
                       onPress={() => onRemove?.(row.key)}
                     />
@@ -244,9 +179,9 @@ export function CourseRows({ rows, mode, idPrefix, onChange, onBlur, onEnter, on
       {mode === 'new' && onAdd !== undefined && (
         <div className="course-rows__add">
           <Button id={`${idPrefix}-add`} icon={Plus} isDisabled={busy} onPress={onAdd}>
-            {t('courses.add')}
+            {t('courseRows.add')}
           </Button>
-          <p className="course-rows__help">{t('courses.help')}</p>
+          {help !== undefined && <p className="course-rows__help">{help}</p>}
         </div>
       )}
     </div>

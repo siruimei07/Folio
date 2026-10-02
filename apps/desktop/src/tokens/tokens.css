@@ -145,6 +145,13 @@
   --size-page-pill: 26px;
   --size-folder-picker: 320px;
   --size-tree-separator: 13px;
+  --size-switch-width: 36px;
+  --size-switch-height: 20px;
+  --size-switch-knob: 14px;
+  --size-checkbox: 15px;
+  --size-settings-nav-item: 36px;
+  --size-settings-code-column: 60px;
+  --size-settings-rules: 220px;
   --radius-panel: 10px;
   --radius-control: 7px;
   --radius-row: 6px;

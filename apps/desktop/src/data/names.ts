@@ -1,6 +1,7 @@
-// What the first run checks before it sends a name (first-run handoff §8; ipc-m1 §16.3, library
-// core §3), the defaults it fills in (§1, §4.3), and the colours new courses get (§1). The shell
-// checks every name again; these only let a page flag a mistake before it asks.
+// What a page checks before it sends a name the user typed (first-run handoff §8; ipc-m1 §16.3,
+// library core §3), the defaults the first run and the semester dialogs fill in (§1, §4.3), and
+// the colours new courses get (§1). The shell checks every name again; these only let a page flag
+// a mistake before it asks. In data/ rather than lib/, because the limits are the contract's.
 import { type AppError, LIMITS } from '../ipc';
 import { PALETTE, type PaletteColor } from '../lib/palette';
 import { charCount } from '../lib/text';
@@ -19,7 +20,7 @@ const FOLDER_CODES = [
 ] as const satisfies readonly Code[];
 export type FolderCode = (typeof FOLDER_CODES)[number];
 
-/** The codes the first run checks itself before it sends a folder name. */
+/** The codes a page checks itself before it sends a folder name. */
 export type NameCode = Exclude<FolderCode, 'PathTooLong' | 'AlreadyExists'>;
 
 /** The codes of a library name (§8). */
@@ -55,8 +56,8 @@ export function hasInvalidFolderCharacter(raw: string): boolean {
   return CONTROL.test(raw) || NOT_IN_FOLDER_NAMES.test(raw);
 }
 
-/** A library name: 1–128 characters without control characters (ipc-m1 §16.3). */
-export function checkLibraryName(raw: string): LibraryNameCode | null {
+/** A library, tag or device name: 1–128 characters without control characters (ipc-m1 §16.3). */
+export function checkDisplayName(raw: string): LibraryNameCode | null {
   const name = raw.trim();
   if (name === '') return 'NameEmpty';
   if (hasControl(name)) return 'NameInvalidCharacter';
@@ -83,6 +84,20 @@ export function checkCourseCode(raw: string): CourseCodeCode | null {
   if (code === '') return null;
   if (hasControl(code)) return 'NameInvalidCharacter';
   if (charCount(code) > LIMITS.courseCodeChars) return 'NameTooLong';
+  return null;
+}
+
+const graphemes = new Intl.Segmenter('en', { granularity: 'grapheme' });
+
+/**
+ * A course badge (`abbr`): empty sends `null`, the default from the course name; otherwise 1–3
+ * grapheme clusters without whitespace or control characters (ipc-m1 §7).
+ */
+export function checkBadge(raw: string): CourseCodeCode | null {
+  const badge = raw.trim();
+  if (badge === '') return null;
+  if (hasControl(badge) || /\s/u.test(badge)) return 'NameInvalidCharacter';
+  if ([...graphemes.segment(badge)].length > LIMITS.abbrGraphemes) return 'NameTooLong';
   return null;
 }
 

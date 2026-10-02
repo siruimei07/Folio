@@ -13,10 +13,10 @@ import type { FolderChoice, IpcError } from '../ipc';
 import { SIZE } from '../tokens/tokens';
 import { useAwaitStatus, useChooseFolder, useOpenChosen } from './choose';
 import { isNameFailure, type StepAction, type StepFooter, useStepFailure } from './failures';
-import { Field } from './Field';
+import { Field } from '../components/Field/Field';
 import { Frame } from './Frame';
-import { checkLibraryName, hasControl, lastName, type LibraryNameCode } from './names';
-import { endFlow, type FolderPage, showCourses } from './state';
+import { checkDisplayName, hasControl, lastName, type LibraryNameCode } from '../data/names';
+import { endFlow, type FolderPage, showCourses } from '../app/startFlow';
 import { focusAccent, Note, StepFooterRow, StepHeader } from './Step';
 
 /** The page a folder gets (§4.2); `notALibrary`: "Open your library…" on a folder without one. */
@@ -170,7 +170,7 @@ export function FolderStep({ page }: { page: FolderPage }) {
   }, [error]);
 
   const runCreate = async () => {
-    const code = checkLibraryName(name);
+    const code = checkDisplayName(name);
     if (code !== null) {
       setNameCode(code);
       nameInput.current?.focus();
@@ -303,7 +303,7 @@ export function FolderStep({ page }: { page: FolderPage }) {
             readOnly={busy}
             inputRef={nameInput}
             onBlur={() => {
-              setNameCode(checkLibraryName(name));
+              setNameCode(checkDisplayName(name));
             }}
             onEnter={() => {
               const main = footer.end.at(-1);

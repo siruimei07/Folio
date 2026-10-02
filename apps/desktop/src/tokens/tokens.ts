@@ -102,6 +102,13 @@ export const SIZE = {
   pagePill: 26,
   folderPicker: 320,
   treeSeparator: 13,
+  switchWidth: 36,
+  switchHeight: 20,
+  switchKnob: 14,
+  checkbox: 15,
+  settingsNavItem: 36,
+  settingsCodeColumn: 60,
+  settingsRules: 220,
 } as const;
 
 /** The `space.*` tokens in CSS pixels, for overlay offsets and other code. */

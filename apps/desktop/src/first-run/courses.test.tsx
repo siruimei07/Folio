@@ -4,11 +4,12 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest';
 
 import { useNavigation } from '../app/navigation';
+import { termOf } from '../data/names';
 import { useSession } from '../data/session';
+import common from '../i18n/locales/en/common.json';
 import copy from '../i18n/locales/en/first-run.json';
 import errors from '../i18n/locales/en/errors.json';
 import { folderChoice, libraryFixture, startFixture } from '../test/fixtures';
-import { termOf } from './names';
 import { LIBRARY_VIEW, pageHeading, renderStart } from './test/render';
 
 type Rendered = ReturnType<typeof renderStart>;
@@ -80,7 +81,7 @@ describe('step 2, a new library', () => {
     await user.type(input('Course 1 name'), 'Calculus');
     await user.click(screen.getByRole('button', { name: 'Course 1 colour: Red' }));
 
-    const popover = await screen.findByRole('dialog', { name: copy.colour.caption });
+    const popover = await screen.findByRole('dialog', { name: common.colour.caption });
     const red = within(popover).getByRole('radio', { name: 'Red' });
     expect(red).toBeChecked();
     await waitFor(() => {
@@ -93,7 +94,7 @@ describe('step 2, a new library', () => {
     expect(within(popover).getByRole('radio', { name: 'Orange' })).toBeChecked();
     await user.keyboard('{Enter}');
     await waitFor(() => {
-      expect(screen.queryByRole('dialog', { name: copy.colour.caption })).toBeNull();
+      expect(screen.queryByRole('dialog', { name: common.colour.caption })).toBeNull();
     });
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Course 1 colour: Orange' })).toHaveFocus();
@@ -127,7 +128,7 @@ describe('step 2, a new library', () => {
     fireEvent.change(input('Course 1 name'), { target: { value: 'Algebra' } });
     await user.type(input('Course 1 name'), '{Enter}');
     await user.type(input('Course 2 code'), 'MAT224');
-    await user.click(screen.getByRole('button', { name: copy.courses.add }));
+    await user.click(screen.getByRole('button', { name: common.courseRows.add }));
     await user.type(input('Course 3 name'), 'algebra');
     await user.clear(input(copy.courses.semesterLabel));
     await user.click(screen.getByRole('button', { name: 'Create 2 courses' }));
@@ -330,7 +331,7 @@ describe('step 2, a folder taken over', () => {
     ]);
     expect(within(courses).getByText('MAT232 Calculus of Several Variables')).toBeInTheDocument();
     expect(within(courses).queryByRole('button', { name: /Remove/ })).toBeNull();
-    expect(within(courses).queryByRole('button', { name: copy.courses.add })).toBeNull();
+    expect(within(courses).queryByRole('button', { name: common.courseRows.add })).toBeNull();
     expect(screen.getByText(copy.review.laterNote)).toBeInTheDocument();
   });
 

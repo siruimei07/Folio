@@ -95,6 +95,9 @@ export function touches(query: LibraryQuery, change: EntryChange): boolean {
     case 'problems':
       // JobChanged and ProblemsChanged keep these current (§5.6).
       return false;
+    case 'ignoreRules':
+      // Entries never change the rules; IgnoreRulesChanged keeps them current (ipc-m1 §22.2).
+      return false;
     case 'unknown':
       return true;
   }

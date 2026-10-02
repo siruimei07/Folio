@@ -1,0 +1,675 @@
+/* The settings dialogs (app-shell handoff §9, 25A). */
+
+/* ---- Frame: the modal, the navigation card and the page. */
+
+.settings-dialog {
+  box-sizing: border-box;
+  width: var(--size-settings-dialog-width);
+  height: var(--size-settings-dialog-height);
+  padding: var(--space-8);
+  border: var(--border-width) solid var(--color-border-default);
+  border-radius: var(--radius-dialog);
+  background: var(--color-surface-modal);
+  box-shadow: var(--shadow-overlay);
+}
+
+.settings {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  gap: var(--space-8);
+}
+
+/* React Aria marks the tabs as focus-visible while one of them is; the tab shows its own ring. */
+.settings[data-focus-visible] {
+  outline: none;
+}
+
+.settings__nav {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: var(--size-settings-nav);
+  padding: var(--space-12) var(--space-10) var(--space-10);
+  border: var(--border-width) solid var(--color-border-default);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface-panel);
+}
+
+.settings__nav-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  padding: var(--space-2) 0 var(--space-10) var(--space-10);
+}
+
+.settings__title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--font-size-dialog-title);
+  font-weight: var(--font-weight-strong);
+  line-height: var(--font-line-height-heading);
+}
+
+.settings__tabs-scroll {
+  min-height: 0;
+  overflow: auto;
+}
+
+.settings__tabs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.settings__tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-10);
+  box-sizing: border-box;
+  height: var(--size-settings-nav-item);
+  padding: 0 var(--space-10);
+  border-radius: var(--radius-row);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-body);
+  white-space: nowrap;
+  cursor: default;
+  outline: none;
+  transition: background-color var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.settings__tab[data-hovered] {
+  background: var(--color-surface-hover);
+}
+
+.settings__tab[data-selected] {
+  background: var(--color-surface-sunken);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-strong);
+}
+
+.settings__tab[data-focus-visible] {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: calc(var(--focus-ring-width) * -1);
+}
+
+/* The 3 px bar at the card's inner left edge (§10 "Selection indicator"). */
+.settings__tab-indicator {
+  position: absolute;
+  top: var(--size-selection-bar-inset);
+  bottom: var(--size-selection-bar-inset);
+  left: calc(var(--space-10) * -1);
+  width: var(--size-selection-bar-width);
+  border-radius: var(--radius-indicator);
+  background: var(--color-selection-indicator);
+  visibility: hidden;
+}
+
+.settings__tab[data-selected] .settings__tab-indicator {
+  visibility: visible;
+}
+
+.settings__tab-icon {
+  flex: none;
+}
+
+.settings__tab-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.settings__page {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  outline: none;
+}
+
+/* A page kept mounted while another shows (`keepMounted`). */
+.settings__page[inert] {
+  display: none;
+}
+
+.settings__page[data-focus-visible] {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: calc(var(--focus-ring-width) * -1);
+}
+
+/* Narrow window: the pages go in a row above the content (library-actions §14). */
+:root[data-layout='narrow'] .settings {
+  flex-direction: column;
+}
+
+:root[data-layout='narrow'] .settings__nav {
+  width: auto;
+  padding: var(--space-8) var(--space-8) var(--space-6);
+}
+
+:root[data-layout='narrow'] .settings__nav-header {
+  padding: 0 0 var(--space-6) var(--space-6);
+}
+
+:root[data-layout='narrow'] .settings__tabs {
+  flex-direction: row;
+}
+
+:root[data-layout='narrow'] .settings__tabs-scroll {
+  overflow: auto hidden;
+}
+
+:root[data-layout='narrow'] .settings__tab-indicator {
+  top: auto;
+  right: var(--size-selection-bar-inset);
+  bottom: 0;
+  left: var(--size-selection-bar-inset);
+  width: auto;
+  height: var(--size-selection-bar-width);
+}
+
+/* ---- Page and cards. */
+
+.settings-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-14);
+}
+
+.settings-page__bar {
+  display: flex;
+}
+
+.settings-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-14);
+  padding: var(--space-16) var(--space-dialog-card-padding);
+  border: var(--border-width) solid var(--color-border-default);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface-panel);
+}
+
+.settings-card--rows {
+  gap: 0;
+  padding-block: 0;
+}
+
+.settings-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-16);
+}
+
+.settings-card__words {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.settings-card__title {
+  margin: 0;
+  font-size: var(--font-size-heading);
+  font-weight: var(--font-weight-strong);
+  line-height: var(--font-line-height-heading);
+}
+
+.settings-card__description {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-label);
+}
+
+.settings-card__action {
+  flex: none;
+}
+
+.settings-card__buttons {
+  display: flex;
+  gap: var(--space-8);
+}
+
+.settings-card__empty {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-label);
+}
+
+/* A live region that is there before it has anything to say, so its first words are read. */
+.settings-card__status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-label);
+}
+
+.settings-card > .settings-card__status:empty {
+  margin-top: calc(var(--space-14) * -1);
+}
+
+.settings-card__status svg[data-tone] {
+  flex: none;
+  color: var(--tone);
+}
+
+.settings-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-8);
+}
+
+.settings-card__footer .settings-card__status {
+  flex: 1;
+}
+
+/* Split cards: rows separated by 1 px lines. */
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-16);
+  padding: var(--space-12) 0;
+}
+
+.settings-row + .settings-row {
+  border-top: var(--border-width) solid var(--color-border-default);
+}
+
+.settings-row__words {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.settings-row__label {
+  font-weight: var(--font-weight-strong);
+}
+
+.settings-row__description {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-label);
+}
+
+.settings-row__control {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.settings-row__value {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-label);
+}
+
+/* ---- Fields. */
+
+.settings-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+
+.settings-select-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.settings-select-field__row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-8);
+}
+
+/* The select's label above it, as for every field in a card (§9 "Fields"). */
+.settings-select-field .select {
+  flex: 1;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+.settings-select-field .select__label {
+  color: var(--color-text-primary);
+}
+
+.settings-select-field__none {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-6);
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-label);
+}
+
+.settings-select-field__label {
+  color: var(--color-text-primary);
+}
+
+.settings-colour-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* ---- Lists: courses, tags, archived courses. */
+
+.reorder-list,
+.settings-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reorder-list[data-dragging] {
+  cursor: grabbing;
+}
+
+.reorder-row,
+.settings-list__row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-10);
+  min-height: var(--size-dialog-control);
+  padding: var(--space-4) 0;
+}
+
+.reorder-row + .reorder-row,
+.settings-list__row + .settings-list__row {
+  border-top: var(--border-width) solid var(--color-border-default);
+}
+
+.reorder-row[data-dragged] {
+  background: var(--color-surface-sunken);
+  color: var(--color-text-tertiary);
+}
+
+/* Where the dragged row would go: a 2 px line at the row's edge. */
+.reorder-row[data-drop]::after {
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: var(--focus-ring-width);
+  border-radius: var(--radius-indicator);
+  background: var(--color-accent-default);
+  content: '';
+}
+
+.reorder-row[data-drop='before']::after {
+  top: calc(var(--focus-ring-width) / -2);
+}
+
+.reorder-row[data-drop='after']::after {
+  bottom: calc(var(--focus-ring-width) / -2);
+}
+
+.reorder-row__grip {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-icon);
+  height: var(--size-target-min);
+  color: var(--color-text-tertiary);
+  cursor: grab;
+  touch-action: none;
+}
+
+.reorder-list[data-dragging] .reorder-row__grip {
+  cursor: grabbing;
+}
+
+.settings-list__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-list__dot {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-icon);
+}
+
+.settings-list__meta {
+  flex: none;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-small);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A course: the code column (600), then the name (26C). */
+.course-line__label {
+  display: flex;
+  flex: 1;
+  align-items: baseline;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+.course-line__code {
+  flex: none;
+  width: var(--size-settings-code-column);
+  overflow: hidden;
+  font-weight: var(--font-weight-strong);
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.course-line__code:empty {
+  display: none;
+}
+
+.course-line__name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-label);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.course-line__name[data-strong] {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-strong);
+}
+
+/* ---- File types. */
+
+.settings-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.settings-chip {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: var(--size-chip);
+  padding: 0 var(--space-8);
+  border: var(--border-width) solid var(--color-border-control);
+  border-radius: var(--radius-chip);
+  background: var(--color-surface-sunken);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-small);
+}
+
+.settings-note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  margin: 0;
+  padding: 0 var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-small);
+}
+
+.settings-note__icon {
+  flex: none;
+  margin-top: var(--space-2);
+  color: var(--color-text-tertiary);
+}
+
+/* ---- Ignore rules. */
+
+.settings-rules {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.settings-rules__input {
+  height: auto;
+  min-height: var(--size-settings-rules);
+  padding: var(--space-8) var(--space-10);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-label);
+  line-height: var(--font-line-height-code);
+  white-space: pre;
+  resize: vertical;
+}
+
+.settings-rules .field-error {
+  margin: 0;
+}
+
+.settings-rules__lines {
+  margin: 0;
+  color: var(--tone);
+  font-size: var(--font-size-small);
+}
+
+.settings-defaults {
+  padding: 0 var(--space-4);
+  font-size: var(--font-size-label);
+}
+
+.settings-defaults__summary {
+  color: var(--color-text-secondary);
+  cursor: default;
+}
+
+.settings-defaults__summary:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.settings-defaults .field__help {
+  margin-top: var(--space-6);
+}
+
+.settings-defaults__rules {
+  margin: var(--space-6) 0 0;
+  padding: var(--space-8) var(--space-10);
+  border: var(--border-width) solid var(--color-border-default);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-sunken);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-small);
+  line-height: var(--font-line-height-code);
+  white-space: pre-wrap;
+}
+
+/* ---- App settings. */
+
+.settings-profile {
+  display: flex;
+  align-items: center;
+  gap: var(--space-14);
+}
+
+.settings-profile__avatar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-dialog-control);
+  height: var(--size-dialog-control);
+  border-radius: var(--radius-pill);
+  background: var(--color-avatar-background);
+  color: var(--color-avatar-text);
+  font-weight: var(--font-weight-badge);
+}
+
+.settings-profile__field {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-swatches {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--space-8) var(--space-12);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.settings-swatch {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  font-size: var(--font-size-label);
+}
+
+.settings-swatch__dot {
+  flex: none;
+  width: var(--size-swatch-dot);
+  height: var(--size-swatch-dot);
+  border-radius: var(--radius-pill);
+  background: var(--swatch-dot);
+}
+
+/* ---- Dialogs over settings: edit course, tags, new semester, add courses. */
+
+.settings-dialog-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-12);
+}
+
+.settings-dialog-row[data-colour] {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.settings-dialog-text {
+  margin: 0;
+}
+
+.settings-dialog-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.settings-dialog-section__title {
+  margin: 0;
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-strong);
+}

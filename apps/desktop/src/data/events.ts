@@ -10,6 +10,7 @@ import { keys, readKey } from './keys';
 import { changeLibrary } from './library';
 import { publishReferences } from './references';
 import { sawRevision, useSession } from './session';
+import { receiveAppSettings, receiveIgnoreRules } from './settings';
 import { isTouched } from './touch';
 
 /**
@@ -96,6 +97,15 @@ export function connectShellEvents(client: QueryClient): () => void {
       if (libraryId === null) return;
       client.setQueryData(keys.count(libraryId, { of: 'problems' }), total);
       refresh(client, libraryId, (query) => readKey(query.queryKey).kind === 'problems');
+    }),
+    shellEvents.onAppSettingsChanged(({ settings }) => {
+      receiveAppSettings(client, settings);
+    }),
+    // Sent before the LibraryStateChanged of any later switch (ipc-m1 §22.2), so the open
+    // library is the one whose rules changed.
+    shellEvents.onIgnoreRulesChanged(({ rules }) => {
+      const libraryId = useSession.getState().libraryId;
+      if (libraryId !== null) receiveIgnoreRules(client, libraryId, rules);
     }),
   ];
   return () => {

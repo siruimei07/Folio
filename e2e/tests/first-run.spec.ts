@@ -4,6 +4,7 @@ import path from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 
+import common from '../../apps/desktop/src/i18n/locales/en/common.json' with { type: 'json' };
 import firstRun from '../../apps/desktop/src/i18n/locales/en/first-run.json' with { type: 'json' };
 import library from '../../apps/desktop/src/i18n/locales/en/library.json' with { type: 'json' };
 import type { Course } from '../../apps/desktop/src/ipc/bindings';
@@ -79,7 +80,7 @@ test('creates a library, its semester and courses, and opens it in the Library',
   await page.getByRole('textbox', { name: 'Course 2 name' }).fill('Linear Algebra');
   // The colour popover: a radio group of the palette.
   await page.getByRole('button', { name: 'Course 2 colour: Orange' }).click();
-  const colours = page.getByRole('dialog', { name: firstRun.colour.caption });
+  const colours = page.getByRole('dialog', { name: common.colour.caption });
   await expect(colours.getByRole('radio', { name: 'Orange' })).toBeFocused();
   await page.keyboard.press('ArrowRight');
   await page.keyboard.press('Enter');

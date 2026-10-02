@@ -17,7 +17,7 @@ import { LoadFailure } from './LoadFailure';
 import { LibraryMenu } from './menus/LibraryMenu';
 import { LibraryPane } from './pane/LibraryPane';
 import { LibraryPanel } from './panel/LibraryPanel';
-import { type CurrentSemester, useCurrentSemesterInfo } from './semester';
+import { type CurrentSemester, useCurrentSemesterInfo } from '../data/semester';
 import { expandAll, setActive, setReveal, showSemester, showWholeTree, useLibraryView } from './state';
 
 /**

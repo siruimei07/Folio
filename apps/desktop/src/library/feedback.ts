@@ -4,15 +4,16 @@
 // lists every one of them (§5, UI architecture §13: nothing is dropped).
 import i18n from 'i18next';
 
+import { DETAILED, showFailure } from '../app/feedback';
 import { reportUiError } from '../app/log';
 import { showToast } from '../app/toasts';
 import { copyErrorDetails } from '../app/windowErrors';
 import { IpcFailure } from '../data/errors';
-import type { IpcError, ItemFailure } from '../ipc';
+import type { ItemFailure } from '../ipc';
 import { type FailedItem, openLibraryDialog } from './state';
 
-/** Codes that point at a bug or a broken state: the toast offers "Copy details", and the log has it. */
-export const DETAILED: ReadonlySet<string> = new Set(['Internal', 'FileSystem', 'InvalidArgument', 'Transport']);
+// Shared with settings (app/feedback.tsx).
+export { DETAILED, messageOf, showFailure, showGone } from '../app/feedback';
 
 /**
  * Gives a command's feedback when it settles: pass `mutation.mutateAsync(variables)`. The
@@ -36,46 +37,8 @@ export function whenSettled<T>(
     });
 }
 
-/** The generic message of an error code (`errors`). */
-export function messageOf(error: IpcError): string {
-  return i18n.t(`errors:${error.code}`);
-}
-
-/** A `NotFound` answer: the item moved or went away (the data layer has refreshed the view). */
-export function showGone(error: IpcError): void {
-  showToast({ tone: 'info', title: messageOf(error) });
-}
-
 /** "Copy details" of a failure: what failed, then the error as the log has it. */
 export const copyFailure = copyErrorDetails;
-
-/**
- * An error toast for a failed command: the title says what failed, the body the code's message.
- * A `NotFound` says the item moved or went away instead.
- */
-export function showFailure(title: string, error: IpcError, source: string, body = messageOf(error)): void {
-  if (error.code === 'NotFound') {
-    showGone(error);
-    return;
-  }
-  const detailed = DETAILED.has(error.code);
-  if (detailed) reportUiError('command', source, error);
-  showToast({
-    tone: 'danger',
-    title,
-    body,
-    actions: detailed
-      ? [
-          {
-            label: i18n.t('library:results.copy'),
-            onPress: () => {
-              copyFailure(title, error);
-            },
-          },
-        ]
-      : undefined,
-  });
-}
 
 export interface BatchFeedback {
   /** Items asked for. */

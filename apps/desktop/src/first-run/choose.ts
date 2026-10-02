@@ -11,7 +11,7 @@ import { useLibraryStatus, useOpenLibrary, usePickLibraryFolder } from '../data/
 import { useSession } from '../data/session';
 import type { FolderChoice, IpcError } from '../ipc';
 import { LIBRARY_EVENT_WAIT_MS } from '../lib/timing';
-import { endFlow, type Intent, showFolder } from './state';
+import { endFlow, type Intent, showFolder } from '../app/startFlow';
 
 /**
  * The folder dialog: resolves to the choice, or `null` when the user cancelled it or it failed.

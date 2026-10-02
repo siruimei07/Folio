@@ -15,11 +15,12 @@ import { percentOf } from '../lib/format';
 import type { PaletteColor } from '../lib/palette';
 import { SCAN_ANNOUNCE_MS } from '../lib/timing';
 import { SIZE } from '../tokens/tokens';
-import { type CourseRow, CourseRows, rowInputId } from './CourseRows';
+import { type CourseRow, CourseRows, rowInputId } from '../components/CourseRows/CourseRows';
 import { Frame } from './Frame';
-import { checkCourseCode, nextColor } from './names';
-import { endFlow } from './state';
-import { focusAccent, PendingButton, StepHeader } from './Step';
+import { checkCourseCode, nextColor } from '../data/names';
+import { endFlow } from '../app/startFlow';
+import { PendingButton } from '../components/Button/PendingButton';
+import { focusAccent, StepHeader } from './Step';
 
 /** Semester names the help lists before "and 3 more" (§5.2). */
 const NAMED_SEMESTERS = 4;

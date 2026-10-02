@@ -178,6 +178,7 @@
       "text": "Restart Folio to fix this. Snap layouts may not appear on the maximize button until then."
     }
   },
+  "tryAgain": "Try again",
   "copyDetails": {
     "action": "Copy details",
     "copied": "Copied the details",

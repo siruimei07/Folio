@@ -1,7 +1,7 @@
 import './Button.css';
 
 import type { LucideIcon } from 'lucide-react';
-import type { ReactNode } from 'react';
+import type { ReactNode, Ref } from 'react';
 import { Button as AriaButton, type ButtonProps as AriaButtonProps } from 'react-aria-components';
 
 import { SIZE } from '../../tokens/tokens';
@@ -22,6 +22,8 @@ export interface ButtonProps extends Omit<AriaButtonProps, 'className' | 'style'
   /** A Lucide icon before the label. */
   icon?: LucideIcon;
   children: ReactNode;
+  /** For moving focus back to it, as after a cancelled native dialog. */
+  ref?: Ref<HTMLButtonElement>;
 }
 
 /** A text button (app-shell handoff §10, library-actions §2). */

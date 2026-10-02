@@ -1,0 +1,40 @@
+/* A labelled text field (first-run handoff §4.1, app-shell handoff §9 "Fields"). */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.field__label {
+  font-size: var(--font-size-label);
+}
+
+.field__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.field__row .field__input {
+  flex: 1;
+  min-width: 0;
+}
+
+.field__input[data-mono] {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-label);
+}
+
+.field[data-width='short'] .field__input {
+  width: var(--size-first-run-field);
+}
+
+.field__help {
+  margin: 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-small);
+}
+
+.field .field-error {
+  margin: 0;
+}

@@ -1417,8 +1417,18 @@
         "feat/ui-library-view"
       ],
       "summary": "Library settings（学期、课程、标签、忽略规则、重建索引）和 App settings（设备名、外观、减少动态效果）两个对话框；切换外观和减少动态效果立即生效",
-      "status": "planned",
+      "status": "done",
       "updated": "2026-10-02",
+      "landed": "2026-10-02",
+      "gates": {
+        "designCritique": "pass",
+        "a11y": "pass",
+        "codeReview": "pass",
+        "securityReview": "na",
+        "check": "pass",
+        "e2e": "pass",
+        "simplify": "pass"
+      },
       "owns": [
         "apps/desktop/src/settings/**",
         "apps/desktop/src/i18n/locales/en/settings.json",

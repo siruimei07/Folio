@@ -1,1 +1,288 @@
-{}
+{
+  "nav": "{{title}} pages",
+  "cancel": "Cancel",
+  "save": "Save",
+  "saving": "Saving…",
+  "library": {
+    "title": "Library settings",
+    "pages": {
+      "library": "Library",
+      "courses": "Courses",
+      "tags": "Tags",
+      "fileTypes": "File types",
+      "ignore": "Ignore rules"
+    }
+  },
+  "app": {
+    "title": "App settings",
+    "pages": {
+      "general": "General",
+      "appearance": "Appearance",
+      "keyboard": "Keyboard"
+    }
+  },
+  "readOnly": {
+    "title": "Read-only for now",
+    "text": "A newer version of Folio changed this library's settings. You can still look around; update Folio to change courses and tags."
+  },
+  "folder": {
+    "label": "Library folder",
+    "change": "Change…",
+    "help": "Folio keeps track of everything in this folder. Choose Change… to open or start a library somewhere else.",
+    "pickFailed": "Couldn't open the folder dialog"
+  },
+  "semester": {
+    "label": "Semester",
+    "none": "No semesters yet",
+    "new": "New semester…",
+    "help": "The semester the Library and the toolbar show. Archived semesters stay in the semester menu.",
+    "archivedOption": "{{name}} (archived)"
+  },
+  "semesterDefault": {
+    "fall": "Fall {{year}}",
+    "winter": "Winter {{year}}",
+    "summer": "Summer {{year}}"
+  },
+  "deleted": {
+    "label": "Deleted files",
+    "description": "When you delete a file or folder in Folio. Folio never deletes files for good.",
+    "value": "Move to the Recycle Bin"
+  },
+  "rebuild": {
+    "title": "Rebuild search index",
+    "description": "Reads every file again. Try this if search misses a file you know is there.",
+    "action": "Rebuild",
+    "running": "Rebuilding…",
+    "runningText": "Rebuilding the search index. Search may miss some files until it finishes.",
+    "done_one": "Rebuilt the search index with {{count, number}} item.",
+    "done_other": "Rebuilt the search index with {{count, number}} items.",
+    "failed": "The rebuild didn't finish. {{message}}",
+    "cancelled": "The rebuild was cancelled. Search may miss some files until the next scan.",
+    "startFailed": "Couldn't start the rebuild. {{message}}",
+    "busy": "A rebuild is already running."
+  },
+  "courses": {
+    "semesterLabel": "Semester",
+    "title": "Courses in {{semester}}",
+    "description": "Each course has a code, a badge and a colour. Drag a course by its handle to reorder it, or use its menu.",
+    "descriptionReadOnly": "Each course has a code, a badge and a colour.",
+    "new": "New course",
+    "files_one": "{{count, number}} file",
+    "files_other": "{{count, number}} files",
+    "more": "More options for {{course}}",
+    "edit": "Edit…",
+    "archive": "Archive",
+    "restore": "Restore",
+    "empty": "No courses in {{semester}} yet. Choose New course to add one.",
+    "noSemesters": {
+      "title": "No semesters yet",
+      "text": "Add a semester to hold your courses. Folio makes a folder for it in your library."
+    },
+    "loadFailed": "Couldn't load your courses",
+    "archivedTitle": "Archived courses",
+    "archivedDescription": "Archived courses keep their folders, files and tags, and still show up in search.",
+    "archivedLabel": "Archived courses in {{semester}}",
+    "archiveSemester": "Archive {{semester}}",
+    "archiveSemesterDescription": "Archived semesters move to the semester menu's Archived list. Nothing moves on disk.",
+    "archiveFailed": "Couldn't archive {{name}}",
+    "restoreFailed": "Couldn't restore {{name}}",
+    "reorderFailed": "Couldn't change the order of the courses"
+  },
+  "editCourse": {
+    "title": "Edit {{course}}",
+    "name": "Folder name",
+    "nameHelp": "Renames the course's folder. Its files and tags stay with it.",
+    "code": "Code (optional)",
+    "codeHelp": "Shown in paths and search results, for example MAT232.",
+    "badge": "Badge (optional)",
+    "badgeHelp": "Up to 3 letters. Leave it empty to use “{{badge}}”.",
+    "colour": "Colour",
+    "colourLabel": "Colour: {{colour}}",
+    "saved": "Saved {{course}}",
+    "failed": "Couldn't save the course"
+  },
+  "tags": {
+    "title": "Tags",
+    "description": "Tags work across all courses, and a file can have more than one. Drag a tag by its handle to reorder it, or use its menu.",
+    "descriptionReadOnly": "Tags work across all courses, and a file can have more than one.",
+    "new": "New tag",
+    "usage_one": "{{count, number}} item",
+    "usage_other": "{{count, number}} items",
+    "more": "More options for {{tag}}",
+    "edit": "Edit…",
+    "delete": "Delete…",
+    "empty": "No tags yet. Choose New tag to add one.",
+    "loadFailed": "Couldn't load your tags",
+    "reorderFailed": "Couldn't change the order of the tags"
+  },
+  "tagDialog": {
+    "newTitle": "New tag",
+    "editTitle": "Edit the tag “{{tag}}”",
+    "name": "Name",
+    "colour": "Colour",
+    "colourLabel": "Tag colour: {{colour}}",
+    "create": "Create tag",
+    "creating": "Creating…",
+    "created": "Created the tag {{tag}}",
+    "saved": "Saved the tag {{tag}}",
+    "createFailed": "Couldn't create the tag",
+    "saveFailed": "Couldn't save the tag"
+  },
+  "deleteTag": {
+    "title": "Delete the tag “{{tag}}”?",
+    "text_one": "It comes off the {{count, number}} file or folder that has it. The files stay where they are.",
+    "text_other": "It comes off the {{count, number}} files and folders that have it. The files stay where they are.",
+    "textUnused": "No file or folder has it yet.",
+    "confirm": "Delete tag",
+    "deleting": "Deleting…",
+    "done_one": "Deleted the tag “{{tag}}” from {{count, number}} item",
+    "done_other": "Deleted the tag “{{tag}}” from {{count, number}} items",
+    "doneUnused": "Deleted the tag “{{tag}}”",
+    "failed": "Couldn't delete the tag “{{tag}}”"
+  },
+  "reorder": {
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "moved": "Moved {{name}} to position {{position, number}} of {{count, number}}"
+  },
+  "fileTypes": {
+    "full": {
+      "title": "Full versions",
+      "description": "For notes, code and other text files, and Word documents, Folio keeps every version, so you can compare and restore them.",
+      "examples": "Examples of files with full versions"
+    },
+    "latest": {
+      "title": "Latest copy only",
+      "description": "For slides, PDFs, images, media and everything else, Folio records each change but keeps only the latest copy, to save space.",
+      "examples": "Examples of files with the latest copy only"
+    },
+    "note": "Text files larger than 10 MB keep only the latest copy. Version history arrives in a later update of Folio; these rules decide what it keeps."
+  },
+  "ignore": {
+    "title": "Ignore rules",
+    "description": "Folio leaves out files and folders that match these patterns: they stay on disk but aren't in the library or in search. One pattern per line, as in a .gitignore file.",
+    "label": "Patterns",
+    "help": "Lines that start with # are comments. Start a line with ! to bring back something Folio leaves out by default.",
+    "revert": "Undo changes",
+    "unsaved": "Not saved yet.",
+    "saved": "Saved. Folio is checking your library again.",
+    "tooLong": "Ignore rules can be up to {{limit, number}} characters. Remove {{over, number}}.",
+    "invalidLine": "Line {{line, number}} isn't a valid pattern, so Folio skips it.",
+    "invalidLines": "Lines {{lines}} aren't valid patterns, so Folio skips them.",
+    "broken": {
+      "title": "These rules can't be used",
+      "text": "A pattern breaks the whole file, so no rule applies, not even Folio's defaults. Fix the patterns and save again."
+    },
+    "loadFailed": "Couldn't load the ignore rules",
+    "saveFailed": "Couldn't save the ignore rules",
+    "defaults": {
+      "summary": "What Folio leaves out by default",
+      "text": "These apply before your rules, in every library.",
+      "label": "Folio's default ignore rules"
+    }
+  },
+  "general": {
+    "loadFailed": "Couldn't load the App settings",
+    "device": {
+      "label": "Device name",
+      "help": "Folio records it with the changes you make on this computer.",
+      "saved": "Saved the device name.",
+      "failed": "Couldn't save the device name"
+    },
+    "privacy": {
+      "title": "Privacy",
+      "text": "Folio doesn't collect usage data. Your files stay on this computer and in the folders you choose."
+    }
+  },
+  "appearance": {
+    "failed": "Couldn't change the appearance",
+    "theme": {
+      "label": "Theme",
+      "description": "System follows Windows' light or dark mode.",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
+    "motion": {
+      "label": "Reduce motion",
+      "description": "Turns off panel and dialog animations.",
+      "system": "Use Windows setting",
+      "on": "On",
+      "off": "Off"
+    },
+    "colours": {
+      "title": "Course and tag colours",
+      "description": "Ten named colours, each with a light and a dark version. Pick one for each course or tag.",
+      "label": "The ten colours"
+    }
+  },
+  "keyboard": {
+    "search": "Search",
+    "library": "Show the Library",
+    "settings": "Library settings"
+  },
+  "newSemester": {
+    "title": "New semester",
+    "name": "Semester name",
+    "nameHelp": "For example Fall 2026 or Winter 2027. Folio makes a folder for it in your library.",
+    "courses": "Courses",
+    "rowsHelp": "Press Enter in a name to add another row.",
+    "archive": "Archive {{semester}}",
+    "close": "Close",
+    "submitSemester": "Create semester",
+    "submit_one": "Create semester and {{count, number}} course",
+    "submit_other": "Create semester and {{count, number}} courses",
+    "submitMore_one": "Create {{count, number}} more course",
+    "submitMore_other": "Create {{count, number}} more courses",
+    "creating": "Creating…",
+    "done": "Created {{semester}}",
+    "doneWithCourses_one": "Created {{semester}} with {{count, number}} course",
+    "doneWithCourses_other": "Created {{semester}} with {{count, number}} courses",
+    "archiveFailed": "Couldn't archive {{semester}}"
+  },
+  "addCourses": {
+    "title": "Add courses to {{semester}}",
+    "submit_one": "Add {{count, number}} course",
+    "submit_other": "Add {{count, number}} courses",
+    "adding": "Adding…",
+    "done_one": "Added {{count, number}} course to {{semester}}",
+    "done_other": "Added {{count, number}} courses to {{semester}}"
+  },
+  "fields": {
+    "semester": {
+      "NameEmpty": "Enter a semester name.",
+      "NameInvalidCharacter": "A semester name can't contain \\ / : * ? \" < > | because it becomes a folder name.",
+      "AlreadyExists": "There's already a semester called {{name}}."
+    },
+    "course": {
+      "NameEmpty": "Enter a course name.",
+      "NameInvalidCharacter": "A course name can't contain \\ / : * ? \" < > | because it becomes a folder name.",
+      "AlreadyExists": "Another course in {{semester}} already has this name."
+    },
+    "folder": {
+      "NameTrailingDotOrSpace": "A folder name can't end with a dot or a space.",
+      "NameReserved": "Windows reserves this name, like CON or NUL. Choose another.",
+      "NameTooLong": "This name is too long for a folder. Shorten it.",
+      "PathTooLong": "The folder's full path would be too long for Windows. Use a shorter name."
+    },
+    "code": {
+      "NameTooLong": "Use 32 characters or fewer.",
+      "NameInvalidCharacter": "Remove line breaks and other control characters."
+    },
+    "badge": {
+      "NameTooLong": "Use up to 3 letters.",
+      "NameInvalidCharacter": "Use letters or digits without spaces."
+    },
+    "tag": {
+      "NameEmpty": "Enter a tag name.",
+      "NameTooLong": "Use 128 characters or fewer.",
+      "NameInvalidCharacter": "Remove line breaks and other control characters.",
+      "AlreadyExists": "There's already a tag called {{name}}."
+    },
+    "device": {
+      "NameEmpty": "Enter a name for this computer.",
+      "NameTooLong": "Use 128 characters or fewer.",
+      "NameInvalidCharacter": "Remove line breaks and other control characters."
+    }
+  }
+}

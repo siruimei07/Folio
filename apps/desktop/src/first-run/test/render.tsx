@@ -10,7 +10,7 @@ import { useToasts } from '../../app/toasts';
 import { NOW } from '../../test/data';
 import { renderApp, type RenderAppOptions } from '../../test/render';
 import { StartGate } from '../StartGate';
-import { endFlow } from '../state';
+import { endFlow } from '../../app/startFlow';
 
 /** What the gate shows once a library is open, in place of the Library view. */
 export const LIBRARY_VIEW = 'The Library view';

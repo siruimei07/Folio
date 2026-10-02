@@ -101,3 +101,8 @@
 .button[data-variant='link'][data-disabled] {
   background: transparent;
 }
+
+/* A spinner inside a button (PendingButton) takes the button's text colour. */
+.button .spinner {
+  color: inherit;
+}

@@ -1,8 +1,7 @@
 import { Info } from 'lucide-react';
 import type { ReactNode, RefObject } from 'react';
 
-import { Button, type ButtonProps } from '../components/Button/Button';
-import { Spinner } from '../components/Progress/Progress';
+import { PendingButton } from '../components/Button/PendingButton';
 import { SIZE } from '../tokens/tokens';
 import { COMMAND_ACTIONS, type StepAction, type StepFooter } from './failures';
 
@@ -32,21 +31,6 @@ export function focusAccent(container: RefObject<HTMLElement | null>): HTMLEleme
   const accent = container.current?.querySelector<HTMLElement>('[data-variant="accent"]') ?? null;
   accent?.focus();
   return accent;
-}
-
-export interface PendingButtonProps extends ButtonProps {
-  /** While its command runs: a spinner and this label in place of the button's own (§4.4). */
-  pending: string | null;
-}
-
-/** A 34 px button that shows a spinner and "Creating…" while its command runs. */
-export function PendingButton({ pending, children, ...props }: PendingButtonProps) {
-  return (
-    <Button size="dialog" {...props}>
-      {pending !== null && <Spinner size="small" />}
-      {pending ?? children}
-    </Button>
-  );
 }
 
 export interface StepFooterRowProps {

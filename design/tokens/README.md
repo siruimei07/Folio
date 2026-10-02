@@ -99,6 +99,10 @@ Round 8 (2026-10-01, lane `feat/ui-first-run`) added the first run's sizes (firs
 `folder-tile`, `first-run-field`, `course-code-field`, `colour-button`, `colour-dot`, `icon-tiny`,
 `swatch`, `swatch-dot`, `map-role-column` and `unavailable-offset`.
 
+Round 9 (2026-10-02, lane `feat/ui-settings`) added the settings dialogs' sizes (app-shell §9):
+`size.switch-width`, `switch-height` and `switch-knob`, `checkbox`, `settings-nav-item`,
+`settings-code-column` and `settings-rules`.
+
 ## Modes
 
 App settings → Appearance → Theme offers Light, Dark and System (default System). The app sets

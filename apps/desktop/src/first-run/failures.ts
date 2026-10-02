@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { Tone } from '../components/feedback';
 import type { IpcError } from '../ipc';
-import { driveOf, isLibraryNameCode, type LibraryNameCode } from './names';
+import { driveOf, isLibraryNameCode, type LibraryNameCode } from '../data/names';
 
 /** A button of step 1's footer; the last one is the accent button and takes focus. */
 export type StepAction = 'back' | 'tryAgain' | 'chooseAnother' | 'chooseFolder' | 'copyDetails' | 'useAnyway' | 'submit';

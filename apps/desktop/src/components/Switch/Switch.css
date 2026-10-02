@@ -1,0 +1,62 @@
+/* Switch (app-shell handoff §9). The hit area is at least size.target-min tall. */
+.switch {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  min-height: var(--size-target-min);
+  cursor: default;
+  outline: none;
+}
+
+.switch__track {
+  position: relative;
+  box-sizing: border-box;
+  width: var(--size-switch-width);
+  height: var(--size-switch-height);
+  border: var(--border-width) solid var(--color-toggle-off);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  transition:
+    background-color var(--motion-duration-fast) var(--motion-easing-standard),
+    border-color var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.switch__knob {
+  position: absolute;
+  top: 50%;
+  left: calc((var(--size-switch-height) - var(--size-switch-knob)) / 2 - var(--border-width));
+  width: var(--size-switch-knob);
+  height: var(--size-switch-knob);
+  border-radius: var(--radius-pill);
+  background: var(--color-toggle-off);
+  transform: translateY(-50%);
+  transition:
+    left var(--motion-duration-fast) var(--motion-easing-standard),
+    background-color var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.switch[data-selected] .switch__track {
+  border-color: var(--color-toggle-on);
+  background: var(--color-toggle-on);
+}
+
+.switch[data-selected] .switch__knob {
+  left: calc(
+    var(--size-switch-width) - var(--size-switch-knob) - (var(--size-switch-height) - var(--size-switch-knob)) / 2 -
+      var(--border-width)
+  );
+  background: var(--color-text-on-button-accent);
+}
+
+.switch[data-focus-visible] .switch__track {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.switch[data-disabled] .switch__track {
+  border-color: var(--color-border-control);
+}
+
+.switch[data-disabled] .switch__knob {
+  background: var(--color-border-control);
+}

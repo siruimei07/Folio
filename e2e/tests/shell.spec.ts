@@ -26,12 +26,14 @@ test('shows the Library on the rail and in the content region, and passes axe', 
   const { page } = folio;
   await openLibrary(page);
   const rail = page.getByRole('navigation', { name: shell.rail.label });
-  const library = rail.getByRole('button', { name: shell.rail.library });
+  const library = rail.getByRole('button', { name: shell.rail.library, exact: true });
   await expect(library).toHaveAttribute('aria-current', 'page');
   await expect(page.getByRole('main').getByRole('region', { name: libraryStrings.panel.title })).toBeVisible();
   await expect(page.getByRole('banner').getByRole('button', { name: titlebar.close })).toBeVisible();
-  // Until M2 the rail shows the Library only (ADR-0005, product decision 3).
-  await expect(rail.getByRole('button')).toHaveCount(1);
+  // Until M2 the rail shows the Library only (ADR-0005, product decision 3), then the gear and
+  // the avatar of the settings dialogs.
+  await expect(rail.getByRole('button')).toHaveCount(3);
+  await expect(rail.getByRole('button', { name: 'Library settings' })).toHaveAttribute('aria-haspopup', 'dialog');
 
   // Focus opens the rail button's tooltip. Check it before any key: React Aria closes it on every
   // keydown on its trigger, so a check after one only passes during the fade-out.

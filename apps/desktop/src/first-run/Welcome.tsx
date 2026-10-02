@@ -8,7 +8,7 @@ import appMark from '../titlebar/app-mark.svg';
 import { SIZE } from '../tokens/tokens';
 import { useChooseFolder } from './choose';
 import { Frame } from './Frame';
-import type { Intent } from './state';
+import type { Intent } from '../app/startFlow';
 
 interface ChoiceCardProps {
   icon: LucideIcon;

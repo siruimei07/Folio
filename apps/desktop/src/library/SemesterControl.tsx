@@ -6,7 +6,7 @@ import type { ToolbarControlProps } from '../app/registry';
 import { SemesterButton } from '../app/Toolbar';
 import { Menu, MenuItem, MenuSection, MenuSeparator, Submenu } from '../components/Menu/Menu';
 import { useLibrary } from '../data/library';
-import { useCurrentSemesterInfo } from './semester';
+import { useCurrentSemesterInfo } from '../data/semester';
 import { openLibraryDialog, showSemester } from './state';
 
 /** A semester's menu key; the menu's own items (`new`, `delete`) never look like one. */

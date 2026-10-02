@@ -8,6 +8,7 @@ import { Shell, type ShellProps } from './app/Shell';
 import { installShortcuts } from './app/shortcuts';
 import { ToastRegion } from './app/ToastRegion';
 import { installWindowFailureToasts } from './app/windowErrors';
+import { useDeviceName } from './data/settings';
 import { StartGate } from './first-run/StartGate';
 
 /**
@@ -18,6 +19,8 @@ import { StartGate } from './first-run/StartGate';
  */
 export function App(props: ShellProps) {
   const { i18n } = useTranslation();
+  // The avatar shows this computer's name from App settings (ipc-m1 §22.1).
+  const deviceName = useDeviceName();
   useEffect(() => installShortcuts(), []);
   useEffect(() => installWindowFailureToasts(), []);
 
@@ -25,7 +28,7 @@ export function App(props: ShellProps) {
     <I18nProvider locale={i18n.language}>
       <ErrorBoundary source="shell">
         <StartGate>
-          <Shell {...props} />
+          <Shell deviceName={deviceName} {...props} />
         </StartGate>
       </ErrorBoundary>
       <ToastRegion />

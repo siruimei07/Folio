@@ -1,0 +1,104 @@
+/* The colour button and its popover (first-run handoff §5.1). */
+.colour-button {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  box-sizing: border-box;
+  width: var(--size-colour-button);
+  height: var(--size-dialog-control);
+  padding: 0;
+  border: var(--border-width) solid var(--color-input-border);
+  border-radius: var(--radius-control);
+  background: var(--color-input-background);
+  cursor: default;
+  outline: none;
+}
+
+.colour-button[data-hovered] {
+  border-color: var(--color-border-strong);
+}
+
+.colour-button[data-focus-visible] {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.colour-button[data-disabled] {
+  background: var(--color-input-background-readonly);
+}
+
+.colour-button__dot {
+  width: var(--size-colour-dot);
+  height: var(--size-colour-dot);
+  border-radius: var(--radius-pill);
+  background: var(--swatch-dot);
+}
+
+.colour-button__chevron {
+  color: var(--color-text-tertiary);
+}
+
+.colour-popover__dialog {
+  outline: none;
+}
+
+.colour-popover__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding: var(--space-10);
+}
+
+.colour-popover__caption {
+  margin: 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-strong);
+}
+
+.colour-popover__swatches {
+  display: grid;
+  grid-template-columns: repeat(5, var(--size-swatch));
+  gap: var(--space-4);
+}
+
+.swatch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-swatch);
+  height: var(--size-swatch);
+  border-radius: var(--radius-control);
+  cursor: default;
+}
+
+.swatch[data-hovered] {
+  background: var(--color-surface-hover);
+}
+
+.swatch[data-focus-visible] {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: 0;
+}
+
+.swatch__dot {
+  width: var(--size-swatch-dot);
+  height: var(--size-swatch-dot);
+  border-radius: var(--radius-pill);
+  background: var(--swatch-dot);
+}
+
+/* The selected colour: a gap in the panel colour, then a ring in the text colour. */
+.swatch[data-selected] .swatch__dot {
+  box-shadow:
+    0 0 0 var(--focus-ring-width) var(--color-surface-panel),
+    0 0 0 calc(var(--focus-ring-width) * 2) var(--color-text-primary);
+}
+
+.colour-popover__footer {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-small);
+}
