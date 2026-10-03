@@ -1824,8 +1824,18 @@
         "feat/ui-first-run"
       ],
       "summary": "资料库打不开的界面上，为新原因加一个要确认的「放弃这次未完成的移动」按钮（文案用 design:ux-copy）",
-      "status": "planned",
-      "updated": "2026-10-02",
+      "status": "done",
+      "updated": "2026-10-03",
+      "landed": "2026-10-03",
+      "gates": {
+        "check": "pass",
+        "e2e": "pass",
+        "codeReview": "pass",
+        "securityReview": "na",
+        "simplify": "pass",
+        "designCritique": "pass",
+        "a11y": "pass"
+      },
       "owns": [
         "apps/desktop/src/first-run/**"
       ],

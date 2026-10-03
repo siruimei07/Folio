@@ -5,12 +5,13 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
-import { type Browser, type Page, test as base, chromium } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
+import { type Browser, type Page, test as base, chromium, expect } from '@playwright/test';
 
 import firstRun from '../apps/desktop/src/i18n/locales/en/first-run.json' with { type: 'json' };
 import type { FolderChoice, LibraryOpened } from '../apps/desktop/src/ipc/bindings';
 
-export { expect } from '@playwright/test';
+export { expect };
 
 /** The debug build produced by `pnpm build:app`. Override with FOLIO_APP_PATH. */
 const appPath =
@@ -154,6 +155,24 @@ async function stop(child: ChildProcess): Promise<void> {
 
 function hasExited(child: ChildProcess): boolean {
   return child.exitCode !== null || child.signalCode !== null;
+}
+
+/**
+ * Serious and critical axe violations, as `rule: targets`. A page fades in (first-run §10), and
+ * axe would measure contrast halfway through, so it waits for the animations that end.
+ */
+export async function blockingViolations(page: Page): Promise<string[]> {
+  await expect
+    .poll(() =>
+      page.evaluate<boolean>(
+        'document.getAnimations().every((animation) => animation.effect?.getTiming().iterations === Infinity)',
+      ),
+    )
+    .toBe(true);
+  const { violations } = await new AxeBuilder({ page }).analyze();
+  return violations
+    .filter(({ impact }) => impact === 'serious' || impact === 'critical')
+    .map(({ id, nodes }) => `${id}: ${nodes.map(({ target }) => target.join(' ')).join(', ')}`);
 }
 
 /** Calls a command in the page, as the UI's IPC module does; a command error rejects. */

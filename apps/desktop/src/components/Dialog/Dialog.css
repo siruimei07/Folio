@@ -113,6 +113,15 @@
   font-size: var(--font-size-label);
 }
 
+/*
+ * An alert dialog's description is its message, in the primary colour as the confirmations'
+ * text is (library-actions §7.4), and the body's note follows it closely.
+ */
+.modal__dialog[role='alertdialog'] .dialog-frame__description {
+  padding-bottom: 0;
+  color: var(--color-text-primary);
+}
+
 .dialog-frame__banner {
   flex: none;
   padding: var(--space-14) var(--space-20) 0;

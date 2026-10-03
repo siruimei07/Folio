@@ -73,7 +73,7 @@ export function StartGate({ children }: { children: ReactNode }) {
     case 'none':
       return <Welcome />;
     case 'unavailable':
-      return <Unavailable root={status.data.root} reason={status.data.reason} />;
+      return <Unavailable key={status.data.reason} root={status.data.root} reason={status.data.reason} />;
     case 'open':
       return children;
   }

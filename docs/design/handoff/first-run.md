@@ -7,7 +7,8 @@ available while Folio runs. The optional cloud remote and AI steps of brief §7 
 and M2 and are not part of this spec.
 
 - Status: ready to build. Decisions 28 and 29 are Sirui's (2026-09-28); the others in section 1
-  are design defaults. Updated 2026-09-28 (lane `design/design-m1-flows`).
+  are design defaults. Updated 2026-09-28 (lane `design/design-m1-flows`); section 7's
+  `unfinishedMove` row and its discard dialog 2026-10-03 (lane `feat/ui-discard-move-action`).
 - Source of truth for looks: the Cowork Design canvas "Folio 设计基础"
   (<https://claude.ai/artifact/F1eGkQ7kuFr3HYayxLtD2K>), row 3 "M1 流程 · 首次使用和启动", boards
   named in each section, and the tokens in [`design/tokens/`](../../../design/tokens/README.md)
@@ -300,6 +301,7 @@ vertically (60 px extra space below), content left-aligned, `space.20` apart: th
 | `newerFormat` | Warning, `circle-alert` | This library needs a newer Folio | A newer version of Folio saved this library. Update Folio, then open it again. Your files are fine. | "Try again" | Or "Start a new library" |
 | `accessDenied` | Danger, `lock` | Folio can't open your library | Windows denied access to the folder below. Check that you can open it in File Explorer, then try again. | "Try again" (accent), "Locate library…" | — |
 | `catalogFailed` | Danger, `circle-x` | Folio can't open its search index | Your files are fine, but the index Folio keeps on this computer couldn't be opened. This happens when another copy of Folio is running or the disk is full. Close other copies of Folio, then try again. | "Try again" (accent), "Copy details" | — |
+| `unfinishedMove` | Warning, `circle-alert` | A move didn't finish | Folio stopped partway through moving or renaming an item, and the library has changed since, so Folio can't finish or undo the move. Your files are fine. Discard the move to open your library with your files where they are now. | "Discard move…" (accent), "Try again" | — |
 
 Tones: warning tile `color.feedback.warning-soft` with a 1 px `color.feedback.warning-border` and
 the icon in `color.feedback.warning`; danger tile the same with `danger`.
@@ -310,6 +312,31 @@ the icon in `color.feedback.warning`; danger tile the same with `danger`.
   (ipc-m1 §6, settled 2026-09-29; `feat/core-library-ops` implements it). The screen then follows
   the answer: the Library view for `open`, this screen with the new reason otherwise. Until that
   lane lands, the button is left out and the text ends with "Restart Folio to try again."
+- "Discard move…" (`unfinishedMove`, lane `feat/ui-discard-move-action`, 2026-10-03) opens an alert
+  dialog (`role="alertdialog"`, section 2.8 frame of library-actions, `size.dialog-small`): title
+  "Discard the unfinished move?", description (`aria-describedby`, `color.text.primary`) "Folio
+  forgets the move and reads your library again. Your files stay where they are now: nothing is
+  moved, deleted or changed.", then a note in `color.text.secondary`: "If part of the move already
+  happened, check the item's tags once your library opens." Footer: "Cancel" (focused) and
+  "Discard move" (danger). Cancel, Esc and the close button change nothing; focus returns to
+  "Discard move…". Only "Discard move" calls `discard_unfinished_move` (ipc-m1 §6); while it runs
+  the button shows a spinner and "Discarding…", and Cancel and Esc wait. The dialog closes on the
+  answer, which the screen follows as it follows "Try again": the Library view for `open`
+  (`LibraryStateChanged` usually gets there first), this screen with the new reason otherwise
+  (its title takes focus), and an unchanged status keeps the screen and reads its title again.
+- A failed discard shows a danger banner under the path field, titled "Folio couldn't discard the
+  move", and changes nothing; pressing again is safe. Texts (all end in the action to take):
+
+  | Code | Text | "Copy details" |
+  |---|---|---|
+  | `InUse` | Another app, such as a sync or backup app, is using a file in the library folder. Close it, then discard the move again. | — |
+  | `AccessDenied` | Windows denied access to a file in the library folder. Check that you can open the folder in File Explorer, then discard the move again. | — |
+  | `DiskFull` | The disk is full. Free up some space on E:, then discard the move again. (Without a drive letter: "…some space, then…") | — |
+  | `NewerFormat` | A newer version of Folio saved this library. Update Folio, then open it again. Your files are fine. | — |
+  | `Busy` | Folio is still opening or closing the library. Wait a moment, then discard the move again. | — |
+  | `Transport` | This window can't reach the rest of Folio. Restart Folio. | Yes |
+  | `NotFound`, `FileSystem`, `Internal`, `DataDirUnavailable` | Your files weren't touched. Discard the move again. If this keeps happening, copy the details and send them to the developer. | Yes |
+
 - Two failures before any library state exist use the same frame with a danger tile (`circle-x`):
   `DataDirUnavailable` — "Folio can't start" / "It can't find a place on this computer to keep its
   data. Restart Folio. If this keeps happening, copy the details and send them to the developer."; a
@@ -353,6 +380,7 @@ The code field is optional: empty sends `null`, so it never shows `NameEmpty`.
 | Step 2, take-over | The first empty code field | Enter submits ("Finish") |
 | Colour popover | The selected swatch | Arrow keys move and select; Enter, Space or a click closes it; Esc closes it; focus returns to the colour button |
 | Unavailable | The title (`tabindex="-1"`) | Tab: the buttons, then the link |
+| "Discard the unfinished move?" | Cancel | Tab stays in the dialog; Esc cancels (not while it runs); focus returns to "Discard move…" |
 
 - Esc does nothing on the full-window pages; there is nothing to close.
 - Each page sets the document title ("Welcome to Folio", "Start a new library — Folio", …) and moves

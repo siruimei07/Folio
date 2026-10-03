@@ -7,7 +7,7 @@ import { type CatalogChanged, shellEvents } from '../ipc';
 import { isOlderRevision } from '../lib/revision';
 import { receiveJob } from './jobs';
 import { keys, readKey } from './keys';
-import { changeLibrary } from './library';
+import { receiveLibraryState } from './library';
 import { publishReferences } from './references';
 import { sawRevision, useSession } from './session';
 import { receiveAppSettings, receiveIgnoreRules } from './settings';
@@ -83,7 +83,7 @@ function onCatalogChanged(client: QueryClient, event: CatalogChanged): void {
 export function connectShellEvents(client: QueryClient): () => void {
   const stops = [
     shellEvents.onLibraryStateChanged(({ status }) => {
-      changeLibrary(client, status);
+      receiveLibraryState(client, status);
     }),
     shellEvents.onCatalogChanged((event) => {
       onCatalogChanged(client, event);

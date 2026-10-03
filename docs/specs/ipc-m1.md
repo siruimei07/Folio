@@ -1005,10 +1005,14 @@ reason `unfinishedMove` and the command `discard_unfinished_move` (§6), and the
 core reports a move that recovery cannot reconcile as `LibraryError::UnfinishedMove` instead of
 `MetaError::Invalid`, and `Library::discard_move` lets go of it (library scan §7.1, §9).
 Generated bindings gained the command and the reason; the fake shell answers the command
-(`apps/desktop/src/ipc/mock/commands/library.ts`, URL parameter `reason=unfinishedMove`). Until
-`feat/ui-discard-move-action` adds the confirmed button and its copy, the unavailable screen
-shows the reason with "Try again" and "Copy details" (`first-run/Unavailable.tsx`). Other
-documents: library scan §7.1, §9 and §10; library-state.md "State and threads".
+(`apps/desktop/src/ipc/mock/commands/library.ts`, URL parameter `reason=unfinishedMove`). Lane
+`feat/ui-discard-move-action` (2026-10-03) added the confirmed "Discard move…" button and its
+copy to the unavailable screen (first-run handoff §7; `data/library.ts`
+`useDiscardUnfinishedMove`, `first-run/DiscardMove.tsx`). Its e2e run found that a start-up
+`library_status` answer of `open` could overwrite the `unfinishedMove` that LibraryStateChanged
+had already brought; the UI now keeps an event that arrives while a status call waits
+(`answeredStatus` in `data/library.ts`). Other documents: library scan §7.1, §9 and §10;
+library-state.md "State and threads".
 
 ## 21. Next lanes
 

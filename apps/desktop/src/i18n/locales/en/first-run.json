@@ -248,7 +248,26 @@
     },
     "unfinishedMove": {
       "title": "A move didn't finish",
-      "text": "Folio stopped while moving or renaming an item, and the library has changed since, so Folio can't finish or undo the move on its own. Your files are fine. Try again, or copy the details and send them to the developer."
+      "text": "Folio stopped partway through moving or renaming an item, and the library has changed since, so Folio can't finish or undo the move. Your files are fine. Discard the move to open your library with your files where they are now."
+    },
+    "discard": {
+      "action": "Discard move…",
+      "title": "Discard the unfinished move?",
+      "text": "Folio forgets the move and reads your library again. Your files stay where they are now: nothing is moved, deleted or changed.",
+      "check": "If part of the move already happened, check the item's tags once your library opens.",
+      "cancel": "Cancel",
+      "confirm": "Discard move",
+      "discarding": "Discarding…",
+      "failed": "Folio couldn't discard the move",
+      "errors": {
+        "InUse": "Another app, such as a sync or backup app, is using a file in the library folder. Close it, then discard the move again.",
+        "AccessDenied": "Windows denied access to a file in the library folder. Check that you can open the folder in File Explorer, then discard the move again.",
+        "DiskFull": "The disk is full. Free up some space on {{drive}}, then discard the move again.",
+        "DiskFullNoDrive": "The disk is full. Free up some space, then discard the move again.",
+        "NewerFormat": "A newer version of Folio saved this library. Update Folio, then open it again. Your files are fine.",
+        "Busy": "Folio is still opening or closing the library. Wait a moment, then discard the move again.",
+        "other": "Your files weren't touched. Discard the move again. If this keeps happening, copy the details and send them to the developer."
+      }
     }
   },
   "cantStart": {

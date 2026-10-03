@@ -12,7 +12,7 @@ import { revisionOf } from './events';
 import { useCancelJob, useJob, useJobs, useRebuildCatalog } from './jobs';
 import { keys } from './keys';
 import { useCount } from './paged';
-import { useLibrary } from './library';
+import { libraryStatusQuery, useLibrary } from './library';
 import { useProblems, useProblemsTotal } from './problems';
 import type { ReferenceUpdate } from './references';
 import {
@@ -190,6 +190,46 @@ describe('LibraryStateChanged', () => {
     expect(client.getQueryCache().findAll({ queryKey: keys.library(libraryId) })).toHaveLength(0);
     expect(client.getQueryData(keys.libraryStatus())).toMatchObject({ state: 'unavailable', reason: 'missing' });
     expect(followed.updates).toEqual([{ kind: 'reset' }]);
+  });
+
+  // At start-up and after a retry, `library_status` may answer `open` while the library's
+  // background work has already found an unfinished move (ipc-m1 §6).
+  it('is newer than a status answer that was on its way, which leaves it in place', async () => {
+    const { client, shell, result } = renderAppHook(() => useLibrary(), { now: NOW });
+    await waitFor(() => {
+      expect(result.current).not.toBeNull();
+    });
+    // The shell answers `open`; the answer reaches the page only after the event.
+    const invoke = shell.invoke.bind(shell);
+    const calls: Promise<unknown>[] = [];
+    let release = () => undefined as unknown;
+    shell.invoke = (command, payload) => {
+      const answer = invoke(command, payload);
+      calls.push(answer);
+      return new Promise((resolve) => {
+        release = () => {
+          resolve(answer);
+        };
+      });
+    };
+
+    const answered = client.query({ ...libraryStatusQuery, staleTime: 0 });
+    await waitFor(() => {
+      expect(calls).toHaveLength(1);
+    });
+    await expect(calls[0]).resolves.toMatchObject({ state: 'open' });
+    act(() => {
+      shell.makeUnavailable('unfinishedMove');
+    });
+    await waitFor(() => {
+      expect(client.getQueryData(keys.libraryStatus())).toMatchObject({ reason: 'unfinishedMove' });
+    });
+    release();
+
+    await expect(answered).resolves.toMatchObject({ state: 'unavailable', reason: 'unfinishedMove' });
+    expect(client.getQueryData(keys.libraryStatus())).toMatchObject({ state: 'unavailable', reason: 'unfinishedMove' });
+    expect(result.current).toBeNull();
+    expect(useSession.getState().libraryId).toBeNull();
   });
 });
 

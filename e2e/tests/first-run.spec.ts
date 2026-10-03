@@ -1,14 +1,13 @@
 import { access, mkdir, readFile, realpath, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 
 import common from '../../apps/desktop/src/i18n/locales/en/common.json' with { type: 'json' };
 import firstRun from '../../apps/desktop/src/i18n/locales/en/first-run.json' with { type: 'json' };
 import library from '../../apps/desktop/src/i18n/locales/en/library.json' with { type: 'json' };
 import type { Course } from '../../apps/desktop/src/ipc/bindings';
-import { createLibrary, expect, invoke, test } from '../fixtures';
+import { blockingViolations, createLibrary, expect, invoke, test } from '../fixtures';
 
 // The first run on the real shell (first-run handoff §2–§7), in a temporary folder that the debug
 // folder dialog double answers with: a new library with its semester and courses, a folder taken
@@ -24,24 +23,6 @@ async function exists(file: string): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-/**
- * Serious and critical axe violations, as `rule: targets`. A page fades in (first-run §10), and
- * axe would measure contrast halfway through, so it waits for the animations that end.
- */
-async function blockingViolations(page: Page): Promise<string[]> {
-  await expect
-    .poll(() =>
-      page.evaluate<boolean>(
-        'document.getAnimations().every((animation) => animation.effect?.getTiming().iterations === Infinity)',
-      ),
-    )
-    .toBe(true);
-  const { violations } = await new AxeBuilder({ page }).analyze();
-  return violations
-    .filter(({ impact }) => impact === 'serious' || impact === 'critical')
-    .map(({ id, nodes }) => `${id}: ${nodes.map(({ target }) => target.join(' ')).join(', ')}`);
 }
 
 function heading(page: Page, name: string) {

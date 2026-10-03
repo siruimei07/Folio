@@ -606,6 +606,13 @@
   font-size: var(--font-size-label);
 }
 
+/* The note under the message of the dialog that asks before discarding a move (§7). */
+.discard-move__check {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-label);
+}
+
 .opening {
   display: flex;
   align-items: center;

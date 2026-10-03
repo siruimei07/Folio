@@ -40,6 +40,8 @@ export interface ModalProps {
   'aria-label'?: string;
   /** The element that describes the dialog, read after its name. */
   'aria-describedby'?: string;
+  /** alertdialog: a confirmation that interrupts the user, read with its description. */
+  role?: 'dialog' | 'alertdialog';
   children: ReactNode;
 }
 
