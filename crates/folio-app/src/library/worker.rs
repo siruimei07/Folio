@@ -696,13 +696,21 @@ impl Session {
             },
             &mut |committed| self.committed(committed),
         );
-        let result = match report {
+        match report {
             Ok(report) => {
                 // The uncapped flag covers every failure; the job result carries the details.
                 if report.needs_reconciliation {
                     self.require_reconciliation();
                 }
-                (!report.cancelled).then(|| JobResult::Import(super::import::result(report)))
+                let cancelled = report.cancelled;
+                let result = JobResult::Import(super::import::result(report));
+                // A cancelled import still reports what it copied and what failed (ipc-m1 §13).
+                if cancelled {
+                    self.jobs.finish_cancelled(ticket, result)
+                } else {
+                    self.jobs.finish(ticket, Ok(Some(result)))
+                }
+                .map_err(Failure::own)?;
             }
             Err(error) => {
                 self.reconcile_error(&error);
@@ -711,8 +719,7 @@ impl Session {
                     .map_err(Failure::own)?;
                 return Ok(());
             }
-        };
-        self.jobs.finish(ticket, Ok(result)).map_err(Failure::own)?;
+        }
         self.queue_hash(Duration::ZERO)?;
         Ok(())
     }
@@ -1381,6 +1388,55 @@ mod tests {
                 .unwrap()
                 .is_some()
         );
+    }
+
+    #[test]
+    fn a_cancelled_import_ends_with_its_result_and_keeps_the_original() {
+        let (dir, session) = inactive_session();
+        let root = session.library.root().to_owned();
+        std::fs::create_dir_all(root.join("Fall/Course")).unwrap();
+        session.library.scan(&session.catalog, None, 10).unwrap();
+        let target = session
+            .catalog
+            .read(|tx| {
+                catalog::entry(
+                    tx,
+                    &folio_core::paths::RelPath::parse("Fall/Course").unwrap(),
+                )
+            })
+            .unwrap()
+            .unwrap();
+        let source = dir.path().join("stopped.md");
+        std::fs::write(&source, b"source").unwrap();
+        session
+            .queue_import(import_core::Request {
+                sources: vec![import_core::Source::select(source.clone()).unwrap()],
+                target: folio_core::library::operations::EntryRef::from(&target),
+                tags: Default::default(),
+                on_conflict: import_core::Conflict::KeepBoth,
+                delete_originals: true,
+            })
+            .unwrap();
+        let (ticket, request) = lock(&session.pending).imports.pop_front().unwrap();
+        assert!(session.jobs.start(&ticket).unwrap());
+        session.jobs.cancel(&ticket.id).unwrap();
+        session.import_files(&ticket, &request).unwrap();
+
+        let job = session
+            .jobs
+            .list()
+            .into_iter()
+            .find(|job| job.id == ticket.id)
+            .unwrap();
+        let crate::ipc::jobs::JobStatus::Cancelled {
+            result: Some(JobResult::Import(result)),
+        } = job.status
+        else {
+            panic!("a cancelled import lost its result: {:?}", job.status);
+        };
+        assert_eq!((result.imported, result.originals_deleted), (0, 0));
+        assert_eq!(std::fs::read(&source).unwrap(), b"source");
+        session.shutdown().unwrap();
     }
 
     #[test]

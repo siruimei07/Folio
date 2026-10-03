@@ -2,7 +2,7 @@
 // token for scripted files; `check_import` reports what would happen; `import_files` runs a job
 // that adds them, with the one clash policy the user chose for all.
 import { nameOf, parentOf } from '../../../lib/paths';
-import type { EntryChange, ImportFailure, ImportResult } from '../../bindings';
+import type { EntryChange, ImportFailure, ImportResult, JobResult } from '../../bindings';
 import type { GroupHandlers } from '../contract';
 import { fail } from '../failure';
 import type { ImportScript } from '../fixtures/types';
@@ -145,23 +145,41 @@ function startImport(
     changes.push({ kind: 'added', entry: library.ref(node) });
   };
 
+  /** The job's result; originals go to the Recycle Bin only once everything is copied. */
+  const report = (complete: boolean): JobResult => {
+    if (complete && request.deleteOriginals) {
+      const tops = new Set(items.map((item) => item.path.split('/')[0] ?? item.path));
+      result.originalsDeleted = [...tops].filter((top) => !incomplete.has(top)).length;
+    }
+    result.failures = failures.slice(0, 100);
+    result.failureCount = failures.length;
+    return { kind: 'import', ...result };
+  };
+
+  // Progress counts files, as the shell's does: a step of files takes the folders before them.
+  const files: string[] = [];
+  const positions: number[] = [];
+  items.forEach((item, at) => {
+    if (item.kind !== 'file' || isIgnored(item.path)) return;
+    files.push(item.path);
+    positions.push(at);
+  });
+  let next = 0;
   return shell.startJob('import', {
     cancellable: true,
-    total: items.length,
-    step: Math.max(1, Math.ceil(items.length / 8)),
-    onStep: (from, to) => {
+    total: files.length,
+    step: Math.max(1, Math.ceil(files.length / 8)),
+    onStep: (_from, to) => {
       const changes: EntryChange[] = [];
-      for (const item of items.slice(from, to)) importItem(item, changes);
+      const until = positions[to] ?? items.length;
+      for (; next < until; next++) {
+        const item = items[next];
+        if (item !== undefined) importItem(item, changes);
+      }
       if (changes.length > 0) shell.changed(changes);
     },
-    finish: () => {
-      if (request.deleteOriginals) {
-        const tops = new Set(items.map((item) => item.path.split('/')[0] ?? item.path));
-        result.originalsDeleted = [...tops].filter((top) => !incomplete.has(top)).length;
-      }
-      result.failures = failures.slice(0, 100);
-      result.failureCount = failures.length;
-      return { kind: 'import', ...result };
-    },
+    current: (done) => files[done] ?? null,
+    finish: () => report(true),
+    stopped: () => report(false),
   });
 }

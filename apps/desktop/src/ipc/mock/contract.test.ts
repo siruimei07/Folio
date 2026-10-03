@@ -38,6 +38,7 @@ describe('the fake shell follows the bindings', () => {
     expect(Object.keys(events).sort()).toEqual([
       'appSettingsChanged',
       'catalogChanged',
+      'dropFailed',
       'dropHover',
       'filesDropped',
       'ignoreRulesChanged',

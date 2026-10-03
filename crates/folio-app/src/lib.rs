@@ -120,6 +120,7 @@ pub fn run() {
                         library::Event::Problems(total) => ProblemsChanged { total }.emit(&handle),
                         library::Event::FilesDropped(event) => event.emit_to(&handle, "main"),
                         library::Event::DropHover(event) => event.emit_to(&handle, "main"),
+                        library::Event::DropFailed(event) => event.emit_to(&handle, "main"),
                         library::Event::Error(error) => {
                             diagnostics::report(&handle, &error);
                             return;

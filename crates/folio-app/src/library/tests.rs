@@ -724,7 +724,7 @@ fn job_commands_expose_progress_and_reject_unknown_finished_or_uncancellable_job
         .finish(&fixed, Err(AppError::Internal("test failure".to_owned())))
         .unwrap();
     assert!(f.events.lock().unwrap().iter().any(|event| matches!(
-        event, Event::Job(job) if job.id == ticket.id && matches!(job.status, JobStatus::Cancelled)
+        event, Event::Job(job) if job.id == ticket.id && matches!(job.status, JobStatus::Cancelled { result: None })
     )));
 }
 

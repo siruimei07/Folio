@@ -82,6 +82,10 @@ interface JobSpec {
   onStep?: (from: number, to: number) => void;
   /** Runs when every item is done; its result finishes the job. */
   finish: () => JobResult;
+  /** Runs when the job is cancelled after it started: what it did before it stopped (imports). */
+  stopped?: () => JobResult;
+  /** The item in progress once `done` items are done, for display (imports). */
+  current?: (done: number) => string | null;
 }
 
 interface JobRun extends JobSpec {
@@ -442,6 +446,18 @@ export class FakeShell {
     this.emit(() => events.filesDropped.emit(payload));
   }
 
+  /** Drags files over the window to `position`, or out of it (`null`): DropHover only. */
+  dragOver(position: Point | null): void {
+    this.emit(() => events.dropHover.emit({ position }));
+  }
+
+  /** A drop the shell rejects (too many items, an unreadable one): no token, only DropFailed. */
+  dropFails(error: AppError, position: Point = { x: 480, y: 320 }): void {
+    this.emit(() => events.dropHover.emit({ position }));
+    this.emit(() => events.dropHover.emit({ position: null }));
+    this.emit(() => events.dropFailed.emit({ error }));
+  }
+
   // ---- jobs
 
   /** Queued and running jobs, then the last finished ones, newest first. */
@@ -464,7 +480,7 @@ export class FakeShell {
     const run = this.active.find((candidate) => candidate.job.id === id);
     if (run === undefined) fail('NotFound', `no queued or running job ${id}`);
     if (!run.job.cancellable) fail('InvalidArgument', `job ${id} cannot be cancelled`);
-    if (run.job.status.state === 'queued') this.finishJob(run, { state: 'cancelled' });
+    if (run.job.status.state === 'queued') this.finishJob(run, { state: 'cancelled', result: null });
     else run.cancelRequested = true;
   }
 
@@ -520,7 +536,8 @@ export class FakeShell {
     });
   }
 
-  private stepJobs(): void {
+  /** Moves every job one step on now: queued ones start, running ones work through a step. */
+  stepJobs(): void {
     const runningKinds = new Set<JobKind>();
     for (const run of [...this.active]) {
       if (run.job.status.state === 'queued') {
@@ -534,7 +551,7 @@ export class FakeShell {
       }
       runningKinds.add(run.job.kind);
       if (run.cancelRequested) {
-        this.finishJob(run, { state: 'cancelled' });
+        this.finishJob(run, { state: 'cancelled', result: run.stopped?.() ?? null });
         continue;
       }
       const total = run.total ?? 1;
@@ -555,7 +572,7 @@ export class FakeShell {
             done: to,
             total: run.total,
             permille: run.total === null ? null : Math.round((to / total) * 1000),
-            current: null,
+            current: run.current?.(to) ?? null,
           },
         });
       }

@@ -38,8 +38,12 @@ pub enum JobStatus {
     Failed {
         error: AppError,
     },
-    /// Stopped between files; what was done stays done.
-    Cancelled,
+    /// Stopped between files; what was done stays done. An import that had started reports
+    /// what it did before it stopped; the other kinds, and a job cancelled while queued, have
+    /// none.
+    Cancelled {
+        result: Option<JobResult>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]

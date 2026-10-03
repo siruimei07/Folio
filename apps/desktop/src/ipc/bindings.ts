@@ -88,6 +88,7 @@ export const commands = {
 export const events = {
 	appSettingsChanged: makeEvent<AppSettingsChanged>("app-settings-changed"),
 	catalogChanged: makeEvent<CatalogChanged>("catalog-changed"),
+	dropFailed: makeEvent<DropFailed>("drop-failed"),
 	dropHover: makeEvent<DropHover>("drop-hover"),
 	filesDropped: makeEvent<FilesDropped>("files-dropped"),
 	ignoreRulesChanged: makeEvent<IgnoreRulesChanged>("ignore-rules-changed"),
@@ -326,6 +327,15 @@ export type DeleteTag = {
 	id: string,
 };
 
+/**
+ *  Files or folders were dropped on the window, but the shell could not take them: too many
+ *  items, a name Windows stores incorrectly, an item it cannot read, or no library to add them
+ *  to. Nothing was chosen, so there is no token.
+ */
+export type DropFailed = {
+	error: AppError,
+};
+
 /**  Files are dragged over the window; `position` is `null` when they leave or the drag ends. */
 export type DropHover = {
 	position: Point | null,
@@ -547,8 +557,12 @@ export type JobResult = ({ kind: "scan"; changes: number; problems: number }) & 
 } & ImportResult | ({ kind: "rebuild"; entries: number }) & { changes?: never; deferred?: never; hashed?: never; problems?: never };
 
 export type JobStatus = { state: "queued" } | { state: "running"; progress: Progress } | { state: "done"; result: JobResult } | { state: "failed"; error: AppError } | 
-/**  Stopped between files; what was done stays done. */
-{ state: "cancelled" };
+/**
+ *  Stopped between files; what was done stays done. An import that had started reports
+ *  what it did before it stopped; the other kinds, and a job cancelled while queued, have
+ *  none.
+ */
+{ state: "cancelled"; result: JobResult | null };
 
 export type LibraryInfo = {
 	id: string,

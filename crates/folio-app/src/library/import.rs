@@ -10,7 +10,7 @@ use folio_core::meta::TagId;
 use super::operations::{operation_error, reference};
 use super::{CHOICE_TTL, Event, LibraryState, MAX_CHOICES, lock};
 use crate::error::AppError;
-use crate::ipc::events::{DropHover, FilesDropped};
+use crate::ipc::events::{DropFailed, DropHover, FilesDropped};
 use crate::ipc::import::{
     CheckImport, ConflictPolicy, ImportCheck, ImportConflict, ImportFailure, ImportFiles,
     ImportName, ImportResult, ImportSource,
@@ -150,9 +150,13 @@ impl LibraryState {
     pub(crate) fn files_dropped(&self, paths: Vec<PathBuf>, position: Point) {
         match self.choose_import(paths) {
             Ok(source) => (self.0.emit)(Event::FilesDropped(FilesDropped { source, position })),
-            Err(error) => (self.0.emit)(Event::Error(format!(
-                "native import selection failed: {error}"
-            ))),
+            Err(error) => {
+                (self.0.emit)(Event::Error(format!(
+                    "native import selection failed: {error}"
+                )));
+                // The page says why nothing happened (ipc-m1 §12); no token was issued.
+                (self.0.emit)(Event::DropFailed(DropFailed { error }));
+            }
         }
     }
 

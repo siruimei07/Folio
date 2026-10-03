@@ -194,11 +194,33 @@ impl Registry {
         Ok(())
     }
 
+    /// Ends a job: `Ok(None)` when it was cancelled with nothing to report.
     pub fn finish(
         &self,
         ticket: &Ticket,
         result: Result<Option<JobResult>, AppError>,
     ) -> Result<(), AppError> {
+        self.end(
+            ticket,
+            match result {
+                Ok(Some(result)) => JobStatus::Done { result },
+                Ok(None) => JobStatus::Cancelled { result: None },
+                Err(error) => JobStatus::Failed { error },
+            },
+        )
+    }
+
+    /// Ends a cancelled job with what it did before it stopped (imports, ipc-m1 §13).
+    pub fn finish_cancelled(&self, ticket: &Ticket, result: JobResult) -> Result<(), AppError> {
+        self.end(
+            ticket,
+            JobStatus::Cancelled {
+                result: Some(result),
+            },
+        )
+    }
+
+    fn end(&self, ticket: &Ticket, status: JobStatus) -> Result<(), AppError> {
         let mut records = lock(&self.jobs);
         let index = records
             .iter()
@@ -207,15 +229,7 @@ impl Registry {
         if !active(&records[index].job.status) {
             return Err(AppError::Internal("a job finished twice".to_owned()));
         }
-        let job = retire(
-            &mut records,
-            index,
-            match result {
-                Ok(Some(result)) => JobStatus::Done { result },
-                Ok(None) => JobStatus::Cancelled,
-                Err(error) => JobStatus::Failed { error },
-            },
-        );
+        let job = retire(&mut records, index, status);
         drop(records);
         (self.emit)(job);
         Ok(())
@@ -233,7 +247,7 @@ fn progress(done: u64, total: Option<u64>) -> Progress {
 
 fn retire_queued(records: &mut VecDeque<Record>, index: usize) -> Option<Job> {
     matches!(records[index].job.status, JobStatus::Queued)
-        .then(|| retire(records, index, JobStatus::Cancelled))
+        .then(|| retire(records, index, JobStatus::Cancelled { result: None }))
 }
 
 /// Gives the job its final status and keeps only the last `FINISHED_LIMIT` finished jobs.
@@ -375,8 +389,9 @@ mod tests {
             .iter()
             .map(|job| (job.id.clone(), job.status.clone()))
             .collect();
-        assert!(statuses.contains(&(hash.id.clone(), JobStatus::Cancelled)));
-        assert!(statuses.contains(&(rebuild.id.clone(), JobStatus::Cancelled)));
+        let cancelled = JobStatus::Cancelled { result: None };
+        assert!(statuses.contains(&(hash.id.clone(), cancelled.clone())));
+        assert!(statuses.contains(&(rebuild.id.clone(), cancelled)));
         assert!(!registry.busy(JobKind::Hash) && !registry.busy(JobKind::Rebuild));
         assert!(!registry.start(&hash).unwrap());
         assert!(!registry.start(&rebuild).unwrap());
@@ -389,5 +404,35 @@ mod tests {
         assert!(scan.cancel.load(Ordering::Acquire) && registry.busy(JobKind::Scan));
         registry.finish(&scan, Ok(None)).unwrap();
         assert!(!registry.busy(JobKind::Scan));
+    }
+
+    #[test]
+    fn a_cancelled_import_keeps_what_it_did_and_ends_once() {
+        let events = Arc::new(Mutex::new(Vec::new()));
+        let capture = events.clone();
+        let registry = Registry::new(Arc::new(move |job| capture.lock().unwrap().push(job)));
+        let import = registry.queue(JobKind::Import, true).unwrap();
+        assert!(registry.start(&import).unwrap());
+        registry.cancel(&import.id).unwrap();
+        let result = JobResult::Import(crate::ipc::import::ImportResult {
+            imported: 7,
+            replaced: 0,
+            renamed: 1,
+            skipped: 0,
+            originals_deleted: 0,
+            failures: Vec::new(),
+            failure_count: 0,
+        });
+        registry.finish_cancelled(&import, result.clone()).unwrap();
+
+        let last = events.lock().unwrap().last().cloned().unwrap();
+        assert_eq!(
+            last.status,
+            JobStatus::Cancelled {
+                result: Some(result.clone())
+            }
+        );
+        assert_eq!(registry.list()[0].status, last.status);
+        assert!(registry.finish_cancelled(&import, result).is_err());
     }
 }

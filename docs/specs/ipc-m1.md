@@ -561,6 +561,7 @@ read it.
 | `pick_import_files` | — → `ImportSource \| null` (null: cancelled) | `Internal` |
 | `FilesDropped` event | `{ source: ImportSource; position: Point }` | — |
 | `DropHover` event | `{ position: Point \| null }` | — |
+| `DropFailed` event | `{ error: AppError }` | — |
 | `check_import` | `{ source: string; target: EntryRef }` → `ImportCheck` | `ChoiceExpired`, `NotFound`, `InvalidArgument` (target not a folder) |
 | `import_files` | `ImportFiles` → job id | `ChoiceExpired`, `NotFound`, `InvalidArgument`, `ReadOnly` (with tags), `Busy` |
 
@@ -609,6 +610,9 @@ type ImportFiles = {
 - `check_import` is repeatable and does not consume the source token. A successfully queued
   `import_files` consumes it once; validation or `Busy` failures leave it available. Selected
   source identities are checked again when the job starts. Conflicts use library-relative paths.
+- A drop the shell cannot take (more than `batch` items, a name that is not Unicode, an item it
+  cannot read, no open library) issues no token: the page gets `DropFailed` with the reason
+  instead of `FilesDropped` (`feat/ipc-import-ui-contract`, 2026-10-02).
 - Implementation and recovery boundaries: [library-import.md](library-import.md).
 
 ## 13. Jobs
@@ -626,7 +630,7 @@ type JobStatus =
   | { state: "running"; progress: Progress }
   | { state: "done"; result: JobResult }
   | { state: "failed"; error: AppError }
-  | { state: "cancelled" };
+  | { state: "cancelled"; result: JobResult | null };
 type Progress = {
   done: number; total: number | null;     // items: files or entries
   permille: number | null;                // 0–1000 by bytes, for jobs that measure bytes
@@ -650,7 +654,10 @@ type ImportFailure = { name: string; error: AppError }; // name: the item's path
   and `ProblemsChanged`.
 - One job of each kind runs at a time; imports queue. `list_jobs` returns the queued and running
   jobs, then the last 20 finished ones.
-- Cancelling stops between files and keeps what is done: copied files stay, hashes stay.
+- Cancelling stops between files and keeps what is done: copied files stay, hashes stay. An import
+  cancelled after it started ends with the `ImportResult` of what it did before it stopped, its
+  failures included and its originals kept; every other cancelled job, and an import cancelled
+  while queued, has `result: null` (`feat/ipc-import-ui-contract`, 2026-10-02).
 - `rebuild_catalog` replaces the catalog and scans from scratch (library core §5.3). Entry ids
   change, so every reference the UI holds becomes stale. While it runs, commands that write fail
   with `Busy`; reads see the catalog as it grows.
@@ -699,6 +706,7 @@ type StrandedCause = "readOnly" | "folderTags" | "unreadable" | "tooLong";
 | `ProblemsChanged` | `{ total }` | The problem list changed |
 | `FilesDropped` | `{ source: ImportSource; position: Point }` | Files or folders were dropped on the window (§12) |
 | `DropHover` | `{ position: Point \| null }` | Files are dragged over the window; `null` when they leave or the drag ends |
+| `DropFailed` | `{ error: AppError }` | Files or folders were dropped, but the shell could not take them (§12) |
 | `MaximizeButtonChanged` | `{ hovered; pressed }` | Existing (ADR-0001 action item 4b) |
 
 ```ts

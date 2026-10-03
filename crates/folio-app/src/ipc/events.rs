@@ -9,6 +9,7 @@ use super::jobs::Job;
 use super::library::LibraryStatus;
 use super::settings::{AppSettings, IgnoreRules};
 use super::types::{EntryRef, Point};
+use crate::error::AppError;
 
 /// The library opened, was created, or became unavailable or read-only. Drop every cached page
 /// and reference.
@@ -76,6 +77,14 @@ pub struct ProblemsChanged {
 pub struct FilesDropped {
     pub source: ImportSource,
     pub position: Point,
+}
+
+/// Files or folders were dropped on the window, but the shell could not take them: too many
+/// items, a name Windows stores incorrectly, an item it cannot read, or no library to add them
+/// to. Nothing was chosen, so there is no token.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type, tauri_specta::Event)]
+pub struct DropFailed {
+    pub error: AppError,
 }
 
 /// Files are dragged over the window; `position` is `null` when they leave or the drag ends.

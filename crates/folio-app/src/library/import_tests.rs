@@ -417,3 +417,37 @@ fn a_native_drop_issues_a_choice_without_paths_in_the_typed_event() {
     assert_eq!(source.position, Point { x: 20, y: 10 });
     assert!(f.state.check_import(f.check(&source.source.token)).is_ok());
 }
+
+#[test]
+fn a_rejected_native_drop_tells_the_page_why_without_a_choice() {
+    let f = Fixture::new();
+    f.state.native_drop(
+        &tauri::DragDropEvent::Drop {
+            paths: vec![f.dir.path().join("missing.txt")],
+            position: tauri::PhysicalPosition::new(20.0, 10.0),
+        },
+        1.0,
+    );
+    wait(|| {
+        lock(&f.events)
+            .iter()
+            .any(|event| matches!(event, Event::DropFailed(_)))
+    });
+    let events = lock(&f.events);
+    let failed = events
+        .iter()
+        .find_map(|event| match event {
+            Event::DropFailed(event) => Some(event.clone()),
+            _ => None,
+        })
+        .unwrap();
+    assert!(
+        !events
+            .iter()
+            .any(|event| matches!(event, Event::FilesDropped(_)))
+    );
+    drop(events);
+    let serialized = serde_json::to_string(&failed).unwrap();
+    assert!(!serialized.contains(&f.dir.path().to_string_lossy().replace('\\', "\\\\")));
+    assert!(lock(&f.state.0.import_choices).is_empty());
+}

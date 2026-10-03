@@ -469,7 +469,7 @@ describe('jobs', () => {
     install();
     const first = await unwrap(ipc.rebuildCatalog());
     await expect(unwrap(ipc.cancelJob({ job: first }))).resolves.toBeNull();
-    expect((await unwrap(ipc.listJobs()))[0]?.status).toEqual({ state: 'cancelled' });
+    expect((await unwrap(ipc.listJobs()))[0]?.status).toEqual({ state: 'cancelled', result: null });
     expect(await failure(ipc.cancelJob({ job: first }))).toBe('NotFound');
   });
 });
@@ -520,6 +520,35 @@ describe('import', () => {
     const course = await entryAt('Fall 2026/CSC148 Introduction to Computer Science');
     const token = drops.seen[0]?.source.token ?? '';
     await expect(unwrap(ipc.checkImport({ source: token, target: course }))).resolves.toMatchObject({ files: 4 });
+  });
+
+  it('ends a cancelled import with what it added, and keeps the originals', async () => {
+    install();
+    const course = await entryAt('Fall 2026/CSC148 Introduction to Computer Science');
+    const source = await unwrap(ipc.pickImportFiles());
+    const job = await unwrap(
+      ipc.importFiles({ source: source?.token ?? '', target: course, tags: [], onConflict: 'keepBoth', deleteOriginals: true }),
+    );
+    shell?.stepJobs(); // starts
+    shell?.stepJobs(); // a first step of files
+    const running = (await unwrap(ipc.listJobs())).find((item) => item.id === job);
+    expect(running?.status.state === 'running' && running.status.progress.current).toBeTruthy();
+    await unwrap(ipc.cancelJob({ job }));
+    shell?.finishJobs();
+    const stopped = (await unwrap(ipc.listJobs())).find((item) => item.id === job);
+    expect(stopped?.status).toMatchObject({ state: 'cancelled', result: { kind: 'import', originalsDeleted: 0 } });
+  });
+
+  it('tells the page about a drop it rejects, without a token', async () => {
+    install();
+    const failures = collect(shellEvents.onDropFailed);
+    const drops = collect(shellEvents.onFilesDropped);
+    shell?.dropFails({ code: 'InvalidArgument', detail: 'invalid import selection size' });
+    await settle();
+    failures.stop();
+    drops.stop();
+    expect(failures.seen).toEqual([{ error: { code: 'InvalidArgument', detail: 'invalid import selection size' } }]);
+    expect(drops.seen).toEqual([]);
   });
 });
 

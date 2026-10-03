@@ -28,7 +28,7 @@ const failed = (kind: Job['kind']): Job => ({
   cancellable: false,
   status: { state: 'failed', error: { code: 'AccessDenied', detail: 'denied' } },
 });
-const cancelled = (kind: Job['kind']): Job => ({ id: `${kind}-cancelled`, kind, cancellable: false, status: { state: 'cancelled' } });
+const cancelled = (kind: Job['kind']): Job => ({ id: `${kind}-cancelled`, kind, cancellable: false, status: { state: 'cancelled', result: null } });
 
 describe('activity status', () => {
   it('follows the jobs: one running, several, recently done, problems, hidden', () => {

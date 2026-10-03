@@ -231,7 +231,7 @@ describe('JobChanged and ProblemsChanged', () => {
     await result.current.cancel.mutateAsync(id);
 
     await waitFor(() => {
-      expect(result.current.job?.status).toEqual({ state: 'cancelled' });
+      expect(result.current.job?.status).toEqual({ state: 'cancelled', result: null });
     });
     await expect(result.current.cancel.mutateAsync(id)).rejects.toMatchObject({
       error: { code: 'NotFound' },

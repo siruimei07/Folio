@@ -115,7 +115,7 @@ describe('jobs', () => {
   it('counts queued and running jobs as active', () => {
     expect(isActiveJob({ status: { state: 'queued' } })).toBe(true);
     expect(isActiveJob({ status: { state: 'running', progress: { done: 0, total: null, permille: null, current: null } } })).toBe(true);
-    expect(isActiveJob({ status: { state: 'cancelled' } })).toBe(false);
+    expect(isActiveJob({ status: { state: 'cancelled', result: null } })).toBe(false);
     expect(isActiveJob({ status: { state: 'failed', error: { code: 'Internal', detail: '' } } })).toBe(false);
   });
 });

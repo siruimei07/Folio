@@ -107,13 +107,13 @@ Handle-based confinement would be a separate OS-boundary change.
 
 - A native drop the shell rejects (more than `LIMITS.batch` items, a non-Unicode name, an
   unreadable folder) reaches only the diagnostics log: `FilesDropped` has no error form, so the
-  page sees the hover end and nothing else. The import UI lane adds a typed drop-failure event
-  (contract change: bindings, fake shell, ipc-m1 §12) before it ships the drop target.
+  page sees the hover end and nothing else. Settled 2026-10-02 by `feat/ipc-import-ui-contract`:
+  the shell also emits `DropFailed { error }` (ipc-m1 §12, §15.1).
 - A cancelled import finishes as `JobStatus::Cancelled`, which has no result: its imported
   count, partial failures and an original-recycle failure that raced the cancel are dropped
-  (committed files still reach the catalog through `CatalogChanged`). Before the import UI
-  lane ships, a contract change gives `Cancelled` an optional `ImportResult` (Sirui,
-  2026-10-02: land first, follow up).
+  (committed files still reach the catalog through `CatalogChanged`). Settled 2026-10-02 by
+  `feat/ipc-import-ui-contract`: `Cancelled { result }` carries the import's `ImportResult`
+  (ipc-m1 §13).
 - `DropHover` is emitted for every native drag-over callback, unthrottled; the import UI lane
   coalesces it (same position, or the job-progress throttle) if profiling shows the cost.
 - Per-file collision checks list the destination parent each time, so very large folders

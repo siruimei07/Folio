@@ -127,6 +127,7 @@ fn contract(builder: Builder<tauri::Wry>) -> Builder<tauri::Wry> {
             events::ProblemsChanged,
             events::FilesDropped,
             events::DropHover,
+            events::DropFailed,
             events::AppSettingsChanged,
             events::IgnoreRulesChanged,
         ])

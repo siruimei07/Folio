@@ -6,6 +6,7 @@ import type { Event, UnlistenFn } from '@tauri-apps/api/event';
 import {
   type AppSettingsChanged,
   type CatalogChanged,
+  type DropFailed,
   type DropHover,
   events,
   type FilesDropped,
@@ -82,6 +83,8 @@ export const shellEvents = {
     subscribe(events.filesDropped, onEvent),
   /** Files are dragged over the window, or left it. */
   onDropHover: (onEvent: (payload: DropHover) => void) => subscribe(events.dropHover, onEvent),
+  /** Files were dropped, but the shell could not take them; nothing was chosen. */
+  onDropFailed: (onEvent: (payload: DropFailed) => void) => subscribe(events.dropFailed, onEvent),
   /** App settings changed: device name, theme or reduced motion. */
   onAppSettingsChanged: (onEvent: (payload: AppSettingsChanged) => void) =>
     subscribe(events.appSettingsChanged, onEvent),

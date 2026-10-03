@@ -43,6 +43,7 @@ pub(crate) enum Event {
     Error(String),
     FilesDropped(crate::ipc::events::FilesDropped),
     DropHover(crate::ipc::events::DropHover),
+    DropFailed(crate::ipc::events::DropFailed),
 }
 
 type Sink = Arc<dyn Fn(Event) + Send + Sync>;
