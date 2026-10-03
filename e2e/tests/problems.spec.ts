@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdir, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, realpath, symlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import AxeBuilder from '@axe-core/playwright';
@@ -90,7 +90,8 @@ test('lists what the scan left out, copies a path, opens the ignore rules, and p
   const shortcut = 'Fall 2026/MAT232 Calculus/Shortcut';
   await links.getByRole('button', { name: `Copy path of ${shortcut}` }).click();
   await expect(page.getByRole('status').filter({ hasText: problems.copy.one })).toBeVisible();
-  expect(windowsClipboard()).toBe(path.join(libraryDir, COURSE, 'Shortcut'));
+  // The shell joins the canonical root; os.tmpdir() can be an 8.3 short path (RUNNER~1 on CI).
+  expect(windowsClipboard()).toBe(path.join(await realpath(libraryDir), COURSE, 'Shortcut'));
 
   // Esc closes the list and focus goes back to the activity button.
   await dialog.getByRole('heading', { name: problems.title }).focus();

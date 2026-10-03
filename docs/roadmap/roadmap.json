@@ -1846,6 +1846,38 @@
       ]
     },
     {
+      "id": "fix/ui-problems-e2e-long-path",
+      "title": "问题列表 e2e 的长路径",
+      "milestone": "M1",
+      "phase": "m1-w4",
+      "track": "ui",
+      "agent": "claude-code",
+      "size": "S",
+      "effort": "low",
+      "deps": [
+        "feat/ui-problems-list"
+      ],
+      "summary": "问题列表合并后 main 的 CI 红了：problems.spec.ts 拿 os.tmpdir() 的 8.3 短路径（CI 上是 RUNNER~1）和剪贴板比较；改成比较规范路径（同 35e9938）",
+      "status": "done",
+      "updated": "2026-10-03",
+      "landed": "2026-10-03",
+      "gates": {
+        "check": "pass",
+        "e2e": "partial",
+        "codeReview": "na",
+        "securityReview": "na",
+        "simplify": "na",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "e2e/tests/problems.spec.ts"
+      ],
+      "notes": [
+        "CI run 37102902231 失败（adc2f88）；本机路径不是短路径，所以本机能过。problems.spec.ts 2/2 本机通过"
+      ]
+    },
+    {
       "id": "gate/m1-acceptance",
       "kind": "gate",
       "title": "M1 验收 → v0.1",
@@ -2494,7 +2526,12 @@
       "updated": "2026-10-01"
     }
   ],
-  "landingQueue": [],
+  "landingQueue": [
+    {
+      "lane": "feat/core-discard-move",
+      "why": "Claude 审计通过、Sirui 已批准；等修复的 main CI 绿了再合并"
+    }
+  ],
   "decisions": [
     {
       "id": "ci-red-preview-pdf",
