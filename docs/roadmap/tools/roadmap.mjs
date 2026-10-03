@@ -86,9 +86,9 @@ function parse(args) {
 }
 
 /** "Sonnet 5.5 · low": the model and effort to start a lane's session at. */
-const run = (data, lane) => `${modelName(data, modelFor(lane))} · ${effortFor(lane)}`;
+const run = (data, lane) => `${modelName(data, modelFor(lane, data))} · ${effortFor(lane)}`;
 /** The same for the Claude Code audit of a Codex lane. */
-const audit = (data, lane) => `${modelName(data, auditModelFor(lane))} · ${auditEffortFor(lane)}`;
+const audit = (data, lane) => `${modelName(data, auditModelFor(lane, data))} · ${auditEffortFor(lane)}`;
 /** What a Claude Code session for this lane runs at now: the audit once a Codex lane is in review. */
 const session = (data, lane) => (!isCodex(lane) ? run(data, lane) : lane.status === 'review' ? `audit ${audit(data, lane)}` : 'Codex');
 

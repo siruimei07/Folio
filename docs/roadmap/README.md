@@ -56,7 +56,9 @@ browser pane opens it with `preview_start roadmap`.
 
 ## Data model
 
-Top level: `meta` (with `models`, the display names of `fable`, `opus` and `sonnet`), `now` (stage, focus milestone, summary lines), `limits` (session caps),
+Top level: `meta` (with `models`, the display names of `fable`, `opus` and `sonnet`, and
+`pausedModels`, models not to recommend for now: Opus 5.5 stands in for them at the same effort,
+also where a lane names one; `["fable"]` since 2026-10-03), `now` (stage, focus milestone, summary lines), `limits` (session caps),
 `runtime` (app lock holder, dev server, devices), `agents`, `tracks` (graph rows), `milestones`,
 `phases` (graph columns, in order; `kind` is `wave`, `sync` or `gate`), `lanes`,
 `landingQueue` (ordered `{ lane, why }`), `decisions` (`approve | decide | manual`,

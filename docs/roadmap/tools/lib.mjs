@@ -58,14 +58,18 @@ export function effortFor(lane) {
   return EFFORTS[Math.max(0, Math.min(EFFORTS.length - 1, i))];
 }
 
+/** Opus 5.5 stands in for a paused model (`meta.pausedModels`, e.g. `["fable"]`) at the same effort. */
+export const usable = (data, model) => (data?.meta?.pausedModels?.includes(model) ? 'opus' : model);
+
 /**
  * The model to run a lane at: its own `model`, else Fable for the work that is hardest to undo
  * (gates, specs, IPC contracts, anything at effort max), Sonnet for routine work (docs-only
  * lanes, landing only) and Opus for everything else: screens, core work, tests and design.
+ * With `data`, a paused model gives way to Opus.
  */
-export function modelFor(lane) {
-  if (lane.model) return lane.model;
-  if (lane.kind === 'gate' || isSpec(lane) || isContract(lane) || effortFor(lane) === 'max') return 'fable';
+export function modelFor(lane, data) {
+  if (lane.model) return usable(data, lane.model);
+  if (lane.kind === 'gate' || isSpec(lane) || isContract(lane) || effortFor(lane) === 'max') return usable(data, 'fable');
   if (lane.id.startsWith('docs/docs-') || lane.prompt?.template === 'land') return 'sonnet';
   return 'opus';
 }
@@ -85,9 +89,12 @@ export function auditEffortFor(lane) {
   return lane.auditEffort ?? ({ S: 'medium', M: 'high', L: 'xhigh' }[lane.size] ?? 'high');
 }
 
-/** The model for that audit: its own `auditModel`, else Fable for an L lane and Opus otherwise. */
-export function auditModelFor(lane) {
-  return lane.auditModel ?? (lane.size === 'L' ? 'fable' : 'opus');
+/**
+ * The model for that audit: its own `auditModel`, else Fable for an L lane and Opus otherwise.
+ * With `data`, a paused model gives way to Opus.
+ */
+export function auditModelFor(lane, data) {
+  return usable(data, lane.auditModel ?? (lane.size === 'L' ? 'fable' : 'opus'));
 }
 
 export const ID_PATTERN = /^(feat|fix|chore|docs|design|spike|refactor|test|perf|gate)\/[a-z0-9][a-z0-9.-]*$/;
@@ -214,9 +221,9 @@ function fill(data, lane, lines, extra = []) {
     milestone: lane.milestone,
     phase: phase?.label ?? lane.phase,
     summary: lane.summary,
-    model: modelName(data, modelFor(lane)),
+    model: modelName(data, modelFor(lane, data)),
     effort: effortFor(lane),
-    auditModel: modelName(data, auditModelFor(lane)),
+    auditModel: modelName(data, auditModelFor(lane, data)),
     auditEffort: auditEffortFor(lane),
     deps: list(lane.deps, 'none'),
     unblocks: list(dependents(data).get(lane.id), 'nothing yet'),
@@ -330,6 +337,9 @@ export function validate(data) {
   const err = (msg) => errors.push(msg);
   for (const key of TOP_KEYS) if (!(key in data)) err(`missing top-level "${key}"`);
   for (const key of Object.keys(data)) if (!TOP_KEYS.includes(key)) err(`unknown top-level "${key}"`);
+  if (data.meta.pausedModels !== undefined && !Array.isArray(data.meta.pausedModels)) err('meta.pausedModels must be an array');
+  else for (const model of data.meta.pausedModels ?? [])
+    if (!MODELS.includes(model) || model === 'opus') err(`meta.pausedModels: "${model}" must be one of ${MODELS.filter((m) => m !== 'opus').join(', ')}`);
   for (const model of MODELS)
     if (typeof data.meta.models?.[model] !== 'string') err(`meta.models.${model} must name the model, e.g. "Opus 5.5"`);
   if (errors.length) return { errors, warnings };

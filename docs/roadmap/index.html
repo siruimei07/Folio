@@ -471,7 +471,7 @@ const DATA = /*@data*/null;
   /** Recommended model and reasoning effort, with a five-step meter. */
   function effortTag(lane) {
     const codex = isCodex(lane);
-    const model = codex ? auditModelFor(lane) : modelFor(lane);
+    const model = codex ? auditModelFor(lane, D) : modelFor(lane, D);
     const name = modelName(D, model);
     const level = codex ? auditEffortFor(lane) : effortFor(lane);
     const n = EFFORTS.indexOf(level) + 1;
@@ -874,7 +874,7 @@ const DATA = /*@data*/null;
       nodeShape(lane, st),
       s('text', { class: 'label', x: 15, y: -1 }, title),
       s('text', { class: 'sub', x: 15, y: 13 }, `${lane.size} · ${agentName(lane.agent)}`));
-      tipFor(node, () => [lane.title, `${DISPLAY[st].label} · ${lane.id}`, isCodex(lane) ? `Codex 实现 · Claude 审计 ${modelName(D, auditModelFor(lane))} · ${auditEffortFor(lane)}` : `${modelName(D, modelFor(lane))} · ${effortFor(lane)}`, lane.next ?? lane.hold ?? lane.summary]);
+      tipFor(node, () => [lane.title, `${DISPLAY[st].label} · ${lane.id}`, isCodex(lane) ? `Codex 实现 · Claude 审计 ${modelName(D, auditModelFor(lane, D))} · ${auditEffortFor(lane)}` : `${modelName(D, modelFor(lane, D))} · ${effortFor(lane)}`, lane.next ?? lane.hold ?? lane.summary]);
       svg.append(node);
     }
     if (sel) svg.classList.add('has-sel');
@@ -1128,12 +1128,13 @@ const DATA = /*@data*/null;
   /** How lanes pick Fable, Opus or Sonnet and an effort (lib.mjs modelFor, effortFor), with today's split. */
   function renderModels() {
     const open = D.lanes.filter((l) => !['done', 'dropped'].includes(l.status));
-    const count = (model) => open.filter((l) => (isCodex(l) ? auditModelFor(l) : modelFor(l)) === model).length;
+    const count = (model) => open.filter((l) => (isCodex(l) ? auditModelFor(l, D) : modelFor(l, D)) === model).length;
     const [fable, opus, sonnet] = MODELS.map((m) => modelName(D, m));
     return h('div', { class: 'panel' },
       h('header', {}, h('h2', {}, '模型和推理强度'),
         h('p', {}, `没完成的 lane：${fable} ${count('fable')} 个，${opus} ${count('opus')} 个，${sonnet} ${count('sonnet')} 个（Codex lane 按 Claude 审计算）`)),
       h('ul', { class: 'steps small' },
+        D.meta.pausedModels?.length ? h('li', {}, h('b', {}, `暂停：${D.meta.pausedModels.map((m) => modelName(D, m)).join('、')}。下面推荐给它的 lane 都由 ${opus} 用同样的推理强度代替，卡片上的标签已经换好`)) : null,
         h('li', {}, `${fable}（最强）：最难回退的工作：验收关卡、规格（docs/specs-*）、IPC 合约（feat/ipc-*）、推理强度 max 的 lane（L 规模的 Rust 核心）；Codex L lane 的 Claude 审计`),
         h('li', {}, `${opus}（日常默认）：界面、Rust 核心、测试、设计；Codex S / M lane 的 Claude 审计`),
         h('li', {}, `${sonnet}：只改文档（docs/docs-*）和只负责合并的 lane`),

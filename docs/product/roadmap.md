@@ -97,6 +97,8 @@
 
 开 session 时按路径图上 lane 的标签选（提示词第一行也写着）。规则在 `docs/roadmap/tools/lib.mjs`，lane 可以单独覆盖（你 2026-10-03 加入 Fable 5.1、要求适当提高推理强度）。
 
+> **Fable 5.1 暂停中**（你 2026-10-03 的决定）：下表推荐给 Fable 的 lane 和审计都由 Opus 5.5 用同样的推理强度代替，路径图的标签和提示词已经换好；M1 验收用 Opus 5.5 · max。恢复时删掉 `roadmap.json` 里 `meta.pausedModels` 的 `fable`。
+
 | 模型 | 用在哪 | 推理强度（默认） |
 |---|---|---|
 | Fable 5.1（最强） | 最难回退的工作：验收关卡、规格（`docs/specs-*`）、IPC 合约（`feat/ipc-*`）、推理强度 max 的 lane（L 规模的 Rust 核心）；Codex L lane 的审计 | 关卡和规格 xhigh 起，L 规模 max；历史格式和同步规格固定 max |

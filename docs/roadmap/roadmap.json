@@ -11,15 +11,18 @@
       "fable": "Fable 5.1",
       "opus": "Opus 5.5",
       "sonnet": "Sonnet 5.5"
-    }
+    },
+    "pausedModels": [
+      "fable"
+    ]
   },
   "now": {
     "stage": "M1 验收：功能 lane 全部合并，下一步 gate/m1-acceptance → v0.1",
     "focus": "M1",
     "summary": [
       "M1 的功能 lane 全部合并：10-02 资料库、搜索、预览、设置、导入整条线等；10-03 问题列表（adc2f88）、它的 e2e 长路径修复（6c52ffc）、放弃未完成移动的后端（7556aea，Codex 做、Claude 审计）和按钮 `feat/ui-discard-move-action`（cb56b5b，CI 37141857529 绿）。main 是绿的。",
-      "下一步：`gate/m1-acceptance`（Fable 5.1 · max）：全部用户流程的 e2e、5 万文件性能复核、冻结 catalog schema 和 .folio 格式的 fixture、engineering:tech-debt、未签名的 NSIS 安装包；你在资料库的副本上用 v0.1 一两周后验收。合并一次一个，每个等上一个在 main 上的 CI 跑完。",
-      "模型（10-03 起）：验收关卡、规格、IPC 合约和推理强度 max 的 lane 用 Fable 5.1；界面、核心、测试、设计用 Opus 5.5；只改文档和只合并的用 Sonnet 5.5。默认推理强度高一档（S、M high，L xhigh；核心、关卡、规格再高一档）；Codex lane 的 Claude 审计 S medium、M high、L xhigh（L 用 Fable）。每个剩下的 lane 都有按类型的开工提示词和自己的要点。",
+      "进行中：`gate/m1-acceptance`（你用 Opus 5.5 · max 开的）：全部用户流程的 e2e、5 万文件性能复核、冻结 catalog schema 和 .folio 格式的 fixture、engineering:tech-debt、未签名的 NSIS 安装包；你在资料库的副本上用 v0.1 一两周后验收。合并一次一个，每个等上一个在 main 上的 CI 跑完。",
+      "模型：Fable 5.1 暂停（你 10-03 的决定）：推荐给它的 lane（关卡、规格、IPC 合约、推理强度 max）都由 Opus 5.5 用同样的推理强度代替；界面、核心、测试、设计用 Opus 5.5，只改文档和只合并的用 Sonnet 5.5。恢复时删掉 meta.pausedModels 里的 fable 即可。",
       "Codex 的项目级 skills（`AGENTS.md`、`.agents/skills/`、`.codex/`、`.claude/skills/`）和 CLAUDE.md 里的两处改动不进仓库，由 Codex 管理：任何 lane 都不提交、不丢弃。"
     ]
   },
@@ -1583,6 +1586,40 @@
       ]
     },
     {
+      "id": "docs/docs-roadmap-pause-fable",
+      "title": "暂停 Fable 5.1",
+      "milestone": "M1",
+      "phase": "m1-w4",
+      "track": "flow",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "docs/docs-roadmap-models-prompts"
+      ],
+      "summary": "暂停 Fable 5.1：meta.pausedModels 让推荐给它的 lane 换成 Opus 5.5（推理强度不变），命令行、提示词和路径图页面一起换",
+      "status": "done",
+      "updated": "2026-10-03",
+      "landed": "2026-10-03",
+      "gates": {
+        "check": "pass",
+        "e2e": "na",
+        "codeReview": "pass",
+        "securityReview": "na",
+        "simplify": "na",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "docs/roadmap/tools/**",
+        "docs/roadmap/index.html",
+        "docs/roadmap/README.md",
+        "docs/product/roadmap.md"
+      ],
+      "shared": [
+        "docs/roadmap/roadmap.json"
+      ]
+    },
+    {
       "id": "refactor/core-sta-helper",
       "title": "合并 STA 辅助函数",
       "milestone": "M1",
@@ -3122,7 +3159,7 @@
       "item": "模型选择加入 Fable 5.1，按任务推荐模型和推理强度，可以适当提高推理强度",
       "type": "decide",
       "state": "done",
-      "result": "Fable 5.1：验收关卡、规格、IPC 合约、推理强度 max；Opus 5.5：界面、核心、测试、设计；Sonnet 5.5：只改文档、只合并。默认推理强度高一档。每个 lane 的标签和提示词第一行都写着推荐"
+      "result": "Fable 5.1：验收关卡、规格、IPC 合约、推理强度 max；Opus 5.5：界面、核心、测试、设计；Sonnet 5.5：只改文档、只合并。默认推理强度高一档。每个 lane 的标签和提示词第一行都写着推荐。10-03 晚些时候 Sirui 暂停 Fable 5.1（meta.pausedModels）：推荐给它的 lane 由 Opus 5.5 用同样的推理强度代替，M1 验收用 Opus 5.5 · max"
     }
   ],
   "looseEnds": [
@@ -3290,7 +3327,7 @@
     "每个 lane 同样收尾：pnpm check + pnpm e2e → /code-review（+ /security-review）→ /simplify → 中文汇报 → 你批准 → but land（Codex lane 见下一条）",
     "CI 红了先修",
     "Codex lane（标着 Codex 的后端 lane）：用「交给 Codex」提示词开工，Codex 自己跑完检查、code-review 和 simplify 后停在 review；再开 Claude Code session 用「Claude 快速审计」提示词：一次 /code-review，涉及特权层再加 /security-review，不重跑 /simplify",
-    "开 session 时按路径图标签（也是提示词第一行）选模型和推理强度：Fable 5.1 给最难回退的工作，Opus 5.5 是日常默认，Sonnet 5.5 给只改文档和只合并的 lane",
+    "开 session 时按路径图标签（也是提示词第一行）选模型和推理强度：Opus 5.5 是日常默认，Sonnet 5.5 给只改文档和只合并的 lane；Fable 5.1 给最难回退的工作，暂停期间（meta.pausedModels）由 Opus 5.5 代替",
     "路线图数据随 lane 更新：开工、到 review、合并前各跑一次 pnpm roadmap status，只改自己那一条"
   ],
   "prompts": {
@@ -3555,6 +3592,11 @@
       "at": "2026-10-03",
       "by": "Claude Code",
       "text": "路线图：模型加入 Fable 5.1（关卡、规格、合约、max 的 lane），默认推理强度高一档，Codex 审计 S medium / M high / L Fable xhigh；开工提示词按 lane 类型分成 7 个模板，剩下的 40 个 lane 都写了自己的要点；关掉两条已完成的待办"
+    },
+    {
+      "at": "2026-10-03",
+      "by": "Claude Code",
+      "text": "暂停 Fable 5.1（Sirui）：meta.pausedModels = [fable]，推荐给它的 lane 由 Opus 5.5 用同样的推理强度代替；M1 验收用 Opus 5.5 · max 开始"
     }
   ]
 }

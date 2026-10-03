@@ -230,3 +230,21 @@ test('a planned lane without its own prompt gets the start template for its kind
   data.lanes.push({ ...data.lanes[1], id: 'gate/m1-acceptance', kind: 'gate', deps: ['feat/core-e'], prompt: { extra: ['Criterion.'] } });
   assert.equal(composePrompt(data, byId(data).get('gate/m1-acceptance')), 'Gate gate/m1-acceptance at Fable · xhigh\nCriterion.');
 });
+
+test('a paused model gives way to Opus at the same effort, also when a lane names it', () => {
+  const data = sample();
+  data.meta.pausedModels = ['fable'];
+  const gate = { id: 'gate/m1-x', kind: 'gate', track: 'verify', size: 'L' };
+  assert.equal(modelFor(gate), 'fable');
+  assert.equal(modelFor(gate, data), 'opus');
+  assert.equal(effortFor(gate), 'max');
+  assert.equal(modelFor({ ...gate, model: 'fable' }, data), 'opus');
+  assert.equal(modelFor({ id: 'docs/docs-x', track: 'flow', size: 'S' }, data), 'sonnet');
+  assert.equal(auditModelFor({ size: 'L' }, data), 'opus');
+  assert.equal(auditModelFor({ size: 'S', auditModel: 'fable' }, data), 'opus');
+  data.lanes.push({ ...data.lanes[1], id: 'gate/m1-acceptance', kind: 'gate', deps: ['feat/core-e'] });
+  assert.equal(composePrompt(data, byId(data).get('gate/m1-acceptance')), 'Gate gate/m1-acceptance at Opus · xhigh');
+  assert.deepEqual(validate(data).errors, []);
+  data.meta.pausedModels = ['opus'];
+  assert.match(validate(data).errors.join('\n'), /meta\.pausedModels: "opus" must be one of fable, sonnet/);
+});
