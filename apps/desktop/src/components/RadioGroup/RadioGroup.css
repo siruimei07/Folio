@@ -1,0 +1,88 @@
+/* Radio group (library-actions handoff §4.1): rows of a 16 px radio, a label in 600 and a
+   one-line description; the whole row tints on hover. */
+.radio-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.radio-group__label {
+  margin-bottom: var(--space-4);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-strong);
+}
+
+.radio {
+  display: grid;
+  grid-template-columns: var(--size-target-min) minmax(0, 1fr);
+  column-gap: var(--space-4);
+  padding: var(--space-4) var(--space-8);
+  border-radius: var(--radius-row);
+}
+
+.radio:hover:not([data-disabled]) {
+  background: var(--color-surface-hover);
+}
+
+.radio__button {
+  display: contents;
+  cursor: default;
+}
+
+.radio__hit {
+  display: flex;
+  grid-row: 1;
+  grid-column: 1;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-target-min);
+  height: var(--size-target-min);
+}
+
+.radio__circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--size-icon);
+  height: var(--size-icon);
+  border: var(--border-width) solid var(--color-input-border-bottom);
+  border-radius: var(--radius-pill);
+  background: var(--color-input-background);
+}
+
+.radio[data-selected] .radio__circle {
+  border: calc(var(--border-width) * 1.5) solid var(--color-accent-default);
+}
+
+.radio[data-selected] .radio__circle::after {
+  content: '';
+  width: var(--space-8);
+  height: var(--space-8);
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-default);
+}
+
+.radio__button[data-focus-visible] .radio__circle {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.radio__label {
+  grid-row: 1;
+  grid-column: 2;
+  align-self: center;
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-strong);
+}
+
+.radio__description {
+  grid-row: 2;
+  grid-column: 2;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-small);
+}
+
+.radio[data-disabled] .radio__label,
+.radio[data-disabled] .radio__description {
+  color: var(--color-text-tertiary);
+}

@@ -1646,6 +1646,51 @@
       ]
     },
     {
+      "id": "feat/ipc-import-ui-contract",
+      "title": "导入界面的合约补充",
+      "milestone": "M1",
+      "phase": "m1-w4",
+      "track": "core",
+      "agent": "claude-code",
+      "size": "S",
+      "effort": "high",
+      "deps": [
+        "feat/core-import"
+      ],
+      "summary": "library-import.md 留给导入界面的两项合约：取消的导入带结果（JobStatus cancelled 的 result），被拒的拖放发 DropFailed 事件；bindings、假 shell、ipc-m1 §12/§13/§15.1",
+      "status": "done",
+      "updated": "2026-10-02",
+      "landed": "2026-10-02",
+      "gates": {
+        "check": "pass",
+        "e2e": "pass",
+        "codeReview": "pass",
+        "securityReview": "pass",
+        "simplify": "pass",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "crates/folio-app/src/ipc/jobs.rs",
+        "crates/folio-app/src/ipc/events.rs",
+        "apps/desktop/src/ipc/bindings.ts",
+        "apps/desktop/src/ipc/mock/**"
+      ],
+      "shared": [
+        "crates/folio-app/src/jobs.rs",
+        "crates/folio-app/src/library/import.rs",
+        "crates/folio-app/src/library/worker.rs",
+        "crates/folio-app/src/library/mod.rs",
+        "crates/folio-app/src/ipc.rs",
+        "crates/folio-app/src/lib.rs",
+        "docs/specs/ipc-m1.md",
+        "docs/specs/library-import.md"
+      ],
+      "notes": [
+        "由 feat/ui-import 的 session 开出，feat/ui-import 叠在它上面；先合并它，再合并界面"
+      ]
+    },
+    {
       "id": "feat/ui-import",
       "title": "导入界面",
       "milestone": "M1",
@@ -1656,11 +1701,22 @@
       "effort": "high",
       "deps": [
         "feat/core-import",
-        "feat/ui-library-view"
+        "feat/ui-library-view",
+        "feat/ipc-import-ui-contract"
       ],
       "summary": "拖放目标、「Add files」、导入对话框（标签、同名处理、删除原文件）、进度和结果",
-      "status": "planned",
+      "status": "done",
       "updated": "2026-10-02",
+      "landed": "2026-10-02",
+      "gates": {
+        "check": "pass",
+        "e2e": "pass",
+        "codeReview": "pass",
+        "securityReview": "pass",
+        "simplify": "pass",
+        "designCritique": "pass",
+        "a11y": "pass"
+      },
       "owns": [
         "apps/desktop/src/import/**",
         "apps/desktop/src/i18n/locales/en/import.json",
@@ -1670,12 +1726,17 @@
         "apps/desktop/src/app/registry.ts",
         "apps/desktop/src/library/pane/LibraryPane.tsx"
       ],
+      "notes": [
+        "叠在 feat/ipc-import-ui-contract 上；pnpm check 和 pnpm e2e 42/42 通过（10-02）",
+        "问题列表（library-actions §11）没有 lane：活动按钮在注册 problems 对话框之前不显示「View problems」",
+        "没做：导入对话框距窗口顶部 96 px（现在居中）；Button 的 isPending 样式只在导入对话框里改成禁用外观"
+      ],
       "links": [
         "docs/design/handoff/library-actions.md",
         "docs/specs/library-import.md"
       ],
       "prompt": [
-        "Folio lane feat/ui-import (docs/roadmap/roadmap.json, M1 wave 4). Start after feat/core-import has landed: its commands, the native drop and the import job are then on main. Use frontend-design.",
+        "Folio lane feat/ui-import (docs/roadmap/roadmap.json, M1 wave 4), stacked on feat/ipc-import-ui-contract (the cancelled import result and the DropFailed event that docs/specs/library-import.md left to this lane). feat/core-import has landed. Use frontend-design.",
         "Read docs/design/handoff/library-actions.md §3 (drop target), §4 (the import dialog, name clashes, behaviour), §5 (progress and results) and §10 (jobs), docs/specs/ipc-m1.md §12–§13, docs/specs/library-import.md (counts, recovery and the single-use choices) and the data hooks in apps/desktop/src/data/ that already wrap the import commands.",
         "Goal: the drop target over the Library, Add files, the import dialog (tags, one name-clash policy, optionally moving the originals to the Recycle Bin), progress through the activity button and the result with its failures. Choices are single-use: never cache or replay a choice token.",
         "Write the lane file and set the roadmap entry to wip (`pnpm roadmap status feat/ui-import wip`). Own apps/desktop/src/import/** and the import namespace; the Library pane gets small additive edits. Component tests for every state, a Playwright flow on temporary folders, design:design-critique and design:accessibility-review, a reduced-motion check, `pnpm check` and `pnpm e2e` with the app lock (CLAUDE.md §7.5), /code-review, /simplify; set the entry to review and report to me in Chinese."

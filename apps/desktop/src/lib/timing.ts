@@ -37,3 +37,6 @@ export const SCAN_ANNOUNCE_MS = 5000;
 
 /** How long the first run waits for LibraryStateChanged after a library opens before it asks. */
 export const LIBRARY_EVENT_WAIT_MS = 1000;
+
+/** A collapsed course or folder under a dragged item or file this long opens (library-actions §3, §7.3). */
+export const EXPAND_AFTER_MS = 700;

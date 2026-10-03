@@ -10,10 +10,33 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '../components/Button/Button';
 import { StateBlock } from '../components/StateBlock/StateBlock';
+import { IpcFailure } from '../data/errors';
 import type { IpcError } from '../ipc';
 import { reportUiError } from './log';
 import { showToast } from './toasts';
 import { copyErrorDetails } from './windowErrors';
+
+/**
+ * Gives a command's feedback when it settles: pass `mutation.mutateAsync(variables)`. The
+ * callbacks of `mutate` run only while the component that called it is mounted, and a menu closes
+ * as soon as an item is chosen, so the feedback follows the promise instead. Anything else that
+ * fails here is a bug, and goes to the log under `source`.
+ */
+export function whenSettled<T>(
+  command: Promise<T>,
+  source: string,
+  onSuccess: (result: T) => void,
+  onError: (failure: IpcFailure) => void,
+): void {
+  command
+    .then(onSuccess, (error: unknown) => {
+      if (!(error instanceof IpcFailure)) throw error;
+      onError(error);
+    })
+    .catch((error: unknown) => {
+      reportUiError('uncaught', source, error);
+    });
+}
 
 /** Codes that point at a bug or a broken state: the toast offers "Copy details", and the log has it. */
 export const DETAILED: ReadonlySet<string> = new Set(['Internal', 'FileSystem', 'InvalidArgument', 'Transport']);

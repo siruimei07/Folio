@@ -28,7 +28,8 @@ export interface ActivityProps {
   onCancel: (job: Job) => void;
   /** Opens the result dialog of an import that left files out or failed (library-actions §5). */
   onDetails: (job: Job) => void;
-  onViewProblems: () => void;
+  /** Opens the problems list; without it, the footer only counts them (no problems dialog yet). */
+  onViewProblems?: () => void;
   /** The narrow window's bar: a 28 px button with only the ring or icon. */
   compact?: boolean;
 }
@@ -100,10 +101,13 @@ export function Activity({ jobs, problems, onCancel, onDetails, onViewProblems, 
           problems={problems}
           onCancel={onCancel}
           onDetails={onDetails}
-          onViewProblems={() => {
-            setOpen(false);
-            onViewProblems();
-          }}
+          onViewProblems={
+            onViewProblems &&
+            (() => {
+              setOpen(false);
+              onViewProblems();
+            })
+          }
           onClose={() => {
             setOpen(false);
           }}
@@ -182,9 +186,11 @@ export function ActivityPanel({ jobs, problems, onCancel, onDetails, onViewProbl
               <>
                 <ToneIcon tone="warning" className="activity__icon" />
                 <span className="activity__footer-text">{t('activity.footerProblems', { count: problems })}</span>
-                <Button size="compact" autoFocus={firstCancel === undefined} onPress={onViewProblems}>
-                  {t('activity.viewProblems')}
-                </Button>
+                {onViewProblems && (
+                  <Button size="compact" autoFocus={firstCancel === undefined} onPress={onViewProblems}>
+                    {t('activity.viewProblems')}
+                  </Button>
+                )}
               </>
             ) : (
               <>

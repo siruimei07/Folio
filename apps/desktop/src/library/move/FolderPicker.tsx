@@ -47,11 +47,15 @@ export function FolderPicker({ semester: initialSemester, moving, chosen, onChoo
   const [semester, setSemester] = useState(initialSemester ?? semesters[0]?.folder.path ?? null);
   const semesterCourses = useCourses(semester).data;
   const courses = useMemo(() => semesterCourses ?? [], [semesterCourses]);
-  const here = moving.every((entry) => parentOf(entry.path) === parentOf(moving[0]?.path ?? ''))
-    ? parentOf(moving[0]?.path ?? '')
-    : null;
-  // The folders down to where the items are start open, so "Already here" shows.
-  const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set(openPathsTo(here ?? '')));
+  // Nothing moves when files are imported (`moving` is empty): no folder is "Already here".
+  const here =
+    moving.length > 0 && moving.every((entry) => parentOf(entry.path) === parentOf(moving[0]?.path ?? ''))
+      ? parentOf(moving[0]?.path ?? '')
+      : null;
+  // The folders down to where the items are, or to the chosen folder, start open, so it shows.
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(
+    () => new Set(openPathsTo(here ?? (chosen === null ? '' : parentOf(chosen.path)))),
+  );
   const [focused, setFocused] = useState<number | null>(null);
 
   // Children of expanded courses and folders; only their folders show, which come first.

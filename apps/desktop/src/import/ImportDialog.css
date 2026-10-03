@@ -1,0 +1,237 @@
+/* The import dialog and its result (library-actions handoff §4, §4.1, §5): 560 px, sections 16 px
+   apart (the dialog frame's body), a 56 px label column for "Add to" and "Tags". */
+
+.import-dialog {
+  --import-label-column: calc(var(--space-32) + var(--space-24));
+}
+
+.import-dialog__what {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+/* Items: a sunken box with up to three 30 px rows, then "and 7 more". */
+.import-items {
+  padding: var(--space-4) 0;
+  border: var(--border-width) solid var(--color-border-default);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-sunken);
+}
+
+.import-items__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.import-items__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  height: var(--size-control);
+  padding: 0 var(--space-10);
+}
+
+.import-items__folder-icon {
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+.import-items__name {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--font-size-body);
+}
+
+.import-items__kind,
+.import-items__more {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-small);
+}
+
+.import-items__kind {
+  flex: none;
+}
+
+.import-items__more {
+  display: flex;
+  align-items: center;
+  height: calc(var(--space-24) + var(--space-2));
+  margin: 0;
+  padding: 0 var(--space-10);
+}
+
+.import-dialog__summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-label);
+  font-variant-numeric: tabular-nums;
+}
+
+.import-dialog__left-out {
+  margin: 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-small);
+}
+
+/* "Add to" and "Tags": the label column, then the control. */
+.import-dialog__row {
+  display: grid;
+  grid-template-columns: var(--import-label-column) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-8);
+}
+
+.import-dialog__label {
+  display: flex;
+  align-items: center;
+  min-height: var(--size-select);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-label);
+}
+
+/* The select-style field of components/Select, sized to its content: at least 240 px. */
+.select__button.import-dialog__target {
+  flex: none;
+  justify-self: start;
+  min-width: calc(var(--size-menu-min-width) + var(--space-32) + var(--space-8));
+  max-width: 100%;
+}
+
+.select__button.import-dialog__target[aria-expanded='true'] {
+  border-color: var(--color-border-strong);
+}
+
+.import-dialog__target-name {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-6);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.import-dialog__target-empty {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  text-overflow: ellipsis;
+}
+
+.import-dialog__target-folder {
+  flex: none;
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.import-dialog__picker {
+  width: var(--size-import-dialog);
+  max-width: calc(100vw - 2 * var(--space-8));
+}
+
+.import-dialog__picker-dialog {
+  padding: var(--space-12);
+  outline: none;
+}
+
+.import-dialog__tags {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
+  padding-top: var(--space-4);
+}
+
+.import-dialog__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6);
+}
+
+.import-dialog__help {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-small);
+}
+
+/* Under the checkbox's label: past the 24 px hit area and its gap. */
+.import-dialog__help--indented {
+  padding-left: calc(var(--size-target-min) + var(--space-6));
+}
+
+/* Name clashes (§4.1): a warning block, the radios indented 24 px. */
+.import-clashes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-10);
+  padding: var(--space-12) var(--space-14);
+  border: var(--border-width) solid var(--color-feedback-warning-border);
+  border-radius: var(--radius-control);
+  background: var(--color-feedback-warning-soft);
+}
+
+.import-clashes__head {
+  display: flex;
+  gap: var(--space-8);
+}
+
+.import-clashes__icon {
+  flex: none;
+  margin-top: var(--space-2);
+  color: var(--color-feedback-warning);
+}
+
+.import-clashes__words {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.import-clashes__heading {
+  margin: 0;
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-strong);
+}
+
+.import-clashes__paths {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-small);
+  overflow-wrap: anywhere;
+}
+
+.import-clashes__choices {
+  padding-left: var(--space-24);
+}
+
+.import-dialog__originals {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* The result dialog (§5). */
+.import-result__text {
+  margin: 0;
+  font-size: var(--font-size-label);
+}
+
+.import-result__capped {
+  margin: 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-small);
+}
+
+/* A button that waits for the check looks like a disabled one, but keeps focus. */
+.import-dialog .button[data-pending] {
+  border-color: var(--color-border-default);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-tertiary);
+}

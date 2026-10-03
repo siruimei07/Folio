@@ -10,12 +10,12 @@ import { isInside, nameOf, parentOf } from '../../lib/paths';
 import { SIZE } from '../../tokens/tokens';
 import { useLibraryCommands } from '../commands';
 import { type Selected, selectOnly, setExpanded, useLibraryView } from '../state';
-import { entryOf, type TreeItem, type TreeModel } from '../tree/layout';
+import { EXPAND_AFTER_MS } from '../../lib/timing';
+import { treeIndexAt } from '../tree/hit';
+import { entryOf, isCollapsed, type TreeItem, type TreeModel } from '../tree/layout';
 
 /** The pointer moves this far with the button down before a drag starts (library-actions §7.3). */
 const DRAG_THRESHOLD_PX = 4;
-/** A collapsed course or folder under the pointer this long expands (§3). */
-const EXPAND_AFTER_MS = 700;
 /** A click that ends a drag is not a click on the row. */
 const CLICK_AFTER_DRAG_MS = 300;
 
@@ -30,7 +30,8 @@ interface Drag {
 /** Whether `target` can take `entries`: not one of them, not below a moved folder, not where all are. */
 export function canTake(target: EntryRef, entries: readonly EntryRef[]): boolean {
   if (entries.some((entry) => isInside(target.path, entry.path))) return false;
-  return !entries.every((entry) => parentOf(entry.path) === target.path);
+  // Nothing moves (an import's picker): every folder can take it.
+  return entries.length === 0 || !entries.every((entry) => parentOf(entry.path) === target.path);
 }
 
 /**
@@ -57,9 +58,8 @@ export function useDragMove(layout: TreeModel) {
   /** The course or folder row under a point that can take the dragged entries. */
   const targetAt = useEffectEvent((x: number, y: number): TreeItem | null => {
     const dragged = current.current;
-    const row = document.elementFromPoint(x, y)?.closest('.library-tree [data-index]');
-    const index = row === null || row === undefined ? NaN : Number(row.getAttribute('data-index'));
-    if (dragged === null || !Number.isInteger(index) || index >= layout.count) return null;
+    const index = treeIndexAt(x, y, layout.count);
+    if (dragged === null || index === null) return null;
     const item = layout.rowAt(index);
     const entry = entryOf(item);
     if (entry === null || entry.kind === 'file' || !canTake(entry, dragged.entries)) return null;
@@ -115,9 +115,7 @@ export function useDragMove(layout: TreeModel) {
         hovered = over;
         window.clearTimeout(expandTimer);
         const entry = target === null ? null : entryOf(target);
-        const collapsed =
-          (target?.kind === 'course' && !target.expanded) || (target?.kind === 'entry' && target.expanded === false);
-        if (entry !== null && collapsed) {
+        if (entry !== null && target !== null && isCollapsed(target)) {
           expandTimer = window.setTimeout(() => {
             setExpanded(entry.path, true);
           }, EXPAND_AFTER_MS);

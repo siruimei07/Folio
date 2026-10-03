@@ -6,7 +6,7 @@
 import { createContext, useContext } from 'react';
 import { create } from 'zustand';
 
-import type { EntryRef, ImportSource } from '../ipc';
+import type { EntryRef, ImportSource, Job } from '../ipc';
 
 /** The rail views. Until M2 only the Library is registered (ADR-0005, product decision 3). */
 export type ViewId = 'library' | 'changes' | 'history';
@@ -20,8 +20,13 @@ export interface DialogParams {
   librarySettings: { page?: string } | undefined;
   appSettings: { page?: string } | undefined;
   problems: undefined;
-  /** Adding files from "Add files" or a drop (`feat/ui-import`), to `target` or a place it asks for. */
-  import: { source: ImportSource; target: EntryRef | null };
+  /**
+   * Adding files from "Add files" or a drop (`feat/ui-import`), to `target` or a place it asks
+   * for; `tags` start selected (the Library's tag filter).
+   */
+  import: { source: ImportSource; target: EntryRef | null; tags?: readonly string[] };
+  /** What an import left out or why it failed (`feat/ui-import`, library-actions §5 "Details"). */
+  importResult: { job: Job; target?: string };
   /** A semester with its courses (first-run handoff §5.1, library-actions §8). */
   newSemester: undefined;
   /** More courses in a semester (library-actions §8). */

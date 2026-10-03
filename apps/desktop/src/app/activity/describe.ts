@@ -4,7 +4,7 @@ import type { TFunction } from 'i18next';
 
 import type { JobResult } from '../../ipc';
 import { formatMoment } from '../../lib/format';
-import { type ActivityJob, type ActivityStatus, endedWithProblems, jobPercent } from './status';
+import { type ActivityJob, type ActivityStatus, endedWithProblems, importResultOf, jobPercent } from './status';
 
 /** `t` of `useTranslation(['shell', 'errors'])`. */
 export type ShellT = TFunction<['shell', 'errors']>;
@@ -93,7 +93,7 @@ function doneTexts(t: ShellT, result: JobResult, target: string | undefined): { 
 }
 
 /** One row of the Activity popover. `now` and `language` place the finish time. */
-export function describeJob(t: ShellT, { job, target, finishedAt }: ActivityJob, now: number, language: string): JobRow {
+export function describeJob(t: ShellT, { job, target, files, finishedAt }: ActivityJob, now: number, language: string): JobRow {
   const { kind, status } = job;
   const time = finishedAt === undefined ? null : formatMoment(finishedAt, now, language);
   const cancelLabel = job.cancellable ? t(`activity.cancel.${kind}`) : null;
@@ -134,7 +134,9 @@ export function describeJob(t: ShellT, { job, target, finishedAt }: ActivityJob,
         time,
         hasDetails: kind === 'import',
       };
-    case 'cancelled':
+    case 'cancelled': {
+      // An import that had started says how far it got (ipc-m1 §13).
+      const result = importResultOf(job);
       return {
         ...base,
         look: 'cancelled',
@@ -142,9 +144,16 @@ export function describeJob(t: ShellT, { job, target, finishedAt }: ActivityJob,
           kind === 'import' && target !== undefined
             ? t('activity.cancelledTitle.importTo', { target })
             : t(`activity.cancelledTitle.${kind}`),
-        meta: null,
+        meta:
+          result === null
+            ? null
+            : files === undefined
+              ? t('activity.cancelledMeta.importSoFar', { count: result.imported })
+              : t('activity.cancelledMeta.import', { count: result.imported, total: files }),
         time,
+        hasDetails: endedWithProblems(job),
       };
+    }
   }
 }
 

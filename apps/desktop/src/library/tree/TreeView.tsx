@@ -9,6 +9,7 @@ import { nameOf } from '../../lib/paths';
 import { SIZE, SPACE } from '../../tokens/tokens';
 import { useActivate } from '../activate';
 import { useEntryKeys } from '../commands';
+import { useDropRows } from '../drop/useFileDrop';
 import { useDragMove } from '../move/useDragMove';
 import { useQuickCounts } from '../quick';
 import { NewFolderField, RenameField } from '../edit/RenameField';
@@ -48,6 +49,7 @@ export function TreeView({ model: layout, label, onRangeChange }: TreeViewProps)
   const rows = selectableRows(layout);
   const keys = useEntryKeys('panel', rows, (index) => layout.folderAt(index));
   const drag = useDragMove(layout);
+  const fileDrop = useDropRows(layout);
   const refocus = () => {
     handle.current?.focusFocused();
   };
@@ -196,7 +198,7 @@ export function TreeView({ model: layout, label, onRangeChange }: TreeViewProps)
               count={item.kind === 'quick' ? counts[item.view] : undefined}
               tags={tags}
               editor={editor(item)}
-              drop={drag.dropOn(item)}
+              drop={drag.dropOn(item) ?? fileDrop(item)}
             />
           );
         }}

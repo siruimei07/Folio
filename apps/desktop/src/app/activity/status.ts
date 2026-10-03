@@ -2,7 +2,7 @@
 // (library-actions handoff §10). Pure: the jobs come from `list_jobs` and `JobChanged`, wired by
 // the data layer's hooks; `useActivityStatus` adds the 10 s after the last job ends.
 
-import type { Job, JobKind } from '../../ipc';
+import type { ImportResult, Job, JobKind } from '../../ipc';
 import { percentOf } from '../../lib/format';
 import { isActiveJob } from '../../lib/jobs';
 
@@ -14,6 +14,8 @@ export interface ActivityJob {
    * started it. `Job` does not carry it, so after a reload imports show without it.
    */
   target?: string;
+  /** The files an import the UI started set out to add (`check_import`), for "7 of 12". */
+  files?: number;
   /** When the UI saw the job end; `Job` has no time, so older jobs show none. */
   finishedAt?: number;
 }
@@ -29,11 +31,16 @@ export type ActivityStatus =
   | { kind: 'done'; withProblems: boolean }
   | { kind: 'problems'; count: number };
 
+/** The import result a job carries: done, or cancelled after it started; `null` otherwise. */
+export function importResultOf(job: Job): ImportResult | null {
+  const { status } = job;
+  if ((status.state === 'done' || status.state === 'cancelled') && status.result?.kind === 'import') return status.result;
+  return null;
+}
+
 /** Failed, or an import that left some files out: "Done with problems". */
 export function endedWithProblems(job: Job): boolean {
-  const { status } = job;
-  if (status.state === 'failed') return true;
-  return status.state === 'done' && status.result.kind === 'import' && status.result.failureCount > 0;
+  return job.status.state === 'failed' || (importResultOf(job)?.failureCount ?? 0) > 0;
 }
 
 /** The share done, from `permille` when the job measures bytes, else files; `null` when unknown. */

@@ -27,6 +27,7 @@ import { usePreferences } from '../preferences';
 import { useOpenQuickFilter } from '../quick';
 import { type QuickView, setCovered, useLibraryView } from '../state';
 import { LoadFailure } from '../LoadFailure';
+import { DropPanel } from '../drop/DropPanel';
 import { EmptyPreview } from './EmptyPreview';
 import { EntriesView } from './EntriesView';
 import { PaneHeader } from './PaneHeader';
@@ -238,6 +239,7 @@ export function LibraryPane({ noCourses }: LibraryPaneProps) {
   return (
     <section className="library-pane" aria-label={t('pane.label')} data-kind={active?.kind ?? 'empty'}>
       {body}
+      <DropPanel region="pane" />
     </section>
   );
 }

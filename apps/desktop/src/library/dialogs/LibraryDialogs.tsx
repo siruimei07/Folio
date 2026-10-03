@@ -8,7 +8,8 @@ import { showToast } from '../../app/toasts';
 import { copyDetails } from '../../app/windowErrors';
 import { Button } from '../../components/Button/Button';
 import { DialogFrame } from '../../components/Dialog/Dialog';
-import { MiddleTruncate } from '../../components/MiddleTruncate/MiddleTruncate';
+import { failureDetails } from '../../components/FailureList/details';
+import { FailureList } from '../../components/FailureList/FailureList';
 import { useRenameEntry } from '../../data/entries';
 import { useCourses, useSemesters } from '../../data/groups';
 import { useCount } from '../../data/paged';
@@ -278,9 +279,7 @@ function FailuresDialog() {
           <Button
             size="dialog"
             onPress={() => {
-              copyDetails(
-                [request.title, ...request.items.map((item) => `${item.place}: ${item.reason}`)].join('\n'),
-              );
+              copyDetails(failureDetails(request.title, request.items));
             }}
           >
             {t('results.copy')}
@@ -291,16 +290,7 @@ function FailuresDialog() {
         </>
       }
     >
-      <ul className="failure-list" aria-label={t('results.list')}>
-        {request.items.map((item, index) => (
-          <li key={index} className="failure-list__item">
-            <span className="failure-list__place">
-              <MiddleTruncate text={item.place} />
-            </span>
-            <span className="failure-list__reason">{item.reason}</span>
-          </li>
-        ))}
-      </ul>
+      <FailureList label={t('results.list')} items={request.items} />
     </DialogFrame>
   );
 }

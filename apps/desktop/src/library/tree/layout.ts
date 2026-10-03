@@ -470,6 +470,11 @@ export class TreeLayout implements TreeModel {
 }
 
 /** The entry a row stands for, with what it is; `null` for rows that are not entries. */
+/** A course or folder row that is closed, which a drag over it opens after a while. */
+export function isCollapsed(item: TreeItem): boolean {
+  return (item.kind === 'course' && !item.expanded) || (item.kind === 'entry' && item.expanded === false);
+}
+
 export function entryOf(item: TreeItem): Selected | null {
   if (item.kind === 'course') return { id: item.course.folder.id, path: item.course.folder.path, kind: 'course' };
   if (item.kind === 'entry') return { id: item.row.id, path: item.row.path, kind: item.row.kind };

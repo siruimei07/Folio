@@ -1,12 +1,12 @@
 // Import (docs/specs/ipc-m1.md §12; library-actions handoff §3–§5). Files come from the file
 // dialog or a drop as a choice token; `check_import` says what adding them to a folder would do,
 // and `import_files` starts the job that adds them, whose progress and result arrive as
-// JobChanged (`jobs.ts`) and whose files arrive as CatalogChanged. Until `feat/core-import`
-// lands, only the fake shell answers these commands.
+// JobChanged (`jobs.ts`) and whose files arrive as CatalogChanged.
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useEffectEvent, useState } from 'react';
+import { useEffect, useEffectEvent } from 'react';
 
 import {
+  type DropFailed,
   type EntryRef,
   type FilesDropped,
   type ImportFiles,
@@ -65,15 +65,29 @@ export function useFilesDropped(onDrop: (drop: FilesDropped) => void): void {
   );
 }
 
-/** Where files are dragged over the window, in CSS pixels; `null` while none are. */
-export function useDropHover(): Point | null {
-  const [position, setPosition] = useState<Point | null>(null);
+/** Calls `onFailed` with every drop the shell could not take while mounted (`DropFailed`). */
+export function useDropFailed(onFailed: (failure: DropFailed) => void): void {
+  const handle = useEffectEvent(onFailed);
   useEffect(
     () =>
-      shellEvents.onDropHover((hover) => {
-        setPosition(hover.position);
+      shellEvents.onDropFailed((failure) => {
+        handle(failure);
       }),
     [],
   );
-  return position;
+}
+
+/**
+ * Calls `onHover` with every DropHover while mounted: where files are dragged, in CSS pixels, or
+ * `null` when they leave. Unthrottled, so it re-renders nothing by itself.
+ */
+export function useDropHoverEvents(onHover: (position: Point | null) => void): void {
+  const handle = useEffectEvent(onHover);
+  useEffect(
+    () =>
+      shellEvents.onDropHover((hover) => {
+        handle(hover.position);
+      }),
+    [],
+  );
 }

@@ -53,13 +53,16 @@ export function Toast({
   ref,
 }: ToastProps) {
   const { t } = useTranslation('common');
+  // A progress toast is announced once (§5): only its title, which stays while the job runs, is a
+  // live region; its count changes several times a second, and stays readable in place.
+  const progressing = tone === 'progress';
   return (
     <div
       ref={ref}
       className="toast"
       data-tone={tone}
       data-leaving={leaving || undefined}
-      role={leaving ? undefined : tone === 'danger' ? 'alert' : 'status'}
+      role={leaving || progressing ? undefined : tone === 'danger' ? 'alert' : 'status'}
       onPointerEnter={() => onHold?.(true)}
       onPointerLeave={() => onHold?.(false)}
       onFocus={() => onHold?.(true)}
@@ -67,13 +70,15 @@ export function Toast({
         if (!event.currentTarget.contains(event.relatedTarget)) onHold?.(false);
       }}
     >
-      {tone === 'progress' ? (
+      {progressing ? (
         <Spinner className="toast__icon" />
       ) : (
         <ToneIcon tone={tone} className="toast__icon" />
       )}
       <div className="toast__body">
-        <p className="toast__title">{title}</p>
+        <p className="toast__title" role={progressing && !leaving ? 'status' : undefined}>
+          {title}
+        </p>
         {body !== undefined && <p className="toast__text">{body}</p>}
         {progress !== undefined && (
           <div className="toast__progress">

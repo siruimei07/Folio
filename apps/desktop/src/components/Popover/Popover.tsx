@@ -5,6 +5,14 @@ import { Popover as AriaPopover, type PopoverProps as AriaPopoverProps } from 'r
 
 import { SPACE } from '../../tokens/tokens';
 
+/** On every open popover, so the app can tell that a menu is open. */
+export const POPOVER_ATTRIBUTE = 'data-popover';
+
+/** Whether a menu, submenu or popover is on screen. */
+export function isPopoverOpen(): boolean {
+  return document.querySelector(`[${POPOVER_ATTRIBUTE}]`) !== null;
+}
+
 export interface PopoverProps extends Omit<AriaPopoverProps, 'className'> {
   /** Sizes the popover, like `menu-popover`. */
   className?: string;
@@ -21,6 +29,7 @@ export function Popover({ className, ...props }: PopoverProps) {
       offset={SPACE[4]}
       containerPadding={SPACE[8]}
       {...props}
+      {...{ [POPOVER_ATTRIBUTE]: '' }}
       className={className === undefined ? 'popover' : `popover ${className}`}
     />
   );

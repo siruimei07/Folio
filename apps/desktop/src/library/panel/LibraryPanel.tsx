@@ -29,6 +29,7 @@ import { courseIn } from '../places';
 import { type PanelMode, setPanelMode, usePreferences } from '../preferences';
 import type { CurrentSemester } from '../../data/semester';
 import { setFilter, useLibraryView } from '../state';
+import { DropPanel } from '../drop/DropPanel';
 import { BrowseTree, FilteredTree } from '../tree/LibraryTree';
 import { LibraryBanners } from './LibraryBanners';
 import { TagFilterBar, useActiveFilter } from './TagFilterBar';
@@ -274,6 +275,7 @@ export function LibraryPanel({ info }: { info: CurrentSemester }) {
       <LibraryBanners />
       {!narrow && semester !== null && courses.length > 0 && <TagFilterBar />}
       <PanelContent info={info} filter={filter} />
+      <DropPanel region="panel" />
     </Panel>
   );
 }

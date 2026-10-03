@@ -1,12 +1,13 @@
 // "Add files" (library-actions handoff §4, §6): the file dialog, then the import dialog of
-// `feat/ui-import` with the folder as the target. Until that dialog is registered, nothing in the
-// Library offers it (`useCanOpenDialog('import')`).
+// `feat/ui-import` with the folder as the target and the tag filter's tags. While that dialog is
+// not registered, nothing in the Library offers it (`useCanOpenDialog('import')`).
 import i18n from 'i18next';
 
 import { openDialog, useCanOpenDialog } from '../app/navigation';
 import { usePickImportFiles } from '../data/import';
 import type { EntryRef } from '../ipc';
 import { showFailure, whenSettled } from './feedback';
+import { useLibraryView } from './state';
 
 /** Adds files to `target`, or `null` while there is no folder to add to; `null` when it cannot. */
 export function useAddFiles(): ((target: EntryRef | null) => void) | null {
@@ -19,7 +20,7 @@ export function useAddFiles(): ((target: EntryRef | null) => void) | null {
       'library.addFiles',
       (source) => {
         // `null`: the dialog was cancelled, and nothing opens.
-        if (source !== null) openDialog('import', { source, target });
+        if (source !== null) openDialog('import', { source, target, tags: useLibraryView.getState().filter });
       },
       (failure) => {
         showFailure(i18n.t('library:menu.addFilesFailed'), failure.error, 'library.addFiles');

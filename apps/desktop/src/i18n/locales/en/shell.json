@@ -137,6 +137,13 @@
       "importTo": "Stopped adding files to {{target}}",
       "rebuild": "Rebuild cancelled"
     },
+    "cancelledMeta": {
+      "import_one": "{{count, number}} of {{total, number}} was added before you stopped.",
+      "import_other": "{{count, number}} of {{total, number}} were added before you stopped.",
+      "importSoFar_one": "{{count, number}} file was added before you stopped.",
+      "importSoFar_other": "{{count, number}} files were added before you stopped."
+    },
+    "cancelFailed": "Couldn't stop {{task}}",
     "cancel": {
       "scan": "Cancel scan",
       "hash": "Cancel checking files",

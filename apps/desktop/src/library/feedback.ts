@@ -8,34 +8,12 @@ import { DETAILED, showFailure } from '../app/feedback';
 import { reportUiError } from '../app/log';
 import { showToast } from '../app/toasts';
 import { copyErrorDetails } from '../app/windowErrors';
-import { IpcFailure } from '../data/errors';
 import type { ItemFailure } from '../ipc';
-import { type FailedItem, openLibraryDialog } from './state';
+import type { FailureItem } from '../components/FailureList/FailureList';
+import { openLibraryDialog } from './state';
 
 // Shared with settings (app/feedback.tsx).
-export { DETAILED, messageOf, showFailure, showGone } from '../app/feedback';
-
-/**
- * Gives a command's feedback when it settles: pass `mutation.mutateAsync(variables)`. The
- * callbacks of `mutate` run only while the component that called it is mounted, and a menu closes
- * as soon as an item is chosen, so the feedback follows the promise instead. Anything else that
- * fails here is a bug, and goes to the log under `source`.
- */
-export function whenSettled<T>(
-  command: Promise<T>,
-  source: string,
-  onSuccess: (result: T) => void,
-  onError: (failure: IpcFailure) => void,
-): void {
-  command
-    .then(onSuccess, (error: unknown) => {
-      if (!(error instanceof IpcFailure)) throw error;
-      onError(error);
-    })
-    .catch((error: unknown) => {
-      reportUiError('uncaught', source, error);
-    });
-}
+export { DETAILED, messageOf, showFailure, showGone, whenSettled } from '../app/feedback';
 
 /** "Copy details" of a failure: what failed, then the error as the log has it. */
 export const copyFailure = copyErrorDetails;
@@ -52,7 +30,7 @@ export interface BatchFeedback {
   /** The title when some failed: "Deleted 2 of 3 items". */
   partial: (done: number) => string;
   /** How a failed item is shown, and why it failed in words. */
-  describe: (failure: ItemFailure) => FailedItem;
+  describe: (failure: ItemFailure) => FailureItem;
   source: string;
 }
 

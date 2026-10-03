@@ -1,6 +1,6 @@
-// Import against the fake shell (ipc-m1 §12; library-actions handoff §3–§5), until
-// `feat/core-import` lands: the file dialog's token, the check that follows the target folder,
-// the job that adds the files, and drops on the window.
+// Import against the fake shell (ipc-m1 §12; library-actions handoff §3–§5): the file dialog's
+// token, the check that follows the target folder, the job that adds the files, and drops on the
+// window.
 import { act, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -11,7 +11,8 @@ import { renderAppHook } from '../test/render';
 import { useChildren } from './entries';
 import { unwrap } from './errors';
 import {
-  useDropHover,
+  useDropFailed,
+  useDropHoverEvents,
   useFilesDropped,
   useImportCheck,
   useImportFiles,
@@ -197,19 +198,27 @@ describe('drops', () => {
     expect(dropped[0]).toMatchObject({ position: { x: 120, y: 80 }, source: { files: 2, folders: 1 } });
   });
 
-  it('reports where files are dragged over the window, and when they leave', async () => {
-    const { result, shell } = renderAppHook(useDropHover, { now: NOW });
+  it('reports where files are dragged over the window, when they leave, and drops the shell refused', async () => {
+    const hovers: unknown[] = [];
+    const failures: unknown[] = [];
+    const { shell } = renderAppHook(
+      () => {
+        useDropHoverEvents((position) => hovers.push(position));
+        useDropFailed((failure) => failures.push(failure));
+      },
+      { now: NOW },
+    );
     await act(() => shell.flush());
-    expect(result.current).toBeNull();
 
     await act(() => events.dropHover.emit({ position: { x: 12, y: 34 } }));
-    await waitFor(() => {
-      expect(result.current).toEqual({ x: 12, y: 34 });
-    });
-
     await act(() => events.dropHover.emit({ position: null }));
     await waitFor(() => {
-      expect(result.current).toBeNull();
+      expect(hovers).toEqual([{ x: 12, y: 34 }, null]);
+    });
+
+    await act(() => events.dropFailed.emit({ error: { code: 'InvalidArgument', detail: 'too many' } }));
+    await waitFor(() => {
+      expect(failures).toEqual([{ error: { code: 'InvalidArgument', detail: 'too many' } }]);
     });
   });
 });

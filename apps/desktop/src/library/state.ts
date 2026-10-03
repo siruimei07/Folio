@@ -5,6 +5,7 @@
 import { create } from 'zustand';
 
 import { reportUiError } from '../app/log';
+import type { FailureItem } from '../components/FailureList/FailureList';
 import { followPath, followRef, followReferences, recheck } from '../data/references';
 import { setCurrentSemester, useSession } from '../data/session';
 import type { EntryChange, EntryRef } from '../ipc';
@@ -42,14 +43,6 @@ export interface Selection {
   focus: { key: string; index: number } | null;
 }
 
-/** A failed item of a batch, for the result dialog. */
-export interface FailedItem {
-  /** As shown: "MAT232/Problem sets/ps2.pdf". */
-  place: string;
-  /** Why it failed, in words. */
-  reason: string;
-}
-
 /** The dialogs the Library view opens itself. */
 export type LibraryDialog =
   | { kind: 'move'; entries: readonly EntryRef[] }
@@ -57,7 +50,7 @@ export type LibraryDialog =
   | { kind: 'deleteItems'; entries: readonly EntryRef[] }
   | { kind: 'deleteSemester'; semester: EntryRef }
   | { kind: 'extension'; entry: EntryRef; name: string; region: Region }
-  | { kind: 'failures'; title: string; items: readonly FailedItem[] };
+  | { kind: 'failures'; title: string; items: readonly FailureItem[] };
 
 /** An entry a menu acts on, with its tags for the Tags submenu. */
 export interface MenuTarget extends Selected {

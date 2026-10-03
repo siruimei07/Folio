@@ -164,6 +164,22 @@ describe('activity words', () => {
       look: 'cancelled',
       title: 'Stopped adding files to MAT232',
     });
+    const stopped = (failureCount: number): Job => ({
+      ...cancelled('import'),
+      status: {
+        state: 'cancelled',
+        result: { kind: 'import', imported: 7, replaced: 0, renamed: 0, skipped: 0, originalsDeleted: 0, failures: [], failureCount },
+      },
+    });
+    expect(describeJob(t, { job: stopped(0), target: 'MAT232', files: 12 }, now, 'en')).toMatchObject({
+      look: 'cancelled',
+      meta: '7 of 12 were added before you stopped.',
+      hasDetails: false,
+    });
+    expect(describeJob(t, { job: stopped(1) }, now, 'en')).toMatchObject({
+      meta: '7 files were added before you stopped.',
+      hasDetails: true,
+    });
     expect(describeJob(t, { job: cancelled('scan') }, now, 'en').title).toBe('Scan cancelled');
     expect(describeJob(t, { job: failed('hash') }, now, 'en').title).toBe("Couldn't check files");
   });

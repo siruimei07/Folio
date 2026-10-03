@@ -6,10 +6,13 @@
 import { LibraryBig, type LucideIcon } from 'lucide-react';
 import type { ComponentType } from 'react';
 
+import { importDialog, ImportResultDialog } from '../import';
 import { LibraryView } from '../library/LibraryView';
+import { FolderPicker } from '../library/move/FolderPicker';
 import { SemesterControl } from '../library/SemesterControl';
 import { SearchDialog } from '../search/SearchDialog';
 import { AddCoursesDialog, AppSettings, LibrarySettings, NewSemesterDialog } from '../settings';
+import { ActivityControl } from './activity/ActivityControl';
 import type { DialogKind, DialogParams, ViewId } from './navigation';
 
 export interface ViewDefinition {
@@ -47,6 +50,9 @@ export const DIALOGS: DialogRegistry = {
   appSettings: AppSettings,
   newSemester: NewSemesterDialog,
   addCourses: AddCoursesDialog,
+  // The Library's folder picker goes in here: features never import each other.
+  import: importDialog(FolderPicker),
+  importResult: ImportResultDialog,
 };
 
 /** Toolbar controls a lane provides; `compact` in the narrow window's 40 px bar. */
@@ -63,7 +69,7 @@ export interface ToolbarControls {
   activity?: ComponentType<ToolbarControlProps>;
 }
 
-export const TOOLBAR: ToolbarControls = { semester: SemesterControl };
+export const TOOLBAR: ToolbarControls = { semester: SemesterControl, activity: ActivityControl };
 
 /** Everything the shell hosts, passed as one value so tests can host their own. */
 export interface ShellRegistry {

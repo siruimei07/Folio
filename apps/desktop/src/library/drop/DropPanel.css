@@ -1,0 +1,84 @@
+/* The panel drop target (library-actions handoff §3): a wash over the whole panel, 8 px in a
+   dashed outline, and a centred card; fades in and out (§13). */
+
+.library-pane,
+.library-panel {
+  position: relative;
+}
+
+.drop-panel {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-index-drop-target);
+  box-sizing: border-box;
+  padding: var(--space-8);
+  background: var(--color-drop-wash);
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  transition:
+    opacity var(--motion-duration-fast) var(--motion-easing-standard),
+    visibility 0s linear var(--motion-duration-fast);
+}
+
+.drop-panel[data-visible] {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.drop-panel__frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: 100%;
+  padding: var(--space-16);
+  border: var(--focus-ring-width) dashed var(--color-drop-outline);
+  /* 8 px: the panel's radius, 2 px in. */
+  border-radius: calc(var(--radius-panel) - 2 * var(--border-width));
+}
+
+.drop-panel__card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-14);
+  box-sizing: border-box;
+  /* 440 px, as wide as a small dialog. */
+  max-width: var(--size-dialog-small);
+  padding: var(--space-16) var(--space-20) var(--space-16) var(--space-16);
+  border: var(--border-width) solid var(--color-border-default);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface-panel);
+  box-shadow: var(--shadow-menu);
+}
+
+.drop-panel__tile {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-state-tile);
+  height: var(--size-state-tile);
+  border-radius: var(--radius-panel);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-default);
+}
+
+.drop-panel__words {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.drop-panel__title {
+  font-size: var(--font-size-heading);
+  font-weight: var(--font-weight-strong);
+  overflow-wrap: anywhere;
+}
+
+.drop-panel__text {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-label);
+}

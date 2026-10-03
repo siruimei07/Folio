@@ -13,6 +13,7 @@ import { useCourses } from '../data/groups';
 import { useLibrary, useLibraryStatus } from '../data/library';
 import { openPathsTo, parentOf } from '../lib/paths';
 import { LibraryDialogs } from './dialogs/LibraryDialogs';
+import { useFileDrop } from './drop/useFileDrop';
 import { LoadFailure } from './LoadFailure';
 import { LibraryMenu } from './menus/LibraryMenu';
 import { LibraryPane } from './pane/LibraryPane';
@@ -54,6 +55,7 @@ function LibraryScreen() {
   const covered = useLibraryView((state) => state.covered);
   const courses = useCourses(info.semester?.folder.path ?? null);
   useRevealTarget(info);
+  useFileDrop(info);
   const noCourses = info.status === 'success' && (info.semester === null || courses.data?.length === 0);
   return (
     <div className="library-view" data-covered={(narrow && covered) || undefined}>

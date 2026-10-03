@@ -381,6 +381,17 @@ rendered wide or `compact`). Registering `search` shows the toolbar's search but
 like the M2 views. `app/Toolbar.tsx` provides `SemesterButton` and `app/activity/` the `Activity`
 button and popover, both presentational, for the lanes that wire them to data.
 
+As built (`feat/ui-import`, 2026-10-02): `TOOLBAR.activity` is `app/activity/ActivityControl.tsx`,
+the button wired to `list_jobs` / JobChanged and the problem count (shown once a scan has
+finished); "View problems" shows only while a `problems` dialog is registered. What `Job` does not
+carry (an import's destination and file count, when a job was seen to end) lives in
+`app/activity/notes.ts`, which the import dialog writes. `DIALOGS.import` is
+`importDialog(FolderPicker)`: the registry hands the Library's folder picker to the import feature,
+since features never import each other. The import toasts (`app/activity/ImportToasts.tsx`, progress
+then result) render with the activity control, which the toolbar shows while a library is open.
+The drop target is the Library's (`library/drop/`): the tree registers a row finder,
+and a drop opens `import` through the navigation store with the tag filter's tags.
+
 ### 6.3 Layout, theme and motion
 
 - **Narrow layout** (window width < `size.narrow-breakpoint`, handoff §2): media queries cannot
