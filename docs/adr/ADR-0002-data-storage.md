@@ -135,6 +135,11 @@ specific to one machine.
   [library-core.md](../specs/library-core.md) §4.2 defines the field rules.
 - New-library presets use design palette keys; Reference uses `stone`. Stored tag definitions
   remain authored data and are never recoloured merely by opening a library.
+- Frozen with v0.1 (2026-10-03, `gate/m1-acceptance`): metadata `format_version` 2, the scan
+  journal 3, the import intent 1 and the per-machine `settings.json` 1. Files that v0.1 wrote are
+  checked in under `crates/folio-core/tests/fixtures/formats/v0.1/`, and
+  `crates/folio-core/tests/format_fixtures.rs` opens each one; every later format change ships
+  with a migration that keeps those tests passing, and with fixtures of its own (README there).
 
 Example, `.folio/meta/2026 秋/线性代数.json`:
 
@@ -194,7 +199,8 @@ Tag ids are stable ASCII strings: the presets are `notes`, `slides`, `homework`,
 **Schema changes**
 - `rusqlite_migration` 2.6, which tracks the version in `PRAGMA user_version`.
 - A unit test calls `Migrations::validate()`.
-- Fixture tests open a database from each released schema version and migrate it.
+- Fixture tests open a database from each released schema version and migrate it. v0.1 released
+  schema 2 (tokenizer 2, paths 1): `crates/folio-core/tests/fixtures/formats/v0.1/catalog.sqlite`.
 - If a migration fails or the file is corrupt, the database is moved aside and rebuilt from the
   disk and `.folio/`, with progress shown to the user.
 
@@ -428,7 +434,7 @@ iCloud folder is the remote (ADR-0003), not the library.
        Han block. A rerun with the final rules stayed within 10% on every other figure here.
      - Rare normalisation paths are slow: 1 MB of U+FDFA, which NFKC expands to 18 characters,
        takes 0.84 s. The body cap also bounds this worst case.
-5. [ ] Tests:
+5. [x] Tests:
    - migrations `validate()` plus fixtures for each released schema version;
    - metadata round-trips, fixtures for older formats, and read-only mode for a newer format;
    - a property test that a full rebuild equals the incrementally maintained catalog.
@@ -436,6 +442,12 @@ iCloud folder is the remote (ADR-0003), not the library.
      registered (`validate()` itself opens a connection without it); metadata files have golden
      bytes, round-trip property tests and a `NewerFormat` error for read-only mode. Fixtures
      wait for the first released schema and the first older format.
+   - Done (2026-10-03, `gate/m1-acceptance`): the v0.1 fixtures of §3 and §4 (a library with every
+     `.folio/` file, its catalog, a scan journal, an import intent and `settings.json`), written
+     once by the v0.1 code. Seven tests open them: the values read back; the current writers
+     reproduce the bytes; the catalog opens without a rebuild and answers browse and one- and
+     two-character Chinese searches; the library scans with that catalog and keeps every tag
+     without writing metadata; recovery reads the import intent and settles it.
    - The rebuild property test exists (2026-09-27, scan lane,
      [`library-scan.md`](../specs/library-scan.md) §10): after random creations, edits,
      deletions, renames (case-only ones included), tagging, settings and hashing, the catalog

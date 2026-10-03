@@ -8,11 +8,6 @@
     "list": "List",
     "addFiles": "Add files"
   },
-  "noLibrary": {
-    "failed": "Couldn't check which library is open",
-    "title": "No library is open",
-    "text": "Open or create a library to see your courses and files here."
-  },
   "tree": {
     "label": "Courses and files in {{semester}}",
     "quick": {

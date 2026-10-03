@@ -1,13 +1,10 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import AxeBuilder from '@axe-core/playwright';
 import type { FrameLocator, Locator, Page } from '@playwright/test';
 
-import library from '../../apps/desktop/src/i18n/locales/en/library.json' with { type: 'json' };
 import preview from '../../apps/desktop/src/i18n/locales/en/preview.json' with { type: 'json' };
-import type { FolderChoice, Job, LibraryOpened } from '../../apps/desktop/src/ipc/bindings';
-import { expect, test } from '../fixtures';
+import { blockingViolations, expect, openLibrary, test, treeRow } from '../fixtures';
 import { pdf, png, SRGB_PROFILE, wav } from '../preview-samples';
 
 // The preview pane on the real shell (app-shell handoff §5; UI architecture §10), one flow per
@@ -44,10 +41,6 @@ See the [syllabus](https://example.com/syllabus) or [the maths](#week-1-vectors)
 <img src="x" onerror="document.title = 'ran'"><script>document.title = 'ran'</script>
 `;
 
-function invoke<T>(page: Page, command: string, args: Record<string, unknown> = {}): Promise<T> {
-  return page.evaluate<T>(`window.__TAURI_INTERNALS__.invoke(${JSON.stringify(command)}, ${JSON.stringify(args)})`);
-}
-
 /** Puts `files` into the course, takes the folder over as the library and waits for its scan. */
 async function library_(page: Page, root: string, files: Record<string, string | Buffer>): Promise<void> {
   const course = path.join(root, 'Fall 2026', COURSE);
@@ -55,32 +48,13 @@ async function library_(page: Page, root: string, files: Record<string, string |
     await mkdir(path.dirname(path.join(course, name)), { recursive: true });
     await writeFile(path.join(course, name), content);
   }
-  const choice = await invoke<FolderChoice | null>(page, 'pick_library_folder');
-  if (!choice) throw new Error('The isolated folder choice was cancelled');
-  const opened = await invoke<LibraryOpened>(page, 'create_library', {
-    request: {
-      folder: choice.token,
-      name: 'E2E library',
-      presetTags: { notes: 'Notes', slides: 'Slides', homework: 'Homework', exam: 'Exams', reference: 'Reference' },
-    },
-  });
-  await expect
-    .poll(async () => (await invoke<Job[]>(page, 'list_jobs')).find((job) => job.id === opened.scan)?.status.state)
-    .toBe('done');
-}
-
-function tree(page: Page): Locator {
-  return page.getByRole('tree', { name: library.tree.label.replace('{{semester}}', 'Fall 2026') });
-}
-
-function row(page: Page, name: string): Locator {
-  return tree(page).getByRole('treeitem', { name: new RegExp(`^${name.replace(/[.()]/g, '\\$&')}`) });
+  await openLibrary(page);
 }
 
 /** Opens a file of the course in the preview. */
 async function show(page: Page, name: string): Promise<Locator> {
-  if (!(await row(page, name).isVisible())) await row(page, COURSE).click();
-  await row(page, name).click();
+  if (!(await treeRow(page, name).isVisible())) await treeRow(page, COURSE).click();
+  await treeRow(page, name).click();
   const pane = page.getByRole('group', { name: preview.label.replace('{{name}}', path.basename(name)) });
   await expect(pane).toBeVisible();
   return pane;
@@ -88,13 +62,6 @@ async function show(page: Page, name: string): Promise<Locator> {
 
 function frameOf(page: Page): FrameLocator {
   return page.frameLocator('iframe.preview-frame');
-}
-
-async function blockingViolations(page: Page): Promise<string[]> {
-  const { violations } = await new AxeBuilder({ page }).analyze();
-  return violations
-    .filter(({ impact }) => impact === 'serious' || impact === 'critical')
-    .map(({ id, nodes }) => `${id}: ${nodes.map(({ target }) => target.join(' ')).join(', ')}`);
 }
 
 test('a note shows maths, code, its images and inert links', async ({ folio }) => {
@@ -165,6 +132,16 @@ test('a PDF pages, zooms, follows its own links and keeps others inert', async (
   if (!libraryDir) throw new Error('This test requires the isolated library-folder fixture');
   const profile = await readFile(SRGB_PROFILE).catch(() => undefined);
   await library_(page, libraryDir, { 'Lecture 1.pdf': pdf({ pages: 3, iccProfile: profile }) });
+  // The page and its frames log no error: pdf.js once named its bundled fonts by a `bundled:` URL
+  // in the CSS of substituted fonts (Helvetica here), which the frame's CSP refuses. A file
+  // Windows makes no thumbnail of answers 404 by design (ipc-m1 §11.2); its tile shows the icon.
+  const errors: string[] = [];
+  page.on('console', (message) => {
+    const { url } = message.location();
+    if (message.type() === 'error' && !url.startsWith('http://folio-file.localhost/thumbnail/')) {
+      errors.push(`${message.text()} @ ${url}`);
+    }
+  });
 
   await show(page, 'Lecture 1.pdf');
   const pages = frameOf(page);
@@ -194,6 +171,7 @@ test('a PDF pages, zooms, follows its own links and keeps others inert', async (
   await page.keyboard.press('Escape');
 
   expect(await blockingViolations(page)).toEqual([]);
+  expect(errors).toEqual([]);
 });
 
 test('images, audio and files Folio does not show', async ({ folio }) => {
@@ -232,11 +210,11 @@ test('the tag row adds and removes a tag on the file', async ({ folio }) => {
   await page.keyboard.press('Escape');
   const tags = pane.getByRole('grid', { name: preview.tags.label });
   await expect(tags.getByRole('row', { name: 'Homework' })).toBeVisible();
-  await expect(row(page, 'ps1.md, tags Homework')).toBeVisible();
+  await expect(treeRow(page, 'ps1.md, tags Homework')).toBeVisible();
 
   await tags.getByRole('button', { name: /Remove tag/ }).click();
   await expect(tags.getByRole('row', { name: 'Homework' })).toHaveCount(0);
-  await expect(row(page, 'ps1.md')).toHaveAccessibleName(/^ps1\.md$/);
+  await expect(treeRow(page, 'ps1.md')).toHaveAccessibleName(/^ps1\.md$/);
 });
 
 test('reduced motion stops the preview popover from moving', async ({ folio }) => {

@@ -4,7 +4,6 @@ import path from 'node:path';
 import type { Page as BrowserPage } from '@playwright/test';
 
 import type {
-  AppError,
   CatalogChanged,
   CreateLibrary,
   EntryChange,
@@ -17,7 +16,7 @@ import type {
   Page,
   ProblemItem,
 } from '../../apps/desktop/src/ipc/bindings';
-import { expect, test } from '../fixtures';
+import { expect, invoke, rejection, test } from '../fixtures';
 
 test.use({ libraryFolder: true });
 
@@ -148,23 +147,6 @@ test('runs a temporary library, observes outside changes, and drains jobs before
     library_root: canonicalRoot,
   });
 });
-
-function invoke<T>(page: BrowserPage, command: string, args: Record<string, unknown> = {}): Promise<T> {
-  return page.evaluate<T>(
-    `window.__TAURI_INTERNALS__.invoke(${JSON.stringify(command)}, ${JSON.stringify(args)})`,
-  );
-}
-
-function rejection(
-  page: BrowserPage,
-  command: string,
-  args: Record<string, unknown>,
-): Promise<AppError | null> {
-  return page.evaluate<AppError | null>(
-    `window.__TAURI_INTERNALS__.invoke(${JSON.stringify(command)}, ${JSON.stringify(args)})
-      .then(() => null, error => error)`,
-  );
-}
 
 interface RecordedEvents {
   catalog: CatalogChanged[];

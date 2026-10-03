@@ -295,7 +295,10 @@ describe('entries', () => {
     expect(await failure(ipc.getEntry({ entry: file }))).toBe('NotFound');
     expect(await failure(ipc.renameEntry({ entry: renamed, name: 'HW2.py' }))).toBe('AlreadyExists');
     expect(await failure(ipc.renameEntry({ entry: renamed, name: 'a:b' }))).toBe('NameInvalidCharacter');
-    expect(await failure(ipc.renameEntry({ entry: renamed, name: 'nul.txt' }))).toBe('NameReserved');
+    // The real shell's device names (folio-core paths.rs), the console's and COM0 included.
+    for (const reserved of ['nul.txt', 'CONIN$', 'COM0', 'CON .txt']) {
+      expect(await failure(ipc.renameEntry({ entry: renamed, name: reserved }))).toBe('NameReserved');
+    }
     expect(await failure(ipc.renameEntry({ entry: renamed, name: 'end.' }))).toBe('NameTrailingDotOrSpace');
     await settle();
     catalog.stop();

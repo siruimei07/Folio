@@ -37,10 +37,16 @@ describe('names', () => {
     expect(checkFolderName('Notes.', false)).toBe('NameTrailingDotOrSpace');
     // Spaces at the ends are trimmed, as the shell does.
     expect(checkFolderName('Notes ', false)).toBeNull();
-    for (const reserved of ['CON', 'nul', 'Com1', 'LPT9', 'nul.txt', 'COM¹', 'CONIN$', '.', '..']) {
+    // Device names as the shell reads them (folio-core paths.rs): spaces before the extension too.
+    for (const reserved of ['CON', 'nul', 'Com1', 'COM0', 'LPT9', 'nul.txt', 'COM¹', 'CONIN$', 'conout$', 'CON .txt', '.', '..']) {
       expect(checkFolderName(reserved, false)).toBe('NameReserved');
     }
     expect(checkFolderName('CONSOLE', false)).toBeNull();
+    expect(checkFolderName('COM10', false)).toBeNull();
+    expect(checkFolderName('NUL-notes.md', false)).toBeNull();
+    // DEL and C1 controls as well as C0.
+    expect(checkFolderName('a\u007fb', false)).toBe('NameInvalidCharacter');
+    expect(checkFolderName('a\u0085b', false)).toBe('NameInvalidCharacter');
     expect(checkFolderName('.folio', true)).toBe('NameReserved');
     expect(checkFolderName('.FOLIO', true)).toBe('NameReserved');
     expect(checkFolderName('.folio', false)).toBeNull();

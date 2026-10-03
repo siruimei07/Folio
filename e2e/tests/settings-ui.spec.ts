@@ -1,12 +1,11 @@
 import { mkdir, realpath, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 
 import settings from '../../apps/desktop/src/i18n/locales/en/settings.json' with { type: 'json' };
-import type { AppSettings, IgnoreRules, Job, Tag } from '../../apps/desktop/src/ipc/bindings';
-import { createLibrary, expect, invoke, test } from '../fixtures';
+import type { AppSettings, IgnoreRules, Tag } from '../../apps/desktop/src/ipc/bindings';
+import { blockingViolations, expect, invoke, openLibrary as open, test } from '../fixtures';
 
 // The settings dialogs on the real shell (app-shell handoff §9; ipc-m1 §22): Library settings from
 // Ctrl+, with its pages, a new tag, ignore rules and a new semester; App settings from the avatar
@@ -18,21 +17,11 @@ test.use({ libraryFolder: true });
 async function openLibrary(page: Page, libraryDir: string): Promise<void> {
   await mkdir(path.join(libraryDir, 'Fall 2026', 'MAT232 Calculus'), { recursive: true });
   await writeFile(path.join(libraryDir, 'Fall 2026', 'MAT232 Calculus', 'notes.md'), '# Notes\n');
-  const opened = await createLibrary(page);
-  await expect
-    .poll(async () => (await invoke<Job[]>(page, 'list_jobs')).find((job) => job.id === opened.scan)?.status.state)
-    .toBe('done');
+  await open(page);
 }
 
 async function expectNoBlockingViolations(page: Page): Promise<void> {
-  // Contrast is measured once the dialog has finished fading in. Polled with `evaluate`: the
-  // page's CSP refuses the function `waitForFunction` builds from text.
-  await expect
-    .poll(() => page.evaluate<boolean>(`document.getAnimations().every((animation) => animation.playState !== 'running')`))
-    .toBe(true);
-  const { violations } = await new AxeBuilder({ page }).include('[role="dialog"]').analyze();
-  const blocking = violations.filter(({ impact }) => impact === 'serious' || impact === 'critical');
-  expect(blocking.map(({ id, nodes }) => `${id}: ${nodes.map(({ target }) => target.join(' ')).join(', ')}`)).toEqual([]);
+  expect(await blockingViolations(page, '[role="dialog"]')).toEqual([]);
 }
 
 test('Library settings: pages from the keyboard, a new tag, ignore rules, axe, and focus back on the gear', async ({ folio }) => {

@@ -1,0 +1,10 @@
+{
+  "format_version": 2,
+  "course": {
+    "archived": false,
+    "code": "MAT237",
+    "color": "teal",
+    "order": 2
+  },
+  "tags": {}
+}

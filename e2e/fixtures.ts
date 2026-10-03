@@ -1,15 +1,16 @@
 import { type ChildProcess, spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { access, mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
 import AxeBuilder from '@axe-core/playwright';
-import { type Browser, type Page, test as base, chromium, expect } from '@playwright/test';
+import { type Browser, type Locator, type Page, test as base, chromium, expect } from '@playwright/test';
 
 import firstRun from '../apps/desktop/src/i18n/locales/en/first-run.json' with { type: 'json' };
-import type { FolderChoice, LibraryOpened } from '../apps/desktop/src/ipc/bindings';
+import library from '../apps/desktop/src/i18n/locales/en/library.json' with { type: 'json' };
+import type { AppError, FolderChoice, Job, LibraryOpened } from '../apps/desktop/src/ipc/bindings';
 
 export { expect };
 
@@ -158,10 +159,11 @@ function hasExited(child: ChildProcess): boolean {
 }
 
 /**
- * Serious and critical axe violations, as `rule: targets`. A page fades in (first-run §10), and
- * axe would measure contrast halfway through, so it waits for the animations that end.
+ * Serious and critical axe violations, as `rule: targets`, in the page or in the part that
+ * `include` selects. A page or a dialog fades in (first-run §10), and axe would measure contrast
+ * halfway through, so it waits for the animations that end.
  */
-export async function blockingViolations(page: Page): Promise<string[]> {
+export async function blockingViolations(page: Page, include?: string): Promise<string[]> {
   await expect
     .poll(() =>
       page.evaluate<boolean>(
@@ -169,15 +171,46 @@ export async function blockingViolations(page: Page): Promise<string[]> {
       ),
     )
     .toBe(true);
-  const { violations } = await new AxeBuilder({ page }).analyze();
+  const axe = new AxeBuilder({ page });
+  const { violations } = await (include === undefined ? axe : axe.include(include)).analyze();
   return violations
     .filter(({ impact }) => impact === 'serious' || impact === 'critical')
     .map(({ id, nodes }) => `${id}: ${nodes.map(({ target }) => target.join(' ')).join(', ')}`);
 }
 
+/** Whether a file or folder is there. */
+export async function exists(file: string): Promise<boolean> {
+  try {
+    await access(file);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const previousPicker = process.env.FOLIO_TEST_IMPORT_FILES;
+
+/**
+ * Answers the import file picker of the apps started from now on (debug builds read
+ * FOLIO_TEST_IMPORT_FILES at start, in Windows' path-list format); `null` restores what was set.
+ */
+export function answerImportPicker(paths: readonly string[] | null): void {
+  if (paths !== null) process.env.FOLIO_TEST_IMPORT_FILES = paths.join(';');
+  else if (previousPicker === undefined) delete process.env.FOLIO_TEST_IMPORT_FILES;
+  else process.env.FOLIO_TEST_IMPORT_FILES = previousPicker;
+}
+
 /** Calls a command in the page, as the UI's IPC module does; a command error rejects. */
 export function invoke<T>(page: Page, command: string, args: Record<string, unknown> = {}): Promise<T> {
   return page.evaluate<T>(`window.__TAURI_INTERNALS__.invoke(${JSON.stringify(command)}, ${JSON.stringify(args)})`);
+}
+
+/** Calls a command in the page and resolves with its error, or `null` if it succeeded. */
+export function rejection(page: Page, command: string, args: Record<string, unknown> = {}): Promise<AppError | null> {
+  return page.evaluate<AppError | null>(
+    `window.__TAURI_INTERNALS__.invoke(${JSON.stringify(command)}, ${JSON.stringify(args)})
+      .then(() => null, error => error)`,
+  );
 }
 
 /**
@@ -191,4 +224,31 @@ export async function createLibrary(page: Page, name = 'E2E library'): Promise<L
   return invoke<LibraryOpened>(page, 'create_library', {
     request: { folder: choice.token, name, presetTags: firstRun.presetTags },
   });
+}
+
+/**
+ * `createLibrary` over what the folder already holds, once its first scan has finished; `poll`
+ * tunes that wait (a timing run polls more often, for longer).
+ */
+export async function openLibrary(
+  page: Page,
+  name?: string,
+  poll?: { timeout?: number; intervals?: number[] },
+): Promise<LibraryOpened> {
+  const opened = await createLibrary(page, name);
+  await expect
+    .poll(async () => (await invoke<Job[]>(page, 'list_jobs')).find((job) => job.id === opened.scan)?.status.state, poll)
+    .toBe('done');
+  return opened;
+}
+
+/** The Library's tree of a semester. */
+export function libraryTree(page: Page, semester = 'Fall 2026'): Locator {
+  return page.getByRole('tree', { name: library.tree.label.replace('{{semester}}', semester) });
+}
+
+/** A row of that tree by the start of its name (the name, then its count or tags). */
+export function treeRow(page: Page, name: string, semester?: string): Locator {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return libraryTree(page, semester).getByRole('treeitem', { name: new RegExp(`^${escaped}`) });
 }

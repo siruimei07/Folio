@@ -5,10 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Callout } from '../../components/Callout/Callout';
 import { extensionOf } from '../../lib/file-types';
-
-/** Characters Windows never allows in a name, and control characters (library core §3). */
-// eslint-disable-next-line no-control-regex -- control characters are what it finds
-const INVALID = /[\\/:*?"<>|\u0000-\u001f]/;
+import { hasInvalidNameCharacter } from '../../lib/names';
 
 export interface NameFieldProps {
   /** The name it starts with. */
@@ -42,7 +39,7 @@ export function NameField({ initial, file, label, error, busy = false, onSubmit,
   const input = useRef<HTMLInputElement>(null);
   const done = useRef(false);
   const calloutId = useId();
-  const invalid = INVALID.test(value);
+  const invalid = hasInvalidNameCharacter(value);
   const message = invalid ? t('rename.errors.NameInvalidCharacter') : empty ? t('rename.errors.NameEmpty') : error;
 
   useLayoutEffect(() => {

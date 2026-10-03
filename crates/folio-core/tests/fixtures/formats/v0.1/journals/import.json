@@ -1,0 +1,29 @@
+{
+  "format_version": 1,
+  "library": "48ffdfb335860f2c15c8bccf2a90e720",
+  "stage": "import-dd45cfcee22627c28feee09df1ce9695.part",
+  "destination": "2026 秋/线性代数/复习笔记.md",
+  "hash": "b3:5a1feefacc9954e45c1f5cbacb4d5572d6200aa9c5a7ba5d6f0ebebc91ace10a",
+  "identity": {
+    "size": 29,
+    "modified_ns": 1791056292160352600,
+    "created_ns": 1791056292160352600,
+    "file_id": "3cba3ea2ba3e591a-b000000105da2"
+  },
+  "parent": {
+    "size": 0,
+    "modified_ns": 1791056292113495800,
+    "created_ns": 1791056292110487700,
+    "file_id": "3cba3ea2ba3e591a-9000000105d90"
+  },
+  "old": {
+    "size": 44,
+    "modified_ns": 1791056291882087800,
+    "created_ns": 1791056292112495600,
+    "file_id": "3cba3ea2ba3e591a-9000000105d98"
+  },
+  "tags": [
+    "notes"
+  ],
+  "added_ns": 1791056292156009400
+}

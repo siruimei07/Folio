@@ -31,10 +31,15 @@ const FILES = new Map<Kind, Map<string, Loader>>(
   ]),
 );
 
-/** The URLs pdf.js is given; only this factory reads them, and only their file names count. */
+/**
+ * The URLs pdf.js is given; only this factory reads them, and only their file names count. Standard
+ * fonts get none: pdf.js would write `url(<it><file>)` into the CSS of every system font that
+ * stands in for one (Helvetica as Arial), which the frame's CSP refuses. The worker still asks
+ * this factory for the fonts it embeds (Symbol and ZapfDingbats).
+ */
 export const BUNDLED_URLS = {
   cMapUrl: 'bundled:cmaps/',
-  standardFontDataUrl: 'bundled:standard_fonts/',
+  standardFontDataUrl: undefined,
   wasmUrl: 'bundled:wasm/',
 };
 

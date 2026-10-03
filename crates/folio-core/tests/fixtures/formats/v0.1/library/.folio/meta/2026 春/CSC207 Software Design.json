@@ -1,0 +1,11 @@
+{
+  "format_version": 2,
+  "course": {
+    "archived": true,
+    "code": "CSC207",
+    "order": 0
+  },
+  "tags": {
+    "lab1.java": ["88a8ea5c2a25ea7f", "homework"]
+  }
+}

@@ -2,12 +2,11 @@ import { execFileSync } from 'node:child_process';
 import { mkdir, realpath, symlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 
 import problems from '../../apps/desktop/src/i18n/locales/en/problems.json' with { type: 'json' };
 import type { Job } from '../../apps/desktop/src/ipc/bindings';
-import { createLibrary, expect, invoke, test } from '../fixtures';
+import { blockingViolations, createLibrary, expect, invoke, test } from '../fixtures';
 
 // The problems list on the real shell (library-actions handoff §11): a library whose scan finds a
 // junction, a .gitignore line and a line of the ignore rules it can't use. "View problems" in the
@@ -82,9 +81,7 @@ test('lists what the scan left out, copies a path, opens the ignore rules, and p
   await expect(rules.getByText('Line 2 of your ignore rules')).toBeVisible();
   await expect(dialog.getByText(/^From the scan at \d{1,2}:\d{2} [AP]M\. The list updates after every scan\.$/)).toBeVisible();
 
-  const { violations } = await new AxeBuilder({ page }).include('.modal').analyze();
-  const blocking = violations.filter(({ impact }) => impact === 'serious' || impact === 'critical');
-  expect(blocking.map(({ id, nodes }) => `${id}: ${nodes.map(({ target }) => target.join(' ')).join(', ')}`)).toEqual([]);
+  expect(await blockingViolations(page, '.modal')).toEqual([]);
 
   // Copy path joins the library-relative path to the library root.
   const shortcut = 'Fall 2026/MAT232 Calculus/Shortcut';

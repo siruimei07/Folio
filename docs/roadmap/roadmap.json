@@ -5,7 +5,7 @@
     "owner": "Sirui",
     "repo": "https://github.com/siruimei07/Folio",
     "explorer": "https://claude.ai/artifact/Mv1f9eXfrkYTbAs7fqQVDC",
-    "updated": "2026-10-02T15:10-04:00",
+    "updated": "2026-10-03T19:55-04:00",
     "updatedBy": "Claude Code",
     "models": {
       "fable": "Fable 5.1",
@@ -17,11 +17,12 @@
     ]
   },
   "now": {
-    "stage": "M1 验收：功能 lane 全部合并，下一步 gate/m1-acceptance → v0.1",
-    "focus": "M1",
+    "stage": "M2 版本记录：M1 已验收（v0.1），先写历史格式规格和 M2 设计细节",
+    "focus": "M2",
     "summary": [
-      "M1 的功能 lane 全部合并：10-02 资料库、搜索、预览、设置、导入整条线等；10-03 问题列表（adc2f88）、它的 e2e 长路径修复（6c52ffc）、放弃未完成移动的后端（7556aea，Codex 做、Claude 审计）和按钮 `feat/ui-discard-move-action`（cb56b5b，CI 37141857529 绿）。main 是绿的。",
-      "进行中：`gate/m1-acceptance`（你用 Opus 5.5 · max 开的）：全部用户流程的 e2e、5 万文件性能复核、冻结 catalog schema 和 .folio 格式的 fixture、engineering:tech-debt、未签名的 NSIS 安装包；你在资料库的副本上用 v0.1 一两周后验收。合并一次一个，每个等上一个在 main 上的 CI 跑完。",
+      "M1 完成：你 10-03 试用 v0.1 后验收（目前没发现明显问题），gate/m1-acceptance 已合并。证据在 docs/specs/m1-acceptance.md：53 个 e2e 覆盖全部用户流程（分支 CI 37157738302 绿），5 万文件时一页 200 行 28 ms、搜索一页 34 ms、预览 465 ms 以内，v0.1 的格式冻结成 fixture，未签名安装包 Folio_0.1.0_x64-setup.exe。",
+      "可以开始：`docs/specs-history-format`（Opus 5.5 · max；remote-format.md 要你批准）和 `design/design-m2-details`（Cowork），两条并行；之后是 M2 合约和依赖，再是核心和界面。你试用时提的课程徽标规则（取课程代码的前三个字母，如 CSC207 → CSC；没有代码时用名称；手填的优先）会作为新的 M2 界面 lane 加进来。合并一次一个，每个等上一个在 main 上的 CI 跑完。",
+      "M1 的遗留项已分给后面的 lane：共用选择栏 → feat/ui-changes-view，对话框外观 → feat/ui-history-view，放弃移动的日志级别 → feat/core-commit-history，三处设计细节 → design/design-m2-details，哈希速度和读屏软件 → test/build-release-candidate。",
       "模型：Fable 5.1 暂停（你 10-03 的决定）：推荐给它的 lane（关卡、规格、IPC 合约、推理强度 max）都由 Opus 5.5 用同样的推理强度代替；界面、核心、测试、设计用 Opus 5.5，只改文档和只合并的用 Sonnet 5.5。恢复时删掉 meta.pausedModels 里的 fable 即可。",
       "Codex 的项目级 skills（`AGENTS.md`、`.agents/skills/`、`.codex/`、`.claude/skills/`）和 CLAUDE.md 里的两处改动不进仓库，由 Codex 管理：任何 lane 都不提交、不丢弃。"
     ]
@@ -123,8 +124,8 @@
       "title": "M1 本地资料库",
       "short": "M1",
       "version": "v0.1，你自己用（先在资料库的副本上用）",
-      "state": "active",
-      "date": "",
+      "state": "done",
+      "date": "2026-10-03",
       "outcome": "日常替代资源管理器：浏览、标签、搜索、预览、导入",
       "acceptance": [
         "每个用户流程都有 Playwright e2e；每个新界面都过了 design:design-critique 和 design:accessibility-review，并检查过减少动态效果",
@@ -138,7 +139,7 @@
       "title": "M2 版本记录",
       "short": "M2",
       "version": "v0.2，你自己用",
-      "state": "locked",
+      "state": "active",
       "date": "",
       "outcome": "提交、历史、文本和 Word 的差异与恢复、正文搜索",
       "acceptance": [
@@ -2030,8 +2031,18 @@
         "feat/ui-problems-list"
       ],
       "summary": "全部用户流程的 e2e、5 万文件性能复核、冻结 schema 和 .folio 格式的 fixture、engineering:tech-debt、未签名的 NSIS 安装包 → v0.1",
-      "status": "planned",
-      "updated": "2026-10-02",
+      "status": "done",
+      "updated": "2026-10-03",
+      "landed": "2026-10-03",
+      "gates": {
+        "check": "pass",
+        "e2e": "pass",
+        "codeReview": "pass",
+        "simplify": "pass",
+        "designCritique": "pass",
+        "a11y": "pass",
+        "securityReview": "na"
+      },
       "links": [
         "docs/specs/testing-strategy.md",
         "docs/specs/system-overview.md",
@@ -2065,7 +2076,7 @@
       ],
       "summary": "remote-format.md（与语言无关的格式说明和 golden vectors，ADR-0003 行动项 2）和 versioning.md（本机对象库、工作区、提交日志、差异、恢复）",
       "status": "planned",
-      "updated": "2026-10-01",
+      "updated": "2026-10-03",
       "links": [
         "docs/adr/ADR-0003-versioning-and-sync.md",
         "docs/adr/ADR-0002-data-storage.md",
@@ -2078,7 +2089,8 @@
           "ADR-0003 action item 2: write docs/specs/remote-format.md before any M2 code: object ids (BLAKE3), object kinds, the pack layout and encoding, head records and the remote tree (ADR-0003 §2–§6, §13); byte-exact golden vectors (inputs and expected bytes or hashes) in a language-neutral form a future Swift app can check; and a compatibility policy (format_version, unknown fields, newer readers).",
           "Then docs/specs/versioning.md: the local object store, the workspace (disk compared with the last commit, ADR-0003 §10), the commit journal and its crash safety (§11), full versions for text and Word files and change events only for everything else (brief), diffs, restore as a new change, the AI commit message flow and what the catalog keeps for M2.",
           "End with the M2 contract outline (workspace.*, history.*, ai.*) for feat/ipc-m2-contract, the crates chore/build-deps-m2 needs, and a check that the planned M2 lanes still fit.",
-          "remote-format.md needs my approval (decision remote-format): once real data exists the format is hard to change. Ask me about retention, size limits and which files get full versions, each as concrete options."
+          "remote-format.md needs my approval (decision remote-format): once real data exists the format is hard to change. Ask me about retention, size limits and which files get full versions, each as concrete options.",
+          "The v0.1 formats are frozen (ADR-0002 §3, §4; crates/folio-core/tests/fixtures/formats/v0.1, opened by tests/format_fixtures.rs): whatever M2 adds to the catalog, .folio or settings bumps that format's version, ships a migration with its test, and adds a fixture of the new version next to v0.1, which must keep opening. Say in versioning.md which versions M2 bumps."
         ]
       }
     },
@@ -2122,7 +2134,7 @@
       ],
       "summary": "窄窗口下的工作区和历史、差异视图的各种状态、恢复确认",
       "status": "planned",
-      "updated": "2026-10-01",
+      "updated": "2026-10-03",
       "links": [
         "docs/design/handoff/app-shell.md",
         "docs/design/handoff/library-actions.md",
@@ -2131,7 +2143,8 @@
       "prompt": {
         "extra": [
           "Screens: the workspace (changes list, check boxes, commit box, pending-sync list) and the history (timeline, file cards, single-file history) at the narrow and wide window sizes; the diff view in every state (text, Word text, a binary file shown as a change event only, very large, loading, failed); the restore confirmation (it makes a new change, nothing is lost); the AI commit message states (generating, failed, falling back to the template).",
-          "Reuse the shell, toolbar, dialogs and activity button from app-shell.md and library-actions.md; the data comes from docs/specs/versioning.md (written by docs/specs-history-format). Hand off as docs/design/handoff/workspace-history.md for feat/ui-diff-viewer, feat/ui-changes-view and feat/ui-history-view."
+          "Reuse the shell, toolbar, dialogs and activity button from app-shell.md and library-actions.md; the data comes from docs/specs/versioning.md (written by docs/specs-history-format). Hand off as docs/design/handoff/workspace-history.md for feat/ui-diff-viewer, feat/ui-changes-view and feat/ui-history-view.",
+          "Also settle three notes from the M1 gate's review of the shell and the Library view (docs/specs/m1-acceptance.md §1): with nine tags the filter bar wraps to three rows at the panel's default width; the quick views count the whole library while the panel counts the semester; a course of folders shows its folders as full-size tiles."
         ]
       }
     },
@@ -2221,7 +2234,7 @@
       ],
       "summary": "提交（有日志，崩溃安全）、模板说明、修改说明、撤销提交、历史和单文件历史",
       "status": "planned",
-      "updated": "2026-10-01",
+      "updated": "2026-10-03",
       "links": [
         "docs/specs/versioning.md",
         "docs/specs/ipc-m2.md",
@@ -2229,7 +2242,8 @@
       ],
       "prompt": [
         "Commit with a journal that is crash-safe at every step (ADR-0003 §11, docs/specs/versioning.md): a commit and its objects exist completely or not at all, and the next start finishes or rolls back. Crash injection at every journal step, as the M1 move and import journals do (docs/specs/library-scan.md §7).",
-        "Also the template commit message, editing the message, undoing the last commit, and the history list and single-file history, paged for 50,000-file libraries."
+        "Also the template commit message, editing the message, undoing the last commit, and the history list and single-file history, paged for 50,000-file libraries.",
+        "Add an info level to the diagnostics log for commits, and move the successful discard of an unfinished move there: it is logged under Event::Error today (docs/specs/m1-acceptance.md §4)."
       ]
     },
     {
@@ -2344,7 +2358,7 @@
       ],
       "summary": "改动列表、勾选、提交框、Ctrl+Enter、待同步列表",
       "status": "planned",
-      "updated": "2026-10-01",
+      "updated": "2026-10-03",
       "links": [
         "docs/design/handoff/workspace-history.md",
         "docs/specs/ipc-m2.md"
@@ -2352,7 +2366,8 @@
       "prompt": {
         "extra": [
           "The workspace view: the changes list with check boxes, the commit box (template and AI message; Ctrl+Enter commits), progress and result through the activity button, and the pending-sync list (empty until M3). The selected file uses feat/ui-diff-viewer.",
-          "A failed commit keeps the selection and the message and shows the error state; 50,000 changed files stay fluid (pages, never the whole list)."
+          "A failed commit keeps the selection and the message and shows the error state; 50,000 changed files stay fluid (pages, never the whole list).",
+          "Before the changes list adds a fifth selection bar, make it one shared component: app/Shell.css, library/tree/Tree.css, search/SearchDialog.css and settings/settings.css each draw it from the same tokens (--size-selection-bar-width, --size-selection-bar-inset, --color-selection-indicator)."
         ]
       }
     },
@@ -2369,14 +2384,15 @@
       ],
       "summary": "历史时间线、文件卡片、单文件历史、恢复",
       "status": "planned",
-      "updated": "2026-10-01",
+      "updated": "2026-10-03",
       "links": [
         "docs/design/handoff/workspace-history.md",
         "docs/specs/ipc-m2.md"
       ],
       "prompt": {
         "extra": [
-          "The history view: the timeline, file cards, single-file history and restore with its confirmation (a restore makes a new change). Uses feat/ui-diff-viewer. Long histories page; a failed restore leaves the user where they were."
+          "The history view: the timeline, file cards, single-file history and restore with its confirmation (a restore makes a new change). Uses feat/ui-diff-viewer. Long histories page; a failed restore leaves the user where they were.",
+          "Settle the dialog look before adding the restore confirmation: the import dialog should sit 96 px from the top of the window (library-actions handoff, the import dialog's frame) but is centred, and only the import dialog gives Button's isPending state the disabled look; move that into the shared Button."
         ]
       }
     },
@@ -2424,7 +2440,7 @@
       ],
       "summary": "提交和恢复在崩溃注入下不丢数据；你自己用 v0.2 至少一两周",
       "status": "planned",
-      "updated": "2026-10-01",
+      "updated": "2026-10-03",
       "links": [
         "docs/specs/versioning.md",
         "docs/specs/remote-format.md",
@@ -2433,7 +2449,8 @@
       "prompt": {
         "extra": [
           "M2 acceptance (roadmap.json `milestones` M2): commit and restore lose nothing under crash injection at every journal step; the remote-format golden vectors still pass; e2e for the workspace, history, diff, restore and AI settings flows; history performance on the 50,000-file fixture; fixtures for the frozen object and pack formats.",
-          "I use v0.2 on my own library for one or two weeks before the gate is done: prepare the unsigned build and a short list of what to watch for."
+          "I use v0.2 on my own library for one or two weeks before the gate is done: prepare the unsigned build and a short list of what to watch for.",
+          "Record the evidence per criterion in docs/specs/m2-acceptance.md, as docs/specs/m1-acceptance.md does; time history with the method in docs/specs/testing-strategy.md (Performance: a quiet window, the app lock, an optimised build that keeps the test hooks); desktop specs run on CI and locally with FOLIO_E2E_DESKTOP=1; add the v0.2 format fixtures next to v0.1."
         ]
       }
     },
@@ -2980,7 +2997,7 @@
       ],
       "summary": "Windows 10 和多显示器缩放；全量无障碍审查；5 万文件 / 100 GB 性能复核；整个 IPC 面的 /security-review；收窄 core:event:allow-listen；engineering:deploy-checklist",
       "status": "planned",
-      "updated": "2026-10-01",
+      "updated": "2026-10-03",
       "links": [
         "docs/specs/testing-strategy.md",
         "docs/specs/system-overview.md",
@@ -2989,7 +3006,8 @@
       "prompt": {
         "extra": [
           "Release candidate checks: Windows 10 and multi-monitor setups with different scaling; a full design:accessibility-review of every screen; a 50,000-file / 100 GB performance pass; /security-review over the whole IPC surface; narrowing core:event:allow-listen (every window can listen to every event today); the open performance items (hashing opens each file three times); engineering:deploy-checklist.",
-          "Every blocker becomes a fix lane; report a go / no-go table to me."
+          "Every blocker becomes a fix lane; report a go / no-go table to me.",
+          "Also from the M1 gate: the app hashes at a tenth of the benchmark's rate (about 2,200 files a second, 49,920 files in 22.7 s; docs/specs/testing-strategy.md, Performance); screen readers (NVDA, Narrator) have never been tried on any screen."
         ]
       }
     },
@@ -3090,7 +3108,8 @@
       "when": "有空时",
       "item": "版本定义（v1.0 = M4 完成、发给同学朋友）和 M1→M4 的顺序：没单独确认过，按本文执行",
       "type": "decide",
-      "state": "open"
+      "state": "done",
+      "result": "你 10-03 确认：v0.1 = M1（自己用）、v0.2 = M2、v0.3 = M3、v1.0 = M4 完成并发给同学朋友，顺序 M1→M4"
     },
     {
       "id": "remote-format",
@@ -3164,7 +3183,7 @@
   ],
   "looseEnds": [
     {
-      "state": "open",
+      "state": "done",
       "item": "pdf.js 按 bundled: URL 加载自带的标准字体，被预览的 CSP 拒绝（控制台报错，退回系统字体）",
       "lane": "feat/ui-preview"
     },
@@ -3199,7 +3218,7 @@
       "lane": "chore/core-webview-accelerator-keys"
     },
     {
-      "state": "open",
+      "state": "done",
       "item": "搜索高亮只能当文本渲染",
       "lane": "feat/ui-search-palette"
     },
@@ -3219,17 +3238,17 @@
       "lane": "feat/ui-settings"
     },
     {
-      "state": "open",
+      "state": "done",
       "item": "共用名称规则（界面和假 shell）；删掉 LibraryView 用不到的「无资料库」分支",
       "lane": "feat/ui-first-run"
     },
     {
-      "state": "open",
-      "item": "共用失败状态、选择栏、对话框外观、e2e helper",
+      "state": "done",
+      "item": "共用失败状态和 e2e helper",
       "lane": "feat/ui-search-palette"
     },
     {
-      "state": "open",
+      "state": "done",
       "item": "第一个发布 schema 的 fixture",
       "lane": "gate/m1-acceptance"
     },
@@ -3245,13 +3264,38 @@
     },
     {
       "state": "open",
-      "item": "哈希时每个文件打开三次等性能改进",
+      "item": "哈希时每个文件打开三次等性能改进；应用里哈希只有基准的十分之一（每秒约 2,200 个文件，5 万文件 22.7 s）",
       "lane": "test/build-release-candidate"
     },
     {
-      "state": "open",
-      "item": "discard.rs:46 按 from 取根条目的类型（现在靠排序取第一个）；成功的放弃记在 Event::Error 下，可改成普通日志（Claude 审计的两处可选小改）",
+      "state": "done",
+      "item": "discard.rs:46 按 from 取根条目的类型：不需要（ScanJournal::read 已拒绝第一条不是被移动项的移动意图，加了注释）",
       "lane": "feat/core-discard-move"
+    },
+    {
+      "state": "open",
+      "item": "共用选择栏：app/Shell.css、library/tree/Tree.css、search/SearchDialog.css、settings/settings.css 四处用同一组 token 各写一份，工作区列表加第五处之前合成一个组件",
+      "lane": "feat/ui-changes-view"
+    },
+    {
+      "state": "open",
+      "item": "对话框外观：导入对话框应离窗口顶部 96 px（现在居中）；Button 的 isPending 样式只在导入对话框里改成禁用外观，应放进共用的 Button",
+      "lane": "feat/ui-history-view"
+    },
+    {
+      "state": "open",
+      "item": "成功放弃移动记在 Event::Error 下：诊断日志加 info 级别（提交也需要）",
+      "lane": "feat/core-commit-history"
+    },
+    {
+      "state": "open",
+      "item": "M1 评审留下的设计细节：9 个标签时筛选栏换成三行；快捷视图计数是全库、面板计数是本学期；全是文件夹的课程把文件夹显示成大卡片",
+      "lane": "design/design-m2-details"
+    },
+    {
+      "state": "open",
+      "item": "读屏软件（NVDA、讲述人）还没试过",
+      "lane": "test/build-release-candidate"
     }
   ],
   "risks": [
@@ -3408,7 +3452,7 @@
       "{extra}",
       "1. Start: read CLAUDE.md, every file in .agents/lanes/ and `pnpm roadmap show {lane}`; run `but status` and `but pull --check`. Read before designing: {links}. Owns: {owns}. Shared files, small additive hunks only: {shared}. If an active lane owns a path you need, stop and ask me. Write .agents/lanes/{laneFile}.md (CLAUDE.md §7.3), create the branch with `but branch new {lane}` and run `pnpm roadmap status {lane} wip --next \"<what you are doing>\"`.",
       "2. UI lane (CLAUDE.md §4.2): build from the handoff spec in docs/design/handoff/; if the screen has none, or it leaves a state open, stop and ask me (design goes to Cowork first). Use frontend-design and the shared components in apps/desktop/src/components/. Develop against the fake shell (apps/desktop/src/ipc/mock/); a UI lane never changes the IPC contract or the bindings. Strings only in your view's i18n namespace, visual values only from tokens, one icon family, a prefers-reduced-motion fallback for every animation; code and libraries must run on WebView2 131 (CI).",
-      "3. Verify: component tests for every state (loading, empty, error, success, disabled), a Playwright flow in e2e/tests/, design:design-critique and then design:accessibility-review on the built screen (keyboard path, visible focus and focus return, contrast, hit targets), and a reduced-motion check.",
+      "3. Verify: component tests for every state (loading, empty, error, success, disabled), a Playwright flow in e2e/tests/ (reuse the helpers in e2e/fixtures.ts, and e2e/desktop.ts for the mouse and the Recycle Bin), design:design-critique and then design:accessibility-review on the built screen (keyboard path, visible focus and focus return, contrast, hit targets), and a reduced-motion check.",
       "4. Finish: `pnpm check`, then `pnpm e2e` under the app lock (CLAUDE.md §7.5; remove the lock only if you took it), /code-review and /simplify; record the gates (`pnpm roadmap gate {lane} check=pass e2e=pass codeReview=pass simplify=pass designCritique=pass a11y=pass securityReview=na`), set `pnpm roadmap status {lane} review --next \"<what I approve>\"`, add the lane to landingQueue and report to me in Chinese: what changed, checks, open risks, screenshots.",
       "5. When I approve the land: `pnpm roadmap status {lane} done` and commit that entry on the branch; check that no other lane is landing and that the previous land's CI run on main finished green; then `but land {lane} --yes`, `but status`, delete the lane file and check the CI run on main. Stop at the first conflict or failure and report it; never use --ai."
     ],
@@ -3418,7 +3462,7 @@
       "Depends on: {deps}. Landing it unblocks: {unblocks}.",
       "{extra}",
       "1. Start: read CLAUDE.md, every file in .agents/lanes/ and `pnpm roadmap show {lane}`; run `but status` and `but pull --check`. Read before designing: {links}. Owns: {owns}. Shared files, small additive hunks only: {shared}. If an active lane owns a path you need, stop and ask me. Write .agents/lanes/{laneFile}.md (CLAUDE.md §7.3), create the branch with `but branch new {lane}` and run `pnpm roadmap status {lane} wip --next \"<what you are doing>\"`.",
-      "2. Core lane (CLAUDE.md §4.2, §5): start with engineering:system-design against the specs and ADRs; a costly-to-reverse choice goes through engineering:architecture into an ADR, and to me, before code. folio-core stays shell-agnostic; IPC types are defined once in folio-app (no 64-bit integers, i32 rather than f64 in inputs); validate every payload on the privileged side; every function returns a typed error and none is swallowed; a schema or on-disk format change ships with a migration and a migration test.",
+      "2. Core lane (CLAUDE.md §4.2, §5): start with engineering:system-design against the specs and ADRs; a costly-to-reverse choice goes through engineering:architecture into an ADR, and to me, before code. folio-core stays shell-agnostic; IPC types are defined once in folio-app (no 64-bit integers, i32 rather than f64 in inputs); validate every payload on the privileged side; every function returns a typed error and none is swallowed; a schema or on-disk format change ships with a migration and a migration test, and a fixture of its new version next to the frozen v0.1 ones (crates/folio-core/tests/fixtures/formats/), which keep opening.",
       "3. Contract lanes (feat/ipc-*) only: write the commands, events, types and error tables into the IPC spec first; planned commands stay test-only stubs until their lane implements them; regenerate the bindings with `cargo test -p folio-app export_bindings` (never by hand) and update the fake shell and its REVIEWED_BINDINGS fingerprint in the same commit; land before the core and UI lanes that build on it.",
       "4. Tests in the same commits as the behaviour: failure paths, crash injection at every journal step that writes state, migrations; disposable data only (a per-lane temporary data directory).",
       "5. Finish: `pnpm check`, `pnpm e2e` under the app lock, /code-review, /security-review (privileged layer and IPC surface) and /simplify; add progress lines to ADR-0004 action item 3 and the IPC spec for the commands it finishes; record the gates (`pnpm roadmap gate {lane} check=pass e2e=pass codeReview=pass securityReview=pass simplify=pass`), set `pnpm roadmap status {lane} review --next \"<what I approve>\"`, add the lane to landingQueue and report to me in Chinese: what changed, checks, open risks, anything the frontend needs.",
@@ -3597,6 +3641,11 @@
       "at": "2026-10-03",
       "by": "Claude Code",
       "text": "暂停 Fable 5.1（Sirui）：meta.pausedModels = [fable]，推荐给它的 lane 由 Opus 5.5 用同样的推理强度代替；M1 验收用 Opus 5.5 · max 开始"
+    },
+    {
+      "at": "2026-10-03",
+      "by": "Claude Code",
+      "text": "M1 验收：Sirui 10-03 试用 v0.1 后验收并批准合并 gate/m1-acceptance；决策 version-plan 确认；M2 开始，docs/specs-history-format 和 design/design-m2-details 可以开始；M1 遗留项分给 M2 和发布候选 lane"
     }
   ]
 }

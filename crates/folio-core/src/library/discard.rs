@@ -43,6 +43,8 @@ impl Library {
                 false
             } else {
                 let expected = match journal.move_entries() {
+                    // `ScanJournal::read` refuses an intent whose first entry is not the moved
+                    // item itself, so that entry is the root.
                     Some(entries) => entries.first().map(|(_, _, disk)| disk.kind),
                     None => catalog::entry(tx, from)?.map(|entry| match entry.record.kind {
                         EntryKind::File => FileKind::File,

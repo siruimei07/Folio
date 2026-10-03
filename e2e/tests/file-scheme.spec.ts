@@ -4,16 +4,12 @@ import path from 'node:path';
 import type { Frame, Page } from '@playwright/test';
 
 import type { AppError, CatalogChanged, EntryRef, FolderChoice, Job, LibraryOpened } from '../../apps/desktop/src/ipc/bindings';
-import { expect, test } from '../fixtures';
+import { expect, invoke, test } from '../fixtures';
 
 test.use({ libraryFolder: true });
 
 const host = 'http://folio-file.localhost';
 const encoded = (entry: EntryRef) => `${entry.id}/${entry.path.split('/').map(encodeURIComponent).join('/')}`;
-
-function invoke<T>(page: Page, command: string, args: Record<string, unknown> = {}): Promise<T> {
-  return page.evaluate<T>(`window.__TAURI_INTERNALS__.invoke(${JSON.stringify(command)}, ${JSON.stringify(args)})`);
-}
 
 interface Reply {
   status: number;

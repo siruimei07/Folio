@@ -1,0 +1,15 @@
+{
+  "format_version": 2,
+  "course": {
+    "abbr": "线代",
+    "archived": false,
+    "code": "MAT232",
+    "color": "blue",
+    "order": 1
+  },
+  "tags": {
+    "作业": ["homework"],
+    "复习笔记.md": ["exam", "notes"],
+    "第3讲 特征值.pptx": ["slides"]
+  }
+}

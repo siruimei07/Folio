@@ -30,7 +30,7 @@ Living document. Update it when a new kind of test or tool is added.
 |---|---|---|---|
 | Core unit | `cargo test` | Pure logic: path normalisation, canonical JSON, hashing, pack encode/decode, merge rules, tokenizer, ignore evaluation | Every change; CI |
 | Core property | `proptest` | Invariants such as `decode(encode(x)) == x`, tokenizer offsets on character boundaries, contiguous-substring matching, rebuilt catalog equals incremental catalog | Every change; CI |
-| Core integration | `cargo test` with temp dirs and fake adapters | Migrations (`validate()` plus one fixture per released schema), metadata formats including older and newer `format_version`, commit and restore on a temp library, watcher reconciliation | Every change; CI |
+| Core integration | `cargo test` with temp dirs and fake adapters | Migrations (`validate()` plus one fixture per released schema), metadata formats including older and newer `format_version`, commit and restore on a temp library, watcher reconciliation. The formats v0.1 released are frozen in `crates/folio-core/tests/fixtures/formats/v0.1/` and opened by `tests/format_fixtures.rs` (ADR-0002 §3) | Every change; CI |
 | Golden vectors | `cargo test` | Remote format: fixed inputs must produce fixed ids and bytes (ADR-0003 §13) | CI |
 | Sync simulation (M3) | `cargo test`; long runs nightly or on demand | ADR-0003 Action item 3: eventually consistent fake remote, two devices plus an iPad writer, crash injection at every journal step | Short seeds on every change; long runs nightly |
 | IPC contract | `cargo test` in `folio-app` | Every command rejects bad input (paths outside the library, oversized values) and maps failures to the typed error union. Generated bindings match the Rust types. The commands Tauri runs are exactly those in the app manifest and the capabilities; planned ones are in none of them ([ipc-m1.md](ipc-m1.md) §3, §19) | CI |
@@ -99,6 +99,50 @@ Known limits:
 - Native dialogs cannot be driven. Keep them behind an adapter so e2e can inject the result.
 - CI runs one worker until run times are known.
 
+Specs that reach the desktop (`e2e/desktop.ts`) run on CI, and locally only with
+`FOLIO_E2E_DESKTOP=1`: a native file drop presses, moves and releases the mouse for about two
+seconds (Windows starts a drag only while a button is down), and an import that recycles its
+originals adds files to the Recycle Bin. `tests/performance.spec.ts` runs only with
+`FOLIO_E2E_PERF=1` (below).
+
+## Performance
+
+Targets (brief §9, M1 acceptance): a page of 200 rows under 50 ms, a page of search results under
+100 ms, a common file previewed within 1 s, on a library of 50,000 files.
+
+How to measure, in a quiet window: the app lock held, no other `cargo`, `rustc`, `link`,
+`folio-app` or pnpm/Vite/Vitest/Playwright process for 30 s before and during the run (sampled
+every 2 s; a run that saw one is repeated), and Defender's state recorded, never changed.
+
+- Core, release build: `cargo test -p folio-core --release --test search_benchmark --
+  --ignored --nocapture browse_and_search_pages` (a 50,000-entry catalog; it fails past the two
+  targets) and `--test scan_benchmark` (49,920 files of 2 KB on disk; first scan, rescan,
+  hashing). Run the built test binaries directly, so no `cargo` process competes.
+- The app: `e2e/tests/performance.spec.ts` with `FOLIO_E2E_PERF=1` on an optimised build that
+  keeps the debug-only test hooks (`CARGO_PROFILE_RELEASE_DEBUG_ASSERTIONS=true`, its own
+  `CARGO_TARGET_DIR`, `tauri build --no-bundle`; `FOLIO_APP_PATH` names the exe). It writes the
+  same 49,920 files plus five common files, takes the folder over, and times the first scan, IPC
+  round trips of a 200-row page and a 50-result search page, and five clicks on each common file
+  until it is rendered. It fails past 1 s for a preview.
+
+Results, 2026-10-03, gate `gate/m1-acceptance` at `6775b0a`: main `58af168` plus the gate's first
+four commits (`e29128b` on main, after a rebase that changed docs only). DESKTOP-N7UG6S7: Intel Core Ultra 7 270K Plus (24 cores), 32 GB, WD Blue SN5000 NVMe,
+Windows 11 Pro 26200, Defender real-time protection on; Rust 1.97.1, Node 24.19.0, SQLite 3.53.2
+(libsqlite3-sys 0.38.2), WebView2 154.0.4258.53. Times are median / slowest; every run undisturbed.
+
+| Measure | Core benchmark (release) | The app (optimised, IPC included) | Target |
+|---|---|---|---|
+| A page of 200 rows | 7.6–38.5 ms by sort key and filter; slowest 39.9 ms (size, descending) | 27 / 28 ms by name, 19 / 19 ms by size | < 50 ms |
+| A page of 50 search results with highlights | Slowest 57.9 ms (the commonest character, whole library); two characters 28.7 ms; Latin 18.6 ms | 讲 29 / 30 ms, 资料 34 / 34 ms, `pdf` 15 / 16 ms | < 100 ms |
+| First scan of 49,920 files | 0.53 s (`WindowsFileSystem`), 0.49 s (`StdFileSystem`); rescan without changes 0.14 s; hashing 2.5 s; catalog 33 MB | 0.74 s; hashing in the background job until 26.9 s | — |
+| Preview, click to rendered | — | 30-page PDF 346 / 446 ms; 12-page scanned PDF (1275 × 1650 images, ICC) 341 / 465 ms; 12-megapixel PNG 54 / 80 ms; 3,000-line Python 284 / 301 ms; Markdown with 40 formulas and code blocks 148 / 184 ms | < 1 s |
+
+The app's hashing job runs at a steady 2,200 files a second (49,920 in 22.7 s), a tenth of the
+benchmark's pass over the same files; a 200-row page still answered in 25–30 ms throughout, so the
+Library stays usable. The cause is open (Defender scanning files a new process opens is one
+guess); `test/build-release-candidate` takes it with its loose end on hashing (each file opened
+three times).
+
 ## Test data
 
 - A `testkit` module in `folio-core` generates libraries: semesters, courses, Chinese and NFD
@@ -122,13 +166,13 @@ Known limits:
 
 ## Gaps today
 
-The shell has smoke tests only; the UI has component tests for the data layer and the fake
-shell. `folio-core` has unit, property and integration tests
-for paths, metadata files (with golden bytes), the catalog, search and library scans. Scan tests
-run on `MemFs`, an in-memory file system with NTFS-like file ids in `test_support` (unit tests
-only), plus one test on a real folder; `tests/scan_benchmark.rs` times a 50,000-file library.
-Coverage tooling, the public `testkit` module, golden vectors for the remote format and the
-simulation harness arrive with the modules that need them (M1–M3).
+Every M1 user flow has an e2e on the real app (docs/specs/m1-acceptance.md §1). `folio-core` has
+unit, property and integration tests for paths, metadata files (with golden bytes and the frozen
+v0.1 fixtures), the catalog, search, library scans and operations. Scan tests run on `MemFs`, an
+in-memory file system with NTFS-like file ids in `test_support` (unit tests only), plus tests on
+real folders; `tests/scan_benchmark.rs` times a 50,000-file library. Coverage tooling, the public
+`testkit` module, golden vectors for the remote format and the simulation harness arrive with
+the modules that need them (M2–M3).
 
 The Windows adapters ([windows-adapter.md](windows-adapter.md)) are tested on the real OS in
 temporary folders on NTFS, on CI too. Tests that need another file system are ignored by default

@@ -1,20 +1,14 @@
 import './LibraryView.css';
 
-import { FolderX } from 'lucide-react';
 import { useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
 
 import { useLayout } from '../app/layout';
 import { takeRevealTarget, useNavigation } from '../app/navigation';
-import { Panel } from '../components/Panel/Panel';
-import { Skeleton } from '../components/Skeleton/Skeleton';
-import { StateBlock } from '../components/StateBlock/StateBlock';
 import { useCourses } from '../data/groups';
-import { useLibrary, useLibraryStatus } from '../data/library';
+import { useLibrary } from '../data/library';
 import { openPathsTo, parentOf } from '../lib/paths';
 import { LibraryDialogs } from './dialogs/LibraryDialogs';
 import { useFileDrop } from './drop/useFileDrop';
-import { LoadFailure } from './LoadFailure';
 import { LibraryMenu } from './menus/LibraryMenu';
 import { LibraryPane } from './pane/LibraryPane';
 import { LibraryPanel } from './panel/LibraryPanel';
@@ -69,33 +63,11 @@ function LibraryScreen() {
 
 /**
  * The Library view (app-shell handoff §5): the Library panel with the tree, and the third column
- * with the files of what is selected or a file's preview. Without an open library it says so;
- * the first-run flow (`feat/ui-first-run`) takes that place once it lands.
+ * with the files of what is selected or a file's preview. The window shows it only while a library
+ * is open (`first-run/StartGate.tsx`, which has the screens for every other state); another
+ * library gets a fresh screen.
  */
 export function LibraryView() {
-  const { t } = useTranslation('library');
   const library = useLibrary();
-  const status = useLibraryStatus();
-  if (library !== null) return <LibraryScreen key={library.id} />;
-  return (
-    <div className="library-view">
-      <Panel title={t('panel.title')} className="library-panel">
-        {status.isPending ? (
-          <Skeleton rows={6} />
-        ) : status.isError ? (
-          <LoadFailure
-            title={t('noLibrary.failed')}
-            error={status.error.error}
-            retry={() => {
-              void status.refetch();
-            }}
-            placement="panel"
-          />
-        ) : (
-          <StateBlock icon={FolderX} title={t('noLibrary.title')} text={t('noLibrary.text')} />
-        )}
-      </Panel>
-      <LibraryPane noCourses />
-    </div>
-  );
+  return library === null ? null : <LibraryScreen key={library.id} />;
 }

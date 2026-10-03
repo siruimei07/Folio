@@ -4,7 +4,6 @@ import path from 'node:path';
 import type { Page as BrowserPage } from '@playwright/test';
 
 import type {
-  AppError,
   AppSettings,
   EntryRow,
   FolderChoice,
@@ -15,7 +14,7 @@ import type {
   Page,
   ProblemItem,
 } from '../../apps/desktop/src/ipc/bindings';
-import { expect, test } from '../fixtures';
+import { expect, invoke, rejection, test } from '../fixtures';
 
 // Settings through the real shell (docs/specs/ipc-m1.md §22).
 
@@ -109,19 +108,6 @@ test.describe('ignore rules', () => {
     await expect.poll(() => rootNames(page)).toEqual(['build', 'notes.md']);
   });
 });
-
-function invoke<T>(page: BrowserPage, command: string, args: Record<string, unknown> = {}): Promise<T> {
-  return page.evaluate<T>(
-    `window.__TAURI_INTERNALS__.invoke(${JSON.stringify(command)}, ${JSON.stringify(args)})`,
-  );
-}
-
-function rejection(page: BrowserPage, command: string, args: Record<string, unknown>): Promise<AppError | null> {
-  return page.evaluate<AppError | null>(
-    `window.__TAURI_INTERNALS__.invoke(${JSON.stringify(command)}, ${JSON.stringify(args)})
-      .then(() => null, error => error)`,
-  );
-}
 
 function rootAppearance(page: BrowserPage): Promise<{ theme: string | null; reduceMotion: string | null }> {
   return page.evaluate(`({

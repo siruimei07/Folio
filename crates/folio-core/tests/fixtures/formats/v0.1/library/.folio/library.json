@@ -1,0 +1,10 @@
+{
+  "format_version": 2,
+  "id": "48ffdfb335860f2c15c8bccf2a90e720",
+  "name": "我的资料库",
+  "versioning": {
+    "text_extensions": ["adoc", "asm", "bat", "bib", "c", "cc", "cfg", "cls", "cmake", "cmd", "conf", "cpp", "cs", "css", "csv", "dart", "go", "h", "hpp", "hs", "htm", "html", "ini", "ipynb", "java", "js", "json", "jsx", "kt", "latex", "lua", "m", "markdown", "md", "mjs", "ml", "org", "php", "pl", "ps1", "py", "qmd", "r", "rb", "rmd", "rs", "rst", "s", "sass", "scala", "scss", "sh", "sql", "sty", "sv", "swift", "tex", "toml", "ts", "tsv", "tsx", "txt", "v", "vhd", "vhdl", "vue", "xml", "yaml", "yml"],
+    "text_max_size": 10485760,
+    "word_extensions": ["docx"]
+  }
+}

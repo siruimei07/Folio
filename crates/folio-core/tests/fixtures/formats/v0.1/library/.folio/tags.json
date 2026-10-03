@@ -1,0 +1,35 @@
+{
+  "format_version": 2,
+  "tags": {
+    "88a8ea5c2a25ea7f": {
+      "color": "violet",
+      "name": "Lab reports",
+      "order": 6
+    },
+    "exam": {
+      "color": "red",
+      "name": "Exams",
+      "order": 4
+    },
+    "homework": {
+      "color": "orange",
+      "name": "Homework",
+      "order": 3
+    },
+    "notes": {
+      "color": "blue",
+      "name": "Notes",
+      "order": 1
+    },
+    "reference": {
+      "color": "stone",
+      "name": "Reference",
+      "order": 5
+    },
+    "slides": {
+      "color": "green",
+      "name": "Slides",
+      "order": 2
+    }
+  }
+}

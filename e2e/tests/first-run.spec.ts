@@ -1,4 +1,4 @@
-import { access, mkdir, readFile, realpath, rename, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, realpath, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import type { Page } from '@playwright/test';
@@ -7,7 +7,7 @@ import common from '../../apps/desktop/src/i18n/locales/en/common.json' with { t
 import firstRun from '../../apps/desktop/src/i18n/locales/en/first-run.json' with { type: 'json' };
 import library from '../../apps/desktop/src/i18n/locales/en/library.json' with { type: 'json' };
 import type { Course } from '../../apps/desktop/src/ipc/bindings';
-import { blockingViolations, createLibrary, expect, invoke, test } from '../fixtures';
+import { blockingViolations, createLibrary, exists, expect, invoke, test } from '../fixtures';
 
 // The first run on the real shell (first-run handoff §2–§7), in a temporary folder that the debug
 // folder dialog double answers with: a new library with its semester and courses, a folder taken
@@ -15,15 +15,6 @@ import { blockingViolations, createLibrary, expect, invoke, test } from '../fixt
 // run in the page because this package has no DOM types.
 
 test.use({ libraryFolder: true });
-
-async function exists(file: string): Promise<boolean> {
-  try {
-    await access(file);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 function heading(page: Page, name: string) {
   return page.getByRole('heading', { level: 1, name });
@@ -125,6 +116,17 @@ test('takes over a folder, writes the course codes, and opens the semester chose
   // Nothing was moved or renamed.
   expect(await exists(path.join(libraryDir, 'Fall 2026', 'CSC148 Intro', 'hw1.py'))).toBe(true);
   expect(await exists(path.join(libraryDir, 'readme.txt'))).toBe(true);
+});
+
+test('steps appear without rising under reduced motion', async ({ folio }) => {
+  const { page } = folio;
+  await page.getByRole('button', { name: firstRun.welcome.newLibrary.title }).click();
+  await expect(heading(page, firstRun.folder.empty.title)).toBeVisible();
+  const step = () => page.evaluate<string>("getComputedStyle(document.querySelector('.step')).animationDuration");
+  // The step rises in with motion on (first-run §10), so the check below is not of nothing.
+  expect(await step()).not.toBe('0s');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  expect(await step()).toBe('0s');
 });
 
 test('says when the library settings are missing, and Try again opens it once they are back', async ({ folio }) => {

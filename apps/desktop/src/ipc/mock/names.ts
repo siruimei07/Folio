@@ -1,19 +1,9 @@
 // Names the user types (docs/specs/ipc-m1.md §16.3; library core §3). The shell trims both ends
-// and converts to NFC, then checks; the fake applies the same rules and codes.
+// and converts to NFC, then checks; the fake applies the same rules (lib/names.ts) and codes.
+import { hasControl, nameProblem } from '../../lib/names';
 import { charCount } from '../../lib/text';
 import { LIMITS } from '../bindings';
 import { fail } from './failure';
-
-const INVALID_IN_NAMES = new Set(['<', '>', ':', '"', '/', '\\', '|', '?', '*']);
-const DEVICE_NAMES = /^(con|prn|aux|nul|com[1-9¹²³]|lpt[1-9¹²³])(\..*)?$/i;
-
-function hasControl(text: string): boolean {
-  for (const char of text) {
-    const code = char.codePointAt(0) ?? 0;
-    if (code < 0x20 || (code >= 0x7f && code < 0xa0)) return true;
-  }
-  return false;
-}
 
 function typed(raw: string): string {
   return raw.trim().normalize('NFC');
@@ -22,15 +12,8 @@ function typed(raw: string): string {
 /** A file or folder name: `create_folder`, `rename_entry`, `create_semester`, `create_course`. */
 export function fileName(raw: string, { atRoot = false } = {}): string {
   const name = typed(raw);
-  if (name === '') fail('NameEmpty', 'the name is empty');
-  if (name === '.' || name === '..') fail('NameReserved', `"${name}" names a folder itself`);
-  if (hasControl(name) || Array.from(name).some((char) => INVALID_IN_NAMES.has(char))) {
-    fail('NameInvalidCharacter', `"${name}" holds a character Windows does not allow`);
-  }
-  if (name.length > LIMITS.nameUnits) fail('NameTooLong', `${String(name.length)} UTF-16 units`);
-  if (name.endsWith('.')) fail('NameTrailingDotOrSpace', `"${name}" ends with a dot`);
-  if (DEVICE_NAMES.test(name)) fail('NameReserved', `"${name}" is a device name`);
-  if (atRoot && name.toLowerCase() === '.folio') fail('NameReserved', '.folio is Folio’s own');
+  const problem = nameProblem(name, LIMITS.nameUnits, atRoot);
+  if (problem !== null) fail(problem, `"${name}": ${problem}`);
   return name;
 }
 

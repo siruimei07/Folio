@@ -3,8 +3,12 @@
 // the colours new courses get (§1). The shell checks every name again; these only let a page flag
 // a mistake before it asks. In data/ rather than lib/, because the limits are the contract's.
 import { type AppError, LIMITS } from '../ipc';
+import { hasControl, hasInvalidNameCharacter, type NameCode, nameProblem } from '../lib/names';
 import { PALETTE, type PaletteColor } from '../lib/palette';
 import { charCount } from '../lib/text';
+
+// A character no name, or no folder name, may hold, flagged while the user types (§8).
+export { hasControl, hasInvalidNameCharacter as hasInvalidFolderCharacter, type NameCode };
 
 type Code = AppError['code'];
 
@@ -19,9 +23,6 @@ const FOLDER_CODES = [
   'AlreadyExists',
 ] as const satisfies readonly Code[];
 export type FolderCode = (typeof FOLDER_CODES)[number];
-
-/** The codes a page checks itself before it sends a folder name. */
-export type NameCode = Exclude<FolderCode, 'PathTooLong' | 'AlreadyExists'>;
 
 /** The codes of a library name (§8). */
 const LIBRARY_NAME_CODES = ['NameEmpty', 'NameTooLong', 'NameInvalidCharacter'] as const satisfies readonly NameCode[];
@@ -38,24 +39,6 @@ export function isLibraryNameCode(code: string): code is LibraryNameCode {
   return (LIBRARY_NAME_CODES as readonly string[]).includes(code);
 }
 
-/** Control characters, which no typed name may hold (C0, DEL and C1). */
-// eslint-disable-next-line no-control-regex -- control characters are what it finds
-const CONTROL = /[\u0000-\u001f\u007f-\u009f]/u;
-/** Characters Windows never allows in a file or folder name. */
-const NOT_IN_FOLDER_NAMES = /[\\/:*?"<>|]/u;
-/** Device names Windows reserves, with any extension (`nul.txt` counts). */
-const DEVICE_NAMES = /^(con|prn|aux|nul|conin\$|conout\$|com[0-9¹²³]|lpt[0-9¹²³])(\..*)?$/iu;
-
-/** A character no name may hold, flagged while the user types (§8). */
-export function hasControl(raw: string): boolean {
-  return CONTROL.test(raw);
-}
-
-/** A character a folder name may not hold, flagged while the user types (§8). */
-export function hasInvalidFolderCharacter(raw: string): boolean {
-  return CONTROL.test(raw) || NOT_IN_FOLDER_NAMES.test(raw);
-}
-
 /** A library, tag or device name: 1–128 characters without control characters (ipc-m1 §16.3). */
 export function checkDisplayName(raw: string): LibraryNameCode | null {
   const name = raw.trim();
@@ -67,15 +50,7 @@ export function checkDisplayName(raw: string): LibraryNameCode | null {
 
 /** A semester or course folder name (library core §3). `atRoot`: a semester, beside `.folio`. */
 export function checkFolderName(raw: string, atRoot: boolean): NameCode | null {
-  const name = raw.trim();
-  if (name === '') return 'NameEmpty';
-  if (hasInvalidFolderCharacter(name)) return 'NameInvalidCharacter';
-  if (name === '.' || name === '..') return 'NameReserved';
-  if (name.length > LIMITS.nameUnits) return 'NameTooLong';
-  if (name.endsWith('.')) return 'NameTrailingDotOrSpace';
-  if (DEVICE_NAMES.test(name)) return 'NameReserved';
-  if (atRoot && name.toLowerCase() === '.folio') return 'NameReserved';
-  return null;
+  return nameProblem(raw.trim(), LIMITS.nameUnits, atRoot);
 }
 
 /** A course code: empty sends `null`, so only its length and characters are checked. */

@@ -6,7 +6,6 @@ import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { useNavigation } from '../app/navigation';
 import { installShortcuts } from '../app/shortcuts';
-import { keys } from '../data/keys';
 import { useSession } from '../data/session';
 import { useLibraryView } from './state';
 import { FALL, findRow, getRow, libraryFixture, MAT, renderLibrary, toastTexts } from './test/render';
@@ -109,17 +108,6 @@ describe('empty states', () => {
 });
 
 describe('error states', () => {
-  it('says when it cannot tell which library is open, rather than that none is', async () => {
-    const { user, shell, client } = renderLibrary({ fail: [{ command: 'library_status', code: 'Internal' }] });
-    // As at start-up: the status has not been read yet, and reading it fails.
-    await act(() => client.resetQueries({ queryKey: keys.libraryStatus() }));
-    expect(await screen.findByRole('heading', { name: "Couldn't check which library is open" })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'No library is open' })).toBeNull();
-    shell.setFailure('library_status', null);
-    await user.click(screen.getByRole('button', { name: 'Try again' }));
-    expect(await findRow('MAT232')).toBeInTheDocument();
-  });
-
   it('says the courses could not load, with Try again and Copy details', async () => {
     const { user, shell } = renderLibrary({ scenario: 'errors' });
     expect(await screen.findByRole('heading', { name: "Couldn't load your courses" })).toBeInTheDocument();

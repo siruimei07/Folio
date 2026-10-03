@@ -1,0 +1,41 @@
+{
+  "format_version": 3,
+  "id": "07be04e25c2606bc",
+  "before": [
+    [
+      "2026 秋/线性代数.json",
+      "{\n  \"format_version\": 2,\n  \"course\": {\n    \"abbr\": \"线代\",\n    \"archived\": false,\n    \"code\": \"MAT232\",\n    \"color\": \"blue\",\n    \"order\": 1\n  },\n  \"tags\": {\n    \"作业\": [\"homework\"],\n    \"复习笔记.md\": [\"exam\", \"notes\"],\n    \"第3讲 特征值.pptx\": [\"slides\"]\n  }\n}\n"
+    ]
+  ],
+  "after": [
+    [
+      "2026 秋/线性代数.json",
+      "{\n  \"format_version\": 2,\n  \"course\": {\n    \"abbr\": \"线代\",\n    \"archived\": false,\n    \"code\": \"MAT232\",\n    \"color\": \"blue\",\n    \"order\": 1\n  },\n  \"tags\": {\n    \"作业\": [\"homework\"],\n    \"复习笔记 (final).md\": [\"exam\", \"notes\"],\n    \"第3讲 特征值.pptx\": [\"slides\"]\n  }\n}\n"
+    ]
+  ],
+  "intent": {
+    "from": "2026 秋/线性代数/复习笔记.md",
+    "to": "2026 秋/线性代数/复习笔记 (final).md",
+    "entries": [
+      {
+        "id": 16,
+        "from": "2026 秋/线性代数/复习笔记.md",
+        "to": "2026 秋/线性代数/复习笔记 (final).md",
+        "kind": "file",
+        "class": "text",
+        "size": 44,
+        "mtime_ns": 1791056291882087800,
+        "file_id": "3cba3ea2ba3e591a-b000000105d6d",
+        "hash": null,
+        "added_ns": 1791056292032881500,
+        "disk": {
+          "size": 44,
+          "modified_ns": 1791056291882087800,
+          "created_ns": 1791056292032881500,
+          "file_id": "3cba3ea2ba3e591a-b000000105d6d"
+        }
+      }
+    ]
+  },
+  "renames": []
+}

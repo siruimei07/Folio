@@ -1,13 +1,12 @@
 import { access, readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 
 import libraryStrings from '../../apps/desktop/src/i18n/locales/en/library.json' with { type: 'json' };
 import shell from '../../apps/desktop/src/i18n/locales/en/shell.json' with { type: 'json' };
 import titlebar from '../../apps/desktop/src/i18n/locales/en/titlebar.json' with { type: 'json' };
-import { createLibrary, expect, test } from '../fixtures';
+import { blockingViolations, createLibrary, expect, test } from '../fixtures';
 
 // The window shell (docs/design/handoff/app-shell.md §2–§4, ui-architecture §6): title bar, toolbar,
 // rail and content region, on the real shell. Strings run in the page because this package has no
@@ -48,9 +47,7 @@ test('shows the Library on the rail and in the content region, and passes axe', 
   await expect(library).toBeFocused();
   await expect(library).toHaveAttribute('aria-current', 'page');
 
-  const { violations } = await new AxeBuilder({ page }).analyze();
-  const blocking = violations.filter(({ impact }) => impact === 'serious' || impact === 'critical');
-  expect(blocking.map(({ id, nodes }) => `${id}: ${nodes.map(({ target }) => target.join(' ')).join(', ')}`)).toEqual([]);
+  expect(await blockingViolations(page)).toEqual([]);
 });
 
 test('puts the toolbar into one 40 px bar below 760 px and back', async ({ folio }) => {

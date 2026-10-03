@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import type { ImportResult, Job } from '../../apps/desktop/src/ipc/bindings';
-import { expect, test } from '../fixtures';
+import { answerImportPicker, expect, test } from '../fixtures';
 
 // All M1 commands are implemented. Unknown commands still have no manifest entry or grant,
 // and Tauri must reject them before any handler runs (ipc-m1 §3, §17).
@@ -16,18 +16,16 @@ test('rejects unknown commands before they reach a handler', async ({ folio }) =
 test.describe('implemented import command boundary', () => {
   test.use({ libraryFolder: true });
   let sources = '';
-  const previousPicker = process.env.FOLIO_TEST_IMPORT_FILES;
 
   test.beforeAll(async () => {
     sources = await mkdtemp(path.join(tmpdir(), 'folio-import-e2e-'));
     const source = path.join(sources, 'lecture.txt');
     await writeFile(source, 'Verified import bytes.');
-    process.env.FOLIO_TEST_IMPORT_FILES = source;
+    answerImportPicker([source]);
   });
 
   test.afterAll(async () => {
-    if (previousPicker === undefined) delete process.env.FOLIO_TEST_IMPORT_FILES;
-    else process.env.FOLIO_TEST_IMPORT_FILES = previousPicker;
+    answerImportPicker(null);
     if (sources) await rm(sources, { recursive: true, force: true });
   });
 

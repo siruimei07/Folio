@@ -1,40 +1,25 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 
 import library from '../../apps/desktop/src/i18n/locales/en/library.json' with { type: 'json' };
 import search from '../../apps/desktop/src/i18n/locales/en/search.json' with { type: 'json' };
-import type { FolderChoice, Job, LibraryOpened, SearchPage } from '../../apps/desktop/src/ipc/bindings';
-import { expect, test } from '../fixtures';
+import type { SearchPage } from '../../apps/desktop/src/ipc/bindings';
+import { blockingViolations, expect, invoke, openLibrary, test } from '../fixtures';
 
 // The search dialog on the real shell (app-shell handoff §8, UI architecture §9): Ctrl+K, results
-// from the real index in two groups with highlights as text, the arrow keys and Enter revealing
-// the file in the Library, Esc, the empty and too-long states, axe and reduced motion.
+// from the real index in two groups with highlights as text, one- and two-character Chinese
+// queries, the arrow keys and Enter revealing the file in the Library, Esc, the empty and too-long
+// states, axe and reduced motion.
 
 test.use({ libraryFolder: true });
 
 const COURSE = 'MAT232 Calculus';
 
-function invoke<T>(page: Page, command: string, args: Record<string, unknown> = {}): Promise<T> {
-  return page.evaluate<T>(`window.__TAURI_INTERNALS__.invoke(${JSON.stringify(command)}, ${JSON.stringify(args)})`);
-}
-
-/** Takes over the isolated folder as the library, waits for its first scan and for `text` to be found. */
-async function takeOver(page: Page, text: string): Promise<void> {
-  const choice = await invoke<FolderChoice | null>(page, 'pick_library_folder');
-  if (!choice) throw new Error('The isolated folder choice was cancelled');
-  const opened = await invoke<LibraryOpened>(page, 'create_library', {
-    request: {
-      folder: choice.token,
-      name: 'E2E library',
-      presetTags: { notes: 'Notes', slides: 'Slides', homework: 'Homework', exam: 'Exams', reference: 'Reference' },
-    },
-  });
-  await expect
-    .poll(async () => (await invoke<Job[]>(page, 'list_jobs')).find((job) => job.id === opened.scan)?.status.state)
-    .toBe('done');
+/** Opens the folder as the library and waits until the index finds `text`. */
+async function openSearchable(page: Page, text: string): Promise<void> {
+  await openLibrary(page);
   const request = { text, scope: null, page: { offset: 0, limit: 50 } };
   await expect.poll(async () => (await invoke<SearchPage>(page, 'search', { request })).items.length).toBeGreaterThan(1);
 }
@@ -58,7 +43,7 @@ test('finds files by name and by folder, reveals one with the keyboard, and pass
   const { page, libraryDir } = folio;
   if (!libraryDir) throw new Error('This test requires the isolated library-folder fixture');
   await seed(libraryDir);
-  await takeOver(page, 'midterm');
+  await openSearchable(page, 'midterm');
 
   await page.keyboard.press('Control+K');
   const dialog = page.getByRole('dialog', { name: search.label });
@@ -84,9 +69,7 @@ test('finds files by name and by folder, reveals one with the keyboard, and pass
   await expect(practice.locator('mark')).toHaveCount(0);
   await expect(dialog.locator('footer')).toContainText('3 results');
 
-  const { violations } = await new AxeBuilder({ page }).include('[role="dialog"]').analyze();
-  const blocking = violations.filter(({ impact }) => impact === 'serious' || impact === 'critical');
-  expect(blocking.map(({ id, nodes }) => `${id}: ${nodes.map(({ target }) => target.join(' ')).join(', ')}`)).toEqual([]);
+  expect(await blockingViolations(page, '[role="dialog"]')).toEqual([]);
 
   // The first row starts active; ↓ moves the active row while the field keeps focus, in the order
   // the rows show. Enter shows the active file in the Library.
@@ -109,12 +92,49 @@ test('finds files by name and by folder, reveals one with the keyboard, and pass
   await expect(tree.getByRole('treeitem', { name: /^Exams/ })).toHaveAttribute('aria-expanded', 'true');
 });
 
+test('finds Chinese names by one and two characters and marks exactly them', async ({ folio }) => {
+  test.setTimeout(120_000);
+  const { page, libraryDir } = folio;
+  if (!libraryDir) throw new Error('This test requires the isolated library-folder fixture');
+  const files = {
+    '线性代数/复习笔记.md': '# 复习\n',
+    '线性代数/第3讲 特征值.pdf': '%PDF-1.4\n',
+    '数学分析/习题课笔记.docx': 'not really a document',
+    '数学分析/期中.pdf': '%PDF-1.4\n',
+  };
+  for (const [name, content] of Object.entries(files)) {
+    const file = path.join(libraryDir, '2026 秋', name);
+    await mkdir(path.dirname(file), { recursive: true });
+    await writeFile(file, content);
+  }
+  await openSearchable(page, '笔');
+
+  await page.keyboard.press('Control+K');
+  const dialog = page.getByRole('dialog', { name: search.label });
+  const field = dialog.getByRole('textbox', { name: search.label });
+  const results = dialog.getByRole('listbox', { name: search.results });
+  // FTS5 trigrams miss terms shorter than three characters; Folio's tokenizer finds them (ADR-0002 §5).
+  const queries: [string, string[]][] = [
+    ['笔', ['复习笔记.md', '习题课笔记.docx']],
+    ['笔记', ['复习笔记.md', '习题课笔记.docx']],
+    ['特征', ['第3讲 特征值.pdf']],
+    ['期', ['期中.pdf']],
+  ];
+  for (const [text, expected] of queries) {
+    await field.fill(text);
+    await expect(results.getByRole('option')).toHaveCount(expected.length);
+    for (const name of expected) {
+      await expect(results.getByRole('option', { name }).locator('mark')).toHaveText(text);
+    }
+  }
+});
+
 test('says when nothing matches or the text is too long, and Esc closes it', async ({ folio }) => {
   test.setTimeout(120_000);
   const { page, libraryDir } = folio;
   if (!libraryDir) throw new Error('This test requires the isolated library-folder fixture');
   await seed(libraryDir);
-  await takeOver(page, 'midterm');
+  await openSearchable(page, 'midterm');
 
   const button = page.getByRole('button', { name: 'Search', exact: true });
   await button.click();
@@ -138,7 +158,7 @@ test('opens and closes without moving under reduced motion', async ({ folio }) =
   const { page, libraryDir } = folio;
   if (!libraryDir) throw new Error('This test requires the isolated library-folder fixture');
   await seed(libraryDir);
-  await takeOver(page, 'midterm');
+  await openSearchable(page, 'midterm');
 
   await page.keyboard.press('Control+K');
   const dialog = page.getByRole('dialog', { name: search.label });
