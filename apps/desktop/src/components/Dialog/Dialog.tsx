@@ -2,7 +2,7 @@ import '../motion.css';
 import './Dialog.css';
 
 import { X } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { type ReactNode, useEffect, useId, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog as AriaDialog, Heading, Modal as AriaModal, ModalOverlay } from 'react-aria-components';
 
@@ -38,6 +38,8 @@ export interface ModalProps {
   className?: string;
   /** Names the dialog when it has no `Heading slot="title"`. */
   'aria-label'?: string;
+  /** The element that describes the dialog, read after its name. */
+  'aria-describedby'?: string;
   children: ReactNode;
 }
 
@@ -74,10 +76,21 @@ export function Modal({
   );
 }
 
-export interface DialogFrameProps extends Omit<ModalProps, 'children' | 'aria-label'> {
+export interface DialogFrameProps extends Omit<ModalProps, 'children' | 'aria-label' | 'aria-describedby'> {
   title: string;
+  /** After the title, like the problems list's count pill. */
+  titleAside?: ReactNode;
+  /**
+   * Focus starts on the title (`tabindex="-1"`) instead of the first control, so a screen reader
+   * reads the name and the description first (the problems list).
+   */
+  focusTitle?: boolean;
+  /** A line under the header that describes the dialog (`aria-describedby`). */
+  description?: ReactNode;
   /** small 440 px (confirmations), medium 560 px (import, results), large 720 × 560 (problems). */
   size?: 'small' | 'medium' | 'large';
+  /** A body without padding, for content that runs to the frame's edges (the problems list). */
+  flush?: boolean;
   /** Under the header, before the body: a block banner for an error. */
   banner?: ReactNode;
   /** Buttons on the right, the primary last. */
@@ -89,15 +102,48 @@ export interface DialogFrameProps extends Omit<ModalProps, 'children' | 'aria-la
  * The dialog frame (library-actions handoff §2.8): header with the title and a close button
  * ("Close (Esc)"), a scrolling body and a sunken footer.
  */
-export function DialogFrame({ title, size = 'small', banner, footer, children, className, ...modal }: DialogFrameProps) {
+export function DialogFrame({
+  title,
+  titleAside,
+  focusTitle = false,
+  description,
+  size = 'small',
+  flush = false,
+  banner,
+  footer,
+  children,
+  className,
+  ...modal
+}: DialogFrameProps) {
   const { t } = useTranslation('common');
+  const descriptionId = useId();
+  const heading = useRef<HTMLHeadingElement>(null);
+  // After React Aria has moved focus into the dialog, as Library settings does for its tab.
+  useEffect(() => {
+    if (!modal.isOpen || !focusTitle) return;
+    const frame = requestAnimationFrame(() => {
+      heading.current?.focus();
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+    };
+  }, [modal.isOpen, focusTitle]);
+
   return (
-    <Modal {...modal} className={`dialog-frame${className === undefined ? '' : ` ${className}`}`}>
+    <Modal
+      {...modal}
+      aria-describedby={description === undefined ? undefined : descriptionId}
+      className={`dialog-frame${className === undefined ? '' : ` ${className}`}`}
+    >
       <div className="dialog-frame__frame" data-size={size}>
         <header className="dialog-frame__header">
-          <Heading slot="title" className="dialog-frame__title">
-            {title}
-          </Heading>
+          {/* One parent always, so the title keeps its focus when the aside comes or goes. */}
+          <div className="dialog-frame__heading">
+            <Heading slot="title" ref={heading} className="dialog-frame__title" tabIndex={focusTitle ? -1 : undefined}>
+              {title}
+            </Heading>
+            {titleAside}
+          </div>
           <IconButton
             icon={X}
             label={t('closeDialog')}
@@ -106,8 +152,15 @@ export function DialogFrame({ title, size = 'small', banner, footer, children, c
             }}
           />
         </header>
+        {description !== undefined && (
+          <p id={descriptionId} className="dialog-frame__description">
+            {description}
+          </p>
+        )}
         {banner !== undefined && <div className="dialog-frame__banner">{banner}</div>}
-        <div className="dialog-frame__body">{children}</div>
+        <div className="dialog-frame__body" data-flush={flush || undefined}>
+          {children}
+        </div>
         {footer !== undefined && <footer className="dialog-frame__footer">{footer}</footer>}
       </div>
     </Modal>

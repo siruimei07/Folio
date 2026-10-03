@@ -1,0 +1,105 @@
+{
+  "title": "Problems",
+  "count_one": "{{count, number}} problem",
+  "count_other": "{{count, number}} problems",
+  "intro": "Folio left these out of your library or couldn't finish something in the last scan. Your files are safe: Folio didn't change any of them.",
+  "loading": "Loading the problems…",
+  "loadingMore": "Loading more problems…",
+  "loadFailed": "Couldn't load the problems",
+  "loadMoreFailed": "Couldn't load more problems",
+  "refreshFailed": "Couldn't update the list",
+  "empty": {
+    "title": "No problems",
+    "text": "Folio found nothing to fix in the last scan."
+  },
+  "footer": {
+    "at": "From the scan at {{time}}. The list updates after every scan.",
+    "on": "From the scan on {{date}}. The list updates after every scan.",
+    "unknown": "The list updates after every scan."
+  },
+  "close": "Close",
+  "groups": {
+    "notUnicode": "Names Folio can't read",
+    "invalidName": "Names Windows doesn't allow",
+    "notNfc": "Names in a different Unicode form",
+    "caseTwins": "Names that differ only in capitals",
+    "unreadable": "Couldn't read",
+    "link": "Shortcuts Folio doesn't follow",
+    "special": "Items that aren't files or folders",
+    "invalidIgnoreRule": "Ignore rules Folio can't use",
+    "metadata": "Settings Folio can't read",
+    "orphanedMetadata": "Settings for folders that are gone",
+    "notRelocated": "Tags that didn't follow a move"
+  },
+  "groupLabel_one": "{{group}}, {{count, number}} item",
+  "groupLabel_other": "{{group}}, {{count, number}} items",
+  "rowTitle": {
+    "caseTwinsTwo": "{{first}} and {{second}}",
+    "caseTwinsMany": "{{count, number}} items like {{path}}",
+    "ignoreRules": "Your ignore rules",
+    "ignoreRuleLine": "Line {{line, number}} of your ignore rules",
+    "gitignoreLine": "Line {{line, number}} of {{file}}",
+    "moved": "{{from}} → {{to}}"
+  },
+  "editIgnoreRules": "Edit ignore rules",
+  "copy": {
+    "label": "Copy path of {{path}}",
+    "labelSeveral": "Copy paths of {{title}}",
+    "one": "Copied the path",
+    "several": "Copied {{count, number}} paths",
+    "failed": "Couldn't copy the path",
+    "failedSeveral": "Couldn't copy the paths"
+  },
+  "characters": {
+    "lessThan": "a less-than sign ( < )",
+    "greaterThan": "a greater-than sign ( > )",
+    "colon": "a colon ( : )",
+    "quote": "a double quote ( \" )",
+    "slash": "a slash ( / )",
+    "backslash": "a backslash ( \\ )",
+    "bar": "a vertical bar ( | )",
+    "questionMark": "a question mark ( ? )",
+    "asterisk": "an asterisk ( * )",
+    "control": "a hidden control character"
+  },
+  "explanation": {
+    "notUnicode": "Its name has characters Windows stores incorrectly. Rename it in File Explorer; until then Folio leaves it out.",
+    "invalidName": {
+      "withEnding": "{{reason}} Rename it on the device that made it; until then Folio leaves it out.",
+      "invalidCharacterOne": "Has {{character}}.",
+      "invalidCharacterSeveral": "Has characters Windows doesn't allow ( {{list}} ).",
+      "invalidCharacterUnknown": "Has characters Windows doesn't allow.",
+      "trailingDotOrSpace": "Ends with a dot or a space.",
+      "reservedName": "Uses a name Windows reserves, like CON or NUL.",
+      "dotName": "Is named . or .., which Windows reserves.",
+      "tooLong": "Its name is longer than Windows allows.",
+      "pathTooLong": "Its full path is longer than Windows allows. Shorten the folders above it.",
+      "empty": "Has no name."
+    },
+    "notNfc": "Its name uses a Unicode form Windows treats differently, common for names typed on a Mac or iPad. Rename it in File Explorer, even to the same text, and Folio adds it.",
+    "notNfcTwin": "Its name uses a Unicode form Windows treats differently, common for names typed on a Mac or iPad. Another item here has the same name in the standard form. Rename one of them.",
+    "caseTwins": "iCloud and your other devices can't keep both. Rename one of them.",
+    "unreadable": {
+      "denied": "Windows denied access. Folio keeps what it already knew about it.",
+      "inUse": "Another app is using it. Folio tries again on the next scan.",
+      "tooLarge": "It's too large for Folio to read.",
+      "other": "Something went wrong reading it. Folio tries again on the next scan."
+    },
+    "link": "It links to another place, so Folio skips it.",
+    "special": "Folio skips devices, pipes and other special items.",
+    "invalidIgnoreRule": "It isn't a valid pattern, so Folio skips that line. The other lines still apply.",
+    "ignoreRulesFile": "Folio couldn't read your ignore rules, so none of them apply.",
+    "gitignoreFile": "Folio couldn't read this file, so none of its rules apply.",
+    "metadata": {
+      "newer": "A newer version of Folio saved it. Update Folio.",
+      "invalid": "It's damaged. Folio uses your other settings and leaves this one alone."
+    },
+    "orphanedMetadata": "Folio has tags and settings for this folder, which isn't there anymore. They stay in case it comes back.",
+    "notRelocated": {
+      "readOnly": "A newer version of Folio made your settings read-only. Update Folio, and the tags follow on the next scan.",
+      "folderTags": "It became a semester or course folder, which can't have tags.",
+      "tooLong": "Its new path is too long for Folio's settings.",
+      "unreadable": "A settings file couldn't be read."
+    }
+  }
+}

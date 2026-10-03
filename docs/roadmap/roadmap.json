@@ -1810,8 +1810,18 @@
         "feat/ui-import"
       ],
       "summary": "活动按钮的「View problems」打开的问题列表：按种类分组、每行说明和「Copy path」、空状态、扫描后自动刷新（library-actions §11）",
-      "status": "planned",
+      "status": "done",
       "updated": "2026-10-03",
+      "landed": "2026-10-03",
+      "gates": {
+        "check": "pass",
+        "e2e": "pass",
+        "codeReview": "pass",
+        "simplify": "pass",
+        "designCritique": "pass",
+        "a11y": "pass",
+        "securityReview": "na"
+      },
       "owns": [
         "apps/desktop/src/problems/**",
         "apps/desktop/src/i18n/locales/en/problems.json",

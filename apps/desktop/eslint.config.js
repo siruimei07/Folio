@@ -21,6 +21,7 @@ const FEATURES = [
   'sync',
   'conflicts',
   'remote-setup',
+  'problems',
 ];
 
 // The code that runs inside the sandboxed preview frame, the only place that may parse file

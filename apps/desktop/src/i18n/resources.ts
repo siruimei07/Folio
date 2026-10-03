@@ -8,6 +8,7 @@ import history from './locales/en/history.json';
 import importFiles from './locales/en/import.json';
 import library from './locales/en/library.json';
 import preview from './locales/en/preview.json';
+import problems from './locales/en/problems.json';
 import remoteSetup from './locales/en/remote-setup.json';
 import search from './locales/en/search.json';
 import settings from './locales/en/settings.json';
@@ -36,6 +37,7 @@ export const en = {
   sync,
   conflicts,
   'remote-setup': remoteSetup,
+  problems,
 };
 
 /** Where `t()` looks up a key that names no namespace. */

@@ -1,0 +1,112 @@
+/* The problems list (library-actions handoff §11): groups that run the dialog's full width, rows
+   indented to the group title, and a footer line with the scan time. */
+
+.problems__list {
+  display: flex;
+  flex-direction: column;
+}
+
+.problems__group-header {
+  display: flex;
+  box-sizing: border-box;
+  height: var(--size-row);
+  margin: 0;
+  align-items: center;
+  gap: var(--space-8);
+  padding: 0 var(--space-16);
+  border-top: var(--border-width) solid var(--color-border-default);
+  border-bottom: var(--border-width) solid var(--color-border-default);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-regular);
+}
+
+.problems__group-icon {
+  flex: none;
+}
+
+.problems__group-title {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: var(--font-weight-strong);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.problems__group-count {
+  flex: none;
+  color: var(--color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.problems__rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The text lines up with the group title: 16 px padding, the 14 px icon and the 8 px gap. */
+.problems__row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-12);
+  padding: var(--space-10) var(--space-12) var(--space-10)
+    calc(var(--space-16) + var(--size-icon-small) + var(--space-8));
+  border-bottom: var(--border-width) solid var(--color-border-guide);
+}
+
+.problems__row-text {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.problems__row-title {
+  min-width: 0;
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-strong);
+}
+
+.problems__row-explanation {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-small);
+}
+
+.problems__failure {
+  padding: var(--space-12) var(--space-16);
+}
+
+.problems__more {
+  position: relative;
+}
+
+.problems__status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  /* Its 14 px icon sits where the group icons do, its text where the rows' text does. */
+  padding: var(--space-10) var(--space-12) var(--space-10) var(--space-16);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-small);
+}
+
+/* What the end-of-list watcher sees; it takes no room. */
+.problems__sentinel {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: var(--border-width);
+}
+
+.problems-dialog__footer-text {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  align-self: center;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-small);
+}

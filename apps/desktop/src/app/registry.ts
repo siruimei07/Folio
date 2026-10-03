@@ -10,6 +10,7 @@ import { importDialog, ImportResultDialog } from '../import';
 import { LibraryView } from '../library/LibraryView';
 import { FolderPicker } from '../library/move/FolderPicker';
 import { SemesterControl } from '../library/SemesterControl';
+import { ProblemsDialog } from '../problems';
 import { SearchDialog } from '../search/SearchDialog';
 import { AddCoursesDialog, AppSettings, LibrarySettings, NewSemesterDialog } from '../settings';
 import { ActivityControl } from './activity/ActivityControl';
@@ -53,6 +54,7 @@ export const DIALOGS: DialogRegistry = {
   // The Library's folder picker goes in here: features never import each other.
   import: importDialog(FolderPicker),
   importResult: ImportResultDialog,
+  problems: ProblemsDialog,
 };
 
 /** Toolbar controls a lane provides; `compact` in the narrow window's 40 px bar. */

@@ -35,6 +35,7 @@ roadmap (`docs/product/roadmap.md` §5) has its namespace already, named after i
 | `sync` | Toolbar sync status, progress and results |
 | `conflicts` | Conflict resolution |
 | `remote-setup` | Creating and joining a cloud remote |
+| `problems` | The problems list that "View problems" opens (library-actions §11) |
 
 Rules:
 
