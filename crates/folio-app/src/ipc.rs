@@ -75,6 +75,7 @@ fn export_builder() -> Builder<tauri::Wry> {
         commands::library::pick_library_folder,
         commands::library::create_library,
         commands::library::open_library,
+        commands::library::discard_unfinished_move,
         commands::operations::list_semesters,
         commands::operations::create_semester,
         commands::operations::update_semester,

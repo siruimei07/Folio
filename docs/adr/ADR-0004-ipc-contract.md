@@ -210,6 +210,13 @@ pages of one revision consistent.
      implemented locally. Codex code/security/unsafe/simplify reviews, `pnpm check` and
      app-locked `pnpm e2e` (40/40) passed; bindings are byte-identical. Separate Claude Code
      audit remains pending; the lane has not landed.
+   - 2026-10-03, `feat/core-discard-move` (§21 item 10): `unfinishedMove` and
+     `discard_unfinished_move` are implemented locally with the contract and individual
+     main-window grant. Discard keeps user files untouched, restores only eligible metadata
+     images and retains the record/status on failure. Generated bindings, fake-shell drift
+     and crash/retry/concurrency tests pass. Codex code/security/simplify reviews,
+     `pnpm check` and app-locked `pnpm e2e` (44/44) passed. Separate Claude Code audit is
+     pending; neither this lane nor its final UI action has landed.
 4. [x] Operations lane: amend ADR-0002 and library core §4.2 for the course code, optional badge
    text and colour, 1–3 character badges, and palette keys for preset tags (spec §20).
 5. [ ] Preview lane: the `folio-file` scheme, the main window's CSP sources, and an e2e test that

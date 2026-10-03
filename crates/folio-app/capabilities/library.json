@@ -7,6 +7,7 @@
     "allow-library-status",
     "allow-pick-library-folder",
     "allow-create-library",
-    "allow-open-library"
+    "allow-open-library",
+    "allow-discard-unfinished-move"
   ]
 }

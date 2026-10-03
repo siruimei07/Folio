@@ -1109,3 +1109,202 @@ fn scheme_checks_catalog_before_disk_and_reports_real_lock_and_offline_failures(
         file_scheme::respond(&f.state, &cache, &req(&reference.id, &reference.path));
     assert_eq!(response.headers()[FILE_ERROR_HEADER], "NotFound");
 }
+
+/// The intent of a file move that stopped before the file moved, naming a catalog identity the
+/// catalog does not hold (as after a rebuild), so recovery cannot reconcile it.
+const UNFINISHED_MOVE: &[u8] = br#"{"format_version":3,"id":"interrupted","before":[],"after":[],
+"intent":{"from":"s/a.md","to":"s/b.md","entries":[{"id":999999,"from":"s/a.md","to":"s/b.md",
+"kind":"file","class":"text","size":0,"mtime_ns":null,"file_id":null,"hash":null,"added_ns":1,
+"disk":{"size":0,"modified_ns":null,"created_ns":null,"file_id":null}}]}}"#;
+
+/// A library holding `s/a.md`, restarted with `journal` left in `.folio/local/journal/`.
+fn restart_with_journal(journal: &[u8]) -> Fixture {
+    let mut f = Fixture::new();
+    f.state.initialize();
+    fs::create_dir(f.root.join("s")).unwrap();
+    fs::write(f.root.join("s/a.md"), b"the user's file").unwrap();
+    let opened = f.create();
+    f.done(&opened.scan);
+    f.state.shutdown().unwrap();
+    let file = Layout::new(&f.root).scan_journal_file();
+    fs::create_dir_all(file.parent().unwrap()).unwrap();
+    fs::write(&file, journal).unwrap();
+    f.restart();
+    f
+}
+
+fn unavailable_for(f: &Fixture, reason: Unavailable) -> LibraryStatus {
+    until("the library to become unavailable", || {
+        let status = f.state.status().unwrap();
+        matches!(&status, LibraryStatus::Unavailable { reason: found, .. } if *found == reason)
+            .then_some(status)
+    })
+}
+
+#[test]
+fn an_unfinished_move_has_its_own_reason_and_discarding_it_reopens_the_library() {
+    use std::os::windows::fs::OpenOptionsExt;
+    use windows_sys::Win32::Storage::FileSystem::{FILE_SHARE_READ, FILE_SHARE_WRITE};
+    let f = restart_with_journal(UNFINISHED_MOVE);
+    let journal = Layout::new(&f.root).scan_journal_file();
+    let settings = fs::read(f.data.join("settings.json")).unwrap();
+    let status = unavailable_for(&f, Unavailable::UnfinishedMove);
+    assert!(
+        f.events
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|event| matches!(event, Event::Library(sent) if *sent == status))
+    );
+    assert_eq!(fs::read(&journal).unwrap(), UNFINISHED_MOVE);
+    assert!(matches!(f.state.list_jobs(), Err(AppError::NoLibrary(_))));
+
+    // Discarding stops halfway: the move, the status and the session stay for another try.
+    let held = fs::OpenOptions::new()
+        .read(true)
+        .share_mode(FILE_SHARE_READ | FILE_SHARE_WRITE)
+        .open(&journal)
+        .unwrap();
+    assert!(matches!(
+        f.state.discard_unfinished_move(),
+        Err(AppError::InUse(_))
+    ));
+    drop(held);
+    assert_eq!(f.state.status().unwrap(), status);
+    assert_eq!(fs::read(&journal).unwrap(), UNFINISHED_MOVE);
+    assert!(lock(&f.state.0.state).session.is_some());
+
+    let attempt = lock(&f.state.0.state).attempt;
+    let opened = f.state.discard_unfinished_move().unwrap();
+    assert!(matches!(opened, LibraryStatus::Open { .. }), "{opened:?}");
+    assert!(lock(&f.state.0.state).attempt != attempt);
+    assert!(!journal.exists());
+    assert_eq!(fs::read(f.data.join("settings.json")).unwrap(), settings);
+    assert_eq!(fs::read(f.root.join("s/a.md")).unwrap(), b"the user's file");
+    let session = lock(&f.state.0.state).session.clone().unwrap();
+    f.done(&session.opened().scan);
+    let entry = f
+        .state
+        .read_catalog(|catalog| {
+            catalog
+                .read(|tx| catalog::entry(tx, &RelPath::parse("s/a.md").unwrap()))
+                .map_err(catalog_error)
+        })
+        .unwrap();
+    assert!(entry.is_some());
+    assert!(f.events.lock().unwrap().iter().any(|event| matches!(
+        event,
+        Event::Error(record) if record.starts_with("discarded an unfinished move from s/a.md to s/b.md")
+    )));
+
+    // A second call finds the library open and changes nothing.
+    let attempt = lock(&f.state.0.state).attempt;
+    assert_eq!(f.state.discard_unfinished_move().unwrap(), opened);
+    assert_eq!(lock(&f.state.0.state).attempt, attempt);
+    assert!(Arc::ptr_eq(
+        &session,
+        lock(&f.state.0.state).session.as_ref().unwrap()
+    ));
+}
+
+#[test]
+fn discarding_answers_any_other_status_as_it_is_and_keeps_a_damaged_journal() {
+    let f = Fixture::new();
+    f.state.initialize();
+    assert_eq!(
+        f.state.discard_unfinished_move().unwrap(),
+        LibraryStatus::None
+    );
+
+    // A journal that cannot be read is no move to let go of.
+    let damaged = br#"{"format_version":3,"id":"damaged","before":[["../other.json",null]],"after":[["../other.json",null]]}"#;
+    let f = restart_with_journal(damaged);
+    let status = unavailable_for(&f, Unavailable::CatalogFailed);
+    let attempt = lock(&f.state.0.state).attempt;
+    assert_eq!(f.state.discard_unfinished_move().unwrap(), status);
+    assert_eq!(lock(&f.state.0.state).attempt, attempt);
+    assert_eq!(
+        fs::read(Layout::new(&f.root).scan_journal_file()).unwrap(),
+        damaged
+    );
+
+    let f = Fixture::new();
+    Settings {
+        library_root: Some(f.root.join("gone")),
+        ..Settings::default()
+    }
+    .save(&f.data)
+    .unwrap();
+    f.state.initialize();
+    let missing = f.state.status().unwrap();
+    assert!(matches!(
+        missing,
+        LibraryStatus::Unavailable {
+            reason: Unavailable::Missing,
+            ..
+        }
+    ));
+    assert_eq!(f.state.discard_unfinished_move().unwrap(), missing);
+    assert_eq!(lock(&f.state.0.state).attempt, 0);
+
+    f.state.begin_close();
+    assert!(matches!(
+        f.state.discard_unfinished_move(),
+        Err(AppError::Busy(_))
+    ));
+}
+
+#[test]
+fn discard_requests_observed_before_an_unfinished_session_do_not_touch_it() {
+    let f = restart_with_journal(UNFINISHED_MOVE);
+    let status = unavailable_for(&f, Unavailable::UnfinishedMove);
+    let attempt = lock(&f.state.0.state).attempt;
+    let session = lock(&f.state.0.state).session.clone().unwrap();
+    for observed in [None, Some(attempt.wrapping_sub(1))] {
+        assert_eq!(f.state.discard_observed(observed).unwrap(), status);
+        assert_eq!(lock(&f.state.0.state).attempt, attempt);
+        assert!(Arc::ptr_eq(
+            &session,
+            lock(&f.state.0.state).session.as_ref().unwrap()
+        ));
+        assert_eq!(
+            fs::read(Layout::new(&f.root).scan_journal_file()).unwrap(),
+            UNFINISHED_MOVE
+        );
+    }
+}
+
+#[test]
+fn discarding_revalidates_a_record_changed_since_recovery_and_preserves_the_error_state() {
+    let f = restart_with_journal(UNFINISHED_MOVE);
+    let status = unavailable_for(&f, Unavailable::UnfinishedMove);
+    let journal = Layout::new(&f.root).scan_journal_file();
+    let outside = f.dir.path().join("outside.json");
+    fs::write(&outside, b"outside sentinel").unwrap();
+    let malformed = br#"{"format_version":3,"id":"tampered","before":[["../../outside.json","changed"]],"after":[["../../outside.json","changed"]]}"#;
+    fs::write(&journal, malformed).unwrap();
+    assert!(matches!(
+        f.state.discard_unfinished_move(),
+        Err(AppError::Internal(_))
+    ));
+    assert_eq!(f.state.status().unwrap(), status);
+    assert_eq!(fs::read(&journal).unwrap(), malformed);
+    assert_eq!(fs::read(&outside).unwrap(), b"outside sentinel");
+    assert!(lock(&f.state.0.state).session.is_some());
+}
+
+#[test]
+fn discarding_a_record_replaced_with_a_newer_format_keeps_it_and_its_status() {
+    let f = restart_with_journal(UNFINISHED_MOVE);
+    let status = unavailable_for(&f, Unavailable::UnfinishedMove);
+    let journal = Layout::new(&f.root).scan_journal_file();
+    let newer = br#"{"format_version":4,"id":"newer","before":[]}"#;
+    fs::write(&journal, newer).unwrap();
+    assert!(matches!(
+        f.state.discard_unfinished_move(),
+        Err(AppError::NewerFormat(_))
+    ));
+    assert_eq!(f.state.status().unwrap(), status);
+    assert_eq!(fs::read(&journal).unwrap(), newer);
+    assert!(lock(&f.state.0.state).session.is_some());
+}

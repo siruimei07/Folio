@@ -343,6 +343,29 @@ impl Session {
         Ok(())
     }
 
+    /// Lets go of the unfinished move that stopped this session (ipc-m1 §6); the caller has
+    /// drained it and opens the library again, whose start-up scan reconciles the catalog.
+    pub(super) fn discard_move(&self) -> Result<(), AppError> {
+        let discarded = self
+            .library
+            .discard_move(&self.catalog)
+            .map_err(|error| errors::library(error).error)?;
+        if let Some(discarded) = discarded {
+            // The log keeps what the user let go of.
+            (self.emit)(Event::Error(format!(
+                "discarded an unfinished move from {} to {}; metadata {}",
+                discarded.from.as_str(),
+                discarded.to.as_str(),
+                if discarded.restored {
+                    "put back"
+                } else {
+                    "left as it was"
+                }
+            )));
+        }
+        Ok(())
+    }
+
     pub fn opened(&self) -> LibraryOpened {
         LibraryOpened {
             library: lock(&self.snapshot).info.clone(),
@@ -1279,6 +1302,105 @@ mod tests {
         ));
         assert_eq!(std::fs::read(path).unwrap(), bytes);
         session.shutdown().unwrap();
+    }
+
+    #[test]
+    fn an_unreconcilable_move_stops_writes_with_its_own_reason_and_keeps_the_record() {
+        let (_dir, session) = inactive_session();
+        let path = session.library.layout().scan_journal_file();
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        // Neither end of the move is on disk any more.
+        let bytes = br#"{"format_version":3,"id":"gone","before":[],"after":[],"intent":{"from":"a.md","to":"b.md","entries":[{"id":1,"from":"a.md","to":"b.md","kind":"file","class":"text","size":0,"mtime_ns":null,"file_id":null,"hash":null,"added_ns":1,"disk":{"size":0,"modified_ns":null,"created_ns":null,"file_id":null}}]}}"#;
+        std::fs::write(&path, bytes).unwrap();
+        assert!(matches!(
+            session.mutate::<()>(|_, _| panic!("write despite an unfinished move")),
+            Err(AppError::Internal(_))
+        ));
+        assert!(matches!(
+            session.status(),
+            LibraryStatus::Unavailable {
+                reason: Unavailable::UnfinishedMove,
+                ..
+            }
+        ));
+        assert_eq!(std::fs::read(&path).unwrap(), bytes);
+        session.shutdown().unwrap();
+        session.discard_move().unwrap();
+        assert!(!path.exists());
+    }
+
+    fn state_with_unfinished_move() -> (TempDir, super::super::LibraryState) {
+        let (dir, session) = inactive_session();
+        let journal = session.library.layout().scan_journal_file();
+        std::fs::create_dir_all(journal.parent().unwrap()).unwrap();
+        let bytes = br#"{"format_version":3,"id":"gone","before":[],"after":[],"intent":{"from":"a.md","to":"b.md","entries":[{"id":1,"from":"a.md","to":"b.md","kind":"file","class":"text","size":0,"mtime_ns":null,"file_id":null,"hash":null,"added_ns":1,"disk":{"size":0,"modified_ns":null,"created_ns":null,"file_id":null}}]}}"#;
+        std::fs::write(&journal, bytes).unwrap();
+        assert!(matches!(
+            session.mutate::<()>(|_, _| panic!("write despite an unfinished move")),
+            Err(AppError::Internal(_))
+        ));
+        session.shutdown().unwrap();
+        let state = super::super::LibraryState::new(Ok(dir.path().join("data")), Arc::new(|_| {}));
+        lock(&state.0.state).ready = true;
+        // Preserve the cached Open status that publish sets before recovery fails.
+        state.publish(session);
+        (dir, state)
+    }
+
+    #[test]
+    fn status_stays_unavailable_while_discard_waits_and_when_it_fails() {
+        use std::os::windows::fs::OpenOptionsExt;
+        use windows_sys::Win32::Storage::FileSystem::{FILE_SHARE_READ, FILE_SHARE_WRITE};
+        let (_dir, state) = state_with_unfinished_move();
+        let status = state.status().unwrap();
+        let session = lock(&state.0.state).session.clone().unwrap();
+        let journal = session.library.layout().scan_journal_file();
+        let before = std::fs::read(&journal).unwrap();
+        let held = std::fs::OpenOptions::new()
+            .read(true)
+            .share_mode(FILE_SHARE_READ | FILE_SHARE_WRITE)
+            .open(&journal)
+            .unwrap();
+        let operation = lock(&session.operation);
+        let discard = thread::spawn({
+            let state = state.clone();
+            move || state.discard_unfinished_move()
+        });
+        super::super::tests::until("discard to acquire the transition", || {
+            state.0.transition.try_lock().is_err().then_some(())
+        });
+        assert_eq!(state.status().unwrap(), status);
+        assert!(Arc::ptr_eq(
+            &session,
+            lock(&state.0.state).session.as_ref().unwrap()
+        ));
+        drop(operation);
+        assert!(matches!(discard.join().unwrap(), Err(AppError::InUse(_))));
+        drop(held);
+        assert_eq!(state.status().unwrap(), status);
+        assert_eq!(std::fs::read(&journal).unwrap(), before);
+        state.shutdown().unwrap();
+    }
+
+    #[test]
+    fn a_discard_drain_error_keeps_the_status_session_and_record() {
+        let (_dir, state) = state_with_unfinished_move();
+        let status = state.status().unwrap();
+        let session = lock(&state.0.state).session.clone().unwrap();
+        let journal = session.library.layout().scan_journal_file();
+        let before = std::fs::read(&journal).unwrap();
+        *lock(&session.worker) = Some(thread::spawn(|| panic!("injected worker panic")));
+        assert!(matches!(
+            state.discard_unfinished_move(),
+            Err(AppError::Internal(message)) if message == "library worker panicked"
+        ));
+        assert_eq!(state.status().unwrap(), status);
+        assert!(Arc::ptr_eq(
+            &session,
+            lock(&state.0.state).session.as_ref().unwrap()
+        ));
+        assert_eq!(std::fs::read(&journal).unwrap(), before);
+        state.shutdown().unwrap();
     }
 
     #[test]

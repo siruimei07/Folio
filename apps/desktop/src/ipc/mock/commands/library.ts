@@ -7,11 +7,20 @@ import type { FakeShell } from '../shell';
 
 export function libraryCommands(
   shell: FakeShell,
-): GroupHandlers<'library_status' | 'pick_library_folder' | 'create_library' | 'open_library'> {
+): GroupHandlers<
+  'library_status' | 'pick_library_folder' | 'create_library' | 'open_library' | 'discard_unfinished_move'
+> {
   return {
     library_status: () => {
       // "Try again": an unavailable library is opened again (it may stay unavailable).
       if (shell.status().state === 'unavailable') shell.retryOpen();
+      return shell.status();
+    },
+
+    discard_unfinished_move: () => {
+      // After the user confirmed: an unfinished move is let go of and the library opens again;
+      // any other status is answered as it is, so a second call changes nothing.
+      shell.discardUnfinishedMove();
       return shell.status();
     },
 

@@ -78,13 +78,20 @@ no list read, file action, switch or close; the session drain waits for a runnin
 a later one finds the session stopped.
 
 Discarding an unfinished move (Sirui, 2026-09-30). A retained move intent that recovery
-cannot reconcile keeps the library unavailable (`catalogFailed`), and a rebuild cannot bypass
-it, so today the only way out is removing `.folio/local/journal/scan.json` by hand. The user
-gets an explicit, confirmed action instead: wave 3 lane `feat/core-discard-move` (roadmap
-§2, task board) adds its own unavailable reason and the command, and `feat/ui-first-run` shows
-it on the library-unavailable screen. Discarding never moves or deletes the user's files and
-never overwrites an authored metadata file that no longer matches the journal's images; it
-removes the journal, and a full scan rebuilds the catalog from the disk and authored metadata.
+cannot reconcile keeps the library unavailable, and a rebuild cannot bypass it. The user gets
+an explicit, confirmed action instead of removing `.folio/local/journal/scan.json` by hand:
+lane `feat/core-discard-move` (2026-10-03) reports its own reason, `unfinishedMove`, where it
+was `catalogFailed`, and adds `discard_unfinished_move` (ipc-m1 §6, library scan §7.1);
+`feat/ui-discard-move-action` shows the button on the library-unavailable screen. Discarding
+never moves or deletes the user's files and never overwrites an authored metadata file that no
+longer matches the journal's images; it removes the journal, and a full scan rebuilds the
+catalog from the disk and authored metadata. The shell drains the stopped session, discards
+with its library and catalog under the transition gate, and reopens like a retry; a failure
+keeps the session, the journal and the status.
+The command captures eligibility and the attempt generation at call entry, then rechecks both
+under the transition gate, so a queued confirmation cannot discard a later session's move.
+The stopped session remains visible until discard succeeds; a drain failure is returned rather
+than logged as success. Its cached unavailable status remains until reopening publishes a result.
 
 Retry applies only when status was unavailable at call entry (ipc-m1 §6). It reopens the
 configured root behind the transition gate without saving settings or consuming a choice.

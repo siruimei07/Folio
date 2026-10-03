@@ -255,10 +255,42 @@ the before state. A matching destination with no source means it completed: keep
 after state and apply the explicit catalog moves, preserving entry ids, hashes, bodies and added
 times even without file ids. Exact directory spelling distinguishes case-only renames on both
 case-insensitive and case-sensitive directories. Conflicting/missing paths, replaced identities,
-unreadable evidence or externally changed metadata stop with a typed error and retain the files
-and journal. Recovery never overwrites a competing authored edit. It commits the reconciled
-catalog and journal marker before cleanup, so another crash is safe to retry. A rebuild cannot
-bypass an unresolved operation intent.
+unreadable evidence or externally changed metadata stop with a typed error
+(`LibraryError::UnfinishedMove`; failing to read or write a metadata file stays `Meta`, and a
+folder on the move's paths that cannot be listed fails as that folder, `Root`, so the user tries
+again instead of discarding) and retain the files and journal. Recovery never overwrites a competing authored edit. It commits
+the reconciled catalog and journal marker before cleanup, so another crash is safe to retry. A
+rebuild cannot bypass an unresolved operation intent.
+
+**Discarding an unfinished move** (Sirui, 2026-09-30; lane `feat/core-discard-move`). Only the
+user lets go of an intent recovery cannot reconcile (ipc-m1 §6, `discard_unfinished_move`).
+`Library::discard_move` runs under the writer's lock, like every writer of `.folio/`:
+
+1. It never moves, deletes or opens a user file; it only lists folders to see where the item is.
+   It uses the listing's metadata, without individual attribute probes that open file handles.
+2. When the item is at its source and not at its destination, by exact spelling as recovery
+   checks it, its kind still matches the intent (or the legacy catalog identity), and every
+   metadata file the journal names holds its before- or after-image
+   (`validate_images`), the before-images go back (`restore`, case renames first). In every
+   other case (the move happened, the item is in both places or neither, a link or another kind
+   of entry is on the way, a file holds something else) no metadata file changes; a folder that
+   cannot be listed fails the discard (`Root`) rather than guess. The files the move wrote
+   before the rename stand, and a file edited since is never overwritten. A journal whose
+   catalog update committed only goes.
+3. Then the journal goes, and the caller runs a full scan. Its catalog may still be the one from
+   before the move (the operation's transaction rolled back), replaced, or rebuilt; the scan
+   brings it in line with the disk and the metadata files. It relocates no tags twice: moves it
+   finds between the old catalog and the disk only carry what the metadata still holds at the
+   old paths. The catalog is not reset: entries keep their ids, hashes and dates.
+
+A failure while restoring or removing the journal keeps the journal, and calling again is safe:
+the images are checked again, restoring writes the same bytes, and the journal goes last. A
+journal that names no move (a scan's) is left for the next scan; one that cannot be read is not
+discarded (`catalogFailed`).
+Only an image conflict found before restoration may leave metadata unchanged and discard the
+record. An invalid case rename encountered during restoration returns a typed error and keeps
+the record, including after a prior rename succeeded. A committed journal is cleanup only and
+does not inspect the user's move paths.
 
 The shell serializes recovery with the full worker walk and operations, and publishes its
 committed report before dependent work; a later failed or cancelled scan cannot hide it. Direct
@@ -330,7 +362,7 @@ Scans never hash, so a new library is browsable before its hashes are done (syst
 
 | Type | Meaning |
 |---|---|
-| `library::LibraryError` | The current scan stopped: the root cannot be listed, `library.json` is missing, invalid or newer, a metadata file cannot be written, recovery evidence conflicts, or the catalog failed. A recovery committed before the scan remains committed and is published separately |
+| `library::LibraryError` | The current scan stopped: the root cannot be listed, `library.json` is missing, invalid or newer, a metadata file cannot be written, recovery evidence conflicts (`UnfinishedMove` for an in-app move recovery cannot reconcile, §7.1), or the catalog failed. A recovery committed before the scan remains committed and is published separately |
 | `library::Problem` | Something the user should see, the scan went on: `NotUnicode`, `InvalidName`, `NotNfc`, `CaseTwins`, `Link`, `Special`, `Unreadable`, `InvalidIgnoreRule`, `Metadata`, `OrphanedMetadata`, `NotRelocated` |
 | `library::ReadFailure` | Why something could not be read: `Denied`, `InUse` (another program holds it; Windows sharing and lock violations), `TooLarge`, `Other` |
 | `library::MetadataFailure` | `Newer`, `Invalid`, `Unreadable(ReadFailure)` |
@@ -348,7 +380,7 @@ core §7). Problems are recomputed by every scan; the shell keeps the latest lis
 | Ignore rules | Precedence of §5 row by row; case and NFC; invalid lines; `.gitignore` in scopes; a scope that is a `.gitignore` covers its folder, or the library at the root (it fails without that: checked once by hand) |
 | Reconcile | Add, modify, remove, kind change; moves by id of files and folders, case-only moves, swaps; id-less entries following a moved folder; entry ids survive moves; entries that stay while their folder entry moves or goes, below a folder that cannot be listed too, get the folder entry at their parent path; `added_ns` of a first scan, a later one and a library that started empty |
 | Metadata | Tags and settings follow every kind of move, also where names in `.folio/meta/` differ in case; case-only renames of files and semester folders; broken and newer files are never written; paths that would be too long |
-| Journal | A swap interrupted between the metadata and the catalog is undone and redone, not swapped back; a half-written move is finished; the journal of a committed scan is removed, not undone; a journal that names other files (`..`, `\`, absolute, drive or UNC paths, unescaped names) stops before touching anything and is retained through a failed rebuild; `sync_metadata` settles an interrupted scan first. Explicit operation tests cover no-id and case-only moves, second recovery crashes, conflicting/unreadable evidence, legacy journals, the size cap and cleanup failure. Mutation checks: undoing nothing, undoing committed journals, or joining the journal's paths as written, fails a test |
+| Journal | A swap interrupted between the metadata and the catalog is undone and redone, not swapped back; a half-written move is finished; the journal of a committed scan is removed, not undone; a journal that names other files (`..`, `\`, absolute, drive or UNC paths, unescaped names) stops before touching anything and is retained through a failed rebuild; `sync_metadata` settles an interrupted scan first. Explicit operation tests cover no-id and case-only moves, second recovery crashes, conflicting/unreadable evidence, legacy journals, the size cap and cleanup failure. Discarding (`operations/entries_tests.rs`): every conflict is `UnfinishedMove` and its discard writes no metadata; a replaced catalog rebuilds by a scan with the tags where the file is; an unmoved item gets its before-images back without a user file being opened; a metadata file edited since is left with every other; a discard stopped while restoring or before the journal goes finishes on the next call; a scan's journal and a committed move's are never reverted. Mutation checks: undoing nothing, undoing committed journals, or joining the journal's paths as written, fails a test |
 | Mirror | Definitions, settings and entry tags; orphaned files; tag files of unconfigured folders; a file that cannot be read keeps what it gave; of two files that name one folder, the one spelled like it holds moved tags |
 | Hashing | Deferral, verification, locked files, cancellation, resume |
 | Property | ADR-0002: after random creations, edits, saves through temporary files, deletions, renames (case-only ones included), tagging, settings and hashing, the incrementally maintained catalog equals one rebuilt from scratch, apart from when entries were added (§6.3); entries keep their ids and times, files their tags, and semesters and courses their settings while their file ids survive. Mutation checks: each of eight deliberate bugs in matching, relocation, catalog updates and hashing fails it or a unit test |

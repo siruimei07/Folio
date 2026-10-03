@@ -79,6 +79,8 @@ const REASONS: Record<Reason, { tone: 'warning' | 'danger'; icon: LucideIcon; ac
   newerFormat: { tone: 'warning', icon: CircleAlert, actions: ['retry'], startNew: true },
   accessDenied: { tone: 'danger', icon: Lock, actions: ['retry', 'locate'], startNew: false },
   catalogFailed: { tone: 'danger', icon: CircleX, actions: ['retry', 'copy'], startNew: false },
+  // Until feat/ui-discard-move-action adds the confirmed discard button (ipc-m1 §6).
+  unfinishedMove: { tone: 'warning', icon: CircleAlert, actions: ['retry', 'copy'], startNew: false },
 };
 
 /**

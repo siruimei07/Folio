@@ -6,7 +6,7 @@
 //   ?fail=<command>[:<code>],…        these commands fail, with `Internal` unless a code is given
 //   ?choice=empty|folders|library|insideLibrary|incomplete   first run: what the chosen folder holds
 //   ?sync=iCloud|oneDrive|dropbox|other                     first run: the folder is in a cloud folder
-//   ?reason=missing|notALibrary|newerFormat|accessDenied|catalogFailed   unavailable: why
+//   ?reason=missing|notALibrary|newerFormat|accessDenied|catalogFailed|unfinishedMove   unavailable: why
 //   ?retry=open                        unavailable: "Try again" opens the library
 //   ?theme=light|dark&motion=on|off    App settings → Appearance as stored (ipc-m1 §22)
 import type { AppError, SyncProvider, Unavailable } from '../bindings';
@@ -92,7 +92,7 @@ function oneOf<T extends string>(value: string | null, allowed: readonly T[]): T
 
 const FOLDER_KINDS = ['empty', 'folders', 'library', 'insideLibrary', 'incomplete'] as const;
 const PROVIDERS = ['iCloud', 'oneDrive', 'dropbox', 'other'] as const;
-const REASONS = ['missing', 'notALibrary', 'newerFormat', 'accessDenied', 'catalogFailed'] as const;
+const REASONS = ['missing', 'notALibrary', 'newerFormat', 'accessDenied', 'catalogFailed', 'unfinishedMove'] as const;
 const THEMES = ['system', 'light', 'dark'] as const;
 const MOTIONS = ['system', 'on', 'off'] as const;
 

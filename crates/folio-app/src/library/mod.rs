@@ -194,6 +194,68 @@ impl LibraryState {
         self.status()
     }
 
+    /// Lets go of the unfinished move that keeps the library unavailable, then opens the
+    /// library again like a retry (ipc-m1 §6). Any other status is answered as it is, so a
+    /// second call changes nothing. A failure keeps the move and the status.
+    pub fn discard_unfinished_move(&self) -> Result<LibraryStatus, AppError> {
+        let observed = {
+            let state = lock(&self.0.state);
+            let status = state
+                .session
+                .as_ref()
+                .map_or_else(|| state.status.clone(), |session| Ok(session.status()));
+            (state.ready
+                && matches!(
+                    status,
+                    Ok(LibraryStatus::Unavailable {
+                        reason: Unavailable::UnfinishedMove,
+                        ..
+                    })
+                ))
+            .then_some(state.attempt)
+        };
+        self.discard_observed(observed)
+    }
+
+    fn discard_observed(&self, observed: Option<u64>) -> Result<LibraryStatus, AppError> {
+        self.status()?;
+        let _transition = lock(&self.0.transition);
+        self.accepting()?;
+        let status = self.status()?;
+        if observed != Some(lock(&self.0.state).attempt)
+            || !matches!(
+                status,
+                LibraryStatus::Unavailable {
+                    reason: Unavailable::UnfinishedMove,
+                    ..
+                }
+            )
+        {
+            return Ok(status);
+        }
+        // Only the worker's recovery reports this reason, and its stopped session stays.
+        let session = lock(&self.0.state).session.clone().ok_or_else(|| {
+            AppError::Internal("no library session holds the unfinished move".to_owned())
+        })?;
+        session.shutdown()?;
+        session.discard_move()?;
+        {
+            let mut state = lock(&self.0.state);
+            // Readers retain the unavailable status until the replacement session is published.
+            state.status = Ok(status);
+            state.session = None;
+        }
+        // Release the old catalog before the new session opens its own.
+        let root = session.root().to_owned();
+        drop(session);
+        self.reopen(&root);
+        let mut state = lock(&self.0.state);
+        // As a retry: a call that saw the old status and waited for the transition reads anew.
+        state.attempt = state.attempt.wrapping_add(1);
+        drop(state);
+        self.status()
+    }
+
     fn data_dir(&self) -> Result<&Path, AppError> {
         self.0.data_dir.as_deref().map_err(Clone::clone)
     }

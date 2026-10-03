@@ -277,6 +277,16 @@ export class FakeShell {
     this.startScan();
   }
 
+  /**
+   * `discard_unfinished_move` (ipc-m1 §6): only an unfinished move is let go of, and the library
+   * opens again with a start-up scan. Any other status stays as it is.
+   */
+  discardUnfinishedMove(): void {
+    if (this.state.kind !== 'unavailable' || this.state.reason !== 'unfinishedMove') return;
+    this.openLibrary(this.state.seed);
+    this.startScan();
+  }
+
   /** The library becomes unavailable while Folio runs (its folder went away). */
   makeUnavailable(reason: Unavailable): void {
     if (this.state.kind !== 'open') return;

@@ -43,6 +43,10 @@ pub enum Unavailable {
     /// written because its disk is full or another program holds a file, or the background
     /// work failed.
     CatalogFailed,
+    /// A move or rename in Folio stopped halfway, and Folio can neither finish nor undo it:
+    /// the item, the files below it, the metadata files it changed or the catalog changed
+    /// since. `discard_unfinished_move` lets go of it, once the user confirms.
+    UnfinishedMove,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]

@@ -101,6 +101,10 @@ pub(super) fn library(error: LibraryError) -> Failure {
         LibraryError::NotALibrary { .. } => Failure::not_a_library(error.to_string()),
         LibraryError::Meta(error) => Failure::metadata(error),
         LibraryError::Catalog(error) => Failure::own(catalog(error)),
+        LibraryError::UnfinishedMove { .. } => Failure {
+            reason: Unavailable::UnfinishedMove,
+            error: AppError::Internal(error.to_string()),
+        },
     }
 }
 
@@ -192,6 +196,13 @@ mod tests {
                     reason: "not JSON".to_owned(),
                 }),
                 Unavailable::NotALibrary,
+            ),
+            // A move recovery cannot reconcile, whatever changed: the user may discard it.
+            (
+                LibraryError::UnfinishedMove {
+                    reason: "move subtree identity no longer matches".to_owned(),
+                },
+                Unavailable::UnfinishedMove,
             ),
         ];
         for (error, reason) in cases {

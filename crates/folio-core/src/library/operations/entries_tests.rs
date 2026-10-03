@@ -1026,19 +1026,54 @@ fn ambiguous_or_replaced_move_targets_retain_the_journal_and_authored_bytes() {
         let before = f.catalog.read(|tx| catalog::entries_in(tx, None)).unwrap();
         let error = f.library.recover_pending(&f.catalog).unwrap_err();
         assert!(
-            matches!(error, crate::library::LibraryError::Meta(crate::meta::MetaError::Invalid { path, .. }) if path == f.library.layout().scan_journal_file()),
-            "{conflict}"
+            matches!(error, crate::library::LibraryError::UnfinishedMove { .. }),
+            "{conflict}: {error}"
         );
         assert_eq!(
             fs::read(f.library.layout().scan_journal_file()).unwrap(),
             journal
         );
-        assert_eq!(fs::read(meta_path).unwrap(), authored);
+        assert_eq!(fs::read(&meta_path).unwrap(), authored);
         assert_eq!(
             f.catalog.read(|tx| catalog::entries_in(tx, None)).unwrap(),
             before
         );
+        // The item is not (only) at its source, so discarding puts nothing back.
+        let files = user_files(&f);
+        let discarded = f.library.discard_move(&f.catalog).unwrap().unwrap();
+        assert!(!discarded.restored, "{conflict}");
+        assert_eq!(fs::read(&meta_path).unwrap(), authored, "{conflict}");
+        assert_eq!(user_files(&f), files, "{conflict}");
+        assert!(!f.library.layout().scan_journal_file().exists());
+        assert_eq!(
+            f.catalog.read(|tx| catalog::entries_in(tx, None)).unwrap(),
+            before
+        );
+        f.scan();
     }
+}
+
+/// Every file and folder of the library outside `.folio/`, with the bytes of each file.
+fn user_files(f: &Fixture) -> Vec<(std::path::PathBuf, Option<Vec<u8>>)> {
+    fn walk(folder: &Path, root: &Path, out: &mut Vec<(std::path::PathBuf, Option<Vec<u8>>)>) {
+        for entry in fs::read_dir(folder).unwrap() {
+            let path = entry.unwrap().path();
+            let relative = path.strip_prefix(root).unwrap().to_owned();
+            if relative == Path::new(".folio") {
+                continue;
+            }
+            if path.is_dir() {
+                out.push((relative, None));
+                walk(&path, root, out);
+            } else {
+                out.push((relative, Some(fs::read(&path).unwrap())));
+            }
+        }
+    }
+    let mut files = Vec::new();
+    walk(f.library.root(), f.library.root(), &mut files);
+    files.sort();
+    files
 }
 
 #[test]
@@ -1212,7 +1247,15 @@ fn unreadable_move_ancestors_retain_the_intent() {
     interrupt_move(&f, "s/c/a.md", "s/c/moved.md");
     let journal = fs::read(f.library.layout().scan_journal_file()).unwrap();
     let blocked = Library::new(f.library.root(), Arc::new(Denied));
-    assert!(blocked.recover_pending(&f.catalog).is_err());
+    // A folder that cannot be listed fails as that folder: no reason to discard the move.
+    assert!(matches!(
+        blocked.recover_pending(&f.catalog),
+        Err(crate::library::LibraryError::Root { .. })
+    ));
+    assert!(matches!(
+        blocked.discard_move(&f.catalog),
+        Err(crate::library::LibraryError::Root { .. })
+    ));
     assert_eq!(
         fs::read(f.library.layout().scan_journal_file()).unwrap(),
         journal
@@ -1412,4 +1455,407 @@ fn interrupted_restore_keeps_mixed_images_and_a_restart_finishes() {
             .unwrap(),
         tags(["notes"])
     );
+}
+
+/// Directory listings suffice for discard; individual metadata probes may open file handles.
+struct ListOnly;
+
+impl FileSystem for ListOnly {
+    fn read_dir(&self, native: &Path) -> io::Result<Vec<DirEntry>> {
+        StdFileSystem.read_dir(native)
+    }
+    fn metadata(&self, _: &Path) -> io::Result<Metadata> {
+        panic!("discarding a move opened an item for its attributes")
+    }
+    fn open(&self, _: &Path) -> io::Result<Box<dyn io::Read + '_>> {
+        panic!("discarding a move opened a user file")
+    }
+}
+
+/// A course move that stopped before the folder moved: the metadata holds the move's images.
+/// With `edit`, a file in the course changed since, so recovery cannot tell it is the item the
+/// move recorded. Returns the course's metadata file, the one the move wrote, and what the
+/// course's file held before.
+fn unmoved_course(f: &Fixture, edit: bool) -> (std::path::PathBuf, std::path::PathBuf, Vec<u8>) {
+    let layout = f.library.layout();
+    let course = |text| {
+        layout
+            .tag_file_path(&crate::meta::TagFile::Course(course_at(text)))
+            .unwrap()
+    };
+    let before = fs::read(course("s/c")).unwrap();
+    interrupt_move(f, "s/c", "s/moved");
+    fs::rename(
+        path("s/moved").to_native(f.library.root()),
+        path("s/c").to_native(f.library.root()),
+    )
+    .unwrap();
+    if edit {
+        fs::write(
+            path("s/c/a.md").to_native(f.library.root()),
+            b"edited while Folio was closed",
+        )
+        .unwrap();
+    }
+    assert!(course("s/moved").exists());
+    (course("s/c"), course("s/moved"), before)
+}
+
+fn unfinished(result: Result<CommittedScan, crate::library::LibraryError>) -> bool {
+    matches!(
+        result,
+        Err(crate::library::LibraryError::UnfinishedMove { .. })
+    )
+}
+
+#[test]
+fn a_recreated_catalog_cannot_reconcile_a_move_and_discarding_lets_a_scan_rebuild_it() {
+    for moved in [true, false] {
+        let f = recovery_fixture();
+        interrupt_move(&f, "s/c/a.md", "s/c/moved.md");
+        if !moved {
+            fs::rename(
+                path("s/c/moved.md").to_native(f.library.root()),
+                path("s/c/a.md").to_native(f.library.root()),
+            )
+            .unwrap();
+        }
+        let config = f.library.layout().read_library().unwrap().unwrap();
+        let fresh = Catalog::open(&f._temp.path().join("fresh.sqlite"), &config.id)
+            .unwrap()
+            .catalog;
+        assert!(unfinished(f.library.recover_pending(&fresh)), "{moved}");
+        let discarded = f.library.discard_move(&fresh).unwrap().unwrap();
+        assert_eq!(
+            discarded,
+            crate::library::DiscardedMove {
+                from: path("s/c/a.md"),
+                to: path("s/c/moved.md"),
+                restored: !moved,
+            }
+        );
+        assert!(!f.library.layout().scan_journal_file().exists());
+        f.library.scan(&fresh, None, 2).unwrap();
+        let (here, gone) = if moved {
+            ("s/c/moved.md", "s/c/a.md")
+        } else {
+            ("s/c/a.md", "s/c/moved.md")
+        };
+        let entry = fresh
+            .read(|tx| catalog::entry(tx, &path(here)))
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            fresh.read(|tx| catalog::entry_tags(tx, entry.id)).unwrap(),
+            tags(["notes"]),
+            "{moved}: the tags are where the file is"
+        );
+        assert!(
+            fresh
+                .read(|tx| catalog::entry(tx, &path(gone)))
+                .unwrap()
+                .is_none()
+        );
+    }
+}
+
+#[test]
+fn discarding_an_unmoved_item_puts_back_what_the_move_wrote_and_never_opens_user_files() {
+    let f = recovery_fixture();
+    let (source_meta, target_meta, before) = unmoved_course(&f, true);
+    assert!(unfinished(f.library.recover_pending(&f.catalog)));
+    let files = user_files(&f);
+    let library = Library::new(f.library.root(), Arc::new(ListOnly));
+    let discarded = library.discard_move(&f.catalog).unwrap().unwrap();
+    assert!(discarded.restored);
+    assert_eq!(fs::read(&source_meta).unwrap(), before);
+    assert!(!target_meta.exists());
+    assert!(!f.library.layout().scan_journal_file().exists());
+    assert_eq!(user_files(&f), files);
+    // The scan finds the edited file where it was, with its id, its tags and its course.
+    let original = f.entry("s/c/a.md");
+    f.scan();
+    let file = f.entry("s/c/a.md");
+    assert_eq!(file.id, original.id);
+    assert_eq!(
+        f.catalog
+            .read(|tx| catalog::entry_tags(tx, file.id))
+            .unwrap(),
+        tags(["notes"])
+    );
+    let meta = f
+        .library
+        .layout()
+        .read_course_meta(&course_at("s/c"))
+        .unwrap()
+        .unwrap();
+    assert!(meta.course.is_some());
+}
+
+#[test]
+fn discarding_a_legacy_move_with_a_recreated_catalog_leaves_metadata_unchanged() {
+    let f = recovery_fixture();
+    let (source_meta, target_meta, _) = unmoved_course(&f, true);
+    let journal_file = f.library.layout().scan_journal_file();
+    let mut journal: serde_json::Value =
+        serde_json::from_slice(&fs::read(&journal_file).unwrap()).unwrap();
+    journal["format_version"] = serde_json::json!(2);
+    journal["moved"] = serde_json::json!(["s/c", "s/moved"]);
+    for key in ["intent", "after", "renames"] {
+        journal.as_object_mut().unwrap().remove(key);
+    }
+    fs::write(&journal_file, serde_json::to_vec(&journal).unwrap()).unwrap();
+    let config = f.library.layout().read_library().unwrap().unwrap();
+    let fresh = Catalog::open(&f._temp.path().join("fresh.sqlite"), &config.id)
+        .unwrap()
+        .catalog;
+    assert!(unfinished(f.library.recover_pending(&fresh)));
+    let source = fs::read(&source_meta).ok();
+    let target = fs::read(&target_meta).unwrap();
+    let files = user_files(&f);
+    let library = Library::new(f.library.root(), Arc::new(ListOnly));
+    assert!(!library.discard_move(&fresh).unwrap().unwrap().restored);
+    assert_eq!(fs::read(&source_meta).ok(), source);
+    assert_eq!(fs::read(&target_meta).unwrap(), target);
+    assert_eq!(user_files(&f), files);
+    assert!(!journal_file.exists());
+    f.library.scan(&fresh, None, 2).unwrap();
+    assert!(
+        fresh
+            .read(|tx| catalog::entry(tx, &path("s/c/a.md")))
+            .unwrap()
+            .is_some()
+    );
+}
+
+#[test]
+fn discarding_leaves_every_metadata_file_when_one_holds_something_else() {
+    let f = recovery_fixture();
+    let (source_meta, target_meta, _) = unmoved_course(&f, false);
+    // Edited elsewhere after the crash: the file holds none of the journal's images.
+    f.course_meta("s/moved", "edited.md");
+    let edited = fs::read(&target_meta).unwrap();
+    let source = fs::read(&source_meta).ok();
+    assert!(unfinished(f.library.recover_pending(&f.catalog)));
+    let files = user_files(&f);
+    let discarded = f.library.discard_move(&f.catalog).unwrap().unwrap();
+    assert!(!discarded.restored);
+    assert_eq!(fs::read(&target_meta).unwrap(), edited);
+    assert_eq!(fs::read(&source_meta).ok(), source);
+    assert_eq!(user_files(&f), files);
+    assert!(!f.library.layout().scan_journal_file().exists());
+    f.scan();
+    assert_eq!(fs::read(&target_meta).unwrap(), edited);
+}
+
+#[test]
+fn discarding_keeps_metadata_when_the_source_endpoint_changed_kind() {
+    struct ChangedKind(FileKind);
+    impl FileSystem for ChangedKind {
+        fn read_dir(&self, native: &Path) -> io::Result<Vec<DirEntry>> {
+            let mut entries = StdFileSystem.read_dir(native)?;
+            if native.file_name().is_some_and(|name| name == "s") {
+                for entry in &mut entries {
+                    if entry.name == "c" {
+                        entry.metadata.kind = self.0;
+                    }
+                }
+            }
+            Ok(entries)
+        }
+        fn metadata(&self, native: &Path) -> io::Result<Metadata> {
+            let mut metadata = StdFileSystem.metadata(native)?;
+            if native.file_name().is_some_and(|name| name == "c") {
+                metadata.kind = self.0;
+            }
+            Ok(metadata)
+        }
+        fn open(&self, _: &Path) -> io::Result<Box<dyn io::Read + '_>> {
+            panic!("discarding a move opened user content")
+        }
+    }
+    for kind in [FileKind::Link, FileKind::Other, FileKind::File] {
+        let f = recovery_fixture();
+        let (source_meta, target_meta, _) = unmoved_course(&f, false);
+        let source = fs::read(&source_meta).ok();
+        let target = fs::read(&target_meta).unwrap();
+        let files = user_files(&f);
+        let library = Library::new(f.library.root(), Arc::new(ChangedKind(kind)));
+        assert!(unfinished(library.recover_pending(&f.catalog)), "{kind:?}");
+        let discarded = library.discard_move(&f.catalog).unwrap().unwrap();
+        assert!(!discarded.restored, "{kind:?}");
+        assert_eq!(fs::read(&source_meta).ok(), source, "{kind:?}");
+        assert_eq!(fs::read(&target_meta).unwrap(), target, "{kind:?}");
+        assert_eq!(user_files(&f), files, "{kind:?}");
+        assert!(!f.library.layout().scan_journal_file().exists());
+    }
+}
+
+#[test]
+fn discarding_retains_the_record_when_restoring_a_case_rename_fails_validation() {
+    let f = recovery_fixture();
+    unmoved_course(&f, true);
+    let journal_file = f.library.layout().scan_journal_file();
+    let mut journal: serde_json::Value =
+        serde_json::from_slice(&fs::read(&journal_file).unwrap()).unwrap();
+    journal["before"] = serde_json::json!([]);
+    journal["after"] = serde_json::json!([]);
+    journal["renames"] = serde_json::json!([["s/absent.json", "s/Absent.json"]]);
+    let bytes = serde_json::to_vec(&journal).unwrap();
+    fs::write(&journal_file, &bytes).unwrap();
+    let files = user_files(&f);
+    assert!(matches!(
+        f.library.discard_move(&f.catalog),
+        Err(crate::library::LibraryError::Meta(
+            crate::meta::MetaError::Invalid { .. }
+        ))
+    ));
+    assert_eq!(fs::read(&journal_file).unwrap(), bytes);
+    assert_eq!(user_files(&f), files);
+}
+
+#[test]
+fn discarding_a_case_only_course_move_keeps_tags_at_the_item() {
+    for moved in [false, true] {
+        let f = recovery_fixture();
+        interrupt_move(&f, "s/c", "s/C");
+        if !moved {
+            fs::rename(f.library.root().join("s/C"), f.library.root().join("s/c")).unwrap();
+        }
+        let here = if moved { "s/C/a.md" } else { "s/c/a.md" };
+        fs::write(
+            f.library.root().join(here),
+            b"edited after the interrupted move",
+        )
+        .unwrap();
+        assert!(unfinished(f.library.recover_pending(&f.catalog)));
+        let files = user_files(&f);
+        let library = Library::new(f.library.root(), Arc::new(ListOnly));
+        assert_eq!(
+            library.discard_move(&f.catalog).unwrap().unwrap().restored,
+            !moved
+        );
+        assert_eq!(user_files(&f), files);
+        f.scan();
+        let file = f.entry(here);
+        assert_eq!(
+            f.catalog
+                .read(|tx| catalog::entry_tags(tx, file.id))
+                .unwrap(),
+            tags(["notes"])
+        );
+    }
+}
+
+#[test]
+fn an_interrupted_discard_keeps_the_journal_and_a_second_one_finishes() {
+    use std::os::windows::fs::OpenOptionsExt;
+    use windows_sys::Win32::Storage::FileSystem::{FILE_SHARE_READ, FILE_SHARE_WRITE};
+    // Open without delete sharing, so nothing can remove the file meanwhile.
+    let hold = |file: &Path| {
+        fs::OpenOptions::new()
+            .read(true)
+            .share_mode(FILE_SHARE_READ | FILE_SHARE_WRITE)
+            .open(file)
+            .unwrap()
+    };
+    let io_error = |result: Result<_, crate::library::LibraryError>| {
+        matches!(
+            result,
+            Err(crate::library::LibraryError::Meta(
+                crate::meta::MetaError::Io { .. }
+            ))
+        )
+    };
+    let f = recovery_fixture();
+    let (source_meta, target_meta, before) = unmoved_course(&f, true);
+    let journal_file = f.library.layout().scan_journal_file();
+    let journal = fs::read(&journal_file).unwrap();
+    let after = fs::read(&target_meta).unwrap();
+
+    // Stopped while putting the images back: the first is back, the second is the move's.
+    let held = hold(&target_meta);
+    assert!(io_error(f.library.discard_move(&f.catalog)));
+    drop(held);
+    assert_eq!(fs::read(&source_meta).unwrap(), before);
+    assert_eq!(fs::read(&target_meta).unwrap(), after);
+    assert_eq!(fs::read(&journal_file).unwrap(), journal);
+
+    // Stopped after the images, before the journal went.
+    let held = hold(&journal_file);
+    assert!(io_error(f.library.discard_move(&f.catalog)));
+    drop(held);
+    assert_eq!(fs::read(&source_meta).unwrap(), before);
+    assert!(!target_meta.exists());
+    assert_eq!(fs::read(&journal_file).unwrap(), journal);
+
+    // Recovery still cannot reconcile it, and discarding again finishes.
+    assert!(unfinished(f.library.recover_pending(&f.catalog)));
+    assert!(
+        f.library
+            .discard_move(&f.catalog)
+            .unwrap()
+            .unwrap()
+            .restored
+    );
+    assert_eq!(fs::read(&source_meta).unwrap(), before);
+    assert!(!journal_file.exists());
+    f.scan();
+    let file = f.entry("s/c/a.md");
+    assert_eq!(
+        f.catalog
+            .read(|tx| catalog::entry_tags(tx, file.id))
+            .unwrap(),
+        tags(["notes"])
+    );
+}
+
+#[test]
+fn discarding_needs_a_pending_move_and_never_reverts_a_committed_one() {
+    struct NoInspection;
+    impl FileSystem for NoInspection {
+        fn read_dir(&self, _: &Path) -> io::Result<Vec<DirEntry>> {
+            panic!("a committed discard inspected user paths")
+        }
+        fn metadata(&self, _: &Path) -> io::Result<Metadata> {
+            panic!("a committed discard opened an item for its attributes")
+        }
+        fn open(&self, _: &Path) -> io::Result<Box<dyn io::Read + '_>> {
+            panic!("a committed discard opened user content")
+        }
+    }
+    let f = recovery_fixture();
+    assert_eq!(f.library.discard_move(&f.catalog).unwrap(), None);
+    // A scan's journal is the next scan's to settle.
+    let journal_file = f.library.layout().scan_journal_file();
+    fs::create_dir_all(journal_file.parent().unwrap()).unwrap();
+    let scan = br#"{"format_version":3,"id":"scan","before":[],"after":[]}"#;
+    fs::write(&journal_file, scan).unwrap();
+    assert_eq!(f.library.discard_move(&f.catalog).unwrap(), None);
+    assert_eq!(fs::read(&journal_file).unwrap(), scan);
+    fs::remove_file(&journal_file).unwrap();
+
+    // A move whose catalog update committed keeps what it wrote, even with the item back at
+    // its source.
+    interrupt_move(&f, "s/c/a.md", "s/c/moved.md");
+    let pending = ScanJournal::read(f.library.layout()).unwrap().unwrap();
+    f.catalog
+        .write(|tx| catalog::set_committed_scan_journal(tx, pending.id()))
+        .unwrap();
+    fs::rename(
+        path("s/c/moved.md").to_native(f.library.root()),
+        path("s/c/a.md").to_native(f.library.root()),
+    )
+    .unwrap();
+    let meta_path = f
+        .library
+        .layout()
+        .tag_file_path(&crate::meta::TagFile::Course(course_at("s/c")))
+        .unwrap();
+    let authored = fs::read(&meta_path).unwrap();
+    let library = Library::new(f.library.root(), Arc::new(NoInspection));
+    let discarded = library.discard_move(&f.catalog).unwrap().unwrap();
+    assert!(!discarded.restored);
+    assert_eq!(fs::read(&meta_path).unwrap(), authored);
+    assert!(!journal_file.exists());
 }

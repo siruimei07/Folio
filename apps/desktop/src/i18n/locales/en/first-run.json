@@ -245,6 +245,10 @@
     "catalogFailed": {
       "title": "Folio can't open its search index",
       "text": "Your files are fine, but the index Folio keeps on this computer couldn't be opened. This happens when another copy of Folio is running or the disk is full. Close other copies of Folio, then try again."
+    },
+    "unfinishedMove": {
+      "title": "A move didn't finish",
+      "text": "Folio stopped while moving or renaming an item, and the library has changed since, so Folio can't finish or undo the move on its own. Your files are fine. Try again, or copy the details and send them to the developer."
     }
   },
   "cantStart": {

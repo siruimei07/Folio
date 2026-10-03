@@ -29,6 +29,7 @@ const REASONS: [Unavailable, string[], string, boolean][] = [
   ['newerFormat', [copy.unavailable.tryAgain], copy.unavailable.tryAgain, true],
   ['accessDenied', [copy.unavailable.tryAgain, copy.unavailable.locate], copy.unavailable.tryAgain, false],
   ['catalogFailed', [copy.unavailable.tryAgain, shellCopy.copyDetails.action], copy.unavailable.tryAgain, false],
+  ['unfinishedMove', [copy.unavailable.tryAgain, shellCopy.copyDetails.action], copy.unavailable.tryAgain, false],
 ];
 
 describe('library unavailable', () => {

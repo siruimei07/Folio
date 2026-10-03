@@ -5,6 +5,7 @@ pub const COMMANDS: &[&str] = &[
     "pick_library_folder",
     "create_library",
     "open_library",
+    "discard_unfinished_move",
 ];
 
 macro_rules! append_commands {
@@ -15,6 +16,7 @@ macro_rules! append_commands {
             crate::commands::library::pick_library_folder,
             crate::commands::library::create_library,
             crate::commands::library::open_library,
+            crate::commands::library::discard_unfinished_move,
         ]; $($remaining),*)
     };
 }

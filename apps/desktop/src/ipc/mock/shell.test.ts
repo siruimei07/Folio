@@ -178,6 +178,32 @@ describe('library', () => {
     shell?.makeReachable();
     await expect(unwrap(ipc.libraryStatus())).resolves.toMatchObject({ state: 'open' });
   });
+
+  it('discards an unfinished move only: the library opens again and scans', async () => {
+    shell = installFakeShell({
+      ...optionsFromUrl('?scenario=unavailable&reason=unfinishedMove', NOW),
+      now: () => NOW,
+      jobStepMs: 1,
+    });
+    const states = collect(shellEvents.onLibraryStateChanged);
+    // "Try again" alone does not get past it.
+    await expect(unwrap(ipc.libraryStatus())).resolves.toMatchObject({ reason: 'unfinishedMove' });
+    const opened = await unwrap(ipc.discardUnfinishedMove());
+    expect(opened).toMatchObject({ state: 'open', library: { name: 'University of Toronto' } });
+    expect((await unwrap(ipc.listJobs())).map((job) => job.kind)).toContain('scan');
+    await settle();
+    states.stop();
+    expect(states.seen.at(-1)?.status).toEqual(opened);
+    // A second call answers the open library as it is.
+    await expect(unwrap(ipc.discardUnfinishedMove())).resolves.toEqual(opened);
+
+    shell.dispose();
+    install('unavailable');
+    await expect(unwrap(ipc.discardUnfinishedMove())).resolves.toMatchObject({ state: 'unavailable', reason: 'missing' });
+    shell.dispose();
+    install('first-run');
+    await expect(unwrap(ipc.discardUnfinishedMove())).resolves.toEqual({ state: 'none' });
+  });
 });
 
 describe('entries', () => {

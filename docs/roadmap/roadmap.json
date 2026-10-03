@@ -1567,15 +1567,23 @@
       "milestone": "M1",
       "phase": "m1-w3",
       "track": "core",
-      "agent": "claude-code",
+      "agent": "codex",
       "size": "S",
       "effort": "xhigh",
       "deps": [
         "feat/core-app-settings"
       ],
       "summary": "移动做到一半崩溃、之后又对不上时：打不开资料库的单独原因，加一个要确认的「放弃这次未完成的移动」命令（合约 + 实现）",
-      "status": "planned",
+      "status": "done",
       "updated": "2026-10-03",
+      "landed": "2026-10-03",
+      "gates": {
+        "check": "pass",
+        "codeReview": "pass",
+        "securityReview": "pass",
+        "simplify": "pass",
+        "e2e": "pass"
+      },
       "shared": [
         "crates/folio-core/src/library/mod.rs",
         "crates/folio-app/src/commands/library.rs",
@@ -1584,6 +1592,9 @@
         "docs/specs/ipc-m1.md",
         "apps/desktop/src/ipc/bindings.ts",
         "apps/desktop/src/ipc/mock/**"
+      ],
+      "notes": [
+        "Claude 审计（Opus，10-03）：/code-review 和 /security-review 无问题，两处可选小改（discard.rs:46 按 from 取类型；成功的放弃记在 Event::Error 下）；pnpm check 通过、pnpm e2e 44/44"
       ],
       "links": [
         "docs/specs/library-scan.md",
@@ -2526,12 +2537,7 @@
       "updated": "2026-10-01"
     }
   ],
-  "landingQueue": [
-    {
-      "lane": "feat/core-discard-move",
-      "why": "Claude 审计通过、Sirui 已批准；等修复的 main CI 绿了再合并"
-    }
-  ],
+  "landingQueue": [],
   "decisions": [
     {
       "id": "ci-red-preview-pdf",

@@ -50,3 +50,16 @@ pub async fn open_library(
 ) -> Result<LibraryOpened, AppError> {
     blocking(state, "open library", |state| state.open(request)).await
 }
+
+/// Lets go of the unfinished move that keeps the library unavailable, after the user confirmed,
+/// and opens the library again; any other status is answered as it is.
+#[tauri::command]
+#[specta::specta]
+pub async fn discard_unfinished_move(
+    state: State<'_, LibraryState>,
+) -> Result<LibraryStatus, AppError> {
+    blocking(state, "discard unfinished move", |state| {
+        state.discard_unfinished_move()
+    })
+    .await
+}

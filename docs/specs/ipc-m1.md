@@ -41,6 +41,7 @@ reverse are in [ADR-0004](../adr/ADR-0004-ipc-contract.md); this spec fixes the 
 | Need | Commands and events |
 |---|---|
 | First run: new library or take over a folder (brief §5.1, §7) | `library_status`, `pick_library_folder`, `create_library`, `open_library`, `LibraryStateChanged` |
+| A move that stopped halfway and can no longer be reconciled keeps the library unavailable until the user discards it (library-state.md, 2026-09-30) | `unfinishedMove`, `discard_unfinished_move` (§6) |
 | Semester switcher, archived semesters (handoff §3) | `list_semesters`, `create_semester`, `update_semester`, `reorder_semesters` |
 | Courses with badge, code and file count; Settings → Courses (handoff §5, §9) | `list_courses`, `create_course`, `update_course`, `reorder_courses` |
 | Tag filter bar, chips, Settings → Tags, batch tagging (brief §5.1, handoff §5, §9) | `list_tags`, `create_tag`, `update_tag`, `reorder_tags`, `delete_tag`, `set_entry_tags` |
@@ -228,13 +229,15 @@ transaction across files. `failed` lists every item that failed.
 | `pick_library_folder` | — → `FolderChoice \| null` (null: cancelled) | `Internal` |
 | `create_library` | `CreateLibrary` → `LibraryOpened` | `ChoiceExpired`, `AlreadyALibrary`, name errors (§16.3), `AccessDenied`, `DiskFull`, `FileSystem` |
 | `open_library` | `OpenLibrary` → `LibraryOpened` | `ChoiceExpired`, `NotALibrary`, `NewerFormat`, `AccessDenied`, `FileSystem`, `Internal` |
+| `discard_unfinished_move` | — → `LibraryStatus` | `DataDirUnavailable`, `Busy`, `InUse`, `AccessDenied`, `NotFound`, `DiskFull`, `FileSystem`, `NewerFormat`, `Internal` |
 
 ```ts
 type LibraryStatus =
   | { state: "none" }                                  // no library on this machine yet
   | { state: "open"; library: LibraryInfo }
   | { state: "unavailable"; root: string; reason: Unavailable };
-type Unavailable = "missing" | "notALibrary" | "newerFormat" | "accessDenied" | "catalogFailed";
+type Unavailable = "missing" | "notALibrary" | "newerFormat" | "accessDenied" | "catalogFailed"
+  | "unfinishedMove";
 type LibraryInfo = { id: string; name: string; root: string; readOnly: boolean; recovered: boolean };
 
 type FolderChoice = { token: string; path: string; content: FolderContent; syncRoot: SyncProvider | null };
@@ -293,6 +296,33 @@ from a catalog file that could not be created.
 | `newerFormat` | `library.json` comes from a newer Folio |
 | `accessDenied` | Windows denied access to the folder or to `.folio/` |
 | `catalogFailed` | The folder is there, but Folio's own state failed: the catalog in the data directory could not be opened or written (another copy of Folio holds it, the disk is full, the database is damaged beyond recovery), `.folio/` could not be read or written because its disk is full or another program holds a file, or the background work failed |
+| `unfinishedMove` | A move or rename in Folio stopped halfway (Folio closed or crashed, or the operation failed after it changed the metadata), and Folio can neither finish nor undo it: the item or the files below it, the metadata files the move changed, or the catalog changed since (the catalog was replaced or rebuilt, a file was edited, the item was moved in File Explorer). The record of the move stays until the user discards it (library scan §7.1). A record that cannot be read at all is `catalogFailed`: it is no move Folio can let go of |
+
+**`discard_unfinished_move`** is the unavailable screen's "Discard the move", which the UI calls
+only after the user confirmed (lane `feat/core-discard-move`, 2026-10-03; Sirui's decision of
+2026-09-30, [library-state.md](library-state.md)):
+
+- When the status is `unavailable` with `unfinishedMove`, the shell closes the library, discards
+  the move and opens the library again behind the same gate as the retry above, and answers with
+  the outcome: `open`, with `LibraryStateChanged` and a new start-up scan, or `unavailable` with
+  this attempt's reason. Any other status is answered as it is, so a second call, or a call from
+  a screen that is out of date, changes nothing.
+- Eligibility and the session's attempt generation are observed at call entry and checked again
+  under the transition gate. A call that waited through startup, a retry or a library switch
+  answers the current status without discarding a different session's move. The stopped session
+  stays visible to status readers throughout discard; a failed drain returns its typed error.
+- Discarding never moves, deletes or opens the user's files. The metadata files the move changed
+  get back what they held before it only when the item is still where it was and each of them
+  still holds what the move found or wrote; otherwise none of them changes, so a file edited
+  since is never overwritten. Then the record of the move goes, and the start-up scan brings the
+  catalog in line with the disk and the metadata files (library scan §7.1).
+- A failure (a metadata file or the record held by another program, a full disk, a folder on
+  the move's paths that cannot be listed) keeps the record and the status, and answers the
+  error; calling again is safe. A folder that cannot be listed while the library opens is no
+  reason to discard: it is `accessDenied` or `missing`, like the library folder. The log records each
+  discarded move, its two paths, and whether the metadata went back.
+- The reason usually arrives by `LibraryStateChanged`: the library's background work finds the
+  record when it starts, so `library_status` at start-up and its retry may answer `open` first.
 
 ## 7. Semesters and courses
 
@@ -910,6 +940,7 @@ UI  --invoke-->  command handler  --spawn_blocking-->  folio-core (Library, Cata
 | Contract fixes (`feat/ipc-m1-contract-fixes`) | The planned-command test with `resolve_paths` and `log_ui_error` declared and not registered; the new codes serialize; `Unavailable` reasons from where opening fails (a damaged `library.json` is `notALibrary`, a file in place of the folder `missing`, catalog failures `catalogFailed` whatever their I/O error); an incomplete `.folio/` is reported, refused by `open_library` and finished in place with its tags kept; a `.folio` file is refused untouched; `fileError` reads the header |
 | Each implementation lane | For every command: each validation rule returns its code; a stale reference is `NotFound` and changes nothing; limits are `InvalidArgument`; tokens are single use, expire and keep to their kind; `.folio` cannot be named or created; events carry the right revision and changes |
 | End to end | One flow per feature (testing strategy); until a command is implemented, calling it is rejected (`not allowed`) |
+| Discarding a move (`feat/core-discard-move`) | `unfinishedMove` for intents recovery cannot reconcile (a replaced catalog, an edited item, an edited metadata file, an item moved or copied outside Folio); the command reopens the library, answers every other status as it is and keeps an unreadable record (`catalogFailed`); crash tests: a discard stopped while restoring images, or before the record goes, keeps the record and the next call finishes; a conflicting metadata file is never written; user files are never opened |
 
 ## 20. Changes to earlier documents
 
@@ -966,6 +997,19 @@ events, `Theme`, `ReduceMotion`, the limit and the constant `DEFAULT_IGNORE_RULE
 §2 (the settings row), library-state.md "Persistence and choices", UI architecture §6.1 and
 §6.3, system overview §4.
 
+### 20.4 Discarding an unfinished move (2026-10-03)
+
+Lane `feat/core-discard-move` (roadmap M1 wave 3) added, contract and implementation in one
+lane, Sirui's decision of 2026-09-30 (library-state.md, "State and threads"): the `Unavailable`
+reason `unfinishedMove` and the command `discard_unfinished_move` (§6), and the §2 row. The
+core reports a move that recovery cannot reconcile as `LibraryError::UnfinishedMove` instead of
+`MetaError::Invalid`, and `Library::discard_move` lets go of it (library scan §7.1, §9).
+Generated bindings gained the command and the reason; the fake shell answers the command
+(`apps/desktop/src/ipc/mock/commands/library.ts`, URL parameter `reason=unfinishedMove`). Until
+`feat/ui-discard-move-action` adds the confirmed button and its copy, the unavailable screen
+shows the reason with "Try again" and "Copy details" (`first-run/Unavailable.tsx`). Other
+documents: library scan §7.1, §9 and §10; library-state.md "State and threads".
+
 ## 21. Next lanes
 
 1. **Done (2026-09-28).** **Library state and jobs** (`feat/core-library-state`): the settings
@@ -992,6 +1036,15 @@ events, `Theme`, `ReduceMotion`, the limit and the constant `DEFAULT_IGNORE_RULE
 8. **Logging** (`chore/core-logging`): the logging module and `log_ui_error` (§16.4).
 9. **Settings** (`feat/core-app-settings`, 2026-10-01): §22, contract and implementation. The
    settings dialogs themselves are `feat/ui-settings` (roadmap wave 4).
+10. **Discarding an unfinished move** (`feat/core-discard-move`, 2026-10-03): §20.4, contract
+    and implementation. The button on the unavailable screen is `feat/ui-discard-move-action`.
+    - **Review checkpoint (2026-10-03):** recovery conflicts have their own reason, and the
+      registered main-window command discards only the observed eligible session, retaining
+      status and record on error. Metadata/image, crash/retry, native no-open, generation and
+      typed-error regressions pass. Codex code/security/simplify reviews, `pnpm check`
+      (Web 662; Rust 586 passed, 8 ignored) and app-locked `pnpm e2e` (44/44) passed.
+      Bindings were regenerated by Rust and the fake fingerprint agrees. Separate Claude
+      Code audit and the confirmed UI action remain pending; no push or landing occurred.
 
 ## 22. Settings
 

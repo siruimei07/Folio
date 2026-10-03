@@ -1,6 +1,7 @@
 //! The library folder, and the catalog kept in line with it: scans, the metadata mirror and
 //! content hashes (docs/specs/library-scan.md).
 
+mod discard;
 mod hashing;
 mod mirror;
 pub mod operations;
@@ -15,6 +16,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+pub use discard::DiscardedMove;
 pub use hashing::HashReport;
 pub use rules::{DEFAULT_IGNORE_RULES, invalid_ignore_lines};
 
@@ -48,6 +50,11 @@ pub enum LibraryError {
     Meta(#[from] MetaError),
     #[error(transparent)]
     Catalog(#[from] CatalogError),
+    /// An in-app move or rename stopped halfway, and recovery can neither finish nor undo it:
+    /// the items, their metadata files or the catalog changed since its intent was written
+    /// (docs/specs/library-scan.md §7.1). The intent stays until [`Library::discard_move`].
+    #[error("an unfinished move cannot be reconciled: {reason}")]
+    UnfinishedMove { reason: String },
 }
 
 /// A change a scan made to the catalog.
@@ -501,7 +508,11 @@ impl Library {
         } else if journal.moved().is_some() {
             // Operations must reconcile in their own transaction before another writer can
             // publish a new journal. Never erase an intent inside an uncommitted writer.
-            return Err(self.recovery_error("a pending explicit move needs reconciliation"));
+            return Err(MetaError::Invalid {
+                path: self.layout.scan_journal_file(),
+                reason: "a pending explicit move needs reconciliation".to_owned(),
+            }
+            .into());
         } else if catalog::has_no_entries(tx)? {
             ScanJournal::remove(&self.layout)?;
         } else {
@@ -510,17 +521,18 @@ impl Library {
         Ok(())
     }
 
-    fn recovery_error(&self, reason: impl Into<String>) -> LibraryError {
-        MetaError::Invalid {
-            path: self.layout.scan_journal_file(),
+    /// Why recovery cannot reconcile a pending move; the user may discard it.
+    fn unfinished(&self, reason: impl Into<String>) -> LibraryError {
+        LibraryError::UnfinishedMove {
             reason: reason.into(),
         }
-        .into()
     }
 
-    fn recovery_metadata_error(&self, error: MetaError) -> LibraryError {
+    /// A metadata file that holds none of the move's images is a conflict; failing to read or
+    /// write one is not.
+    fn unfinished_metadata(&self, error: MetaError) -> LibraryError {
         if matches!(error, MetaError::Invalid { .. }) {
-            self.recovery_error(error.to_string())
+            self.unfinished(error.to_string())
         } else {
             error.into()
         }
@@ -550,17 +562,9 @@ impl Library {
                 self.settle_journal(tx)?;
                 return Ok(CommittedScan::default());
             };
-            let source = self.exact_disk_entry(from)?;
-            let destination = self.exact_disk_entry(to)?;
-            let completed = match (source.is_some(), destination.is_some()) {
-                (true, false) => false,
-                (false, true) => true,
-                _ => {
-                    return Err(
-                        self.recovery_error("move source/destination are conflicting or absent")
-                    );
-                }
-            };
+            let completed = self.moved_on_disk(from, to)?.ok_or_else(|| {
+                self.unfinished("move source/destination are conflicting or absent")
+            })?;
             let explicit = journal.move_entries();
             let legacy = explicit.is_none();
             let snapshots = match explicit {
@@ -570,14 +574,14 @@ impl Library {
                     // metadata still provide a guarded migration path; never guess missing IDs.
                     let entries = catalog::entries_in(tx, Some(from))?;
                     if entries.is_empty() {
-                        return Err(self.recovery_error("legacy move has no catalog identity"));
+                        return Err(self.unfinished("legacy move has no catalog identity"));
                     }
                     let mut snapshots = Vec::new();
                     for entry in entries {
                         let target = match entry.record.path.strip_prefix(from) {
                             Some(tail) => to
                                 .join(&tail)
-                                .map_err(|error| self.recovery_error(error.to_string()))?,
+                                .map_err(|error| self.unfinished(error.to_string()))?,
                             None => to.clone(),
                         };
                         let disk = Metadata {
@@ -605,14 +609,14 @@ impl Library {
                     .iter()
                     .any(|entry| !allowed.contains(&entry.id))
             {
-                return Err(self.recovery_error("move catalog subtree conflicts with the journal"));
+                return Err(self.unfinished("move catalog subtree conflicts with the journal"));
             }
             for (entry, target, expected) in &snapshots {
                 if entry.record.kind == EntryKind::Folder
                     && entry.record.path.depth() == 1
                     && target.depth() != 1
                 {
-                    return Err(self.recovery_error("a semester move changes its hierarchy"));
+                    return Err(self.unfinished("a semester move changes its hierarchy"));
                 }
                 let path = if completed {
                     target
@@ -621,7 +625,7 @@ impl Library {
                 };
                 let actual = self
                     .exact_disk_entry(path)?
-                    .ok_or_else(|| self.recovery_error("move subtree is incomplete"))?;
+                    .ok_or_else(|| self.unfinished("move subtree is incomplete"))?;
                 if actual.kind != expected.kind
                     || actual.size != expected.size
                     || actual.modified_ns != expected.modified_ns
@@ -631,14 +635,12 @@ impl Library {
                         .as_ref()
                         .is_some_and(|id| actual.file_id.as_ref() != Some(id))
                 {
-                    return Err(self.recovery_error("move subtree identity no longer matches"));
+                    return Err(self.unfinished("move subtree identity no longer matches"));
                 }
                 let current = catalog::entry_by_id(tx, entry.id)?
-                    .ok_or_else(|| self.recovery_error("move catalog identity is missing"))?;
+                    .ok_or_else(|| self.unfinished("move catalog identity is missing"))?;
                 if current != *entry {
-                    return Err(
-                        self.recovery_error("move catalog identity conflicts with the journal")
-                    );
+                    return Err(self.unfinished("move catalog identity conflicts with the journal"));
                 }
             }
             let mut report = CommittedScan {
@@ -651,7 +653,7 @@ impl Library {
                 if !legacy || journal.has_after_images() {
                     journal
                         .validate_images(true)
-                        .map_err(|error| self.recovery_metadata_error(error))?;
+                        .map_err(|error| self.unfinished_metadata(error))?;
                 }
                 for (_, target, _) in &snapshots {
                     if catalog::entries_with_key(tx, &target.key())?
@@ -659,14 +661,16 @@ impl Library {
                         .any(|entry| !allowed.contains(&entry.id))
                     {
                         return Err(
-                            self.recovery_error("move destination catalog identity is occupied")
+                            self.unfinished("move destination catalog identity is occupied")
                         );
                     }
                 }
-                let config = self
-                    .layout
-                    .read_library()?
-                    .ok_or_else(|| self.recovery_error("library settings are missing"))?;
+                let config =
+                    self.layout
+                        .read_library()?
+                        .ok_or_else(|| LibraryError::NotALibrary {
+                            path: self.layout.library_file(),
+                        })?;
                 let mut changes = catalog::EntryChanges::default();
                 for (entry, target, _) in &snapshots {
                     changes.moved.push((entry.id, target.clone()));
@@ -682,10 +686,10 @@ impl Library {
             } else {
                 journal
                     .validate_images(false)
-                    .map_err(|error| self.recovery_metadata_error(error))?;
+                    .map_err(|error| self.unfinished_metadata(error))?;
                 journal
                     .restore(&self.layout)
-                    .map_err(|error| self.recovery_metadata_error(error))?;
+                    .map_err(|error| self.unfinished_metadata(error))?;
             }
             // The journal remains durable until the marker and all derived rows COMMIT.
             let tree = MetaTree::read(&self.layout)?;
@@ -705,13 +709,52 @@ impl Library {
         Ok(report)
     }
 
+    /// Whether a pending move happened on disk, by exact spelling: `Some(false)` when only its
+    /// source is there, `Some(true)` when only its destination is, `None` otherwise.
+    fn moved_on_disk(&self, from: &RelPath, to: &RelPath) -> Result<Option<bool>, LibraryError> {
+        let source = self.exact_disk_entry(from)?.is_some();
+        let destination = self.exact_disk_entry(to)?.is_some();
+        Ok((source != destination).then_some(destination))
+    }
+
+    /// A folder that cannot be read is no evidence against the move: it fails as the folder
+    /// (`Root`), so the user tries again instead of discarding.
     fn exact_disk_entry(&self, path: &RelPath) -> Result<Option<Metadata>, LibraryError> {
+        self.exact_entry(path, |native, listed| {
+            let metadata = self
+                .fs
+                .metadata(native)
+                .map_err(|source| LibraryError::Root {
+                    path: native.to_owned(),
+                    source,
+                })?;
+            if metadata.kind != listed.kind {
+                return Err(self.unfinished("move path changed during inspection"));
+            }
+            Ok(metadata)
+        })
+    }
+
+    /// Discard needs only location and kind: attribute probes may open user file handles.
+    fn exact_listed_entry(&self, path: &RelPath) -> Result<Option<Metadata>, LibraryError> {
+        self.exact_entry(path, |_, listed| Ok(listed))
+    }
+
+    fn exact_entry(
+        &self,
+        path: &RelPath,
+        inspect: impl Fn(&Path, Metadata) -> Result<Metadata, LibraryError>,
+    ) -> Result<Option<Metadata>, LibraryError> {
         let mut parent = self.root().to_owned();
         let names: Vec<_> = path.names().collect();
         for (index, name) in names.iter().enumerate() {
-            let entries = self.fs.read_dir(&parent).map_err(|error| {
-                self.recovery_error(format!("cannot inspect move path: {error}"))
-            })?;
+            let entries = self
+                .fs
+                .read_dir(&parent)
+                .map_err(|source| LibraryError::Root {
+                    path: parent.clone(),
+                    source,
+                })?;
             let Some(entry) = entries
                 .into_iter()
                 .find(|entry| entry.name.to_str() == Some(*name))
@@ -719,20 +762,15 @@ impl Library {
                 return Ok(None);
             };
             parent.push(name);
-            let metadata = self.fs.metadata(&parent).map_err(|error| {
-                self.recovery_error(format!("cannot inspect move identity: {error}"))
-            })?;
-            if metadata.kind != entry.metadata.kind {
-                return Err(self.recovery_error("move path changed during inspection"));
-            }
+            let metadata = inspect(&parent, entry.metadata)?;
             if index + 1 == names.len() {
                 return Ok(Some(metadata));
             }
             if metadata.kind != crate::fs::FileKind::Folder {
-                return Err(self.recovery_error("move path contains a link or special entry"));
+                return Err(self.unfinished("move path contains a link or special entry"));
             }
         }
-        Err(self.recovery_error("empty move path"))
+        Err(self.unfinished("empty move path"))
     }
 
     /// Carries out a watcher's rescan (docs/specs/windows-adapter.md §5.4): a scan of the whole

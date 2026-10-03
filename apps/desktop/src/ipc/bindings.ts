@@ -28,6 +28,11 @@ export const commands = {
 } | null, AppError>(__TAURI_INVOKE("pick_library_folder")),
 	createLibrary: (request: CreateLibrary) => typedError<LibraryOpened, AppError>(__TAURI_INVOKE("create_library", { request })),
 	openLibrary: (request: OpenLibrary) => typedError<LibraryOpened, AppError>(__TAURI_INVOKE("open_library", { request })),
+	/**
+	 *  Lets go of the unfinished move that keeps the library unavailable, after the user confirmed,
+	 *  and opens the library again; any other status is answered as it is.
+	 */
+	discardUnfinishedMove: () => typedError<LibraryStatus, AppError>(__TAURI_INVOKE("discard_unfinished_move")),
 	listSemesters: () => typedError<Semester[], AppError>(__TAURI_INVOKE("list_semesters")),
 	createSemester: (request: CreateSemester) => typedError<Semester, AppError>(__TAURI_INVOKE("create_semester", { request })),
 	updateSemester: (request: UpdateSemester) => typedError<Semester, AppError>(__TAURI_INVOKE("update_semester", { request })),
@@ -994,7 +999,13 @@ export type Unavailable =
  *  written because its disk is full or another program holds a file, or the background
  *  work failed.
  */
-"catalogFailed";
+"catalogFailed" | 
+/**
+ *  A move or rename in Folio stopped halfway, and Folio can neither finish nor undo it:
+ *  the item, the files below it, the metadata files it changed or the catalog changed
+ *  since. `discard_unfinished_move` lets go of it, once the user confirms.
+ */
+"unfinishedMove";
 
 /**
  *  Changes App settings: each field that is not `null` replaces the stored value, so the
