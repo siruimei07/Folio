@@ -13,12 +13,12 @@
     }
   },
   "now": {
-    "stage": "M1 · 第 4 波：导入已完成，剩放弃移动和问题列表",
+    "stage": "M1 · 第 4 波：只剩「放弃移动」按钮，然后验收",
     "focus": "M1",
     "summary": [
-      "10-02 已合并：路径图 + 提交身份检查、「最近添加」时钟修复、`Ctrl+K` 搜索、首次使用、预览区、PDF 预览的 CI 修复、WebView 快捷键、设置界面、设置 e2e 的长路径、e2e 亚像素容差、首帧主题、窗口主题、换电脑交接、三个路线图 lane。",
-      "导入整条线已合并：后端 `feat/core-import`（20c1d58）、STA 辅助函数（79a9a0a）、导入契约补充（660b915）、导入界面 `feat/ui-import`（b246288）。main 的 CI：契约 run 37094484726 绿；导入界面的 run 37095267893 也通过，main 是绿的。合并一次一个，每个等上一个在 main 上的 CI 跑完。",
-      "M1 验收前还剩三个 lane：`feat/core-discard-move`（Opus 5.5 · xhigh，可以开始）→ `feat/ui-discard-move-action`；新加的 `feat/ui-problems-list`（Sirui 10-02 决定，后端已在 main，可以开始）。两条可以并行。",
+      "10-02 已合并：路径图 + 提交身份检查、「最近添加」时钟修复、`Ctrl+K` 搜索、首次使用、预览区、PDF 预览的 CI 修复、WebView 快捷键、设置界面、两个 e2e 修复、首帧主题、窗口主题、换电脑交接、导入整条线（后端、STA 辅助函数、契约补充、导入界面）。",
+      "10-03 已合并：问题列表 `feat/ui-problems-list`（adc2f88）；它的 e2e 在 CI 上比较了 8.3 短路径，main 红过一次，`fix/ui-problems-e2e-long-path`（6c52ffc，CI 37103936499 绿）修好；放弃未完成的移动 `feat/core-discard-move`（Codex 做、Claude 审计，7556aea，CI 37104768745 绿）。合并一次一个，每个等上一个在 main 上的 CI 跑完。",
+      "M1 验收前只剩 `feat/ui-discard-move-action`（可以开始，提示词已写好契约、错误、时序和假 shell 场景），然后是 `gate/m1-acceptance`。",
       "Codex 的项目级 skills（`AGENTS.md`、`.agents/skills/`、`.codex/`、`.claude/skills/`）和 CLAUDE.md 里的两处改动不进仓库，由 Codex 管理：任何 lane 都不提交、不丢弃。"
     ]
   },
@@ -1524,6 +1524,35 @@
       ]
     },
     {
+      "id": "docs/docs-roadmap-sync-point-5",
+      "title": "同步点 5 路线图刷新",
+      "milestone": "M1",
+      "phase": "m1-w4",
+      "track": "flow",
+      "agent": "claude-code",
+      "size": "S",
+      "effort": "low",
+      "deps": [
+        "docs/docs-roadmap-sync-point-4"
+      ],
+      "summary": "问题列表、它的 e2e 修复和放弃移动合并后刷新路线图：now、日志、待办、放弃移动按钮的提示词",
+      "status": "done",
+      "updated": "2026-10-03",
+      "landed": "2026-10-03",
+      "gates": {
+        "check": "pass",
+        "e2e": "na",
+        "codeReview": "na",
+        "securityReview": "na",
+        "simplify": "na",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "docs/roadmap/roadmap.json"
+      ]
+    },
+    {
       "id": "refactor/core-sta-helper",
       "title": "合并 STA 辅助函数",
       "milestone": "M1",
@@ -1801,11 +1830,21 @@
         "apps/desktop/src/first-run/**"
       ],
       "notes": [
-        "原来写在 feat/ui-first-run 里的未完成项，拆成单独的小 lane（整理时新加，名字可改）"
+        "原来写在 feat/ui-first-run 里的未完成项，拆成单独的小 lane（整理时新加，名字可改）",
+        "feat/core-discard-move 已合并（a722917，10-03）：契约、假 shell 场景和 first-run 里的占位都在 main"
       ],
       "links": [
         "docs/specs/library-state.md",
-        "docs/design/handoff/first-run.md"
+        "docs/design/handoff/first-run.md",
+        "docs/specs/ipc-m1.md",
+        "docs/specs/library-scan.md"
+      ],
+      "prompt": [
+        "Folio lane feat/ui-discard-move-action (docs/roadmap/roadmap.json, M1 wave 4). feat/core-discard-move has landed (a722917): the Unavailable reason `unfinishedMove` and the command `discard_unfinished_move` are on main. Use frontend-design.",
+        "Read docs/specs/ipc-m1.md §6 (the `unfinishedMove` row and the `discard_unfinished_move` bullets) and §20.4, docs/specs/library-scan.md §7.1 \"Discarding an unfinished move\", docs/specs/library-state.md, docs/design/handoff/first-run.md §7 (it has no row for this reason yet) and apps/desktop/src/first-run/Unavailable.tsx (`retry`, `REASONS`).",
+        "Goal: on the unavailable screen for `unfinishedMove`, replace the placeholder (`REASONS.unfinishedMove` and `first-run.json` `unavailable.unfinishedMove`, title \"A move didn't finish\") with the real design: a \"Discard the move\" action behind an alert dialog that says what is let go of and that files are not touched (copy via design:ux-copy; add the §7 row to the handoff). Call `ipc.discardUnfinishedMove()` only after confirmation and follow its LibraryStatus answer exactly as \"Try again\" does (usually `open` plus LibraryStateChanged and a start-up scan job; or `unavailable` with a new reason). Any other status comes back unchanged, so a double press or a stale screen is harmless.",
+        "Errors go to the screen's banner like Try again's and change nothing (the user can press again): InUse, AccessDenied, NotFound, DiskFull, FileSystem, NewerFormat, Internal, Busy, DataDirUnavailable, Transport. Timing: at start-up and after Try again, `library_status` may answer `open` first and LibraryStateChanged brings `unfinishedMove` a moment later; wait for the heading, not the first answer. Fake shell: `?scenario=unavailable&reason=unfinishedMove`, `?fail=discard_unfinished_move:InUse`, `&retry=open`.",
+        "Write the lane file and set the roadmap entry to wip (`pnpm roadmap status feat/ui-discard-move-action wip`). Own apps/desktop/src/first-run/** and the first-run namespace. Component tests for every state (confirm, cancel, success, each error), a Playwright flow against the fake shell, design:design-critique and design:accessibility-review (alert dialog focus and return), a reduced-motion check, `pnpm check` and `pnpm e2e` with the app lock (CLAUDE.md §7.5), /code-review, /simplify; set the entry to review and report to me in Chinese."
       ]
     },
     {
@@ -2756,6 +2795,11 @@
       "state": "open",
       "item": "哈希时每个文件打开三次等性能改进",
       "lane": "test/build-release-candidate"
+    },
+    {
+      "state": "open",
+      "item": "discard.rs:46 按 from 取根条目的类型（现在靠排序取第一个）；成功的放弃记在 Event::Error 下，可改成普通日志（Claude 审计的两处可选小改）",
+      "lane": "feat/core-discard-move"
     }
   ],
   "risks": [
@@ -3015,6 +3059,11 @@
       "at": "2026-10-03",
       "by": "Claude Code",
       "text": "合并：feat/ipc-import-ui-contract（660b915，CI 37094484726 通过）、feat/ui-import（b246288，Commits 37095267917 通过，CI 37095267893 在跑）；refactor/core-sta-helper（79a9a0a，CI 37093247762 通过）。新增 feat/ui-problems-list（Sirui 决定，M1 验收前）"
+    },
+    {
+      "at": "2026-10-03",
+      "by": "Claude Code",
+      "text": "合并：feat/ui-problems-list（adc2f88）；main CI 37102902231 因 e2e 比较 8.3 短路径失败，fix/ui-problems-e2e-long-path（6c52ffc，CI 37103936499 通过）修复；feat/core-discard-move（Codex，Claude Opus 审计无问题，7556aea）。解锁 feat/ui-discard-move-action"
     }
   ]
 }
