@@ -9,6 +9,7 @@ use std::ffi::OsString;
 use std::os::windows::ffi::{OsStrExt, OsStringExt};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::thread::Builder;
 
 use windows::Storage::Provider::StorageProviderSyncRootManager;
 use windows::Win32::Foundation::{ERROR_CANCELLED, HWND};
@@ -25,6 +26,7 @@ use windows::Win32::UI::Shell::{
 use windows::core::{HRESULT, PWSTR};
 
 use folio_core::library::operations::MAX_BATCH;
+use folio_core::win::{StaError, in_sta};
 
 use crate::error::AppError;
 use crate::ipc::library::SyncProvider;
@@ -38,7 +40,7 @@ pub fn pick_folder(owner: Option<isize>) -> Result<Option<PathBuf>, AppError> {
         return absolute_path(path.into()).map(Some);
     }
 
-    in_sta(move || {
+    let work = move || {
         // SAFETY: this thread has an STA; the returned interface stays here until dropped.
         let dialog: IFileOpenDialog =
             unsafe { CoCreateInstance(&FileOpenDialog, None, CLSCTX_INPROC_SERVER) }
@@ -71,7 +73,13 @@ pub fn pick_folder(owner: Option<isize>) -> Result<Option<PathBuf>, AppError> {
         // SAFETY: Show succeeded, so GetResult returns a live shell item on this apartment.
         let item = unsafe { dialog.GetResult() }.map_err(native_error)?;
         item_path(&item).map(Some)
-    })
+    };
+    in_sta(
+        Builder::new().name("folio-shell-com".into()),
+        initialize_sta,
+        work,
+    )
+    .map_err(worker_error)?
 }
 
 /// Blocks until the native file dialog closes; folders enter through native drops instead.
@@ -83,7 +91,7 @@ pub fn pick_import_files(owner: Option<isize>) -> Result<Option<Vec<PathBuf>>, A
         return import_paths_override(&paths);
     }
 
-    in_sta(move || {
+    let work = move || {
         // SAFETY: this thread has an STA; the returned interface stays here until dropped.
         let dialog: IFileOpenDialog =
             unsafe { CoCreateInstance(&FileOpenDialog, None, CLSCTX_INPROC_SERVER) }
@@ -125,7 +133,13 @@ pub fn pick_import_files(owner: Option<isize>) -> Result<Option<Vec<PathBuf>>, A
             paths.push(item_path(&item)?);
         }
         Ok(Some(paths))
-    })
+    };
+    in_sta(
+        Builder::new().name("folio-shell-com".into()),
+        initialize_sta,
+        work,
+    )
+    .map_err(worker_error)?
 }
 
 fn check_import_selection_count(count: u32) -> Result<(), AppError> {
@@ -260,21 +274,18 @@ fn inside_root(path: &Path, root: &Path) -> Result<bool, AppError> {
     Ok(true)
 }
 
-fn in_sta<T: Send>(work: impl FnOnce() -> Result<T, AppError> + Send) -> Result<T, AppError> {
-    std::thread::scope(|scope| {
-        std::thread::Builder::new()
-            .name("folio-shell-com".into())
-            .spawn_scoped(scope, || {
-                // SAFETY: a new thread has no conflicting apartment; this makes it an STA. All
-                // interfaces drop before the apartment guard.
-                unsafe { RoInitialize(RO_INIT_SINGLETHREADED) }.map_err(native_error)?;
-                let _apartment = Apartment;
-                work()
-            })
-            .map_err(|error| AppError::Internal(format!("start shell COM worker: {error}")))?
-            .join()
-            .map_err(|_| AppError::Internal("shell COM worker panicked".into()))?
-    })
+fn initialize_sta() -> windows::core::Result<Apartment> {
+    // SAFETY: in_sta calls this on a fresh thread; Apartment undoes every successful call there.
+    unsafe { RoInitialize(RO_INIT_SINGLETHREADED) }?;
+    Ok(Apartment)
+}
+
+fn worker_error(error: StaError) -> AppError {
+    match error {
+        StaError::Initialize(error) => native_error(error),
+        StaError::Spawn(error) => AppError::Internal(format!("start shell COM worker: {error}")),
+        StaError::Panicked(_) => AppError::Internal("shell COM worker panicked".into()),
+    }
 }
 
 static MTA_HELD: AtomicBool = AtomicBool::new(false);
@@ -319,7 +330,61 @@ fn native_error(error: windows::core::Error) -> AppError {
 
 #[cfg(test)]
 mod tests {
+    use windows::Win32::Foundation::E_FAIL;
+    use windows::Win32::System::Com::{
+        APTTYPE, APTTYPE_MAINSTA, APTTYPE_STA, APTTYPEQUALIFIER, CoGetApartmentType,
+    };
+
     use super::*;
+
+    #[test]
+    fn native_dialog_objects_stay_in_the_named_sta_worker() {
+        for _ in 0..3 {
+            in_sta(
+                Builder::new().name("folio-shell-com".into()),
+                initialize_sta,
+                || -> windows::core::Result<()> {
+                    assert_eq!(std::thread::current().name(), Some("folio-shell-com"));
+                    let (mut apartment, mut qualifier) =
+                        (APTTYPE::default(), APTTYPEQUALIFIER::default());
+                    // SAFETY: both output values are valid and live through this synchronous call.
+                    unsafe { CoGetApartmentType(&mut apartment, &mut qualifier) }?;
+                    assert!(apartment == APTTYPE_STA || apartment == APTTYPE_MAINSTA);
+                    // SAFETY: this worker has an STA; the interface drops before its guard.
+                    let dialog: IFileOpenDialog =
+                        unsafe { CoCreateInstance(&FileOpenDialog, None, CLSCTX_INPROC_SERVER) }?;
+                    // SAFETY: the interface is live in its creating apartment. Do not show UI.
+                    unsafe { dialog.GetOptions() }?;
+                    Ok(())
+                },
+            )
+            .map_err(worker_error)
+            .unwrap()
+            .unwrap();
+        }
+    }
+
+    #[test]
+    fn dialog_worker_failure_mapping_keeps_the_existing_internal_details() {
+        let native = windows::core::Error::from(E_FAIL);
+        assert_eq!(
+            worker_error(StaError::Initialize(native.clone())),
+            native_error(native),
+        );
+        assert_eq!(
+            worker_error(StaError::Spawn(std::io::Error::other("test spawn failure"))),
+            AppError::Internal("start shell COM worker: test spawn failure".into()),
+        );
+        let failure = in_sta(Builder::new(), initialize_sta, || {
+            panic!("test worker panic")
+        })
+        .map_err(worker_error);
+        assert_eq!(
+            failure,
+            Err(AppError::Internal("shell COM worker panicked".into()))
+        );
+        assert_eq!(in_sta(Builder::new(), initialize_sta, || 42).unwrap(), 42);
+    }
 
     #[test]
     fn empty_import_override_means_cancelled() {
@@ -429,7 +494,20 @@ mod tests {
         let root = dir.path().canonicalize().unwrap();
         for _ in 0..3 {
             // The answer depends on this machine's registrations; the process must survive.
-            let _ = in_sta(|| sync_provider(&root));
+            let _ = in_sta(Builder::new(), initialize_sta, || sync_provider(&root)).unwrap();
+            assert!(MTA_HELD.load(Ordering::Relaxed));
+            // Recycle's COM-only STA teardown must also leave the cached factory valid.
+            let missing = dir.path().join("missing.txt");
+            assert_eq!(
+                folio_core::recycle::RecycleBin::recycle(
+                    &folio_core::win::WindowsRecycleBin,
+                    &missing
+                )
+                .unwrap_err()
+                .failure,
+                folio_core::recycle::RecycleFailure::NotFound,
+            );
+            let _ = sync_provider(&root);
         }
         assert!(MTA_HELD.load(Ordering::Relaxed));
     }

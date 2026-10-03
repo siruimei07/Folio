@@ -12,6 +12,7 @@ use std::ffi::OsString;
 use std::io;
 use std::os::windows::ffi::{OsStrExt, OsStringExt};
 use std::path::{Component, Path, PathBuf, Prefix};
+use std::thread::Builder;
 
 use windows::Win32::Foundation::{
     E_ABORT, E_ACCESSDENIED, ERROR_FILE_NOT_FOUND, ERROR_LOCK_VIOLATION, ERROR_PATH_NOT_FOUND,
@@ -35,6 +36,7 @@ use windows::Win32::UI::Shell::{
 use windows::core::{ComObject, Error, HRESULT, HSTRING, PCWSTR, Ref, Result, implement};
 
 use super::handle;
+use super::{StaError, in_sta};
 use crate::files;
 use crate::recycle::{RecycleBin, RecycleError, RecycleFailure, check};
 
@@ -52,7 +54,8 @@ impl RecycleBin for WindowsRecycleBin {
                 "not a path the shell can take",
             )
         })?;
-        in_apartment(|| recycle_item(&path)).unwrap_or_else(|error| Err(error_of(&path, &error)))
+        in_sta(Builder::new(), initialize_sta, || recycle_item(&path))
+            .unwrap_or_else(|error| worker_error(&path, error))
     }
 }
 
@@ -100,21 +103,19 @@ fn plain_path(path: &Path) -> Option<PathBuf> {
     (names > 0).then(|| plain.into())
 }
 
-/// Runs `work` on a thread of its own in a single-threaded apartment, which `IFileOperation`
-/// needs whatever the caller's thread is.
-fn in_apartment<T: Send>(work: impl FnOnce() -> T + Send) -> Result<T> {
-    std::thread::scope(|scope| {
-        scope
-            .spawn(|| {
-                // SAFETY: the thread is new and has not used COM; `Apartment` undoes this.
-                unsafe { CoInitializeEx(None, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE) }
-                    .ok()?;
-                let _apartment = Apartment;
-                Ok(work())
-            })
-            .join()
-            .unwrap_or_else(|panic| std::panic::resume_unwind(panic))
-    })
+fn initialize_sta() -> Result<Apartment> {
+    // SAFETY: in_sta calls this on a fresh thread; Apartment undoes every successful call there.
+    unsafe { CoInitializeEx(None, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE) }.ok()?;
+    Ok(Apartment)
+}
+
+fn worker_error(path: &Path, error: StaError) -> std::result::Result<(), RecycleError> {
+    match error {
+        StaError::Initialize(error) => Err(error_of(path, &error)),
+        // Preserve scope.spawn's spawn-failure panic and the original worker panic payload.
+        StaError::Spawn(error) => panic!("failed to spawn thread: {error:?}"),
+        StaError::Panicked(payload) => std::panic::resume_unwind(payload),
+    }
 }
 
 /// Undoes `CoInitializeEx` when the thread is done with COM.
@@ -402,6 +403,11 @@ mod tests {
     use std::fs::{self, File, OpenOptions};
     use std::os::windows::fs::OpenOptionsExt;
 
+    use windows::Win32::Foundation::E_FAIL;
+    use windows::Win32::System::Com::{
+        APTTYPE, APTTYPE_MAINSTA, APTTYPE_STA, APTTYPEQUALIFIER, COINIT_MULTITHREADED,
+        CoGetApartmentType,
+    };
     use windows_sys::Win32::Storage::FileSystem::FILE_SHARE_READ;
 
     use super::*;
@@ -417,6 +423,57 @@ mod tests {
             .share_mode(FILE_SHARE_READ)
             .open(path)
             .unwrap()
+    }
+
+    #[test]
+    fn recycle_from_an_mta_caller_uses_a_fresh_sta_and_leaves_a_held_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("held.txt");
+        fs::write(&file, "keep me").unwrap();
+        let _held = held(&file);
+        std::thread::scope(|scope| {
+            scope
+                .spawn(|| {
+                    // SAFETY: this fresh test thread has no COM apartment; the guard pairs this call.
+                    unsafe { CoInitializeEx(None, COINIT_MULTITHREADED) }
+                        .ok()
+                        .unwrap();
+                    let _mta = Apartment;
+                    let apartment = in_sta(Builder::new(), initialize_sta, || {
+                        assert_eq!(std::thread::current().name(), None);
+                        let (mut apartment, mut qualifier) =
+                            (APTTYPE::default(), APTTYPEQUALIFIER::default());
+                        // SAFETY: both outputs remain valid for the synchronous call.
+                        unsafe { CoGetApartmentType(&mut apartment, &mut qualifier) }.unwrap();
+                        apartment
+                    })
+                    .unwrap();
+                    assert!(apartment == APTTYPE_STA || apartment == APTTYPE_MAINSTA);
+                    assert_eq!(failure(&file), RecycleFailure::InUse);
+                })
+                .join()
+                .unwrap();
+        });
+        assert_eq!(fs::read_to_string(file).unwrap(), "keep me");
+    }
+
+    #[test]
+    fn recycle_worker_failures_keep_native_errors_and_panic_payloads() {
+        let path = Path::new(r"C:\unused-sta-test.txt");
+        let native = Error::from(E_FAIL);
+        assert_eq!(
+            worker_error(path, StaError::Initialize(native.clone())),
+            Err(error_of(path, &native))
+        );
+        let error = in_sta(Builder::new(), initialize_sta, || {
+            std::panic::panic_any(37_u32)
+        })
+        .unwrap_err();
+        let panic =
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| worker_error(path, error)))
+                .unwrap_err();
+        assert_eq!(panic.downcast_ref::<u32>(), Some(&37));
+        assert_eq!(in_sta(Builder::new(), initialize_sta, || 42).unwrap(), 42);
     }
 
     #[test]
@@ -508,7 +565,7 @@ mod tests {
         let (a, b) = (dir.path().join("a.md"), dir.path().join("b.md"));
         fs::write(&a, "a").unwrap();
         fs::write(&b, "b").unwrap();
-        let same = in_apartment(|| {
+        let same = in_sta(Builder::new(), initialize_sta, || {
             let item = parse(&a).unwrap();
             (is_same_file(&item, &a), is_same_file(&item, &b))
         })

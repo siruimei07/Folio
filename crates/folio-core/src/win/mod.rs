@@ -7,11 +7,13 @@ mod files;
 mod handle;
 mod notify;
 mod recycle;
+mod sta;
 mod watcher;
 
 pub use files::{WindowsFileSystem, rename_no_replace};
 pub use handle::Volume;
 pub use recycle::WindowsRecycleBin;
+pub use sta::{StaError, in_sta};
 pub use watcher::{WatchEvent, Watcher};
 
 /// The folder `FOLIO_TEST_NON_NTFS_DIR` names, on a volume that is not NTFS (on Sirui's machine

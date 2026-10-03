@@ -1507,9 +1507,16 @@
         "fix/build-ci-access-violation"
       ],
       "summary": "dialogs.rs 的 in_sta 和 win::recycle 的 in_apartment 几乎一样：合成 folio-core win 模块里的一个，保留 CI 修复的 MTA 规则",
-      "status": "planned",
-      "hold": "feat/core-import 也在改对话框代码，导入合并后再开最省事",
+      "status": "done",
       "updated": "2026-10-02",
+      "landed": "2026-10-02",
+      "gates": {
+        "check": "pass",
+        "e2e": "pass",
+        "codeReview": "pass",
+        "simplify": "pass",
+        "securityReview": "pass"
+      },
       "owns": [
         "crates/folio-app/src/dialogs.rs",
         "crates/folio-core/src/win/**"
@@ -2357,6 +2364,10 @@
     {
       "lane": "docs/docs-roadmap-device-refresh",
       "why": "叠在 Codex 交接上：三个路线图 lane 从这里 --whole-stack 一起合并"
+    },
+    {
+      "lane": "refactor/core-sta-helper",
+      "why": "本地检查通过，等待 Claude audit；合并获批后核实 main 的 Windows Server 2022 CI"
     }
   ],
   "decisions": [
