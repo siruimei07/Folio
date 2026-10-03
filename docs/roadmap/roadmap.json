@@ -13,12 +13,12 @@
     }
   },
   "now": {
-    "stage": "M1 · 后端已齐，只剩导入界面和收尾",
+    "stage": "M1 · 第 4 波：导入已完成，剩放弃移动和问题列表",
     "focus": "M1",
     "summary": [
-      "10-02 已合并：路径图 + 提交身份检查、「最近添加」时钟修复、`Ctrl+K` 搜索、首次使用、预览区、PDF 预览的 CI 修复、WebView 快捷键、设置界面、设置 e2e 的长路径（da1c486）、e2e 亚像素容差（1688239）、首帧主题（a417dd9）、窗口主题（7c88c0b）、导入后端 `feat/core-import`（20c1d58）。第 3 波的后端全部合并，M1 只剩导入界面和验收。",
-      "10-02 换电脑交接也已合并（8c193ff、25f29f3、9c84d3e）。导入合并后 main 的完整 CI run 37055180308 还在跑（Commits run 37055180557 通过）；上一次完整 CI（窗口主题 run 37051369268）是绿的。合并一次一个，每个等上一个在 main 上的 CI 跑完，所以等 37055180308 出结果再合并下一个。",
-      "可以开始：导入界面 `feat/ui-import`（Opus 5.5 · high，M1 关键路径）、`feat/core-discard-move`（hunk 已和导入隔开）、STA 辅助函数（Codex，导入已合并）。合并队列里剩两个路线图 lane（Codex 交接、换电脑刷新，`--whole-stack` 一起合并；同步点 3 已合并为 e84ccd0）。",
+      "10-02 已合并：路径图 + 提交身份检查、「最近添加」时钟修复、`Ctrl+K` 搜索、首次使用、预览区、PDF 预览的 CI 修复、WebView 快捷键、设置界面、设置 e2e 的长路径、e2e 亚像素容差、首帧主题、窗口主题、换电脑交接、三个路线图 lane。",
+      "导入整条线已合并：后端 `feat/core-import`（20c1d58）、STA 辅助函数（79a9a0a）、导入契约补充（660b915）、导入界面 `feat/ui-import`（b246288）。main 的 CI：契约 run 37094484726 绿；导入界面的 run 37095267893 也通过，main 是绿的。合并一次一个，每个等上一个在 main 上的 CI 跑完。",
+      "M1 验收前还剩三个 lane：`feat/core-discard-move`（Opus 5.5 · xhigh，可以开始）→ `feat/ui-discard-move-action`；新加的 `feat/ui-problems-list`（Sirui 10-02 决定，后端已在 main，可以开始）。两条可以并行。",
       "Codex 的项目级 skills（`AGENTS.md`、`.agents/skills/`、`.codex/`、`.claude/skills/`）和 CLAUDE.md 里的两处改动不进仓库，由 Codex 管理：任何 lane 都不提交、不丢弃。"
     ]
   },
@@ -1429,9 +1429,9 @@
         "docs/docs-roadmap-sync-point-3"
       ],
       "summary": "标出 Codex 做的后端 lane；每个给「交给 Codex」的完整提示词和「Claude 快速审计」的短提示词（CLI、路径图页面、规则）",
-      "status": "review",
+      "status": "done",
       "updated": "2026-10-02",
-      "next": "叠在 docs/docs-roadmap-sync-point-3 上，和它一起合并（--whole-stack）",
+      "landed": "2026-10-02",
       "gates": {
         "check": "pass",
         "e2e": "na",
@@ -1470,9 +1470,9 @@
         "docs/docs-roadmap-codex-handoff"
       ],
       "summary": "换电脑后对齐路线图的全局部分：只有 Codex 在做导入、补上窗口主题的合并位置、关掉已办完的事项，并记下换电脑交接已合并、main 是绿的",
-      "status": "review",
+      "status": "done",
       "updated": "2026-10-02",
-      "next": "叠在 Codex 交接上；三个路线图 lane 一起合并：but land docs/docs-roadmap-device-refresh --whole-stack",
+      "landed": "2026-10-02",
       "gates": {
         "check": "pass",
         "e2e": "na",
@@ -1492,6 +1492,35 @@
         "2. Run `pnpm roadmap doctor`; refresh `now` and `log` for whatever landed since, mark the three lanes done and commit that on the top branch.",
         "3. `pnpm check`, then `but land docs/docs-roadmap-device-refresh --whole-stack --yes`, `but status`, delete the three lane files, check the CI and Commits runs on main, and republish the explorer (docs/roadmap/README.md, Publish). Stop at the first conflict or failure; never use --ai.",
         "Report to me in Chinese."
+      ]
+    },
+    {
+      "id": "docs/docs-roadmap-sync-point-4",
+      "title": "同步点 4 路线图刷新",
+      "milestone": "M1",
+      "phase": "m1-w4",
+      "track": "flow",
+      "agent": "claude-code",
+      "size": "S",
+      "effort": "low",
+      "deps": [
+        "docs/docs-roadmap-device-refresh"
+      ],
+      "summary": "导入、STA、导入界面合并后刷新路线图：关掉已合并的路线图 lane、合并提示词等上一个 CI、加上问题列表 lane",
+      "status": "done",
+      "updated": "2026-10-03",
+      "landed": "2026-10-03",
+      "gates": {
+        "check": "pass",
+        "e2e": "na",
+        "codeReview": "na",
+        "securityReview": "na",
+        "simplify": "na",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "docs/roadmap/roadmap.json"
       ]
     },
     {
@@ -1546,8 +1575,7 @@
       ],
       "summary": "移动做到一半崩溃、之后又对不上时：打不开资料库的单独原因，加一个要确认的「放弃这次未完成的移动」命令（合约 + 实现）",
       "status": "planned",
-      "hold": "和 feat/core-import 都改 library/mod.rs 和 ipc-m1.md；Rust 名额满时等一等",
-      "updated": "2026-10-02",
+      "updated": "2026-10-03",
       "shared": [
         "crates/folio-core/src/library/mod.rs",
         "crates/folio-app/src/commands/library.rs",
@@ -1770,6 +1798,44 @@
       ]
     },
     {
+      "id": "feat/ui-problems-list",
+      "title": "问题列表",
+      "milestone": "M1",
+      "phase": "m1-w4",
+      "track": "ui",
+      "agent": "claude-code",
+      "size": "M",
+      "effort": "high",
+      "deps": [
+        "feat/ui-import"
+      ],
+      "summary": "活动按钮的「View problems」打开的问题列表：按种类分组、每行说明和「Copy path」、空状态、扫描后自动刷新（library-actions §11）",
+      "status": "planned",
+      "updated": "2026-10-03",
+      "owns": [
+        "apps/desktop/src/problems/**",
+        "apps/desktop/src/i18n/locales/en/problems.json",
+        "e2e/tests/problems.spec.ts"
+      ],
+      "shared": [
+        "apps/desktop/src/app/registry.ts"
+      ],
+      "notes": [
+        "Sirui 10-02 在导入界面会话里决定：M1 验收前加上（导入界面的备注里记着它没有 lane）",
+        "后端已在 main：list_problems（每页 100）和 ProblemsChanged 事件；活动按钮在 registry.ts 注册 problems 对话框后才显示「View problems」"
+      ],
+      "links": [
+        "docs/design/handoff/library-actions.md",
+        "docs/specs/ipc-m1.md"
+      ],
+      "prompt": [
+        "Folio lane feat/ui-problems-list (docs/roadmap/roadmap.json, M1 wave 4). The problems list that the activity button's \"View problems\" opens. Its backend is on main: `list_problems { page }` (pages of 100) and the `ProblemsChanged` event. Use frontend-design.",
+        "Read docs/design/handoff/library-actions.md §11 (layout, groups, row copy per kind and cause, empty state, focus) and §10 (the activity button), docs/specs/ipc-m1.md for list_problems and ProblemsChanged, apps/desktop/src/app/registry.ts (the button shows \"View problems\" once a `problems` dialog is registered) and the shared failure list, dialog and toast components the import UI lane reused or added.",
+        "Goal: the 720 × 560 dialog with the count pill and intro, groups in the §11 order with row title, explanation and \"Copy path\" (joined to the library root), paging as the list scrolls, refetch on ProblemsChanged, the empty state and the footer with the scan time. Fix actions other than \"Edit ignore rules\" wait for a later contract: do not add commands. All copy goes through the problems namespace (design:ux-copy for anything §11 leaves open).",
+        "Write the lane file and set the roadmap entry to wip (`pnpm roadmap status feat/ui-problems-list wip`). Own apps/desktop/src/problems/** and the problems namespace; registry.ts gets one additive entry. Component tests for every kind and state, a Playwright flow against the fake shell or a temporary library with problems, design:design-critique and design:accessibility-review (focus on the title, Esc returns focus to the activity button), a reduced-motion check, `pnpm check` and `pnpm e2e` with the app lock (CLAUDE.md §7.5), /code-review, /simplify; set the entry to review and report to me in Chinese."
+      ]
+    },
+    {
       "id": "gate/m1-acceptance",
       "kind": "gate",
       "title": "M1 验收 → v0.1",
@@ -1792,7 +1858,8 @@
         "feat/core-discard-move",
         "feat/ui-settings",
         "feat/ui-import",
-        "feat/ui-discard-move-action"
+        "feat/ui-discard-move-action",
+        "feat/ui-problems-list"
       ],
       "summary": "全部用户流程的 e2e、5 万文件性能复核、冻结 schema 和 .folio 格式的 fixture、engineering:tech-debt、未签名的 NSIS 安装包 → v0.1",
       "status": "planned",
@@ -2417,20 +2484,7 @@
       "updated": "2026-10-01"
     }
   ],
-  "landingQueue": [
-    {
-      "lane": "docs/docs-roadmap-codex-handoff",
-      "why": "叠在路线图刷新上，一起合并；只改路线图和它的工具"
-    },
-    {
-      "lane": "docs/docs-roadmap-device-refresh",
-      "why": "叠在 Codex 交接上：三个路线图 lane 从这里 --whole-stack 一起合并"
-    },
-    {
-      "lane": "refactor/core-sta-helper",
-      "why": "本地检查通过，等待 Claude audit；合并获批后核实 main 的 Windows Server 2022 CI"
-    }
-  ],
+  "landingQueue": [],
   "decisions": [
     {
       "id": "ci-red-preview-pdf",
@@ -2458,9 +2512,10 @@
     {
       "id": "sync-point-3",
       "when": "现在",
-      "item": "同步点 3 只剩两个路线图 lane（Codex 交接、换电脑刷新）：批准用 --whole-stack 一起合并（导入和同步点 3 已合并）",
+      "item": "同步点 3：按合并队列的顺序一次合并一个",
       "type": "approve",
-      "state": "open"
+      "state": "done",
+      "result": "10-02 已全部合并（导入 20c1d58、路线图三个 lane 到 2e08a75），main 的 CI 绿"
     },
     {
       "id": "git-email",
@@ -2553,6 +2608,14 @@
       "type": "decide",
       "state": "done",
       "result": "相信 Codex：Claude 只做快速审计（一次 /code-review，涉及特权层加 /security-review，不重跑 /simplify），S 用 low、M/L 用 medium"
+    },
+    {
+      "id": "problems-list-lane",
+      "when": "2026-10-02",
+      "item": "问题列表（library-actions §11）没有 lane，要不要在 M1 验收前做",
+      "type": "decide",
+      "state": "done",
+      "result": "M1 验收前加上 feat/ui-problems-list（在导入界面会话里回答）"
     }
   ],
   "looseEnds": [
@@ -2725,7 +2788,7 @@
       "{extra}",
       "3. Take the app lock (CLAUDE.md §7.5), run `pnpm check` and `pnpm e2e`, release the lock.",
       "4. Mark it done in the roadmap (`pnpm roadmap status {lane} done`) and commit that one entry on {lane}.",
-      "5. Land one lane at a time: check that no other lane is landing, then `but land {lane} --yes`, `but status`, delete the lane file and check the CI run on main. Stop at the first conflict or failure and report it; never use --ai.",
+      "5. Land one lane at a time: check that no other lane is landing and that the previous land's CI run on main has finished green (a land is workspace-wide, CLAUDE.md §7.4: run it only when every other active lane is at checkpoint, review or done, or after telling me), then `but land {lane} --yes`, `but status`, delete the lane file and check the CI run on main. Stop at the first conflict or failure and report it; never use --ai.",
       "Report to me in Chinese."
     ],
     "reviewCodex": [
@@ -2735,7 +2798,7 @@
       "{extra}",
       "3. Take the app lock (CLAUDE.md §7.5), run `pnpm check` and `pnpm e2e`, release the lock.",
       "4. If the lane has not, add its progress line to the ADR and spec items it finishes (for commands: ADR-0004 action item 3 and docs/specs/ipc-m1.md §21). Mark it done (`pnpm roadmap status {lane} done`) and commit that entry on the branch.",
-      "5. Land one lane at a time: check that no other lane is landing, then `but land {lane} --yes`, `but status`, delete the lane file and check the CI run on main. Stop at the first conflict or failure and report it; never use --ai.",
+      "5. Land one lane at a time: check that no other lane is landing and that the previous land's CI run on main has finished green (a land is workspace-wide, CLAUDE.md §7.4: run it only when every other active lane is at checkpoint, review or done, or after telling me), then `but land {lane} --yes`, `but status`, delete the lane file and check the CI run on main. Stop at the first conflict or failure and report it; never use --ai.",
       "Report to me in Chinese."
     ],
     "landRoadmap": [
@@ -2884,6 +2947,21 @@
       "at": "2026-10-02",
       "by": "Claude Code",
       "text": "合并：feat/core-import（20c1d58，Claude 审计无发现，pnpm check 和 e2e 40/40 通过）；main 的 CI run 37055180308 进行中，Commits 37055180557 通过。解锁 feat/ui-import；STA 辅助函数可以交给 Codex"
+    },
+    {
+      "at": "2026-10-02",
+      "by": "Claude Code",
+      "text": "合并：docs/docs-roadmap-codex-handoff 和 docs/docs-roadmap-device-refresh（2e08a75，Commits 37056772887 通过）。同步点 3 结束；在做 feat/ipc-import-ui-contract 和 feat/ui-import，refactor/core-sta-helper 等审计"
+    },
+    {
+      "at": "2026-10-02",
+      "by": "Claude Code",
+      "text": "提示词：合并模板（land）补上「等上一个合并的 main CI 跑完」和「合并是整个工作区的操作」"
+    },
+    {
+      "at": "2026-10-03",
+      "by": "Claude Code",
+      "text": "合并：feat/ipc-import-ui-contract（660b915，CI 37094484726 通过）、feat/ui-import（b246288，Commits 37095267917 通过，CI 37095267893 在跑）；refactor/core-sta-helper（79a9a0a，CI 37093247762 通过）。新增 feat/ui-problems-list（Sirui 决定，M1 验收前）"
     }
   ]
 }
