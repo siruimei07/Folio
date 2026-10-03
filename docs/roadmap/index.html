@@ -155,6 +155,7 @@ section[role="tabpanel"] { display: grid; gap: 20px; }
 .effort i b { width: 3px; height: 9px; border-radius: 1px; background: var(--line-strong); }
 .effort i b.on { background: var(--accent); }
 .effort[data-m="sonnet"] i b.on { background: var(--down); }
+.effort[data-m="fable"] i b.on { background: var(--t-design); }
 .tag.codex { font-weight: 600; color: var(--ink); background: var(--accent-soft); border-color: transparent; }
 .prompt + .prompt { margin-top: 12px; }
 .prompt h3 { margin: 0 0 4px; }
@@ -541,7 +542,7 @@ const DATA = /*@data*/null;
     }
     const text = composePrompt(D, lane);
     if (!text) return null;
-    return promptCard(text, null, [lane.prompt ? '新开 session，选' : '通用开工提示词；新开 session，选', effortTag(lane), '，再粘贴'], '复制提示词');
+    return promptCard(text, null, ['新开 session，选', effortTag(lane), '，再粘贴'], '复制提示词');
   }
   const tip = $('#tip');
   function showTip(event, lines) {
@@ -1123,20 +1124,21 @@ const DATA = /*@data*/null;
   }
 
   // ---------- For agents ----------
-  /** How lanes pick Opus or Sonnet and an effort (lib.mjs modelFor, effortFor), with today's split. */
+  const TEMPLATE_LABEL = { start: '构建 / 文档（start）', startUi: '界面（startUi）', startCore: '核心和合约（startCore）', startSpec: '规格（startSpec）', startDesign: '设计，Cowork（startDesign）', startVerify: '测试和实测（startVerify）', gate: '验收关卡（gate）' };
+  /** How lanes pick Fable, Opus or Sonnet and an effort (lib.mjs modelFor, effortFor), with today's split. */
   function renderModels() {
-    const open = D.lanes.filter((l) => !['done', 'dropped'].includes(l.status) && l.kind !== 'gate');
+    const open = D.lanes.filter((l) => !['done', 'dropped'].includes(l.status));
     const count = (model) => open.filter((l) => (isCodex(l) ? auditModelFor(l) : modelFor(l)) === model).length;
-    const opus = modelName(D, 'opus');
-    const sonnet = modelName(D, 'sonnet');
+    const [fable, opus, sonnet] = MODELS.map((m) => modelName(D, m));
     return h('div', { class: 'panel' },
       h('header', {}, h('h2', {}, '模型和推理强度'),
-        h('p', {}, `没完成的 lane：${opus} ${count('opus')} 个，${sonnet} ${count('sonnet')} 个（Codex lane 按 Claude 审计算）`)),
+        h('p', {}, `没完成的 lane：${fable} ${count('fable')} 个，${opus} ${count('opus')} 个，${sonnet} ${count('sonnet')} 个（Codex lane 按 Claude 审计算）`)),
       h('ul', { class: 'steps small' },
-        h('li', {}, `${opus}（默认）：Rust 核心、验收关卡、L 规模、推理强度 xhigh 及以上，以及 M 规模的界面和规格（要做设计评审、无障碍、取舍）`),
-        h('li', {}, `${sonnet}（价格是 Opus 的一半）：S 规模的界面、测试、文档，以及只负责合并的 lane；Codex 小 lane 的 Claude 审计`),
-        h('li', {}, '推理强度：S medium、M high、L xhigh；Rust 核心高一档，docs/ 低一档；只合并的 lane 用 low。两个模型都有 low 到 max 五档'),
-        h('li', {}, 'lane 可以用 model / effort（Codex lane 用 auditModel / auditEffort）覆盖默认值；开 session 时按卡片上的标签选')));
+        h('li', {}, `${fable}（最强）：最难回退的工作：验收关卡、规格（docs/specs-*）、IPC 合约（feat/ipc-*）、推理强度 max 的 lane（L 规模的 Rust 核心）；Codex L lane 的 Claude 审计`),
+        h('li', {}, `${opus}（日常默认）：界面、Rust 核心、测试、设计；Codex S / M lane 的 Claude 审计`),
+        h('li', {}, `${sonnet}：只改文档（docs/docs-*）和只负责合并的 lane`),
+        h('li', {}, '推理强度：S、M high，L xhigh；Rust 核心、验收关卡、规格高一档（L 核心到 max），只改文档和只合并的低一档。Codex 审计：S medium、M high、L xhigh。三个模型都有 low 到 max 五档'),
+        h('li', {}, 'lane 可以用 model / effort（Codex lane 用 auditModel / auditEffort）覆盖默认值；开 session 时按卡片上的标签选，提示词第一行也写着')));
   }
 
   function renderMaintain(root) {
@@ -1174,7 +1176,8 @@ const DATA = /*@data*/null;
               h('div', { class: 'muted' }, d.verified),
               h('div', { class: 'muted' }, d.notes))))))),
       h('div', { class: 'grid-2' },
-        h('div', { class: 'panel' }, h('header', {}, h('h2', {}, '通用开工提示词'), h('p', {}, '没写专用提示词的 lane 用它，{lane} 等由页面填好')), promptPre(D.prompts.start)),
+        h('div', { class: 'panel' }, h('header', {}, h('h2', {}, '开工提示词（按 lane 类型）'), h('p', {}, '每个 lane 按类型用一个模板，自己的要点填在 {extra}，{lane} 等由页面填好')),
+          START_TEMPLATES.map((name) => h('details', {}, h('summary', {}, TEMPLATE_LABEL[name] ?? name), promptPre(D.prompts[name])))),
         h('div', { class: 'panel' }, h('header', {}, h('h2', {}, '交给 Codex'), h('p', {}, '标着 Codex 的后端 lane 用它；lane 自己的细节填在 {extra}')), promptPre(D.prompts.codexHandoff))),
       h('div', { class: 'grid-2' },
         h('div', { class: 'panel' }, h('header', {}, h('h2', {}, 'Claude 快速审计'), h('p', {}, '相信 Codex：一次 /code-review，涉及特权层加 /security-review，不重跑 /simplify')), promptPre(D.prompts.codexAudit)),

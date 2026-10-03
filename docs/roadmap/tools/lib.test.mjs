@@ -16,6 +16,7 @@ import {
   laneFile,
   modelFor,
   sharedPaths,
+  startTemplate,
   taskDir,
   unlocks,
   validate,
@@ -40,7 +41,7 @@ function sample() {
     ...extra,
   });
   return {
-    meta: { models: { opus: 'Opus', sonnet: 'Sonnet' } },
+    meta: { models: { fable: 'Fable', opus: 'Opus', sonnet: 'Sonnet' } },
     now: { stage: '', focus: 'M1', summary: [] },
     limits: { rustSessions: 3, uiSessions: 4 },
     runtime: {},
@@ -63,6 +64,12 @@ function sample() {
     prompts: {
       land: ['Land {lane} ({laneFile}, {taskDir}).', '{extra}', 'Done.'],
       start: ['Start {lane}: {summary} ({phase})'],
+      startUi: ['UI {lane}', '{extra}'],
+      startCore: ['Core {lane}: {summary} ({phase}) at {model} · {effort}, unblocks {unblocks}', '{extra}'],
+      startSpec: ['Spec {lane}'],
+      startDesign: ['Design {lane}'],
+      startVerify: ['Verify {lane}'],
+      gate: ['Gate {lane} at {model} · {effort}', '{extra}'],
       codexHandoff: ['Codex builds {lane}: {summary}', '{extra}', 'Owns {owns}.'],
       codexAudit: ['Audit {lane} at {auditModel} · {auditEffort}.'],
     },
@@ -119,8 +126,15 @@ test('prompts fill the lane fields and drop an empty {extra}', () => {
   assert.equal(composePrompt(data, lanes.get('feat/core-e')), 'Land feat/core-e (feat--core-e, feat-core-e).\nDone.');
   lanes.get('feat/core-e').prompt = { template: 'land', extra: ['Extra step.'] };
   assert.match(composePrompt(data, lanes.get('feat/core-e')), /\nExtra step\.\nDone\.$/);
-  assert.equal(composePrompt(data, lanes.get('feat/core-b')), 'Start feat/core-b: summary of feat/core-b (Wave 1)');
+  assert.equal(composePrompt(data, lanes.get('feat/core-b')), 'Core feat/core-b: summary of feat/core-b (Wave 1) at Opus · xhigh, unblocks feat/core-d');
+  lanes.get('feat/core-b').prompt = { extra: ['Lane detail.'] };
+  assert.match(composePrompt(data, lanes.get('feat/core-b')), /^Core feat\/core-b: .*\nLane detail\.$/);
   assert.equal(composePrompt(data, lanes.get('feat/core-a')), null);
+  assert.deepEqual(validate(data).errors, []);
+  lanes.get('feat/core-b').prompt = { extra: 'not a list' };
+  assert.match(validate(data).errors.join('\n'), /prompt\.extra must be an array of strings/);
+  delete data.prompts.startVerify;
+  assert.match(validate(data).errors.join('\n'), /prompts\.startVerify must be an array of lines/);
   assert.equal(laneFile('feat/ui-preview'), 'feat--ui-preview');
   assert.equal(taskDir('feat/ui-preview'), 'feat-ui-preview');
 });
@@ -130,18 +144,20 @@ test('a Codex lane gets a handoff while it is open and a short audit', () => {
   const d = byId(data).get('feat/core-d');
   assert.deepEqual(codexPrompts(data, d), {
     handoff: 'Codex builds feat/core-d: summary of feat/core-d\nOwns crates/x/**.',
-    audit: 'Audit feat/core-d at Sonnet · low.',
+    audit: 'Audit feat/core-d at Opus · medium.',
   });
   assert.equal(composePrompt(data, d), codexPrompts(data, d).handoff);
   d.prompt = { template: 'codexHandoff', extra: ['Lane detail.'] };
   assert.match(codexPrompts(data, d).handoff, /\nLane detail\.\nOwns/);
   d.status = 'review';
   assert.equal(codexPrompts(data, d).handoff, null);
-  assert.equal(composePrompt(data, d), 'Audit feat/core-d at Sonnet · low.');
+  assert.equal(composePrompt(data, d), 'Audit feat/core-d at Opus · medium.');
   d.prompt = { template: 'land' };
   assert.equal(codexPrompts(data, d).audit, 'Land feat/core-d (feat--core-d, feat-core-d).\nDone.');
   assert.equal(codexPrompts(data, byId(data).get('feat/core-b')), null);
-  assert.equal(auditEffortFor({ size: 'L' }), 'medium');
+  assert.equal(auditEffortFor({ size: 'S' }), 'medium');
+  assert.equal(auditEffortFor({ size: 'M' }), 'high');
+  assert.equal(auditEffortFor({ size: 'L' }), 'xhigh');
   assert.equal(auditEffortFor({ size: 'L', auditEffort: 'high' }), 'high');
   d.prompt = { template: 'nope' };
   assert.match(validate(data).errors.join('\n'), /unknown prompt template "nope"/);
@@ -151,9 +167,13 @@ test('a Codex lane gets a handoff while it is open and a short audit', () => {
 
 test('effort defaults by size and track, and a lane can override it', () => {
   const lanes = byId(sample());
-  assert.equal(effortFor(lanes.get('feat/core-a')), 'high');
-  assert.equal(effortFor(lanes.get('feat/core-c')), 'xhigh');
-  assert.equal(effortFor({ id: 'docs/x', size: 'S', track: 'flow' }), 'low');
+  assert.equal(effortFor(lanes.get('feat/core-a')), 'xhigh');
+  assert.equal(effortFor(lanes.get('feat/core-c')), 'max');
+  assert.equal(effortFor({ id: 'docs/docs-x', size: 'S', track: 'flow' }), 'medium');
+  assert.equal(effortFor({ id: 'docs/specs-x', size: 'M', track: 'flow' }), 'xhigh');
+  assert.equal(effortFor({ id: 'gate/m1-x', kind: 'gate', size: 'M', track: 'verify' }), 'xhigh');
+  assert.equal(effortFor({ id: 'feat/ui-x', size: 'S', track: 'ui' }), 'high');
+  assert.equal(effortFor({ id: 'feat/ui-x', size: 'S', track: 'ui', prompt: { template: 'land' } }), 'medium');
   assert.equal(effortFor({ id: 'feat/ui-x', size: 'L', track: 'ui' }), 'xhigh');
   assert.equal(effortFor({ id: 'feat/core-x', size: 'L', track: 'core', effort: 'max' }), 'max');
   const data = sample();
@@ -161,25 +181,29 @@ test('effort defaults by size and track, and a lane can override it', () => {
   assert.match(validate(data).errors.join('\n'), /effort must be one of/);
 });
 
-test('Opus takes judgment-heavy lanes, Sonnet routine ones, and a lane can override it', () => {
+test('Fable takes the hardest-to-undo lanes, Sonnet routine ones, Opus the rest; a lane can override it', () => {
   const ui = (extra) => ({ id: 'feat/ui-x', track: 'ui', size: 'M', ...extra });
   assert.equal(modelFor(ui({})), 'opus');
-  assert.equal(modelFor(ui({ size: 'S' })), 'sonnet');
-  assert.equal(modelFor(ui({ size: 'S', effort: 'xhigh' })), 'opus');
+  assert.equal(modelFor(ui({ size: 'S' })), 'opus');
+  assert.equal(modelFor(ui({ size: 'L' })), 'opus');
+  assert.equal(modelFor(ui({ effort: 'max' })), 'fable');
   assert.equal(modelFor(ui({ prompt: { template: 'land' } })), 'sonnet');
-  assert.equal(modelFor(ui({ size: 'L', prompt: { template: 'land' } })), 'opus');
   assert.equal(modelFor({ id: 'feat/core-x', track: 'core', size: 'S' }), 'opus');
-  assert.equal(modelFor({ id: 'gate/m1-x', kind: 'gate', track: 'verify', size: 'S' }), 'opus');
-  assert.equal(modelFor({ id: 'docs/x', track: 'flow', size: 'S' }), 'sonnet');
+  assert.equal(modelFor({ id: 'feat/core-x', track: 'core', size: 'L' }), 'fable');
+  assert.equal(modelFor({ id: 'feat/ipc-x', track: 'core', size: 'M' }), 'fable');
+  assert.equal(modelFor({ id: 'gate/m1-x', kind: 'gate', track: 'verify', size: 'S' }), 'fable');
+  assert.equal(modelFor({ id: 'docs/specs-x', track: 'flow', size: 'M' }), 'fable');
+  assert.equal(modelFor({ id: 'docs/docs-x', track: 'flow', size: 'S' }), 'sonnet');
   assert.equal(modelFor(ui({ model: 'sonnet' })), 'sonnet');
-  assert.equal(auditModelFor({ size: 'S' }), 'sonnet');
+  assert.equal(auditModelFor({ size: 'S' }), 'opus');
   assert.equal(auditModelFor({ size: 'M' }), 'opus');
-  assert.equal(auditModelFor({ size: 'S', auditModel: 'opus' }), 'opus');
+  assert.equal(auditModelFor({ size: 'L' }), 'fable');
+  assert.equal(auditModelFor({ size: 'S', auditModel: 'sonnet' }), 'sonnet');
   const data = sample();
   data.lanes[1].model = 'haiku';
   data.lanes[2].auditModel = 'opus';
   const errors = validate(data).errors.join('\n');
-  assert.match(errors, /model must be one of opus, sonnet/);
+  assert.match(errors, /model must be one of fable, opus, sonnet/);
   assert.match(errors, /auditModel only applies to Codex lanes/);
   delete data.meta.models.sonnet;
   assert.match(validate(data).errors.join('\n'), /meta\.models\.sonnet must name the model/);
@@ -191,4 +215,18 @@ test('canonical formatting puts lane fields in one order', () => {
   const keys = Object.keys(JSON.parse(canonical(data)).lanes[1]);
   assert.ok(keys.indexOf('status') < keys.indexOf('next'));
   assert.equal(keys[0], 'id');
+});
+
+test('a planned lane without its own prompt gets the start template for its kind', () => {
+  const kind = (extra) => startTemplate({ id: 'feat/x', track: 'flow', agent: 'claude-code', ...extra });
+  assert.equal(kind({ id: 'gate/m1-x', kind: 'gate', track: 'verify' }), 'gate');
+  assert.equal(kind({ agent: 'cowork', track: 'design' }), 'startDesign');
+  assert.equal(kind({ id: 'docs/specs-x' }), 'startSpec');
+  assert.equal(kind({ track: 'ui' }), 'startUi');
+  assert.equal(kind({ id: 'feat/ipc-x', track: 'core' }), 'startCore');
+  assert.equal(kind({ track: 'verify' }), 'startVerify');
+  assert.equal(kind({}), 'start');
+  const data = sample();
+  data.lanes.push({ ...data.lanes[1], id: 'gate/m1-acceptance', kind: 'gate', deps: ['feat/core-e'], prompt: { extra: ['Criterion.'] } });
+  assert.equal(composePrompt(data, byId(data).get('gate/m1-acceptance')), 'Gate gate/m1-acceptance at Fable · xhigh\nCriterion.');
 });

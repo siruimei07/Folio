@@ -29,37 +29,44 @@ export const GATE_STATES = ['pass', 'partial', 'fail', 'todo', 'na'];
 
 export const SIZE_WEIGHT = { S: 1, M: 2, L: 3 };
 
-/** Reasoning effort levels, lowest first; Opus 5.5 and Sonnet 5.5 both take all five. */
+/** Reasoning effort levels, lowest first; Fable 5.1, Opus 5.5 and Sonnet 5.5 all take all five. */
 export const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'];
 
 /**
  * Models a Claude Code session can run on; `meta.models` maps each to its display name.
- * Opus is the default; Sonnet costs half as much and suits routine, well-specified work.
+ * Fable is the most capable, for work that is hardest to undo; Opus is the everyday default;
+ * Sonnet suits routine, well-specified work.
  */
-export const MODELS = ['opus', 'sonnet'];
+export const MODELS = ['fable', 'opus', 'sonnet'];
+
+/** A spec lane (docs/specs-*): formats and behaviour other lanes build on. */
+export const isSpec = (lane) => lane.id.startsWith('docs/specs-');
+
+/** An IPC contract lane (feat/ipc-*): the commands and types both sides build on. */
+export const isContract = (lane) => lane.id.startsWith('feat/ipc-');
 
 /**
- * The effort to run a lane at: its own `effort`, else by size (S medium, M high, L xhigh),
- * one step up for Rust core work (crash safety, COM, concurrency) and down for docs-only lanes.
+ * The effort to run a lane at: its own `effort`, else by size (S high, M high, L xhigh), one
+ * step up for Rust core work (crash safety, COM, concurrency), gates and specs, and one step
+ * down for docs-only lanes (docs/docs-*) and landing-only prompts.
  */
 export function effortFor(lane) {
   if (lane.effort) return lane.effort;
-  let i = { S: 1, M: 2, L: 3 }[lane.size] ?? 2;
-  if (lane.track === 'core') i += 1;
-  if (lane.track === 'flow' && lane.id.startsWith('docs/')) i -= 1;
-  return EFFORTS[Math.max(0, Math.min(3, i))];
+  let i = { S: 2, M: 2, L: 3 }[lane.size] ?? 2;
+  if (lane.track === 'core' || lane.kind === 'gate' || isSpec(lane)) i += 1;
+  if (lane.id.startsWith('docs/docs-') || lane.prompt?.template === 'land') i -= 1;
+  return EFFORTS[Math.max(0, Math.min(EFFORTS.length - 1, i))];
 }
 
 /**
- * The model to run a lane at: its own `model`, else Opus for judgment-heavy work (gates, Rust
- * core, size L, effort xhigh or above) and Sonnet for routine work (landing only, size S).
- * Everything else, e.g. an M screen with its design and accessibility reviews, stays on Opus.
+ * The model to run a lane at: its own `model`, else Fable for the work that is hardest to undo
+ * (gates, specs, IPC contracts, anything at effort max), Sonnet for routine work (docs-only
+ * lanes, landing only) and Opus for everything else: screens, core work, tests and design.
  */
 export function modelFor(lane) {
   if (lane.model) return lane.model;
-  if (lane.kind === 'gate' || lane.track === 'core' || lane.size === 'L') return 'opus';
-  if (EFFORTS.indexOf(effortFor(lane)) >= EFFORTS.indexOf('xhigh')) return 'opus';
-  if (lane.prompt?.template === 'land' || lane.size === 'S') return 'sonnet';
+  if (lane.kind === 'gate' || isSpec(lane) || isContract(lane) || effortFor(lane) === 'max') return 'fable';
+  if (lane.id.startsWith('docs/docs-') || lane.prompt?.template === 'land') return 'sonnet';
   return 'opus';
 }
 
@@ -70,16 +77,17 @@ export const modelName = (data, model) => data.meta.models?.[model] ?? model;
 export const isCodex = (lane) => lane.agent === 'codex';
 
 /**
- * The effort for the Claude Code audit of a Codex lane: its own `auditEffort`, else low for a
- * small lane and medium otherwise. Codex is trusted, so the audit checks rather than redoes.
+ * The effort for the Claude Code audit of a Codex lane: its own `auditEffort`, else medium for a
+ * small lane, high for M and xhigh for L. Codex is trusted, so the audit checks rather than
+ * redoes, but its lanes are crash-safety and privileged-layer work.
  */
 export function auditEffortFor(lane) {
-  return lane.auditEffort ?? (lane.size === 'S' ? 'low' : 'medium');
+  return lane.auditEffort ?? ({ S: 'medium', M: 'high', L: 'xhigh' }[lane.size] ?? 'high');
 }
 
-/** The model for that audit: its own `auditModel`, else Sonnet for a small lane and Opus otherwise. */
+/** The model for that audit: its own `auditModel`, else Fable for an L lane and Opus otherwise. */
 export function auditModelFor(lane) {
-  return lane.auditModel ?? (lane.size === 'S' ? 'sonnet' : 'opus');
+  return lane.auditModel ?? (lane.size === 'L' ? 'fable' : 'opus');
 }
 
 export const ID_PATTERN = /^(feat|fix|chore|docs|design|spike|refactor|test|perf|gate)\/[a-z0-9][a-z0-9.-]*$/;
@@ -211,6 +219,7 @@ function fill(data, lane, lines, extra = []) {
     auditModel: modelName(data, auditModelFor(lane)),
     auditEffort: auditEffortFor(lane),
     deps: list(lane.deps, 'none'),
+    unblocks: list(dependents(data).get(lane.id), 'nothing yet'),
     owns: list(lane.owns, 'not set yet: choose them in step 1 (one module folder, e.g. crates/folio-core/src/<module>/**)'),
     shared: list(lane.shared, 'none expected'),
     links: list(lane.links, 'the specs and ADRs `pnpm roadmap show` and the lane summary point to'),
@@ -229,17 +238,36 @@ function fill(data, lane, lines, extra = []) {
  */
 export function codexPrompts(data, lane) {
   if (!isCodex(lane) || lane.kind === 'gate' || ['done', 'dropped'].includes(lane.status)) return null;
-  const own = Array.isArray(lane.prompt) ? { template: 'codexHandoff', extra: lane.prompt } : lane.prompt;
-  const takenOver = own && own.template !== 'codexHandoff';
+  const own = Array.isArray(lane.prompt) ? { extra: lane.prompt } : lane.prompt;
+  const template = own?.template ?? 'codexHandoff';
+  const takenOver = template !== 'codexHandoff';
   return {
     handoff: takenOver || lane.status === 'review' ? null : fill(data, lane, data.prompts.codexHandoff, own?.extra),
-    audit: takenOver ? fill(data, lane, data.prompts[own.template] ?? [], own.extra) : fill(data, lane, data.prompts.codexAudit),
+    audit: takenOver ? fill(data, lane, data.prompts[template] ?? [], own.extra) : fill(data, lane, data.prompts.codexAudit),
   };
+}
+
+/** Every template `startTemplate` can pick; `validate` requires all of them. */
+export const START_TEMPLATES = ['start', 'startUi', 'startCore', 'startSpec', 'startDesign', 'startVerify', 'gate'];
+
+/**
+ * The start template for a lane by its kind: `gate`, `startDesign` (Cowork), `startSpec`,
+ * `startUi`, `startCore` (Claude Code core and contract lanes), `startVerify`, else `start`.
+ */
+export function startTemplate(lane) {
+  if (lane.kind === 'gate') return 'gate';
+  if (lane.agent === 'cowork' || lane.track === 'design') return 'startDesign';
+  if (isSpec(lane)) return 'startSpec';
+  if (lane.track === 'ui') return 'startUi';
+  if (lane.track === 'core') return 'startCore';
+  if (lane.track === 'verify') return 'startVerify';
+  return 'start';
 }
 
 /**
  * The copyable prompt for a lane: for a Codex lane its handoff (or, once in review, its audit);
- * otherwise its own lines, a template with its fields, or the start template.
+ * otherwise its own lines, a template with its fields (`{ template?, extra }`, the start
+ * template for its kind when `template` is left out), or, for a planned lane, that start template.
  */
 export function composePrompt(data, lane) {
   if (isCodex(lane)) {
@@ -247,8 +275,8 @@ export function composePrompt(data, lane) {
     return codex ? codex.handoff ?? codex.audit : null;
   }
   if (Array.isArray(lane.prompt)) return fill(data, lane, lane.prompt);
-  if (lane.prompt) return fill(data, lane, data.prompts[lane.prompt.template] ?? [], lane.prompt.extra);
-  if (lane.status === 'planned' && lane.kind !== 'gate') return fill(data, lane, data.prompts.start);
+  if (lane.prompt) return fill(data, lane, data.prompts[lane.prompt.template ?? startTemplate(lane)] ?? [], lane.prompt.extra);
+  if (lane.status === 'planned') return fill(data, lane, data.prompts[startTemplate(lane)] ?? data.prompts.start);
   return null;
 }
 
@@ -378,7 +406,8 @@ export function validate(data) {
     if (Array.isArray(lane.prompt)) {
       if (lane.prompt.some((x) => typeof x !== 'string')) err(`${at}: prompt lines must be strings`);
     } else if (lane.prompt !== undefined) {
-      if (!data.prompts[lane.prompt.template]) err(`${at}: unknown prompt template "${lane.prompt.template}"`);
+      if (lane.prompt.extra !== undefined && (!Array.isArray(lane.prompt.extra) || lane.prompt.extra.some((x) => typeof x !== 'string')))
+        err(`${at}: prompt.extra must be an array of strings`);
       for (const key of Object.keys(lane.prompt))
         if (!['template', 'extra'].includes(key)) err(`${at}: unknown prompt field "${key}"`);
     }
@@ -417,7 +446,7 @@ export function validate(data) {
     if (!laneIds.has(item.lane)) err(`loose end "${item.item}": unknown lane "${item.lane}"`);
   }
   for (const r of data.risks) if (!['high', 'med', 'low'].includes(r.level)) err(`risk "${r.risk}": level "${r.level}"`);
-  for (const name of ['land', 'start', 'codexHandoff', 'codexAudit'])
+  for (const name of ['land', 'codexHandoff', 'codexAudit', ...START_TEMPLATES])
     if (!Array.isArray(data.prompts[name])) err(`prompts.${name} must be an array of lines`);
   return { errors, warnings };
 }

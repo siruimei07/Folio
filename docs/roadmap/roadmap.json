@@ -8,17 +8,18 @@
     "updated": "2026-10-02T15:10-04:00",
     "updatedBy": "Claude Code",
     "models": {
+      "fable": "Fable 5.1",
       "opus": "Opus 5.5",
       "sonnet": "Sonnet 5.5"
     }
   },
   "now": {
-    "stage": "M1 · 第 4 波：只剩「放弃移动」按钮，然后验收",
+    "stage": "M1 验收：功能 lane 全部合并，下一步 gate/m1-acceptance → v0.1",
     "focus": "M1",
     "summary": [
-      "10-02 已合并：路径图 + 提交身份检查、「最近添加」时钟修复、`Ctrl+K` 搜索、首次使用、预览区、PDF 预览的 CI 修复、WebView 快捷键、设置界面、两个 e2e 修复、首帧主题、窗口主题、换电脑交接、导入整条线（后端、STA 辅助函数、契约补充、导入界面）。",
-      "10-03 已合并：问题列表 `feat/ui-problems-list`（adc2f88）；它的 e2e 在 CI 上比较了 8.3 短路径，main 红过一次，`fix/ui-problems-e2e-long-path`（6c52ffc，CI 37103936499 绿）修好；放弃未完成的移动 `feat/core-discard-move`（Codex 做、Claude 审计，7556aea，CI 37104768745 绿）。合并一次一个，每个等上一个在 main 上的 CI 跑完。",
-      "M1 验收前只剩 `feat/ui-discard-move-action`（可以开始，提示词已写好契约、错误、时序和假 shell 场景），然后是 `gate/m1-acceptance`。",
+      "M1 的功能 lane 全部合并：10-02 资料库、搜索、预览、设置、导入整条线等；10-03 问题列表（adc2f88）、它的 e2e 长路径修复（6c52ffc）、放弃未完成移动的后端（7556aea，Codex 做、Claude 审计）和按钮 `feat/ui-discard-move-action`（cb56b5b，CI 37141857529 绿）。main 是绿的。",
+      "下一步：`gate/m1-acceptance`（Fable 5.1 · max）：全部用户流程的 e2e、5 万文件性能复核、冻结 catalog schema 和 .folio 格式的 fixture、engineering:tech-debt、未签名的 NSIS 安装包；你在资料库的副本上用 v0.1 一两周后验收。合并一次一个，每个等上一个在 main 上的 CI 跑完。",
+      "模型（10-03 起）：验收关卡、规格、IPC 合约和推理强度 max 的 lane 用 Fable 5.1；界面、核心、测试、设计用 Opus 5.5；只改文档和只合并的用 Sonnet 5.5。默认推理强度高一档（S、M high，L xhigh；核心、关卡、规格再高一档）；Codex lane 的 Claude 审计 S medium、M high、L xhigh（L 用 Fable）。每个剩下的 lane 都有按类型的开工提示词和自己的要点。",
       "Codex 的项目级 skills（`AGENTS.md`、`.agents/skills/`、`.codex/`、`.claude/skills/`）和 CLAUDE.md 里的两处改动不进仓库，由 Codex 管理：任何 lane 都不提交、不丢弃。"
     ]
   },
@@ -1553,6 +1554,35 @@
       ]
     },
     {
+      "id": "docs/docs-roadmap-models-prompts",
+      "title": "模型选择和提示词刷新",
+      "milestone": "M1",
+      "phase": "m1-w4",
+      "track": "flow",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "docs/docs-roadmap-sync-point-5"
+      ],
+      "summary": "M1 最后一个功能 lane 合并后刷新路线图；模型加入 Fable 5.1、默认推理强度高一档；按 lane 类型重写开工提示词，每个剩下的 lane 写上自己的要点",
+      "status": "done",
+      "updated": "2026-10-03",
+      "landed": "2026-10-03",
+      "gates": {
+        "check": "pass",
+        "e2e": "na",
+        "codeReview": "pass",
+        "securityReview": "na",
+        "simplify": "na",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "docs/roadmap/**",
+        "docs/product/roadmap.md"
+      ]
+    },
+    {
       "id": "refactor/core-sta-helper",
       "title": "合并 STA 辅助函数",
       "milestone": "M1",
@@ -1946,7 +1976,6 @@
       "track": "verify",
       "agent": "claude-code",
       "size": "L",
-      "effort": "xhigh",
       "deps": [
         "fix/ui-recently-added-clock",
         "feat/ui-search-palette",
@@ -1965,7 +1994,25 @@
       ],
       "summary": "全部用户流程的 e2e、5 万文件性能复核、冻结 schema 和 .folio 格式的 fixture、engineering:tech-debt、未签名的 NSIS 安装包 → v0.1",
       "status": "planned",
-      "updated": "2026-10-02"
+      "updated": "2026-10-02",
+      "links": [
+        "docs/specs/testing-strategy.md",
+        "docs/specs/system-overview.md",
+        "docs/adr/ADR-0002-data-storage.md",
+        "docs/specs/ipc-m1.md",
+        "docs/adr/ADR-0001-application-stack.md"
+      ],
+      "prompt": {
+        "extra": [
+          "M1 acceptance (the four criteria in roadmap.json `milestones` M1):",
+          "- Every user flow has a Playwright e2e: first run and choosing the library; browsing semesters and courses; tags; Ctrl+K search, including one- and two-character Chinese queries; preview (PDF, image, text, code; Office falls back to \"open with\"); import (drop, Add files, name clashes, originals to the Recycle Bin, a cancelled import); move and rename; discarding an unfinished move; Library and App settings; the problems list. Map e2e/tests/ to these flows, fill the gaps, and confirm from the lane gates that every screen passed design critique, accessibility review and the reduced-motion check.",
+          "- 50,000-file library (the `large` fixture in docs/specs/testing-strategy.md; crates/folio-core/tests/scan_benchmark.rs and search_benchmark.rs): a page of 200 rows under 50 ms, a search page under 100 ms, a common file previewed within 1 s, plus the initial scan time. Measure in a quiet window (no other cargo or pnpm process, app lock held) and record the numbers with the machine and versions in docs/specs/testing-strategy.md.",
+          "- Freeze the formats (ADR-0002 action item 5; this gate's open loose end): a fixture of the released catalog schema and of every .folio metadata file at its current format_version, checked in with the core tests, and a test that opens each one. From then on every format change ships with a migration and a test against these fixtures; record the frozen versions in ADR-0002.",
+          "- engineering:tech-debt over M1. Settle the open loose ends: pdf.js standard fonts blocked by the preview CSP; search highlights rendered as text only; the shared name rules (UI and fake shell) and LibraryView's unused \"no library\" branch; shared failure states, selection bar, dialog look and e2e helpers; the two optional discard-move cleanups. Fix the small ones here or give each a later lane.",
+          "- An unsigned NSIS installer from `pnpm bundle` (ADR-0001 action item 6 explains the Smart App Control warning). Do not bump versions, tag or publish: I install it and use v0.1 on a copy of my library for one or two weeks, and the version becomes 0.1.0 only after I accept.",
+          "Ask me to confirm the version plan (decision version-plan: v1.0 = M4 done and shared with classmates) before you mark the gate done."
+        ]
+      }
     },
     {
       "id": "docs/specs-history-format",
@@ -1983,8 +2030,20 @@
       "status": "planned",
       "updated": "2026-10-01",
       "links": [
-        "docs/adr/ADR-0003-versioning-and-sync.md"
-      ]
+        "docs/adr/ADR-0003-versioning-and-sync.md",
+        "docs/adr/ADR-0002-data-storage.md",
+        "docs/product/brief.md",
+        "docs/specs/system-overview.md",
+        "docs/specs/library-core.md"
+      ],
+      "prompt": {
+        "extra": [
+          "ADR-0003 action item 2: write docs/specs/remote-format.md before any M2 code: object ids (BLAKE3), object kinds, the pack layout and encoding, head records and the remote tree (ADR-0003 §2–§6, §13); byte-exact golden vectors (inputs and expected bytes or hashes) in a language-neutral form a future Swift app can check; and a compatibility policy (format_version, unknown fields, newer readers).",
+          "Then docs/specs/versioning.md: the local object store, the workspace (disk compared with the last commit, ADR-0003 §10), the commit journal and its crash safety (§11), full versions for text and Word files and change events only for everything else (brief), diffs, restore as a new change, the AI commit message flow and what the catalog keeps for M2.",
+          "End with the M2 contract outline (workspace.*, history.*, ai.*) for feat/ipc-m2-contract, the crates chore/build-deps-m2 needs, and a check that the planned M2 lanes still fit.",
+          "remote-format.md needs my approval (decision remote-format): once real data exists the format is hard to change. Ask me about retention, size limits and which files get full versions, each as concrete options."
+        ]
+      }
     },
     {
       "id": "feat/ipc-m2-contract",
@@ -1994,13 +2053,24 @@
       "track": "core",
       "agent": "claude-code",
       "size": "M",
-      "effort": "xhigh",
       "deps": [
         "docs/specs-history-format"
       ],
       "summary": "workspace.*、history.*、ai.* 和 AI 设置的合约",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/specs/versioning.md",
+        "docs/specs/remote-format.md",
+        "docs/specs/ipc-m1.md",
+        "docs/adr/ADR-0004-ipc-contract.md"
+      ],
+      "prompt": {
+        "extra": [
+          "Write docs/specs/ipc-m2.md in the style of ipc-m1.md from docs/specs/versioning.md: the workspace.*, history.* and ai.* commands and events (WorkspaceChanged, the commit and restore jobs), their types and error tables, and the AI settings. The API key is write-only across IPC: the UI can set, test and clear it, never read it back.",
+          "Fake shell scenarios for the M2 UI lanes: a workspace with text, Word and binary changes; a long history; large and empty diffs; a failed commit; a restore; AI unavailable."
+        ]
+      }
     },
     {
       "id": "design/design-m2-details",
@@ -2015,7 +2085,18 @@
       ],
       "summary": "窄窗口下的工作区和历史、差异视图的各种状态、恢复确认",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/design/handoff/app-shell.md",
+        "docs/design/handoff/library-actions.md",
+        "docs/specs/versioning.md"
+      ],
+      "prompt": {
+        "extra": [
+          "Screens: the workspace (changes list, check boxes, commit box, pending-sync list) and the history (timeline, file cards, single-file history) at the narrow and wide window sizes; the diff view in every state (text, Word text, a binary file shown as a change event only, very large, loading, failed); the restore confirmation (it makes a new change, nothing is lost); the AI commit message states (generating, failed, falling back to the template).",
+          "Reuse the shell, toolbar, dialogs and activity button from app-shell.md and library-actions.md; the data comes from docs/specs/versioning.md (written by docs/specs-history-format). Hand off as docs/design/handoff/workspace-history.md for feat/ui-diff-viewer, feat/ui-changes-view and feat/ui-history-view."
+        ]
+      }
     },
     {
       "id": "chore/build-deps-m2",
@@ -2030,7 +2111,15 @@
       ],
       "summary": "差异算法、docx 解析、HTTP 客户端等 crate",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/specs/versioning.md",
+        "docs/specs/remote-format.md"
+      ],
+      "prompt": [
+        "Add the crates M2 needs, as docs/specs/versioning.md chooses them: a text diff library, a docx text reader (zip and XML; no macros, no external processes), an HTTP client with rustls for the AI call, and anything the object store needs beyond blake3. Prefer small, maintained crates with permissive licences; record each choice, version and licence in the spec.",
+        "An exclusive operation (CLAUDE.md §7.4): only when every other lane is at checkpoint, review or done. Versions at least one day old, pinned with `cargo update --precise`. No feature code: Cargo.toml, Cargo.lock and at most a compile-only smoke test."
+      ]
     },
     {
       "id": "feat/core-object-store",
@@ -2040,14 +2129,23 @@
       "track": "core",
       "agent": "codex",
       "size": "L",
-      "effort": "max",
+      "auditEffort": "max",
       "deps": [
         "feat/ipc-m2-contract",
         "chore/build-deps-m2"
       ],
       "summary": "BLAKE3 对象、pack 编解码、本机存储，golden 测试（关键路径）",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/specs/remote-format.md",
+        "docs/specs/versioning.md",
+        "docs/adr/ADR-0003-versioning-and-sync.md"
+      ],
+      "prompt": [
+        "Critical path for M2 and M3. Implement docs/specs/remote-format.md and the local store in docs/specs/versioning.md: BLAKE3 object ids, the object kinds, immutable packs (encode and decode) and the local object store with crash-safe writes (temporary file, flush, rename; a partial pack is never visible).",
+        "The golden vectors in remote-format.md pass byte for byte. Add property-based tests (round trip, corruption detected, truncated packs rejected) and a crash-injection test for every write step. Large files stream and memory stays bounded. folio-core only, in a new module; no IPC in this lane."
+      ]
     },
     {
       "id": "feat/core-workspace",
@@ -2062,7 +2160,16 @@
       ],
       "summary": "工作区 = 磁盘现状对比上次提交；WorkspaceChanged",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/specs/versioning.md",
+        "docs/specs/ipc-m2.md",
+        "docs/specs/library-scan.md"
+      ],
+      "prompt": [
+        "The workspace is the disk compared with the last commit (docs/specs/versioning.md, ADR-0003 §10). Reuse the M1 scan and catalog change detection (docs/specs/library-scan.md) instead of a second walker. Text and Word files get full versions; every other file gets change events only.",
+        "Emit WorkspaceChanged as ipc-m2.md defines; its commands stop being stubs here. Handle renames, case-only renames and unreadable files (they go to the problems list, never a crash)."
+      ]
     },
     {
       "id": "feat/core-commit-history",
@@ -2072,13 +2179,21 @@
       "track": "core",
       "agent": "codex",
       "size": "L",
-      "effort": "max",
       "deps": [
         "feat/core-workspace"
       ],
       "summary": "提交（有日志，崩溃安全）、模板说明、修改说明、撤销提交、历史和单文件历史",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/specs/versioning.md",
+        "docs/specs/ipc-m2.md",
+        "docs/adr/ADR-0003-versioning-and-sync.md"
+      ],
+      "prompt": [
+        "Commit with a journal that is crash-safe at every step (ADR-0003 §11, docs/specs/versioning.md): a commit and its objects exist completely or not at all, and the next start finishes or rolls back. Crash injection at every journal step, as the M1 move and import journals do (docs/specs/library-scan.md §7).",
+        "Also the template commit message, editing the message, undoing the last commit, and the history list and single-file history, paged for 50,000-file libraries."
+      ]
     },
     {
       "id": "feat/core-text-extract",
@@ -2094,7 +2209,16 @@
       ],
       "summary": "从 md、代码、txt、docx 抽取文字进全文索引（正文搜索）",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/specs/versioning.md",
+        "docs/adr/ADR-0002-data-storage.md",
+        "docs/specs/library-scan.md"
+      ],
+      "prompt": [
+        "Extract text from md, code, txt and docx into the full-text index (ADR-0002 and its Chinese FTS5 tokenizer) so search finds file contents. Detect encodings (UTF-8 with or without BOM, UTF-16, GBK); cap the text and the time per file; never run macros or external programs; a file that fails goes to the problems list and never stops the scan.",
+        "Re-extract only when the content hash changes; measure the extra scan time on the 50,000-file fixture."
+      ]
     },
     {
       "id": "feat/core-diff-restore",
@@ -2109,7 +2233,14 @@
       ],
       "summary": "文本和 Word 文字的差异；恢复旧版本 = 产生一条新改动",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/specs/versioning.md",
+        "docs/specs/ipc-m2.md"
+      ],
+      "prompt": [
+        "Diffs for text and for Word text (by paragraph), with a summary instead of a diff for very large files; other files show change events only. Restoring an old version writes it to disk as a new change: history is never rewritten, and the current file is never lost (it stays in history or goes to the Recycle Bin)."
+      ]
     },
     {
       "id": "feat/core-ai-message",
@@ -2119,14 +2250,23 @@
       "track": "core",
       "agent": "codex",
       "size": "M",
-      "effort": "xhigh",
+      "auditModel": "fable",
       "deps": [
         "feat/ipc-m2-contract",
         "chore/build-deps-m2"
       ],
       "summary": "DeepSeek（兼容 OpenAI）只从特权层请求；Key 存在 Windows 凭据管理器；失败退回模板；要 /security-review",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/specs/versioning.md",
+        "docs/specs/ipc-m2.md",
+        "docs/specs/windows-adapter.md"
+      ],
+      "prompt": [
+        "The AI commit message: DeepSeek through its OpenAI-compatible API, called only from the privileged layer. The key lives in Windows Credential Manager, never in settings files or logs, and is never returned to the UI. Send only what docs/specs/versioning.md allows (paths and diff excerpts under a size cap), with a timeout; any failure falls back to the template message.",
+        "The audit runs /security-review (network egress, secrets). What leaves the machine is my decision: stop and ask if the spec leaves a case open."
+      ]
     },
     {
       "id": "feat/ui-diff-viewer",
@@ -2142,7 +2282,17 @@
       ],
       "summary": "工作区和历史共用的差异组件（在假 shell 上开发，不等核心）",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/design/handoff/workspace-history.md",
+        "docs/specs/ipc-m2.md"
+      ],
+      "prompt": {
+        "extra": [
+          "The diff component the workspace and history views share: text and Word text diffs; a binary or unsupported file as a change event only; a very large diff as a summary with a way to open the file. Build it on the fake shell scenarios from feat/ipc-m2-contract; it does not wait for the core lanes.",
+          "Virtualise long diffs; mark changes with more than colour (signs or labels) so it passes the contrast and screen-reader checks; the keyboard moves between changes."
+        ]
+      }
     },
     {
       "id": "feat/ui-changes-view",
@@ -2157,7 +2307,17 @@
       ],
       "summary": "改动列表、勾选、提交框、Ctrl+Enter、待同步列表",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/design/handoff/workspace-history.md",
+        "docs/specs/ipc-m2.md"
+      ],
+      "prompt": {
+        "extra": [
+          "The workspace view: the changes list with check boxes, the commit box (template and AI message; Ctrl+Enter commits), progress and result through the activity button, and the pending-sync list (empty until M3). The selected file uses feat/ui-diff-viewer.",
+          "A failed commit keeps the selection and the message and shows the error state; 50,000 changed files stay fluid (pages, never the whole list)."
+        ]
+      }
     },
     {
       "id": "feat/ui-history-view",
@@ -2172,7 +2332,16 @@
       ],
       "summary": "历史时间线、文件卡片、单文件历史、恢复",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/design/handoff/workspace-history.md",
+        "docs/specs/ipc-m2.md"
+      ],
+      "prompt": {
+        "extra": [
+          "The history view: the timeline, file cards, single-file history and restore with its confirmation (a restore makes a new change). Uses feat/ui-diff-viewer. Long histories page; a failed restore leaves the user where they were."
+        ]
+      }
     },
     {
       "id": "feat/ui-settings-ai",
@@ -2188,7 +2357,16 @@
       ],
       "summary": "AI 设置页（Key、模型、开关）",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/specs/ipc-m2.md",
+        "docs/design/handoff/workspace-history.md"
+      ],
+      "prompt": {
+        "extra": [
+          "The AI page in Settings, inside the structure feat/ui-settings built (apps/desktop/src/settings/): on or off, the model, and the API key as a write-only field (set, test, clear; never shown back). Copy via design:ux-copy, including what is sent to DeepSeek and that commits work without AI."
+        ]
+      }
     },
     {
       "id": "gate/m2-acceptance",
@@ -2209,7 +2387,18 @@
       ],
       "summary": "提交和恢复在崩溃注入下不丢数据；你自己用 v0.2 至少一两周",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/specs/versioning.md",
+        "docs/specs/remote-format.md",
+        "docs/specs/testing-strategy.md"
+      ],
+      "prompt": {
+        "extra": [
+          "M2 acceptance (roadmap.json `milestones` M2): commit and restore lose nothing under crash injection at every journal step; the remote-format golden vectors still pass; e2e for the workspace, history, diff, restore and AI settings flows; history performance on the 50,000-file fixture; fixtures for the frozen object and pack formats.",
+          "I use v0.2 on my own library for one or two weeks before the gate is done: prepare the unsigned build and a short list of what to watch for."
+        ]
+      }
     },
     {
       "id": "test/core-icloud-field-test",
@@ -2224,7 +2413,16 @@
       ],
       "summary": "真实 iCloud 实测（ADR-0003 行动项 4）：冲突副本命名、NFD 文件名、大小写重命名、删除去向、固定文件夹、pack 和 head 记录先后；要你在 iPad 上配合",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/adr/ADR-0003-versioning-and-sync.md"
+      ],
+      "prompt": {
+        "extra": [
+          "ADR-0003 action item 4, on the current iCloud for Windows (installed on DESKTOP-N7UG6S7 on 10-02), with me on the iPad: how conflict copies are named (edits and new files); how updates reach downloaded files and whether watchers see them; NFD names and names invalid on Windows; case-only renames; whether remote deletions reach the Recycle Bin; whether new files in a pinned folder inherit the pin; ordering and latency between a head record and a large pack; renaming over an existing file versus delete then move.",
+          "First write a step-by-step plan I can follow (what I do on the iPad, what you script on Windows); then run it and record every observation with versions and timings in docs/research/icloud-field-test.md (a Chinese summary for me, raw logs alongside). The results feed docs/specs-sync and the simulation's fake remote."
+        ]
+      }
     },
     {
       "id": "test/core-sync-simulation",
@@ -2234,13 +2432,22 @@
       "track": "verify",
       "agent": "codex",
       "size": "L",
-      "effort": "xhigh",
       "deps": [
         "docs/specs-history-format"
       ],
       "summary": "同步仿真 harness（行动项 3）：最终一致的假云端、两台设备加「iPad」、每个日志步骤注入崩溃；长跑放夜间 CI",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/adr/ADR-0003-versioning-and-sync.md",
+        "docs/specs/remote-format.md",
+        "docs/specs/versioning.md"
+      ],
+      "prompt": [
+        "ADR-0003 action item 3: the sync simulation harness. The fake remote is an eventually consistent folder with per-file delays and reordering, head records that arrive before their packs, conflict copies in every observed naming pattern, NFD names, blocking placeholders, silent overwrites and stalls of days. The actors are two Folio devices and an \"iPad\" writer running random operation sequences, with a crash injected at every journal step.",
+        "Invariants: nothing ever canonical is lost (it is in a pack, the library, the mirror or the Recycle Bin); devices converge after quiet periods; no direct edit is silently overwritten; one linear canonical history. Seeds are reproducible and a failing seed prints a minimal replay.",
+        "A short run in `pnpm check`, the long run in a nightly CI workflow (actions pinned to commit SHAs). Until feat/core-sync-round exists, drive it with the M2 store and a reference model of the sync rules."
+      ]
     },
     {
       "id": "docs/specs-sync",
@@ -2250,13 +2457,25 @@
       "track": "flow",
       "agent": "claude-code",
       "size": "M",
-      "effort": "xhigh",
+      "effort": "max",
       "deps": [
         "test/core-icloud-field-test"
       ],
       "summary": "同步的 spec",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/adr/ADR-0003-versioning-and-sync.md",
+        "docs/research/icloud-field-test.md",
+        "docs/specs/remote-format.md",
+        "docs/specs/versioning.md"
+      ],
+      "prompt": {
+        "extra": [
+          "Write docs/specs/sync.md from ADR-0003 §5–§12 and the field test (docs/research/icloud-field-test.md): the remote layout as used; choosing the canonical head; one sync round (pull, import direct edits, rebase, land files with deletions to the Recycle Bin, push); the snapshot before a sync and recovery after an interruption; mirror rules and invalid names; merge rules; placeholders and freeing space (on by default, my 09-26 decision); watching the remote; creating and joining a remote.",
+          "Every rule names the simulation invariant that checks it; list what the field test could not settle and how the design stays safe anyway. End with the M3 contract outline and a check of the planned M3 lanes."
+        ]
+      }
     },
     {
       "id": "feat/ipc-m3-contract",
@@ -2266,14 +2485,24 @@
       "track": "core",
       "agent": "claude-code",
       "size": "M",
-      "effort": "xhigh",
       "deps": [
         "docs/specs-sync",
         "gate/m2-acceptance"
       ],
       "summary": "同步的合约",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/specs/sync.md",
+        "docs/specs/ipc-m2.md",
+        "docs/adr/ADR-0004-ipc-contract.md"
+      ],
+      "prompt": {
+        "extra": [
+          "Write docs/specs/ipc-m3.md from docs/specs/sync.md: the sync.* and remote.* commands and events (status with ↑N ↓N, the sync job with progress and result, conflicts and their choices, creating and joining a remote, freeing space), types and error tables.",
+          "Fake shell scenarios for the M3 UI lanes: in sync, ahead and behind, syncing, offline, every conflict kind, a failed sync, joining an existing remote."
+        ]
+      }
     },
     {
       "id": "design/design-sync",
@@ -2288,7 +2517,18 @@
       ],
       "summary": "工具栏同步状态、进度和结果、冲突处理、创建 / 加入云端仓库、释放空间",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/specs/sync.md",
+        "docs/design/handoff/app-shell.md",
+        "docs/design/handoff/library-actions.md"
+      ],
+      "prompt": {
+        "extra": [
+          "Screens: the toolbar's sync state (in sync, ↑N ↓N, syncing, offline, error) and the Sync button; sync progress and the result; resolving conflicts one at a time (text merge, choosing a Word version, keeping both); creating and joining a remote in iCloud Drive; freeing space.",
+          "Rules and data come from docs/specs/sync.md; reuse the shell, toolbar, activity button and dialogs. Hand off as docs/design/handoff/sync.md for feat/ui-sync-toolbar, feat/ui-conflicts and feat/ui-remote-setup."
+        ]
+      }
     },
     {
       "id": "feat/core-remote-store",
@@ -2304,7 +2544,16 @@
       ],
       "summary": "云端布局；推送 pack 和 head 记录；拉取并校验；选出规范 head",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/specs/sync.md",
+        "docs/specs/remote-format.md",
+        "docs/adr/ADR-0003-versioning-and-sync.md"
+      ],
+      "prompt": [
+        "The remote side of docs/specs/sync.md and remote-format.md: the remote layout in iCloud Drive; packs pushed before head records; every pulled object verified (BLAKE3) before use; choosing the canonical head (ADR-0003 §6). Never overwrite or delete anything on the remote another device may still need; tolerate missing, late, duplicated and conflict-copied files.",
+        "The simulation harness (test/core-sync-simulation) runs against it and the golden vectors still pass."
+      ]
     },
     {
       "id": "feat/core-mirror",
@@ -2319,7 +2568,16 @@
       ],
       "summary": "普通文件夹镜像；覆盖前先导入；识别 iPad / Mac 上的直接修改；不合法的文件名；冲突副本",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/specs/sync.md",
+        "docs/research/icloud-field-test.md",
+        "docs/adr/ADR-0003-versioning-and-sync.md"
+      ],
+      "prompt": [
+        "The plain-folder mirror (ADR-0003 §7, docs/specs/sync.md): import before overwrite, so a direct edit made on the iPad or a Mac is never lost; recognise those edits; names invalid on Windows; conflict copies in the patterns the field test recorded. Deletions go to the Recycle Bin, never permanently.",
+        "Crash injection at every step; the simulation invariants hold."
+      ]
     },
     {
       "id": "feat/core-sync-round",
@@ -2329,7 +2587,7 @@
       "track": "core",
       "agent": "codex",
       "size": "L",
-      "effort": "max",
+      "auditEffort": "max",
       "deps": [
         "feat/core-mirror",
         "feat/core-commit-history",
@@ -2337,7 +2595,15 @@
       ],
       "summary": "拉取 → 导入直接修改 → rebase → 落地文件（删除进回收站）→ 推送；同步前快照；中断后恢复（关键路径）",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/specs/sync.md",
+        "docs/adr/ADR-0003-versioning-and-sync.md"
+      ],
+      "prompt": [
+        "Critical path. One sync round as docs/specs/sync.md defines it: pull → import direct edits → rebase → land files (deletions to the Recycle Bin) → push; a snapshot before each sync and recovery after an interruption at any step.",
+        "Done means the long simulation run is green across many seeds with every invariant holding (nothing canonical lost, convergence, no silent overwrite, one linear history). Report the seeds and the run time in the handoff."
+      ]
     },
     {
       "id": "feat/core-merge-conflicts",
@@ -2347,14 +2613,21 @@
       "track": "core",
       "agent": "codex",
       "size": "M",
-      "effort": "xhigh",
       "deps": [
         "feat/core-sync-round",
         "feat/core-diff-restore"
       ],
       "summary": "文本三方合并；Word 由你选；其他文件两份都留",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/specs/sync.md",
+        "docs/specs/ipc-m3.md",
+        "docs/adr/ADR-0003-versioning-and-sync.md"
+      ],
+      "prompt": [
+        "Merge rules for paths changed on both sides (ADR-0003 §9): a three-way merge for text, my choice for Word files, both copies kept for everything else. The result is a normal commit and nothing is discarded without a copy. Expose the conflicts as ipc-m3.md defines for feat/ui-conflicts."
+      ]
     },
     {
       "id": "feat/core-placeholders",
@@ -2369,7 +2642,14 @@
       ],
       "summary": "等待占位文件下载；推送后设为「仅在云端」释放空间",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/specs/sync.md",
+        "docs/specs/windows-adapter.md"
+      ],
+      "prompt": [
+        "iCloud placeholders: wait for a placeholder to download before reading it (progress and a timeout, never a hang), and after a push mark mirror files online-only to free space (on by default). Use the Windows cloud-files APIs through the windows adapter (docs/specs/windows-adapter.md); unsafe and FFI code gets unsafe-checker, and the audit runs /security-review."
+      ]
     },
     {
       "id": "feat/core-remote-watch",
@@ -2384,7 +2664,14 @@
       ],
       "summary": "发现云端新记录 → 工具栏显示 ↓N",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/specs/sync.md",
+        "docs/specs/ipc-m3.md"
+      ],
+      "prompt": [
+        "Watch the remote for new head records and report ↓N to the toolbar (the event in ipc-m3.md). Debounce, survive iCloud's delays and the folder disappearing, and cost nothing while idle."
+      ]
     },
     {
       "id": "feat/core-remote-setup",
@@ -2399,7 +2686,14 @@
       ],
       "summary": "创建云端仓库；换电脑后加入",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/specs/sync.md",
+        "docs/specs/ipc-m3.md"
+      ],
+      "prompt": [
+        "Create a remote in iCloud Drive and join an existing one after a device change (docs/specs/sync.md): validate the folder, refuse one that is not a Folio remote or holds a newer format, never overwrite either side; the first sync after joining imports before it lands anything."
+      ]
     },
     {
       "id": "feat/ui-sync-toolbar",
@@ -2415,7 +2709,16 @@
       ],
       "summary": "云端状态、↑N ↓N、Sync 按钮、进度和结果",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/design/handoff/sync.md",
+        "docs/specs/ipc-m3.md"
+      ],
+      "prompt": {
+        "extra": [
+          "The toolbar's sync state and Sync button, progress through the activity button, and the result, from docs/design/handoff/sync.md on the fake shell scenarios of feat/ipc-m3-contract. Offline and error states are explicit; the button is keyboard reachable and announces state changes."
+        ]
+      }
     },
     {
       "id": "feat/ui-conflicts",
@@ -2425,6 +2728,7 @@
       "track": "ui",
       "agent": "claude-code",
       "size": "M",
+      "effort": "xhigh",
       "deps": [
         "feat/ipc-m3-contract",
         "design/design-sync",
@@ -2432,7 +2736,16 @@
       ],
       "summary": "逐个处理冲突",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/design/handoff/sync.md",
+        "docs/specs/ipc-m3.md"
+      ],
+      "prompt": {
+        "extra": [
+          "Resolving conflicts one at a time from docs/design/handoff/sync.md: text with the merge result in feat/ui-diff-viewer, Word by choosing a version, other files by keeping both. Cancelling loses nothing, and every choice is confirmed."
+        ]
+      }
     },
     {
       "id": "feat/ui-remote-setup",
@@ -2448,7 +2761,16 @@
       ],
       "summary": "创建 / 加入云端仓库的流程",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/design/handoff/sync.md",
+        "docs/specs/ipc-m3.md"
+      ],
+      "prompt": {
+        "extra": [
+          "Creating and joining a remote from docs/design/handoff/sync.md: choosing the iCloud Drive folder (native dialog), validation errors, the first sync's progress. Say plainly that joining never overwrites files."
+        ]
+      }
     },
     {
       "id": "gate/m3-acceptance",
@@ -2470,7 +2792,17 @@
       ],
       "summary": "长时间仿真全绿；iCloud 实测通过；两台 Windows 设备加 iPad 的实机测试（旧电脑 g16-strix 可以当第二台）",
       "status": "planned",
-      "updated": "2026-10-02"
+      "updated": "2026-10-02",
+      "links": [
+        "docs/specs/sync.md",
+        "docs/research/icloud-field-test.md"
+      ],
+      "prompt": {
+        "extra": [
+          "M3 acceptance (roadmap.json `milestones` M3): the long simulation run is green; the field test passed; a real test over several days with two Windows devices (g16-strix can be the second) and the iPad.",
+          "You prepare and support: the test plan with steps for each device, builds for both machines and a log of what happened; I run the devices. Any lost or overwritten file is a blocker with its own fix lane."
+        ]
+      }
     },
     {
       "id": "feat/ui-office-preview",
@@ -2487,7 +2819,16 @@
       ],
       "summary": "按 spike 的结论接入 Word / Excel / PPT 预览（M3 期间就可以开始）",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/research/office-preview-spike.md",
+        "docs/specs/ui-architecture.md"
+      ],
+      "prompt": {
+        "extra": [
+          "Word, Excel and PowerPoint previews as docs/research/office-preview-spike.md concludes (PowerPoint: option A; Excel shows values without cell styles, accepted 09-26). Keep \"open with\" as the fallback; untrusted files render under the preview's CSP with no scripts; measure memory on large files. It can start during M3."
+        ]
+      }
     },
     {
       "id": "feat/ui-onboarding",
@@ -2502,7 +2843,16 @@
       ],
       "summary": "首次使用引导",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/design/handoff/first-run.md",
+        "docs/product/brief.md"
+      ],
+      "prompt": {
+        "extra": [
+          "A first-use guide (choosing the library, semesters and courses, tags, search, history and sync). It needs a design handoff first: if docs/design/handoff/ has none, stop and ask me to run a Cowork design lane. Skippable, never blocking, and reopenable from Settings."
+        ]
+      }
     },
     {
       "id": "feat/core-app-integration",
@@ -2517,7 +2867,14 @@
       ],
       "summary": "开机启动、快捷键、检查更新的设置",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/specs/windows-adapter.md",
+        "docs/adr/ADR-0004-ipc-contract.md"
+      ],
+      "prompt": [
+        "Start with Windows, a global shortcut that opens Folio, and the check-for-updates setting. If no spec defines their settings and IPC yet, stop and ask for the contract first. Tauri plugins come through a deps lane; capabilities list individual permissions only."
+      ]
     },
     {
       "id": "chore/build-release-pipeline",
@@ -2527,12 +2884,23 @@
       "track": "flow",
       "agent": "claude-code",
       "size": "M",
+      "effort": "xhigh",
       "deps": [
         "gate/m3-acceptance"
       ],
       "summary": "Tauri updater、公开的更新源、打 tag 自动构建 NSIS 并发布",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/adr/ADR-0001-application-stack.md",
+        ".github/workflows/ci.yml"
+      ],
+      "prompt": {
+        "extra": [
+          "The Tauri updater with a public update feed, and a tag that builds the NSIS installer in CI and publishes the release. Code signing and where the feed lives are my decision (decision signing; ADR-0001 action item 6): ask me first.",
+          "The updater's private key lives only in GitHub secrets, never in the repository or logs; actions pinned to commit SHAs; the release job runs on windows-2022 like CI. engineering:deploy-checklist and /security-review (secrets, update integrity)."
+        ]
+      }
     },
     {
       "id": "docs/docs-install-guide",
@@ -2547,7 +2915,16 @@
       ],
       "summary": "给同学朋友的安装说明，包括 SmartScreen 怎么放行",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/product/brief.md",
+        "docs/adr/ADR-0001-application-stack.md"
+      ],
+      "prompt": {
+        "extra": [
+          "An install guide in Chinese for classmates and friends: download, the SmartScreen and Smart App Control prompts for an unsigned app (with screenshots), choosing the library folder, updating, uninstalling, and where to report problems. Short; test every step on a clean Windows user account."
+        ]
+      }
     },
     {
       "id": "test/build-release-candidate",
@@ -2566,7 +2943,18 @@
       ],
       "summary": "Windows 10 和多显示器缩放；全量无障碍审查；5 万文件 / 100 GB 性能复核；整个 IPC 面的 /security-review；收窄 core:event:allow-listen；engineering:deploy-checklist",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/specs/testing-strategy.md",
+        "docs/specs/system-overview.md",
+        "crates/folio-app/capabilities/"
+      ],
+      "prompt": {
+        "extra": [
+          "Release candidate checks: Windows 10 and multi-monitor setups with different scaling; a full design:accessibility-review of every screen; a 50,000-file / 100 GB performance pass; /security-review over the whole IPC surface; narrowing core:event:allow-listen (every window can listen to every event today); the open performance items (hashing opens each file three times); engineering:deploy-checklist.",
+          "Every blocker becomes a fix lane; report a go / no-go table to me."
+        ]
+      }
     },
     {
       "id": "gate/v1-trial",
@@ -2577,13 +2965,22 @@
       "track": "verify",
       "agent": "sirui",
       "size": "M",
-      "effort": "medium",
+      "model": "opus",
+      "effort": "high",
       "deps": [
         "test/build-release-candidate"
       ],
       "summary": "2～3 位同学试用 → 修问题 → v1.0 上线",
       "status": "planned",
-      "updated": "2026-10-01"
+      "updated": "2026-10-01",
+      "links": [
+        "docs/product/brief.md"
+      ],
+      "prompt": {
+        "extra": [
+          "Two or three classmates try the release candidate. Prepare a short trial guide and feedback form, collect the reports, run design:research-synthesis on them and turn the problems into fix lanes ranked by severity. v1.0 ships when I decide the fixes are enough."
+        ]
+      }
     }
   ],
   "landingQueue": [],
@@ -2709,7 +3106,7 @@
       "item": "Codex 做的后端 lane 由 Claude Code 怎么审",
       "type": "decide",
       "state": "done",
-      "result": "相信 Codex：Claude 只做快速审计（一次 /code-review，涉及特权层加 /security-review，不重跑 /simplify），S 用 low、M/L 用 medium"
+      "result": "相信 Codex：Claude 只做快速审计（一次 /code-review，涉及特权层加 /security-review，不重跑 /simplify）。10-03 起强度提高：S Opus · medium、M Opus · high、L Fable · xhigh（对象库、一轮同步 max）"
     },
     {
       "id": "problems-list-lane",
@@ -2718,6 +3115,14 @@
       "type": "decide",
       "state": "done",
       "result": "M1 验收前加上 feat/ui-problems-list（在导入界面会话里回答）"
+    },
+    {
+      "id": "model-policy",
+      "when": "2026-10-03",
+      "item": "模型选择加入 Fable 5.1，按任务推荐模型和推理强度，可以适当提高推理强度",
+      "type": "decide",
+      "state": "done",
+      "result": "Fable 5.1：验收关卡、规格、IPC 合约、推理强度 max；Opus 5.5：界面、核心、测试、设计；Sonnet 5.5：只改文档、只合并。默认推理强度高一档。每个 lane 的标签和提示词第一行都写着推荐"
     }
   ],
   "looseEnds": [
@@ -2762,12 +3167,12 @@
       "lane": "feat/ui-search-palette"
     },
     {
-      "state": "open",
+      "state": "done",
       "item": "两个重复的 STA 辅助函数",
       "lane": "refactor/core-sta-helper"
     },
     {
-      "state": "open",
+      "state": "done",
       "item": "移动做到一半崩溃后对不上，资料库打不开（你 9-30 批准加「放弃」入口）",
       "lane": "feat/core-discard-move"
     },
@@ -2885,11 +3290,13 @@
     "每个 lane 同样收尾：pnpm check + pnpm e2e → /code-review（+ /security-review）→ /simplify → 中文汇报 → 你批准 → but land（Codex lane 见下一条）",
     "CI 红了先修",
     "Codex lane（标着 Codex 的后端 lane）：用「交给 Codex」提示词开工，Codex 自己跑完检查、code-review 和 simplify 后停在 review；再开 Claude Code session 用「Claude 快速审计」提示词：一次 /code-review，涉及特权层再加 /security-review，不重跑 /simplify",
+    "开 session 时按路径图标签（也是提示词第一行）选模型和推理强度：Fable 5.1 给最难回退的工作，Opus 5.5 是日常默认，Sonnet 5.5 给只改文档和只合并的 lane",
     "路线图数据随 lane 更新：开工、到 review、合并前各跑一次 pnpm roadmap status，只改自己那一条"
   ],
   "prompts": {
     "land": [
       "Folio: land {lane} (docs/roadmap/roadmap.json, landing queue). I approve landing it once the checks are green.",
+      "Run this session on {model} at {effort} effort.",
       "1. Read CLAUDE.md §7, every file in .agents/lanes/ and .agents/lanes/{laneFile}.md; run `but status` and `but pull --check`.",
       "2. Confirm from the lane file that /code-review, /security-review where it applies, and /simplify are done; if one is missing, run it and fix findings with commits on the branch.",
       "{extra}",
@@ -2918,10 +3325,14 @@
       "Report to me in Chinese."
     ],
     "start": [
-      "Folio lane {lane} (docs/roadmap/roadmap.json: {milestone}, {phase}). Goal, from the roadmap: {summary}",
-      "Read CLAUDE.md, every file in .agents/lanes/ and the lane's entry (`pnpm roadmap show {lane}`: what it depends on, what it unblocks, its links). Write the lane file and set the entry to wip (`pnpm roadmap status {lane} wip`).",
-      "Follow the feature pipeline in CLAUDE.md §4.2 for this kind of lane (engineering:system-design first for backend or IPC work; a handoff spec first for UI).",
-      "Finish with `pnpm check` and `pnpm e2e` under the app lock (CLAUDE.md §7.5), /code-review, /security-review if it touches the privileged layer or IPC, and /simplify; set the entry to review and report to me in Chinese."
+      "Folio lane {lane}: {title} ({milestone}, {phase}). Run this session on {model} at {effort} effort.",
+      "Goal: {summary}",
+      "Depends on: {deps}. Landing it unblocks: {unblocks}.",
+      "{extra}",
+      "1. Start: read CLAUDE.md, every file in .agents/lanes/ and `pnpm roadmap show {lane}`; run `but status` and `but pull --check`. Read before designing: {links}. Owns: {owns}. Shared files, small additive hunks only: {shared}. If an active lane owns a path you need, stop and ask me. Write .agents/lanes/{laneFile}.md (CLAUDE.md §7.3), create the branch with `but branch new {lane}` and run `pnpm roadmap status {lane} wip --next \"<what you are doing>\"`.",
+      "2. Follow the feature pipeline in CLAUDE.md §4.2 for this kind of lane. Dependency changes are exclusive operations (CLAUDE.md §7.4): new versions at least one day old (pnpm minimumReleaseAge; crates pinned with `cargo update --precise`; GitHub Actions pinned to a release's commit SHA); record why each one was chosen.",
+      "3. Finish: `pnpm check`, `pnpm e2e` under the app lock if the app is affected (CLAUDE.md §7.5; remove the lock only if you took it), /code-review, /security-review if it touches the privileged layer, CI or secrets, and /simplify; record the gates (`pnpm roadmap gate {lane} check=pass e2e=pass codeReview=pass simplify=pass`), set `pnpm roadmap status {lane} review --next \"<what I approve>\"`, add the lane to landingQueue and report to me in Chinese: what changed, checks, open risks.",
+      "4. When I approve the land: `pnpm roadmap status {lane} done` and commit that entry on the branch; check that no other lane is landing and that the previous land's CI run on main finished green; then `but land {lane} --yes`, `but status`, delete the lane file and check the CI run on main. Stop at the first conflict or failure and report it; never use --ai."
     ],
     "codexHandoff": [
       "Folio Codex lane {lane}: {title} ({milestone}, {phase}). Backend Rust only. Work in D:/CS Projects Repositories/Files & Backup/Folio (REPO); scratch and review notes go in D:/CS Projects Repositories/Files & Backup/folio-agent-work/tasks/{taskDir}/ (WORK).",
@@ -2940,7 +3351,7 @@
       "3. system-design against the specs and ADRs before coding. A missing contract or a costly decision: stop and ask me. Never change the IPC contract (generated bindings, the fake shell) unless this lane owns it; never hand-edit apps/desktop/src/ipc/bindings.ts.",
       "4. Implement with tests in the same commits: failure, crash-recovery and migration cases where they apply, disposable data only. Commit only your own files or hunks: `but commit -b {lane} -m \"<type>(<scope>): <summary>\" <ids>`. Commits are Sirui's: no Codex, model, session or co-author lines; never `--ai`.",
       "5. Finish: `pnpm check`, then `pnpm e2e` under the app lock (CLAUDE.md §7.5; remove the lock only if you took it). Run code-review, ponytail (simplify), and the security skills (differential-review, unsafe-checker) when the lane touches the privileged layer, IPC, capabilities or unsafe/FFI code; fix what they find. Record results with `pnpm roadmap gate {lane} check=pass e2e=pass codeReview=pass simplify=pass` (securityReview too when it applies).",
-      "6. Write WORK/claude-review-handoff.md for a short Claude Code audit: commits, behaviour, exact check results, the three to five places most worth a second look, open risks and any frontend handoff (command, types, errors). Then `pnpm roadmap status {lane} review --next \"Claude audit\"`, commit that entry on the branch and stop: no push, no land.",
+      "6. Write WORK/claude-review-handoff.md for the Claude Code audit (it runs at {auditModel} · {auditEffort}): commits, behaviour, exact check results, the three to five places most worth a second look, open risks and any frontend handoff (command, types, errors). Then `pnpm roadmap status {lane} review --next \"Claude audit\"`, commit that entry on the branch and stop: no push, no land.",
       "",
       "Report to me in Chinese: branch, what changed, exact check results, risks and anything the frontend needs."
     ],
@@ -2952,6 +3363,71 @@
       "4. Take the app lock (CLAUDE.md §7.5), run `pnpm check` and `pnpm e2e`, release the lock. Record the gates, mark the lane done (`pnpm roadmap status {lane} done`) and commit that entry on the branch.",
       "5. Land one lane at a time, after the previous land's main CI has finished: `but land {lane} --yes`, `but status`, delete the lane file, check the CI run on main. Stop at the first conflict or failure; never use --ai.",
       "Report to me in Chinese: findings, fixes and check results."
+    ],
+    "startUi": [
+      "Folio lane {lane}: {title} ({milestone}, {phase}). Run this session on {model} at {effort} effort.",
+      "Goal: {summary}",
+      "Depends on: {deps}. Landing it unblocks: {unblocks}.",
+      "{extra}",
+      "1. Start: read CLAUDE.md, every file in .agents/lanes/ and `pnpm roadmap show {lane}`; run `but status` and `but pull --check`. Read before designing: {links}. Owns: {owns}. Shared files, small additive hunks only: {shared}. If an active lane owns a path you need, stop and ask me. Write .agents/lanes/{laneFile}.md (CLAUDE.md §7.3), create the branch with `but branch new {lane}` and run `pnpm roadmap status {lane} wip --next \"<what you are doing>\"`.",
+      "2. UI lane (CLAUDE.md §4.2): build from the handoff spec in docs/design/handoff/; if the screen has none, or it leaves a state open, stop and ask me (design goes to Cowork first). Use frontend-design and the shared components in apps/desktop/src/components/. Develop against the fake shell (apps/desktop/src/ipc/mock/); a UI lane never changes the IPC contract or the bindings. Strings only in your view's i18n namespace, visual values only from tokens, one icon family, a prefers-reduced-motion fallback for every animation; code and libraries must run on WebView2 131 (CI).",
+      "3. Verify: component tests for every state (loading, empty, error, success, disabled), a Playwright flow in e2e/tests/, design:design-critique and then design:accessibility-review on the built screen (keyboard path, visible focus and focus return, contrast, hit targets), and a reduced-motion check.",
+      "4. Finish: `pnpm check`, then `pnpm e2e` under the app lock (CLAUDE.md §7.5; remove the lock only if you took it), /code-review and /simplify; record the gates (`pnpm roadmap gate {lane} check=pass e2e=pass codeReview=pass simplify=pass designCritique=pass a11y=pass securityReview=na`), set `pnpm roadmap status {lane} review --next \"<what I approve>\"`, add the lane to landingQueue and report to me in Chinese: what changed, checks, open risks, screenshots.",
+      "5. When I approve the land: `pnpm roadmap status {lane} done` and commit that entry on the branch; check that no other lane is landing and that the previous land's CI run on main finished green; then `but land {lane} --yes`, `but status`, delete the lane file and check the CI run on main. Stop at the first conflict or failure and report it; never use --ai."
+    ],
+    "startCore": [
+      "Folio lane {lane}: {title} ({milestone}, {phase}). Run this session on {model} at {effort} effort.",
+      "Goal: {summary}",
+      "Depends on: {deps}. Landing it unblocks: {unblocks}.",
+      "{extra}",
+      "1. Start: read CLAUDE.md, every file in .agents/lanes/ and `pnpm roadmap show {lane}`; run `but status` and `but pull --check`. Read before designing: {links}. Owns: {owns}. Shared files, small additive hunks only: {shared}. If an active lane owns a path you need, stop and ask me. Write .agents/lanes/{laneFile}.md (CLAUDE.md §7.3), create the branch with `but branch new {lane}` and run `pnpm roadmap status {lane} wip --next \"<what you are doing>\"`.",
+      "2. Core lane (CLAUDE.md §4.2, §5): start with engineering:system-design against the specs and ADRs; a costly-to-reverse choice goes through engineering:architecture into an ADR, and to me, before code. folio-core stays shell-agnostic; IPC types are defined once in folio-app (no 64-bit integers, i32 rather than f64 in inputs); validate every payload on the privileged side; every function returns a typed error and none is swallowed; a schema or on-disk format change ships with a migration and a migration test.",
+      "3. Contract lanes (feat/ipc-*) only: write the commands, events, types and error tables into the IPC spec first; planned commands stay test-only stubs until their lane implements them; regenerate the bindings with `cargo test -p folio-app export_bindings` (never by hand) and update the fake shell and its REVIEWED_BINDINGS fingerprint in the same commit; land before the core and UI lanes that build on it.",
+      "4. Tests in the same commits as the behaviour: failure paths, crash injection at every journal step that writes state, migrations; disposable data only (a per-lane temporary data directory).",
+      "5. Finish: `pnpm check`, `pnpm e2e` under the app lock, /code-review, /security-review (privileged layer and IPC surface) and /simplify; add progress lines to ADR-0004 action item 3 and the IPC spec for the commands it finishes; record the gates (`pnpm roadmap gate {lane} check=pass e2e=pass codeReview=pass securityReview=pass simplify=pass`), set `pnpm roadmap status {lane} review --next \"<what I approve>\"`, add the lane to landingQueue and report to me in Chinese: what changed, checks, open risks, anything the frontend needs.",
+      "6. When I approve the land: `pnpm roadmap status {lane} done` and commit that entry on the branch; check that no other lane is landing and that the previous land's CI run on main finished green; then `but land {lane} --yes`, `but status`, delete the lane file and check the CI run on main. Stop at the first conflict or failure and report it; never use --ai."
+    ],
+    "startSpec": [
+      "Folio lane {lane}: {title} ({milestone}, {phase}). Run this session on {model} at {effort} effort.",
+      "Goal: {summary}",
+      "Depends on: {deps}. Landing it unblocks: {unblocks}.",
+      "{extra}",
+      "1. Start: read CLAUDE.md, every file in .agents/lanes/ and `pnpm roadmap show {lane}`; run `but status` and `but pull --check`. Read before designing: {links}. Owns: {owns}. Shared files, small additive hunks only: {shared}. If an active lane owns a path you need, stop and ask me. Write .agents/lanes/{laneFile}.md (CLAUDE.md §7.3), create the branch with `but branch new {lane}` and run `pnpm roadmap status {lane} wip --next \"<what you are doing>\"`.",
+      "2. Spec lane: engineering:system-design, then engineering:architecture for each costly choice (an ADR in docs/adr/). Write in English under docs/specs/. A format must be language-neutral and versioned, with golden test vectors a future Swift app could check; say what is frozen and what may change. Weigh the options with their trade-offs; product, scope and privacy choices go to me in Chinese as concrete options (AskUserQuestion), never decided by you.",
+      "3. Keep the roadmap honest: if the spec changes how later lanes split, propose the change (new, merged or reordered lanes and their deps) in your report rather than editing other lanes' entries.",
+      "4. Finish: `pnpm check` (docs only: no e2e); /code-review on any code or vectors; record the gates (`pnpm roadmap gate {lane} check=pass e2e=na codeReview=pass securityReview=na simplify=na`), set `pnpm roadmap status {lane} review --next \"<what I approve>\"`, add the lane to landingQueue and report to me in Chinese with every decision I need to make, each with your recommendation.",
+      "5. When I approve the land: `pnpm roadmap status {lane} done` and commit that entry on the branch; check that no other lane is landing and that the previous land's CI run on main finished green; then `but land {lane} --yes`, `but status`, delete the lane file and check the CI run on main. Stop at the first conflict or failure and report it; never use --ai."
+    ],
+    "startDesign": [
+      "Folio Cowork design lane {lane}: {title} ({milestone}, {phase}). Run this session on {model} at {effort} effort. Write only under docs/ and design/; never run git or but.",
+      "Goal: {summary}",
+      "Depends on: {deps}. Landing it unblocks: {unblocks}.",
+      "{extra}",
+      "1. Read CLAUDE.md §2–§4, the files in .agents/lanes/, docs/product/brief.md, design/tokens/ (its README has the contrast table), the handoffs in docs/design/handoff/ and the Design System artifact (links in docs/design/handoff/app-shell.md). Also: {links}.",
+      "2. design:design-system (new tokens only when the existing ones cannot express it) → a Design canvas mockup in light and dark → design:design-critique → design:accessibility-review → design:ux-copy for every string → design:design-handoff. Save the spec in docs/design/handoff/: layout at the narrow and wide window sizes, every state (loading, empty, error, success, disabled), the keyboard path and focus, motion with its reduced-motion fallback, and the IPC data each state needs.",
+      "3. Visual-direction and product choices go to me in Chinese with concrete options. Hand off: write .agents/lanes/{laneFile}.md with Agent: Cowork and Status: review, leave the files uncommitted and tell me; a Claude Code session commits them on {lane} and lands it once I approve."
+    ],
+    "startVerify": [
+      "Folio lane {lane}: {title} ({milestone}, {phase}). Run this session on {model} at {effort} effort.",
+      "Goal: {summary}",
+      "Depends on: {deps}. Landing it unblocks: {unblocks}.",
+      "{extra}",
+      "1. Start: read CLAUDE.md, every file in .agents/lanes/ and `pnpm roadmap show {lane}`; run `but status` and `but pull --check`. Read before designing: {links}. Owns: {owns}. Shared files, small additive hunks only: {shared}. If an active lane owns a path you need, stop and ask me. Write .agents/lanes/{laneFile}.md (CLAUDE.md §7.3), create the branch with `but branch new {lane}` and run `pnpm roadmap status {lane} wip --next \"<what you are doing>\"`.",
+      "2. Verification lane: start with engineering:testing-strategy: which risk each test retires and its pass criterion. Disposable data and a per-lane temporary data directory only; never the shared dev database, and never a real library without a copy. Record the evidence (commands, counts, timings, versions, screenshots) in the lane's document.",
+      "3. A finding that needs a product decision goes to me in Chinese; a product bug gets its own fix lane (roadmap entry, deps and prompt), never a silent workaround in the test.",
+      "4. Finish: `pnpm check`, `pnpm e2e` under the app lock if the lane runs the app, /code-review on harness code; record the gates (`pnpm roadmap gate {lane} check=pass e2e=pass codeReview=pass`), set `pnpm roadmap status {lane} review --next \"<what I approve>\"`, add the lane to landingQueue and report to me in Chinese.",
+      "5. When I approve the land: `pnpm roadmap status {lane} done` and commit that entry on the branch; check that no other lane is landing and that the previous land's CI run on main finished green; then `but land {lane} --yes`, `but status`, delete the lane file and check the CI run on main. Stop at the first conflict or failure and report it; never use --ai."
+    ],
+    "gate": [
+      "Folio acceptance gate {lane}: {title} ({milestone}). Run this session on {model} at {effort} effort. You verify and fix small things; you do not add features.",
+      "Goal: {summary}",
+      "Waits for: {deps}. Landing it unblocks: {unblocks}.",
+      "{extra}",
+      "1. Start: read CLAUDE.md, every file in .agents/lanes/, `pnpm roadmap show {lane}`, the milestone's acceptance list in docs/roadmap/roadmap.json (`milestones`), docs/product/roadmap.md §5 and docs/product/brief.md; run `but status` and `but pull --check`. Write .agents/lanes/{laneFile}.md, create the branch and set the entry to wip.",
+      "2. engineering:testing-strategy: list every acceptance criterion and how you will prove it. Run everything on the integrated main: `pnpm check`, `pnpm e2e` under the app lock (CLAUDE.md §7.5), then the gate's own checks above.",
+      "3. Every failure becomes a fix lane (roadmap entry with deps and a prompt) unless it is a small test or doc fix inside this lane; never mark the gate done while a criterion fails. engineering:tech-debt over the milestone; settle every open loose end in roadmap.json that names this milestone's lanes: close it, move it to a later lane, or ask me.",
+      "4. engineering:deploy-checklist before any build you hand me. Report to me in Chinese: a criterion → evidence table, open risks, what I should try by hand, and the decisions I need to make.",
+      "5. Mark the gate done only after I accept the milestone; then refresh `now` and the next milestone's lane prompts in roadmap.json, and land as for any lane (the previous land's main CI green first; never --ai)."
     ]
   },
   "log": [
@@ -3074,6 +3550,11 @@
       "at": "2026-10-03",
       "by": "Claude Code",
       "text": "合并：feat/ui-problems-list（adc2f88）；main CI 37102902231 因 e2e 比较 8.3 短路径失败，fix/ui-problems-e2e-long-path（6c52ffc，CI 37103936499 通过）修复；feat/core-discard-move（Codex，Claude Opus 审计无问题，7556aea）。解锁 feat/ui-discard-move-action"
+    },
+    {
+      "at": "2026-10-03",
+      "by": "Claude Code",
+      "text": "路线图：模型加入 Fable 5.1（关卡、规格、合约、max 的 lane），默认推理强度高一档，Codex 审计 S medium / M high / L Fable xhigh；开工提示词按 lane 类型分成 7 个模板，剩下的 40 个 lane 都写了自己的要点；关掉两条已完成的待办"
     }
   ]
 }

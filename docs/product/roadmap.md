@@ -1,6 +1,6 @@
 # Folio 上线路线图（到 v1.0）
 
-> **状态**：v0.7，M1 第 3 波收尾 · 同步点 3 · **更新**：2026-10-02 · **决策人**：Sirui · **整理**：Claude Code
+> **状态**：v0.8，M1 功能全部合并 · 下一步 M1 验收 · **更新**：2026-10-03 · **决策人**：Sirui · **整理**：Claude Code
 >
 > **实时状态在路径图里**：<!-- explorer-url --><https://claude.ai/artifact/Mv1f9eXfrkYTbAs7fqQVDC><!-- /explorer-url -->（可交互：依赖图、并行槽位、看板、合并队列、文件归属、每个 lane 的提示词）。数据只有一份 [`docs/roadmap/roadmap.json`](../roadmap/roadmap.json)，agent 用 `pnpm roadmap` 更新、`pnpm check` 校验（[说明](../roadmap/README.md)）。本文只放不常变的部分：规则、分工、里程碑的定义和并行方式。
 
@@ -33,7 +33,7 @@
 
 ### 3.2 main 上已经有什么
 
-<details><summary>main 上已经有什么（2026-10-02，144 个提交）</summary>
+<details><summary>main 上已经有什么（2026-10-03，234 个提交）</summary>
 
 | 方面 | 内容 |
 |---|---|
@@ -41,14 +41,14 @@
 | 工程底座 | Tauri 2.12 + React 19 + Rust；类型化 IPC；Playwright 通过 WebView2 CDP 跑 e2e；GitHub Actions CI（windows-2022） |
 | 核心库 | 路径和 Windows 命名规则；`.folio/` 元数据（格式 2）；SQLite catalog（迁移 2）；中文搜索；扫描与对账；移动的崩溃恢复；本机设置（settings.json、忽略规则） |
 | Windows 适配 | NTFS 文件 ID、占位文件、回收站、文件监视 |
-| 命令 | 资料库和任务、学期课程标签条目、浏览和搜索、设置、`log_ui_error`；只剩导入的 3 个 |
+| 命令 | M1 的全部命令：资料库和任务、学期课程标签条目、浏览和搜索、设置、导入、放弃未完成的移动、问题列表、`log_ui_error` |
 | 文件协议 | 只读的 `folio-file`、缩略图、用默认程序打开、在资源管理器中显示 |
-| 界面 | 英文界面；窗口骨架和共用组件；数据层和全部 M1 hook；假 shell（含 5 万条的数据）；资料库视图 |
+| 界面 | 英文界面；窗口骨架和共用组件；数据层和全部 M1 hook；假 shell（含 5 万条的数据）；资料库视图、`Ctrl+K` 搜索、预览、首次使用、设置、导入、问题列表、放弃移动 |
 | 设计 | token（浅色和深色）；app-shell、首次使用、资料库操作三份 handoff |
 
 </details>
 
-### 3.3 M1 验收（出 v0.1 之前）🔒
+### 3.3 M1 验收（出 v0.1 之前）🟢 可以开始
 
 验收标准在路径图「里程碑 → M1」，对应 `gate/m1-acceptance`。
 
@@ -86,12 +86,24 @@
 
 - Codex 只做后端编码（你 2026-09-28 的决定，写在上级目录的 `AGENTS.md`），规则以 `CLAUDE.md` 为准：lane 文件在 `.agents/lanes/`，spec 和 ADR 写进 `docs/`，草稿在 `folio-agent-work/tasks/<lane>/`。
 - Codex 在上级目录（现在是 `Files & Backup`）启动；路径图给 Codex 的提示词开头已经带上它需要的那段说明。
-- Codex 做完停在 review，把评审范围写进 `claude-review-handoff.md`；合并前由 Claude Code 做 `/code-review`、`/security-review`、`/simplify`。
+- Codex 做完停在 review，把评审范围写进 `claude-review-handoff.md`；合并前由 Claude Code 审计：一次 `/code-review`，涉及特权层、IPC 或 unsafe 代码再加 `/security-review`，Codex 自己的 simplify 算数（你 10-02 的决定；10-03 起审计的推理强度提高，见 4.2）。
 - Codex 发现要改界面时写前端交接，不改 `apps/desktop`。
 - 关键路径（`feat/core-object-store`、`feat/core-sync-round`）交给 Codex 时要及时看进度。
 - 所有提交都是 Sirui Mei <sirui.mei07@gmail.com>，任何 agent 都不在提交信息里写自己的信息（CLAUDE.md §7.1 第 5 条，`pnpm check` 和 CI 检查）。
 
 </details>
+
+### 4.2 模型和推理强度
+
+开 session 时按路径图上 lane 的标签选（提示词第一行也写着）。规则在 `docs/roadmap/tools/lib.mjs`，lane 可以单独覆盖（你 2026-10-03 加入 Fable 5.1、要求适当提高推理强度）。
+
+| 模型 | 用在哪 | 推理强度（默认） |
+|---|---|---|
+| Fable 5.1（最强） | 最难回退的工作：验收关卡、规格（`docs/specs-*`）、IPC 合约（`feat/ipc-*`）、推理强度 max 的 lane（L 规模的 Rust 核心）；Codex L lane 的审计 | 关卡和规格 xhigh 起，L 规模 max；历史格式和同步规格固定 max |
+| Opus 5.5（日常默认） | 界面、Rust 核心、测试和实测、设计（Cowork）；Codex S / M lane 的审计 | S、M high，L xhigh；Rust 核心高一档 |
+| Sonnet 5.5 | 只改文档（`docs/docs-*`）和只负责合并的 lane | medium |
+
+Codex lane 的 Claude 审计：S Opus · medium、M Opus · high、L Fable · xhigh；对象库和一轮同步（两条关键路径）用 Fable · max，AI 提交说明（密钥和网络）用 Fable。
 
 ## 5. 路线图
 
@@ -127,14 +139,8 @@
 
 在路径图「决策与风险 → 风险」（数据里的 `risks`）。
 
-## 附录 A：通用提示词
+## 附录 A：提示词
 
-每个 lane 的提示词在路径图里点开 lane 复制，或运行 `pnpm roadmap prompt <lane>`。没写专用提示词的 lane 用通用开工提示词；给 Codex 的 lane 会自动在前面加上下面这段（数据里的 `prompts.codexPreamble`）。
+每个 lane 的提示词在路径图里点开 lane 复制，或运行 `pnpm roadmap prompt <lane>`。提示词按 lane 的类型生成（界面、核心和合约、规格、设计、测试和实测、验收关卡、构建和文档各一个模板），第一行写着推荐的模型和推理强度，中间是这个 lane 自己的要点（要读的文档、关键风险、需要你决定的事），最后是检查、汇报和你批准后的合并步骤。
 
-<details><summary>A.0 交给 Codex 时加在提示词开头</summary>
-
-```text
-Codex: follow AGENTS.md in the folder above Folio and Folio/CLAUDE.md. Backend coding only: lane file in Folio/.agents/lanes/, specs and ADRs in Folio/docs/, scratch in folio-agent-work/tasks/<lane>/. Map the Claude skill names below to your skills in AGENTS.md §5. Stop at review and write the review scope into folio-agent-work/tasks/<lane>/claude-review-handoff.md; a Claude Code session runs /code-review, /security-review and /simplify before I approve the land.
-```
-
-</details>
+Codex lane 有两段：交给 Codex 的完整交接（`pnpm roadmap prompt <lane> --codex`），和它停在 review 后 Claude Code 的审计（`--audit`）。模板原文在路径图「给 agent → 开工提示词（按 lane 类型）」，数据在 `docs/roadmap/roadmap.json` 的 `prompts`。
