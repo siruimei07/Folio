@@ -17,12 +17,13 @@
     ]
   },
   "now": {
-    "stage": "M2 版本记录：M1 已验收（v0.1），先写历史格式规格和 M2 设计细节",
+    "stage": "M2 版本记录：历史格式已批准，下一步合并 M2 设计，再开 M2 合约",
     "focus": "M2",
     "summary": [
-      "M1 完成：你 10-03 试用 v0.1 后验收（目前没发现明显问题），gate/m1-acceptance 已合并。证据在 docs/specs/m1-acceptance.md：53 个 e2e 覆盖全部用户流程（分支 CI 37157738302 绿），5 万文件时一页 200 行 28 ms、搜索一页 34 ms、预览 465 ms 以内，v0.1 的格式冻结成 fixture，未签名安装包 Folio_0.1.0_x64-setup.exe。",
-      "可以开始：`docs/specs-history-format`（Opus 5.5 · max；remote-format.md 要你批准）和 `design/design-m2-details`（Cowork），两条并行；之后是 M2 合约和依赖，再是核心和界面。还有 `feat/ui-course-badge-code`（Opus 5.5 · high）：你试用时提的课程徽标规则（取课程代码的前三个字母，如 CSC207 → CSC；没有代码时用名称；手填的优先），和前两条互不影响。合并一次一个，每个等上一个在 main 上的 CI 跑完。",
-      "M1 的遗留项已分给后面的 lane：共用选择栏 → feat/ui-changes-view，对话框外观 → feat/ui-history-view，放弃移动的日志级别 → feat/core-commit-history，三处设计细节 → design/design-m2-details，哈希速度和读屏软件 → test/build-release-candidate。",
+      "10-03 已合并：M1 验收（v0.1）；课程徽标取课程代码（adbe08a，徽标字号改 9 px、窄窗口 8.5 px，你选的 B）；历史格式规格（remote-format.md 历史格式 1 含 golden vectors、versioning.md、ADR-0006 Word 旧版本稀疏保留，你已批准，1a8488b，CI 37174106955 绿）。",
+      "待提交和合并：`design/design-m2-details`（Cowork 做完：workspace-history.md 和第 10 轮 token，文件还没提交），要一个 Claude Code session 提交、重新生成 token 并合并。M2 合约等它合并后再开（合约要用设计里的恢复预览、历史字段等）；「未同步」列表你已定为按 31A 显示最近三个提交（合约 lane 顺带改 versioning.md §9.1）。",
+      "现在就能开：`chore/build-deps-m2` 和 `test/core-sync-simulation`（交给 Codex）、`test/core-icloud-field-test`（Opus 5.5 · high，要你在 iPad 上配合）、`fix/ui-problems-paging-flake`（一个偶尔失败的测试）。合并一次一个，每个等上一个在 main 上的 CI 跑完。",
+      "按你批准的 versioning.md §19：差异和恢复也等正文抽取；AI 提交说明等差异做完再开；M3 新增 `feat/core-retention`（Word 旧版本稀疏保留）；M1 的三处资料库细节由新的 `feat/ui-library-m1-notes` 做。关键路径：设计 → M2 合约 → 对象库 → 工作区 → 提交和历史 → 差异和恢复 → AI 提交说明 → M2 验收。",
       "模型：Fable 5.1 暂停（你 10-03 的决定）：推荐给它的 lane（关卡、规格、IPC 合约、推理强度 max）都由 Opus 5.5 用同样的推理强度代替；界面、核心、测试、设计用 Opus 5.5，只改文档和只合并的用 Sonnet 5.5。恢复时删掉 meta.pausedModels 里的 fable 即可。",
       "Codex 的项目级 skills（`AGENTS.md`、`.agents/skills/`、`.codex/`、`.claude/skills/`）和 CLAUDE.md 里的两处改动不进仓库，由 Codex 管理：任何 lane 都不提交、不丢弃。"
     ]
@@ -1649,6 +1650,37 @@
       ]
     },
     {
+      "id": "docs/docs-roadmap-m2-refresh",
+      "title": "M2 路线图刷新",
+      "milestone": "M2",
+      "phase": "m2-spec",
+      "track": "flow",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "docs/specs-history-format"
+      ],
+      "summary": "历史格式规格和课程徽标合并后刷新路线图：按 versioning.md §19 调整 M2 lane，加上设计 lane 的待定项、Word 稀疏保留和两个新 lane",
+      "status": "done",
+      "updated": "2026-10-03",
+      "landed": "2026-10-03",
+      "gates": {
+        "check": "pass",
+        "e2e": "na",
+        "codeReview": "na",
+        "securityReview": "na",
+        "simplify": "na",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "docs/roadmap/roadmap.json"
+      ],
+      "notes": [
+        "pnpm check 10-04：路线图检查和单元测试通过；唯一失败是 tokens 过期测试，原因是 Cowork 未提交的第 10 轮 token（design/design-m2-details 提交时重新生成），与本 lane 无关"
+      ]
+    },
+    {
       "id": "refactor/core-sta-helper",
       "title": "合并 STA 辅助函数",
       "milestone": "M1",
@@ -2139,7 +2171,8 @@
       "agent": "claude-code",
       "size": "M",
       "deps": [
-        "docs/specs-history-format"
+        "docs/specs-history-format",
+        "design/design-m2-details"
       ],
       "summary": "workspace.*、history.*、ai.* 和 AI 设置的合约",
       "status": "planned",
@@ -2148,12 +2181,16 @@
         "docs/specs/versioning.md",
         "docs/specs/remote-format.md",
         "docs/specs/ipc-m1.md",
-        "docs/adr/ADR-0004-ipc-contract.md"
+        "docs/adr/ADR-0004-ipc-contract.md",
+        "docs/design/handoff/workspace-history.md",
+        "docs/adr/ADR-0006-history-retention.md"
       ],
       "prompt": {
         "extra": [
           "Write docs/specs/ipc-m2.md in the style of ipc-m1.md from docs/specs/versioning.md: the workspace.*, history.* and ai.* commands and events (WorkspaceChanged, the commit and restore jobs), their types and error tables, and the AI settings. The API key is write-only across IPC: the UI can set, test and clear it, never read it back.",
-          "Fake shell scenarios for the M2 UI lanes: a workspace with text, Word and binary changes; a long history; large and empty diffs; a failed commit; a restore; AI unavailable."
+          "Fake shell scenarios for the M2 UI lanes: a workspace with text, Word and binary changes; a long history; large and empty diffs; a failed commit; a restore; AI unavailable.",
+          "Start from versioning.md §17 (the contract outline) and §15 (errors), plus what design/design-m2-details needs (docs/design/handoff/workspace-history.md §18): a read-only `plan_restore { commit, path }` for the restore dialog (outcome, target, Recycle Bin); HistoryItem fields (the undone commit's summary, the restored version's time and file name, a reword's new short id, the effective time for day headers, whether a FileVersion equals the current file); cancelling Generate (a request id and a cancel command, or a short job); commit progress text (bytes, and files for the first commit).",
+          "\"Not synced\" in M2 (Sirui, 2026-10-04, decision not-synced-list): follow design decision 31A and list the newest three commits, read from list_history; update versioning.md §9.1, which says the list stays empty until M3, in this lane."
         ]
       }
     },
@@ -2284,11 +2321,13 @@
       "links": [
         "docs/specs/remote-format.md",
         "docs/specs/versioning.md",
-        "docs/adr/ADR-0003-versioning-and-sync.md"
+        "docs/adr/ADR-0003-versioning-and-sync.md",
+        "docs/adr/ADR-0006-history-retention.md"
       ],
       "prompt": [
         "Critical path for M2 and M3. Implement docs/specs/remote-format.md and the local store in docs/specs/versioning.md: BLAKE3 object ids, the object kinds, immutable packs (encode and decode) and the local object store with crash-safe writes (temporary file, flush, rename; a partial pack is never visible).",
-        "The golden vectors in remote-format.md pass byte for byte. Add property-based tests (round trip, corruption detected, truncated packs rejected) and a crash-injection test for every write step. Large files stream and memory stays bounded. folio-core only, in a new module; no IPC in this lane."
+        "The golden vectors in remote-format.md pass byte for byte. Add property-based tests (round trip, corruption detected, truncated packs rejected) and a crash-injection test for every write step. Large files stream and memory stays bounded. folio-core only, in a new module; no IPC in this lane.",
+        "versioning.md §19 item 8: pass every file of the golden vectors (remote-format.md §12, docs/specs/remote-format-vectors/) in this lane's own tests; `pnpm check` keeps the vectors equal to their generator (`check:vectors`)."
       ]
     },
     {
@@ -2332,12 +2371,15 @@
       "links": [
         "docs/specs/versioning.md",
         "docs/specs/ipc-m2.md",
-        "docs/adr/ADR-0003-versioning-and-sync.md"
+        "docs/adr/ADR-0003-versioning-and-sync.md",
+        "docs/adr/ADR-0006-history-retention.md"
       ],
       "prompt": [
         "Commit with a journal that is crash-safe at every step (ADR-0003 §11, docs/specs/versioning.md): a commit and its objects exist completely or not at all, and the next start finishes or rolls back. Crash injection at every journal step, as the M1 move and import journals do (docs/specs/library-scan.md §7).",
         "Also the template commit message, editing the message, undoing the last commit, and the history list and single-file history, paged for 50,000-file libraries.",
-        "Add an info level to the diagnostics log for commits, and move the successful discard of an unfinished move there: it is logged under Event::Error today (docs/specs/m1-acceptance.md §4)."
+        "Add an info level to the diagnostics log for commits, and move the successful discard of an unfinished move there: it is logged under Event::Error today (docs/specs/m1-acceptance.md §4).",
+        "versioning.md §19 item 4: this lane also records the first commit automatically (\"Start history\", §7.7, design decision 32A) and adds settings.json's device id (§4.6).",
+        "Catalog migrations are appended in landing order (§19 item 6): renumber yours when you rebase onto a lane that added one."
       ]
     },
     {
@@ -2374,7 +2416,8 @@
       "agent": "codex",
       "size": "M",
       "deps": [
-        "feat/core-commit-history"
+        "feat/core-commit-history",
+        "feat/core-text-extract"
       ],
       "summary": "文本和 Word 文字的差异；恢复旧版本 = 产生一条新改动",
       "status": "planned",
@@ -2384,7 +2427,8 @@
         "docs/specs/ipc-m2.md"
       ],
       "prompt": [
-        "Diffs for text and for Word text (by paragraph), with a summary instead of a diff for very large files; other files show change events only. Restoring an old version writes it to disk as a new change: history is never rewritten, and the current file is never lost (it stays in history or goes to the Recycle Bin)."
+        "Diffs for text and for Word text (by paragraph), with a summary instead of a diff for very large files; other files show change events only. Restoring an old version writes it to disk as a new change: history is never rewritten, and the current file is never lost (it stays in history or goes to the Recycle Bin).",
+        "versioning.md §19 item 1: Word diffs and text decoding use the `extract` module from feat/core-text-extract (versioning.md §10.2–§10.3): one reader for search and diffs, not two."
       ]
     },
     {
@@ -2398,7 +2442,8 @@
       "auditModel": "fable",
       "deps": [
         "feat/ipc-m2-contract",
-        "chore/build-deps-m2"
+        "chore/build-deps-m2",
+        "feat/core-diff-restore"
       ],
       "summary": "DeepSeek（兼容 OpenAI）只从特权层请求；Key 存在 Windows 凭据管理器；失败退回模板；要 /security-review",
       "status": "planned",
@@ -2410,7 +2455,8 @@
       ],
       "prompt": [
         "The AI commit message: DeepSeek through its OpenAI-compatible API, called only from the privileged layer. The key lives in Windows Credential Manager, never in settings files or logs, and is never returned to the UI. Send only what docs/specs/versioning.md allows (paths and diff excerpts under a size cap), with a timeout; any failure falls back to the template message.",
-        "The audit runs /security-review (network egress, secrets). What leaves the machine is my decision: stop and ask if the spec leaves a case open."
+        "The audit runs /security-review (network egress, secrets). What leaves the machine is my decision: stop and ask if the spec leaves a case open.",
+        "Sirui chose (versioning.md §19 item 2) that this lane waits for the diff: it builds the request from the selected items and their changed lines (§12.3) and owns everything that decides what leaves the machine, under one /security-review in the audit."
       ]
     },
     {
@@ -2461,7 +2507,8 @@
         "extra": [
           "The workspace view: the changes list with check boxes, the commit box (template and AI message; Ctrl+Enter commits), progress and result through the activity button, and the pending-sync list (empty until M3). The selected file uses feat/ui-diff-viewer.",
           "A failed commit keeps the selection and the message and shows the error state; 50,000 changed files stay fluid (pages, never the whole list).",
-          "Before the changes list adds a fifth selection bar, make it one shared component: app/Shell.css, library/tree/Tree.css, search/SearchDialog.css and settings/settings.css each draw it from the same tokens (--size-selection-bar-width, --size-selection-bar-inset, --color-selection-indicator)."
+          "Before the changes list adds a fifth selection bar, make it one shared component: app/Shell.css, library/tree/Tree.css, search/SearchDialog.css and settings/settings.css each draw it from the same tokens (--size-selection-bar-width, --size-selection-bar-inset, --color-selection-indicator).",
+          "versioning.md §19 item 4: start the first commit from an always-on registry control (the shell stays data-agnostic) and show its progress; metadata changes are listed without check boxes (workspace-history.md)."
         ]
       }
     },
@@ -2491,6 +2538,31 @@
       }
     },
     {
+      "id": "feat/ui-library-m1-notes",
+      "title": "M1 评审留下的资料库细节",
+      "milestone": "M2",
+      "phase": "m2-impl",
+      "track": "ui",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "design/design-m2-details"
+      ],
+      "summary": "按 workspace-history.md §12 做 M1 验收留下的三处资料库细节：标签筛选最多两行加「+N」、快捷视图跟当前学期、课程里的文件夹显示成一排 48 px 卡片（你在设计 lane 里选的 33B、34A、35A）",
+      "status": "planned",
+      "updated": "2026-10-04",
+      "links": [
+        "docs/design/handoff/workspace-history.md",
+        "docs/design/handoff/app-shell.md"
+      ],
+      "prompt": {
+        "extra": [
+          "Build docs/design/handoff/workspace-history.md §12 on the Library view: the tag filter shows at most two rows, the rest behind \"+N\" (decision 33B); the quick views count and filter within the current semester (34A); folders in a course or folder grid are a row of 48 px cards (35A, tokens size.folder-card and size.folder-card-min from round 10).",
+          "Library view only (apps/desktop/src/library/**, the library namespace); no IPC change. If a count needs data the shell does not send, stop and ask me."
+        ]
+      }
+    },
+    {
       "id": "feat/ui-settings-ai",
       "title": "AI 设置页",
       "milestone": "M2",
@@ -2512,6 +2584,36 @@
       "prompt": {
         "extra": [
           "The AI page in Settings, inside the structure feat/ui-settings built (apps/desktop/src/settings/): on or off, the model, and the API key as a write-only field (set, test, clear; never shown back). Copy via design:ux-copy, including what is sent to DeepSeek and that commits work without AI."
+        ]
+      }
+    },
+    {
+      "id": "fix/ui-problems-paging-flake",
+      "title": "问题列表分页测试偶尔失败",
+      "milestone": "M2",
+      "phase": "m2-spec",
+      "track": "ui",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "feat/ui-problems-list"
+      ],
+      "summary": "problems.test.tsx 的「滚到底再加载一页」在完整 pnpm check 负载高时偶尔失败（期望 450 实际 400）；查清是测试还是组件的问题，去掉对时间的依赖",
+      "status": "planned",
+      "updated": "2026-10-04",
+      "owns": [
+        "apps/desktop/src/problems/**"
+      ],
+      "notes": [
+        "课程徽标 lane 10-03 在完整 pnpm check 里看到；单独跑和重跑都通过"
+      ],
+      "links": [
+        "docs/design/handoff/library-actions.md"
+      ],
+      "prompt": {
+        "extra": [
+          "apps/desktop/src/problems/problems.test.tsx, \"loads a page more each time the end of the list comes into view\", sometimes ends at 400 rows instead of 450 under the load of a full `pnpm check`. Reproduce it first (run the file many times in a row while other tests load the machine), then find whether the test reaches the end before the list watches its new end, or the component misses an intersection while a page loads (then a user's list would stop at 400 too: a real bug).",
+          "Fix the cause, never with longer timeouts or retries; the sibling test \"asks for the next page by itself while the end of a short list is in view\" must keep passing. Show it stable over many repeated runs."
         ]
       }
     },
@@ -2538,13 +2640,15 @@
       "links": [
         "docs/specs/versioning.md",
         "docs/specs/remote-format.md",
-        "docs/specs/testing-strategy.md"
+        "docs/specs/testing-strategy.md",
+        "docs/adr/ADR-0006-history-retention.md"
       ],
       "prompt": {
         "extra": [
           "M2 acceptance (roadmap.json `milestones` M2): commit and restore lose nothing under crash injection at every journal step; the remote-format golden vectors still pass; e2e for the workspace, history, diff, restore and AI settings flows; history performance on the 50,000-file fixture; fixtures for the frozen object and pack formats.",
           "I use v0.2 on my own library for one or two weeks before the gate is done: prepare the unsigned build and a short list of what to watch for.",
-          "Record the evidence per criterion in docs/specs/m2-acceptance.md, as docs/specs/m1-acceptance.md does; time history with the method in docs/specs/testing-strategy.md (Performance: a quiet window, the app lock, an optimised build that keeps the test hooks); desktop specs run on CI and locally with FOLIO_E2E_DESKTOP=1; add the v0.2 format fixtures next to v0.1."
+          "Record the evidence per criterion in docs/specs/m2-acceptance.md, as docs/specs/m1-acceptance.md does; time history with the method in docs/specs/testing-strategy.md (Performance: a quiet window, the app lock, an optimised build that keeps the test hooks); desktop specs run on CI and locally with FOLIO_E2E_DESKTOP=1; add the v0.2 format fixtures next to v0.1.",
+          "versioning.md §19 item 7: write the v0.2/ fixtures (versioning.md §14) and check the golden vectors and the targets of versioning.md §2."
         ]
       }
     },
@@ -2589,12 +2693,14 @@
       "links": [
         "docs/adr/ADR-0003-versioning-and-sync.md",
         "docs/specs/remote-format.md",
-        "docs/specs/versioning.md"
+        "docs/specs/versioning.md",
+        "docs/adr/ADR-0006-history-retention.md"
       ],
       "prompt": [
         "ADR-0003 action item 3: the sync simulation harness. The fake remote is an eventually consistent folder with per-file delays and reordering, head records that arrive before their packs, conflict copies in every observed naming pattern, NFD names, blocking placeholders, silent overwrites and stalls of days. The actors are two Folio devices and an \"iPad\" writer running random operation sequences, with a crash injected at every journal step.",
         "Invariants: nothing ever canonical is lost (it is in a pack, the library, the mirror or the Recycle Bin); devices converge after quiet periods; no direct edit is silently overwritten; one linear canonical history. Seeds are reproducible and a failing seed prints a minimal replay.",
-        "A short run in `pnpm check`, the long run in a nightly CI workflow (actions pinned to commit SHAs). Until feat/core-sync-round exists, drive it with the M2 store and a reference model of the sync rules."
+        "A short run in `pnpm check`, the long run in a nightly CI workflow (actions pinned to commit SHAs). Until feat/core-sync-round exists, drive it with the M2 store and a reference model of the sync rules.",
+        "ADR-0006 (versioning.md §19 item 3): the fake remote and the invariants also cover prune commits and pack deletion, which feat/core-retention adds."
       ]
     },
     {
@@ -2616,12 +2722,14 @@
         "docs/adr/ADR-0003-versioning-and-sync.md",
         "docs/research/icloud-field-test.md",
         "docs/specs/remote-format.md",
-        "docs/specs/versioning.md"
+        "docs/specs/versioning.md",
+        "docs/adr/ADR-0006-history-retention.md"
       ],
       "prompt": {
         "extra": [
           "Write docs/specs/sync.md from ADR-0003 §5–§12 and the field test (docs/research/icloud-field-test.md): the remote layout as used; choosing the canonical head; one sync round (pull, import direct edits, rebase, land files with deletions to the Recycle Bin, push); the snapshot before a sync and recovery after an interruption; mirror rules and invalid names; merge rules; placeholders and freeing space (on by default, my 09-26 decision); watching the remote; creating and joining a remote.",
-          "Every rule names the simulation invariant that checks it; list what the field test could not settle and how the design stays safe anyway. End with the M3 contract outline and a check of the planned M3 lanes."
+          "Every rule names the simulation invariant that checks it; list what the field test could not settle and how the design stays safe anyway. End with the M3 contract outline and a check of the planned M3 lanes.",
+          "Specify remote compaction for feat/core-retention (ADR-0006): when packs may be deleted, how other devices learn of it, and which simulation invariant checks it."
         ]
       }
     },
@@ -2746,11 +2854,37 @@
       "updated": "2026-10-01",
       "links": [
         "docs/specs/sync.md",
-        "docs/adr/ADR-0003-versioning-and-sync.md"
+        "docs/adr/ADR-0003-versioning-and-sync.md",
+        "docs/adr/ADR-0006-history-retention.md"
       ],
       "prompt": [
         "Critical path. One sync round as docs/specs/sync.md defines it: pull → import direct edits → rebase → land files (deletions to the Recycle Bin) → push; a snapshot before each sync and recovery after an interruption at any step.",
         "Done means the long simulation run is green across many seeds with every invariant holding (nothing canonical lost, convergence, no silent overwrite, one linear history). Report the seeds and the run time in the handoff."
+      ]
+    },
+    {
+      "id": "feat/core-retention",
+      "title": "Word 旧版本稀疏保留",
+      "milestone": "M3",
+      "phase": "m3-impl",
+      "track": "core",
+      "agent": "codex",
+      "size": "L",
+      "deps": [
+        "feat/core-sync-round"
+      ],
+      "summary": "按 ADR-0006 稀疏保留 Word 旧版本：定时任务、prune 提交、本机和云端的压缩（versioning.md §19 第 3 条，你 10-03 批准）",
+      "status": "planned",
+      "updated": "2026-10-04",
+      "links": [
+        "docs/adr/ADR-0006-history-retention.md",
+        "docs/specs/versioning.md",
+        "docs/specs/sync.md",
+        "docs/specs/remote-format.md"
+      ],
+      "prompt": [
+        "ADR-0006: the thinning job that keeps fewer old Word versions as they age, prune commits that record it, and compaction of the local store and of the remote (as docs/specs/sync.md specifies). Thinning is decided per device and must be safe against wrong clocks (ADR-0006).",
+        "Nothing still referenced by any canonical commit is deleted; a pack is removed from the remote only by the rules in sync.md, after other devices can learn of it. Crash injection at every step; the simulation (test/core-sync-simulation) covers prune commits and pack deletion and stays green."
       ]
     },
     {
@@ -2936,7 +3070,8 @@
         "feat/core-remote-setup",
         "feat/ui-sync-toolbar",
         "feat/ui-conflicts",
-        "feat/ui-remote-setup"
+        "feat/ui-remote-setup",
+        "feat/core-retention"
       ],
       "summary": "长时间仿真全绿；iCloud 实测通过；两台 Windows 设备加 iPad 的实机测试（旧电脑 g16-strix 可以当第二台）",
       "status": "planned",
@@ -3210,7 +3345,8 @@
       "when": "M2 之前",
       "item": "批准 remote-format.md：云端格式一旦有了真实数据就很难再改",
       "type": "approve",
-      "state": "locked"
+      "state": "done",
+      "result": "10-03 批准历史格式 1（remote-format.md，含 golden vectors）和 ADR-0006（Word 旧版本按时间稀疏保留），确认 versioning.md 的 M2 设计和 §19 的 lane 调整（AI 提交说明等差异做完再开；新增 feat/core-retention）"
     },
     {
       "id": "second-device",
@@ -3273,6 +3409,22 @@
       "type": "decide",
       "state": "done",
       "result": "Fable 5.1：验收关卡、规格、IPC 合约、推理强度 max；Opus 5.5：界面、核心、测试、设计；Sonnet 5.5：只改文档、只合并。默认推理强度高一档。每个 lane 的标签和提示词第一行都写着推荐。10-03 晚些时候 Sirui 暂停 Fable 5.1（meta.pausedModels）：推荐给它的 lane 由 Opus 5.5 用同样的推理强度代替，M1 验收用 Opus 5.5 · max"
+    },
+    {
+      "id": "badge-token-size",
+      "when": "2026-10-03",
+      "item": "三个大写字母的课程徽标（COM、MGT、WGS）在原字号下被裁边",
+      "type": "decide",
+      "state": "done",
+      "result": "方案 B：徽标 token 改为 9 px（窄窗口 8.5 px），字距 −0.3 px（feat/ui-course-badge-code）"
+    },
+    {
+      "id": "not-synced-list",
+      "when": "2026-10-04",
+      "item": "M2 的「未同步」列表：设计决定 31A 显示最近三个提交，versioning.md §9.1 写的是 M3 之前为空。建议按 31A（合约 lane 顺带改 §9.1，从 list_history 取）",
+      "type": "decide",
+      "state": "done",
+      "result": "按 31A：M2 的「未同步」显示最近三个提交；feat/ipc-m2-contract 把 versioning.md §9.1 改成一致，从 list_history 取"
     }
   ],
   "looseEnds": [
@@ -3383,13 +3535,18 @@
     },
     {
       "state": "open",
-      "item": "M1 评审留下的设计细节：9 个标签时筛选栏换成三行；快捷视图计数是全库、面板计数是本学期；全是文件夹的课程把文件夹显示成大卡片",
-      "lane": "design/design-m2-details"
+      "item": "M1 评审留下的设计细节：9 个标签时筛选栏换成三行；快捷视图计数是全库、面板计数是本学期；全是文件夹的课程把文件夹显示成大卡片（设计已定：33B、34A、35A，见 workspace-history.md §12；由 feat/ui-library-m1-notes 实现）",
+      "lane": "feat/ui-library-m1-notes"
     },
     {
       "state": "open",
       "item": "读屏软件（NVDA、讲述人）还没试过",
       "lane": "test/build-release-candidate"
+    },
+    {
+      "state": "open",
+      "item": "Cowork 的 Design System 页面「Folio Design System」还没更新到第 10 轮 token（diff、历史相关）；以 design/tokens/ 为准",
+      "lane": "design/design-sync"
     }
   ],
   "risks": [
@@ -3466,7 +3623,8 @@
     "CI 红了先修",
     "Codex lane（标着 Codex 的后端 lane）：用「交给 Codex」提示词开工，Codex 自己跑完检查、code-review 和 simplify 后停在 review；再开 Claude Code session 用「Claude 快速审计」提示词：一次 /code-review，涉及特权层再加 /security-review，不重跑 /simplify",
     "开 session 时按路径图标签（也是提示词第一行）选模型和推理强度：Opus 5.5 是日常默认，Sonnet 5.5 给只改文档和只合并的 lane；Fable 5.1 给最难回退的工作，暂停期间（meta.pausedModels）由 Opus 5.5 代替",
-    "路线图数据随 lane 更新：开工、到 review、合并前各跑一次 pnpm roadmap status，只改自己那一条"
+    "路线图数据随 lane 更新：开工、到 review、合并前各跑一次 pnpm roadmap status，只改自己那一条",
+    "M2 起 catalog 迁移按合并顺序追加：并行的 lane rebase 到别人新加的迁移之后，自己重新编号"
   ],
   "prompts": {
     "land": [
@@ -3745,6 +3903,16 @@
       "at": "2026-10-03",
       "by": "Claude Code",
       "text": "新增 M2 界面 lane feat/ui-course-badge-code（Sirui 试用 v0.1 后提的课程徽标规则：取课程代码前三个字母，没有代码用名称，手填优先）"
+    },
+    {
+      "at": "2026-10-03",
+      "by": "Claude Code",
+      "text": "路线图：按 versioning.md §19（Sirui 已批准）调整 M2 依赖（差异等正文抽取、AI 提交说明等差异），M3 新增 feat/core-retention；M2 合约等设计合并并带上设计的待定项；新增 feat/ui-library-m1-notes、fix/ui-problems-paging-flake；remote-format 标为已批准；记下徽标字号决定"
+    },
+    {
+      "at": "2026-10-03",
+      "by": "Claude Code",
+      "text": "Sirui：M2 的「未同步」按 31A 显示最近三个提交（合约 lane 改 versioning.md §9.1）"
     }
   ]
 }
