@@ -21,7 +21,7 @@
     "focus": "M2",
     "summary": [
       "M1 完成：你 10-03 试用 v0.1 后验收（目前没发现明显问题），gate/m1-acceptance 已合并。证据在 docs/specs/m1-acceptance.md：53 个 e2e 覆盖全部用户流程（分支 CI 37157738302 绿），5 万文件时一页 200 行 28 ms、搜索一页 34 ms、预览 465 ms 以内，v0.1 的格式冻结成 fixture，未签名安装包 Folio_0.1.0_x64-setup.exe。",
-      "可以开始：`docs/specs-history-format`（Opus 5.5 · max；remote-format.md 要你批准）和 `design/design-m2-details`（Cowork），两条并行；之后是 M2 合约和依赖，再是核心和界面。你试用时提的课程徽标规则（取课程代码的前三个字母，如 CSC207 → CSC；没有代码时用名称；手填的优先）会作为新的 M2 界面 lane 加进来。合并一次一个，每个等上一个在 main 上的 CI 跑完。",
+      "可以开始：`docs/specs-history-format`（Opus 5.5 · max；remote-format.md 要你批准）和 `design/design-m2-details`（Cowork），两条并行；之后是 M2 合约和依赖，再是核心和界面。还有 `feat/ui-course-badge-code`（Opus 5.5 · high）：你试用时提的课程徽标规则（取课程代码的前三个字母，如 CSC207 → CSC；没有代码时用名称；手填的优先），和前两条互不影响。合并一次一个，每个等上一个在 main 上的 CI 跑完。",
       "M1 的遗留项已分给后面的 lane：共用选择栏 → feat/ui-changes-view，对话框外观 → feat/ui-history-view，放弃移动的日志级别 → feat/core-commit-history，三处设计细节 → design/design-m2-details，哈希速度和读屏软件 → test/build-release-candidate。",
       "模型：Fable 5.1 暂停（你 10-03 的决定）：推荐给它的 lane（关卡、规格、IPC 合约、推理强度 max）都由 Opus 5.5 用同样的推理强度代替；界面、核心、测试、设计用 Opus 5.5，只改文档和只合并的用 Sonnet 5.5。恢复时删掉 meta.pausedModels 里的 fable 即可。",
       "Codex 的项目级 skills（`AGENTS.md`、`.agents/skills/`、`.codex/`、`.claude/skills/`）和 CLAUDE.md 里的两处改动不进仓库，由 Codex 管理：任何 lane 都不提交、不丢弃。"
@@ -1621,6 +1621,34 @@
       ]
     },
     {
+      "id": "docs/docs-roadmap-course-badge-lane",
+      "title": "加上课程徽标 lane",
+      "milestone": "M2",
+      "phase": "m2-spec",
+      "track": "flow",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "gate/m1-acceptance"
+      ],
+      "summary": "M1 验收合并后把 Sirui 的课程徽标规则加成 M2 界面 lane，并更新 now",
+      "status": "done",
+      "updated": "2026-10-03",
+      "landed": "2026-10-03",
+      "gates": {
+        "check": "pass",
+        "e2e": "na",
+        "codeReview": "na",
+        "securityReview": "na",
+        "simplify": "na",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "docs/roadmap/roadmap.json"
+      ]
+    },
+    {
       "id": "refactor/core-sta-helper",
       "title": "合并 STA 辅助函数",
       "milestone": "M1",
@@ -2145,6 +2173,54 @@
           "Screens: the workspace (changes list, check boxes, commit box, pending-sync list) and the history (timeline, file cards, single-file history) at the narrow and wide window sizes; the diff view in every state (text, Word text, a binary file shown as a change event only, very large, loading, failed); the restore confirmation (it makes a new change, nothing is lost); the AI commit message states (generating, failed, falling back to the template).",
           "Reuse the shell, toolbar, dialogs and activity button from app-shell.md and library-actions.md; the data comes from docs/specs/versioning.md (written by docs/specs-history-format). Hand off as docs/design/handoff/workspace-history.md for feat/ui-diff-viewer, feat/ui-changes-view and feat/ui-history-view.",
           "Also settle three notes from the M1 gate's review of the shell and the Library view (docs/specs/m1-acceptance.md §1): with nine tags the filter bar wraps to three rows at the panel's default width; the quick views count the whole library while the panel counts the semester; a course of folders shows its folders as full-size tiles."
+        ]
+      }
+    },
+    {
+      "id": "feat/ui-course-badge-code",
+      "title": "课程徽标用课程代码",
+      "milestone": "M2",
+      "phase": "m2-spec",
+      "track": "ui",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "gate/m1-acceptance"
+      ],
+      "summary": "课程徽标默认取课程代码的前三个字母（CSC207 → CSC、MAT232 → MAT）；没有代码时仍取课程名的前三个字母；手填的徽标优先（你试用 v0.1 后提的）",
+      "status": "planned",
+      "updated": "2026-10-03",
+      "owns": [
+        "apps/desktop/src/lib/courses.ts"
+      ],
+      "shared": [
+        "apps/desktop/src/components/CourseBadge/CourseBadge.tsx",
+        "apps/desktop/src/components/CourseRows/CourseRows.tsx",
+        "apps/desktop/src/settings/courses/EditCourseDialog.tsx",
+        "apps/desktop/src/lib/lib.test.ts",
+        "apps/desktop/src/components/components.test.tsx",
+        "apps/desktop/src/first-run/courses.test.tsx",
+        "docs/design/handoff/app-shell.md",
+        "docs/design/handoff/first-run.md",
+        "docs/specs/library-core.md",
+        "docs/specs/ipc-m1.md"
+      ],
+      "notes": [
+        "Sirui 10-03 试用 v0.1 后提出；M1 验收时唯一的改动意见"
+      ],
+      "links": [
+        "docs/design/handoff/app-shell.md",
+        "docs/design/handoff/first-run.md",
+        "docs/specs/library-core.md",
+        "docs/specs/ipc-m1.md"
+      ],
+      "prompt": {
+        "extra": [
+          "Sirui's rule (2026-10-03, after trying v0.1): a course's derived badge is the first three letters of its code, upper case: CSC207 → CSC, ECO101 → ECO, MAT232 → MAT, STA256 → STA. Without a code, keep today's rule (the first three letters of the name, \"Cal\"). An explicit badge (`abbr`) still wins.",
+          "The derivation lives in one place, `courseBadgeText` in apps/desktop/src/lib/courses.ts; every badge (tree, grid headers, Settings → Courses, the first-run and new-semester course rows, the import dialog and folder picker) calls it. Codes: take the leading letters; a code without letters (only digits) falls back to the name; a code in a wide script takes two characters, as names do. Pass the code into it from every caller.",
+          "No IPC change: `abbr: null` still means \"derive it\", now from the code first. Update the docs that state the old rule: app-shell handoff decision 23 and §10 (the badge row) and §12 item 1, first-run handoff (the badge preview and its \"badge “Cal”\" footer example), library-core.md §4.2 and the `abbr` comment in ipc-m1.md.",
+          "Two courses with the same prefix (CSC207 and CSC236) get the same badge and differ by colour; Settings → Courses can set either badge by hand. Accept that unless design:design-critique finds it confusing; then ask me with options.",
+          "Tests: the badge cases in apps/desktop/src/lib/lib.test.ts (code, no code, digits-only code, wide script, explicit abbr), the component and first-run tests that expect \"Cal\", and a Playwright check that a course created with a code shows its code letters in the tree."
         ]
       }
     },
@@ -3646,6 +3722,11 @@
       "at": "2026-10-03",
       "by": "Claude Code",
       "text": "M1 验收：Sirui 10-03 试用 v0.1 后验收并批准合并 gate/m1-acceptance；决策 version-plan 确认；M2 开始，docs/specs-history-format 和 design/design-m2-details 可以开始；M1 遗留项分给 M2 和发布候选 lane"
+    },
+    {
+      "at": "2026-10-03",
+      "by": "Claude Code",
+      "text": "新增 M2 界面 lane feat/ui-course-badge-code（Sirui 试用 v0.1 后提的课程徽标规则：取课程代码前三个字母，没有代码用名称，手填优先）"
     }
   ]
 }
