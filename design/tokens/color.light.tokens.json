@@ -610,6 +610,24 @@
           "hex": "#b91c1c"
         },
         "$description": "The - sign and removed line numbers, on color.diff.removed-background."
+      },
+      "added-emphasis": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.6745, 0.8627, 0.7255],
+          "hex": "#acdcb9"
+        },
+        "$description": "Words or characters that changed inside an added line, on top of color.diff.added-background, with a 1 px underline in color.diff.added-text (workspace-history handoff §6.4)."
+      },
+      "removed-emphasis": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.9608, 0.7608, 0.7608],
+          "hex": "#f5c2c2"
+        },
+        "$description": "Words or characters that changed inside a removed line, on top of color.diff.removed-background, with a 1 px underline in color.diff.removed-text."
       }
     },
     "syntax": {

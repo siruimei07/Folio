@@ -12,7 +12,7 @@ durations.
   `library-actions.md`).
 - The same tokens, with component previews, are in the Cowork Design System artifact
   "Folio Design System" (<https://claude.ai/artifact/QfXvWuzvoGdhUZCU4tsZyM>); these files stay the
-  source of truth.
+  source of truth. The artifact has rounds 1–10 (synced 2026-10-04).
 
 ## Files
 
@@ -102,6 +102,13 @@ Round 8 (2026-10-01, lane `feat/ui-first-run`) added the first run's sizes (firs
 Round 9 (2026-10-02, lane `feat/ui-settings`) added the settings dialogs' sizes (app-shell §9):
 `size.switch-width`, `switch-height` and `switch-knob`, `checkbox`, `settings-nav-item`,
 `settings-code-column` and `settings-rules`.
+
+Round 10 (2026-10-03, lane `design/design-m2-details`) added what the M2 screens need
+(`docs/design/handoff/workspace-history.md`): `color.diff.added-emphasis` and
+`color.diff.removed-emphasis` for the words that changed inside a changed line; `size.diff-line-number`,
+`diff-sign`, `diff-fold` and `diff-summary` for the diff view; `size.composer-summary` and
+`commit-bar-field` for the commit box and the narrow window's commit bar; `size.folder-card` and
+`folder-card-min` for folder cards in a course grid (decision 35A).
 
 ## Modes
 
@@ -216,6 +223,17 @@ Checked against the values in these files. Text needs 4.5:1; UI parts and graphi
 | Progress fill on track | 3.0:1 | 4.01 | 6.29 |
 | Drop outline on drop.wash, lowest | 3.0:1 | 4.53 | 7.14 |
 | Drop outline on drop.row | 3.0:1 | 4.59 | 6.34 |
+| Primary text on diff added-emphasis | 4.5:1 | 11.40 | 6.84 |
+| Primary text on diff removed-emphasis | 4.5:1 | 11.14 | 8.60 |
+| Emphasis underline (diff added-text) on added-emphasis | 3.0:1 | 3.54 | 5.78 |
+| Emphasis underline (diff removed-text) on removed-emphasis | 3.0:1 | 4.12 | 5.37 |
+| Line numbers (tertiary) on added line | 4.5:1 | 4.97 | 5.25 |
+| Line numbers (tertiary) on removed line | 4.5:1 | 4.87 | 5.47 |
+| Current-change bar (accent) on changed lines, lowest | 3.0:1 | 4.79 | 7.25 |
+| Check box border (unchecked) on selected row | 3.0:1 | 3.19 | 3.76 |
+| Secondary text on warning-soft (notes in the commit box) | 4.5:1 | 6.80 | 6.54 |
+| Secondary text on danger-soft | 4.5:1 | 6.62 | 7.04 |
+| Shortcut hint "Ctrl+Enter" on the commit button, 80 % opacity (an accepted exception, decision 36) | 4.5:1 | 4.12 | 4.50 |
 
 `color.accent.fill` and `color.border.control` are decorative and are not used for indicators or
 input boundaries: outline buttons and chips are identified by their text labels.

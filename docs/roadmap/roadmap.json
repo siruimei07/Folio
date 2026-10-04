@@ -2271,8 +2271,13 @@
         "gate/m1-acceptance"
       ],
       "summary": "窄窗口下的工作区和历史、差异视图的各种状态、恢复确认",
-      "status": "planned",
-      "updated": "2026-10-03",
+      "status": "done",
+      "updated": "2026-10-04",
+      "landed": "2026-10-04",
+      "gates": {
+        "check": "pass",
+        "e2e": "pass"
+      },
       "links": [
         "docs/design/handoff/app-shell.md",
         "docs/design/handoff/library-actions.md",

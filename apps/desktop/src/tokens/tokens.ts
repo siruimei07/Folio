@@ -109,6 +109,14 @@ export const SIZE = {
   settingsNavItem: 36,
   settingsCodeColumn: 60,
   settingsRules: 220,
+  diffLineNumber: 40,
+  diffSign: 16,
+  diffFold: 28,
+  diffSummary: 32,
+  composerSummary: 36,
+  commitBarField: 32,
+  folderCard: 48,
+  folderCardMin: 180,
 } as const;
 
 /** The `space.*` tokens in CSS pixels, for overlay offsets and other code. */

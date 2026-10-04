@@ -1148,6 +1148,70 @@
         "unit": "px"
       },
       "$description": "Minimum height of the ignore rules text area in Library settings."
+    },
+    "diff-line-number": {
+      "$type": "dimension",
+      "$value": {
+        "value": 40,
+        "unit": "px"
+      },
+      "$description": "Each of the two line-number columns of a diff (workspace-history handoff §6.3)."
+    },
+    "diff-sign": {
+      "$type": "dimension",
+      "$value": {
+        "value": 16,
+        "unit": "px"
+      },
+      "$description": "The column of a diff line that holds its + or − sign."
+    },
+    "diff-fold": {
+      "$type": "dimension",
+      "$value": {
+        "value": 28,
+        "unit": "px"
+      },
+      "$description": "Height of the row that stands for unchanged lines a diff leaves out (\"Show 7 unchanged lines\")."
+    },
+    "diff-summary": {
+      "$type": "dimension",
+      "$value": {
+        "value": 32,
+        "unit": "px"
+      },
+      "$description": "Height of the strip under a diff header: what is compared, the counts and the change navigation."
+    },
+    "composer-summary": {
+      "$type": "dimension",
+      "$value": {
+        "value": 36,
+        "unit": "px"
+      },
+      "$description": "Height of the commit message summary field in the commit box."
+    },
+    "commit-bar-field": {
+      "$type": "dimension",
+      "$value": {
+        "value": 32,
+        "unit": "px"
+      },
+      "$description": "Height of the summary field and its buttons in the narrow window's commit bar (decision 30B)."
+    },
+    "folder-card": {
+      "$type": "dimension",
+      "$value": {
+        "value": 48,
+        "unit": "px"
+      },
+      "$description": "Height of a folder card in a course or folder grid (decision 35A)."
+    },
+    "folder-card-min": {
+      "$type": "dimension",
+      "$value": {
+        "value": 180,
+        "unit": "px"
+      },
+      "$description": "Smallest width of a folder card; the grid fits as many as this allows."
     }
   },
   "radius": {

@@ -152,6 +152,14 @@
   --size-settings-nav-item: 36px;
   --size-settings-code-column: 60px;
   --size-settings-rules: 220px;
+  --size-diff-line-number: 40px;
+  --size-diff-sign: 16px;
+  --size-diff-fold: 28px;
+  --size-diff-summary: 32px;
+  --size-composer-summary: 36px;
+  --size-commit-bar-field: 32px;
+  --size-folder-card: 48px;
+  --size-folder-card-min: 180px;
   --radius-panel: 10px;
   --radius-control: 7px;
   --radius-row: 6px;
@@ -255,6 +263,8 @@
   --color-diff-removed-background: #fdecec;
   --color-diff-added-text: #137a3a;
   --color-diff-removed-text: #b91c1c;
+  --color-diff-added-emphasis: #acdcb9;
+  --color-diff-removed-emphasis: #f5c2c2;
   --color-syntax-keyword: #7c3aed;
   --color-syntax-string: #15803d;
   --color-syntax-function: #1d4ed8;
@@ -386,6 +396,8 @@
   --color-diff-removed-background: #361a1a;
   --color-diff-added-text: #86efac;
   --color-diff-removed-text: #fca5a5;
+  --color-diff-added-emphasis: #245a35;
+  --color-diff-removed-emphasis: #6e2c2c;
   --color-syntax-keyword: #c4b5fd;
   --color-syntax-string: #86efac;
   --color-syntax-function: #93c5fd;
@@ -517,6 +529,8 @@
     --color-diff-removed-background: #361a1a;
     --color-diff-added-text: #86efac;
     --color-diff-removed-text: #fca5a5;
+    --color-diff-added-emphasis: #245a35;
+    --color-diff-removed-emphasis: #6e2c2c;
     --color-syntax-keyword: #c4b5fd;
     --color-syntax-string: #86efac;
     --color-syntax-function: #93c5fd;

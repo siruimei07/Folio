@@ -5,7 +5,8 @@ the preview, search and the two settings dialogs. Everything the first milestone
 the app; feature behaviour stays in the brief and the specs.
 
 - Status: ready to build. Every design decision is closed (section 1); section 12 lists the
-  engineering follow-up and what is not drawn yet. Updated 2026-09-27.
+  engineering follow-up and what is not drawn yet. Updated 2026-09-27; pointers to
+  [workspace-history.md](workspace-history.md) (M2) added 2026-10-03.
 - Source of truth for looks: the Cowork Design canvas "Folio 设计基础"
   (<https://claude.ai/artifact/F1eGkQ7kuFr3HYayxLtD2K>, Sirui's private artifact; boards named in
   each section) and the tokens in [`design/tokens/`](../../../design/tokens/README.md), also
@@ -84,9 +85,10 @@ Board: "组合预览". Wide layout (window width ≥ `size.narrow-breakpoint`, 7
 - Library: the tree takes the full width; the tag filter bar is hidden (filters stay available
   through search). Opening a file replaces the tree with the preview; the preview header starts
   with a "Back" button. Only two preview actions show: "Open with default app" and "More".
-- Changes and History were not drawn for narrow windows. Default: the list takes the full width
-  (Changes: the commit card and "Not synced" card stack below the list, scrolling with it); picking
-  an item opens the preview over the list with "Back", like the Library.
+- Changes and History in the narrow window: [workspace-history.md](workspace-history.md) §2.2
+  (30B: the changes list takes the full width with the commit bar pinned to the bottom; History
+  takes the full width; opening a change or a version covers the list with "Back", like the
+  Library).
 
 ## 3. Title bar and toolbar (18C3)
 
@@ -158,15 +160,16 @@ segmented toggle (Tree pressed), "+" Add files.
 order. Idle chip: `color.surface.panel`, 1 px `color.border.control`, `color.text.secondary`, tag
 dot 7 px in `palette.<color>.dot`. Selected: `color.text.primary` fill and border,
 `color.surface.panel` text, 600. Several tags can be selected; "All" clears them. Wraps to a
-second row when needed. With a filter on, the tree shows only matching files, with every course
-and folder that contains one expanded.
+second row when needed; tags that would start a third row go behind a "+N" chip with a menu (33B,
+[workspace-history.md](workspace-history.md) §12.1). With a filter on, the tree shows only matching
+files, with every course and folder that contains one expanded.
 
 **Tree** (padding 6 px; rows `size.row`, `radius.row`, indent 16 px per level, 1 px
 `color.border.guide` indent guides):
 
 | Row | Content |
 |---|---|
-| Quick views | "Recently added", "Untagged" with icons and counts, then a separator |
+| Quick views | "Recently added", "Untagged" with icons and counts, then a separator. Lists and counts follow the current semester, like the tree (34A, [workspace-history.md](workspace-history.md) §12.2) |
 | Course | chevron, course badge (section 10), course code (600, tabular figures), course name (`font.size.label`, 400, `color.text.secondary`), file count (11 px, `color.text.tertiary`). A course without a code shows its name at 600 in `color.text.primary` |
 | Folder | chevron, folder / folder-open icon in `color.text.secondary`, name |
 | File | type icon 16 px in `palette.<color>.solid`, name, up to three tag dots (7 px, 3 px apart) |
@@ -204,14 +207,18 @@ and folder that contains one expanded.
 - Course or folder selected: header with folder icon, then the course code (600) and course name
   (`color.text.secondary`) for a course, or path + name for a folder, then "· 10 files",
   "Date modified" sort button and List / Grid toggle; grid of tiles (min 150 px, gap 12, padding
-  14): 104 px thumbnail area on `color.surface.sunken`, then icon + name + tag dots.
+  14): 104 px thumbnail area on `color.surface.sunken`, then icon + name + tag dots. Folders come
+  first as 48 px cards in a "Folders" group (35A, [workspace-history.md](workspace-history.md)
+  §12.3).
 - Drop target (not drawn): while files are dragged over the window, the preview shows a 2 px dashed
   `color.accent.default` outline and "Drop to add to MAT232" (the course code, or the name of a
   course without one).
 
 ## 6. Changes view (11, 21A, 22A)
 
-Board: "工作区 · 平铺列表 + 标题和说明".
+Board: "工作区 · 平铺列表 + 标题和说明". M2's states (metadata rows, readiness, the AI message
+states, committing, the first commit), the "Not synced" card before sync exists (31A) and the diff
+in every state: [workspace-history.md](workspace-history.md) §3–§6, §10.
 
 **Changes list** (`size.changes-panel`):
 
@@ -249,7 +256,8 @@ the library. The file is in the Recycle Bin."
 
 ## 7. History view (10A, 19C, 20A)
 
-Board: "历史 · 宽度可拖动".
+Board: "历史 · 宽度可拖动". M2's entries and states, one file's history, restoring a version,
+editing a message and undoing a commit: [workspace-history.md](workspace-history.md) §7–§9.
 
 - Width `size.history-panel` (440), draggable between `size.history-panel-min` and
   `size.history-panel-max` with an 8 px handle centred in the gap to the preview (grip 4 × 36 px
@@ -372,7 +380,8 @@ Known limitations, accepted:
 - Tag dots in rows are colour only (8A). They carry a tooltip and an accessible label, the tag
   names show in the preview header and the filter chips, and the palette keeps neighbouring colours
   at ΔE2000 ≥ 10.4.
-- With English labels the tag filter bar wraps to two rows at 340 px.
+- With English labels the tag filter bar wraps to two rows at 340 px; more tags go behind "+N"
+  (33B).
 - Long course names can still truncate in the tree at 340 px; the code before them always shows,
   and the tooltip carries the full name.
 - At 440 px the "Not synced" pill wraps under long commit titles.
@@ -398,5 +407,7 @@ Build requirements from the review:
    join-remote flows (brief §7), conflict resolution. These get their own handoff specs.
    Drawn since (2026-09-28, lane `design/design-m1-flows`): first run in
    [first-run.md](first-run.md); the drop target, context menus and the error state for failed
-   window commands in [library-actions.md](library-actions.md). Still to draw: Changes and History
-   in the narrow window, the toolbar sync states, join-remote, conflict resolution.
+   window commands in [library-actions.md](library-actions.md). Drawn since (2026-10-03, lane
+   `design/design-m2-details`): Changes and History in the narrow window in
+   [workspace-history.md](workspace-history.md) §2.2. Still to draw: the toolbar sync states,
+   join-remote, conflict resolution.
