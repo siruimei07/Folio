@@ -17,12 +17,12 @@
     ]
   },
   "now": {
-    "stage": "M2 版本记录：设计和历史格式都已合并，M2 合约可以开始",
+    "stage": "M2 版本记录：依赖已合并，M2 合约可以开始；先修 main 上偶尔失败的测试",
     "focus": "M2",
     "summary": [
-      "10-04 已合并：M2 设计细节（ed245bf、ab61012、56ff81a：workspace-history.md 和第 10 轮 token，你的 30B～35A 六个决定）；iCloud 实测（80b3f26，iPad 上配合，结果在 docs/research/icloud-field-test.md）；问题列表分页测试的修复（c5776a3）。之前：M1 验收（v0.1）、课程徽标、历史格式规格。完整 pnpm check 不再卡在 token 测试上。",
-      "现在可以开始：`feat/ipc-m2-contract`（M2 合约，关键路径的第一步；Opus 5.5 · xhigh，Fable 暂停中）；`feat/ui-library-m1-notes`（M1 留下的三处资料库细节，S）；`fix/core-recycle-cloud-placeholder`（删云端占位文件时误报失败，S）。合并一次一个，每个等上一个在 main 上的 CI 跑完。",
-      "同步仿真 `test/core-sync-simulation`：Claude 审计后退回 Codex 修改（进行中）；它合并后 `docs/specs-sync` 才能开（要用实测和仿真的发现，含 pack 删除竞态，决策 pack-deletion-race）。进行中：`chore/build-deps-m2`（Codex，checkpoint；装依赖是整个工作区的操作，要等别的 lane 都在 checkpoint 或 review）。",
+      "10-04 已合并：M2 依赖 `chore/build-deps-m2`（CI 37230017035 绿）；M1 留下的资料库细节 `feat/ui-library-m1-notes`（41539d2：标签筛选两行加「+N」、快捷视图跟当前学期、文件夹卡片）。它合并后 main 的 CI（run 37237819510）先红后绿：problems.test.tsx 的短列表分页测试偶尔失败（和这个 lane 无关），重跑通过；修复交给 fix/ui-problems-short-list-flake。 更早：M2 设计、iCloud 实测、问题列表分页修复、历史格式规格。",
+      "可以开始：`fix/ui-problems-short-list-flake`（CI 红了先修，S，Opus 5.5 · high）；`feat/ipc-m2-contract`（M2 合约，关键路径第一步，Opus 5.5 · xhigh）。对象库等 M2 核心 lane 等合约合并。合并一次一个，每个等上一个在 main 上的 CI 跑完。",
+      "进行中：`fix/core-recycle-cloud-placeholder`（你定了：只在云端的文件进提供方的回收站，记为 CloudTrash；装着这类文件的文件夹留下，报 CloudOnly；IPC 和界面文字留给之后的合约 lane）；`test/core-sync-simulation`（第二次审计没过，退回 Codex：iPad 再次移到同一个 NFD 名字仍会变成删除、补一条「路径级直接修改不丢」的不变量、锚点和压缩用同一条「自己推送已确认」规则并用单调时钟；之后第三次审计，合并后 `docs/specs-sync` 才能开）。",
       "按你批准的 versioning.md §19：差异和恢复也等正文抽取；AI 提交说明等差异做完再开；M3 新增 `feat/core-retention`（Word 旧版本稀疏保留）；M1 的三处资料库细节由新的 `feat/ui-library-m1-notes` 做。关键路径：M2 合约 → 对象库 → 工作区 → 提交和历史 → 差异和恢复 → AI 提交说明 → M2 验收。",
       "模型：Fable 5.1 暂停（你 10-03 的决定）：推荐给它的 lane（关卡、规格、IPC 合约、推理强度 max）都由 Opus 5.5 用同样的推理强度代替；界面、核心、测试、设计用 Opus 5.5，只改文档和只合并的用 Sonnet 5.5。恢复时删掉 meta.pausedModels 里的 fable 即可。",
       "Codex 的项目级 skills（`AGENTS.md`、`.agents/skills/`、`.codex/`、`.claude/skills/`）和 CLAUDE.md 里的两处改动不进仓库，由 Codex 管理：任何 lane 都不提交、不丢弃。"
@@ -1743,6 +1743,34 @@
       ]
     },
     {
+      "id": "docs/docs-roadmap-review-queue",
+      "title": "M2 依赖和资料库细节合并后的路线图刷新",
+      "milestone": "M2",
+      "phase": "m2-spec",
+      "track": "flow",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "docs/docs-roadmap-design-landed"
+      ],
+      "summary": "M2 依赖、M1 资料库细节合并后更新 now；main 的 CI 又被一个偶尔失败的测试弄红，加上修复 lane；同步仿真第二次审计退回 Codex",
+      "status": "done",
+      "updated": "2026-10-04",
+      "landed": "2026-10-04",
+      "gates": {
+        "check": "pass",
+        "e2e": "na",
+        "codeReview": "na",
+        "securityReview": "na",
+        "simplify": "na",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "docs/roadmap/roadmap.json"
+      ]
+    },
+    {
       "id": "docs/docs-roadmap-claimed",
       "title": "“已领取”状态",
       "milestone": "M2",
@@ -2743,6 +2771,41 @@
         "extra": [
           "apps/desktop/src/problems/problems.test.tsx, \"loads a page more each time the end of the list comes into view\", sometimes ends at 400 rows instead of 450 under the load of a full `pnpm check`. Reproduce it first (run the file many times in a row while other tests load the machine), then find whether the test reaches the end before the list watches its new end, or the component misses an intersection while a page loads (then a user's list would stop at 400 too: a real bug).",
           "Fix the cause, never with longer timeouts or retries; the sibling test \"asks for the next page by itself while the end of a short list is in view\" must keep passing. Show it stable over many repeated runs."
+        ]
+      }
+    },
+    {
+      "id": "fix/ui-problems-short-list-flake",
+      "title": "问题列表短列表测试偶尔失败",
+      "milestone": "M2",
+      "phase": "m2-spec",
+      "track": "ui",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "fix/ui-problems-paging-flake"
+      ],
+      "summary": "problems.test.tsx 的「短列表的结尾在视野里时自己要下一页」在 main 的 CI 上失败过（期望 250 实际 200，run 37237819510）；查清是测试还是组件的问题，并把两处测试共用的假 IntersectionObserver 合成一个 helper",
+      "status": "planned",
+      "updated": "2026-10-04",
+      "owns": [
+        "apps/desktop/src/problems/**",
+        "apps/desktop/src/test/**"
+      ],
+      "shared": [
+        "apps/desktop/src/search/SearchDialog.test.tsx"
+      ],
+      "notes": [
+        "main CI 37237819510（41539d2，feat/ui-library-m1-notes 合并后）只有这一个测试失败；那个 lane 没碰问题列表用到的代码"
+      ],
+      "links": [
+        "docs/design/handoff/library-actions.md"
+      ],
+      "prompt": {
+        "extra": [
+          "apps/desktop/src/problems/problems.test.tsx, \"asks for the next page by itself while the end of a short list is in view\", failed on main's CI (run 37237819510: 200 rows, expected 250). It is the sibling of the test fix/ui-problems-paging-flake fixed (3f08d18), which changed the fake IntersectionObserver; read that lane's finding first.",
+          "Reproduce it under load (many repeats while other tests load the machine, as that lane did), then decide: does the test set the end in view too late for the first watcher, or does ProblemList miss a page when the end is already in view while a page loads? If the component misses it, a user's short list would stop at 200 too: fix the component, not only the test. No longer timeouts or retries.",
+          "Also move the remembering fake IntersectionObserver into one helper in apps/desktop/src/test/ and use it from problems.test.tsx and search/SearchDialog.test.tsx (loose end). Show every paging test in both files stable over many repeated runs and alongside a full `pnpm check`."
         ]
       }
     },
@@ -3756,7 +3819,7 @@
     {
       "state": "open",
       "item": "会记住「已滚到底」的假 IntersectionObserver 在 problems.test.tsx 和 SearchDialog.test.tsx 各写了一份：工作区列表要第三份之前合成 src/test/ 里的共用 helper",
-      "lane": "feat/ui-changes-view"
+      "lane": "fix/ui-problems-short-list-flake"
     }
   ],
   "risks": [
@@ -4133,6 +4196,16 @@
       "at": "2026-10-04",
       "by": "Claude Code",
       "text": "合并：design/design-m2-details（ed245bf、ab61012、56ff81a）；M2 合约可以开始；记下设计决定 30B～35A"
+    },
+    {
+      "at": "2026-10-04",
+      "by": "Claude Code",
+      "text": "now：同步仿真（等第二次审计）和 M2 依赖（等审计）都在合并队列里"
+    },
+    {
+      "at": "2026-10-04",
+      "by": "Claude Code",
+      "text": "合并：chore/build-deps-m2（CI 37230017035 绿）、feat/ui-library-m1-notes（41539d2；main CI 37237819510 第一次因 problems.test.tsx 短列表测试偶尔失败而红，重跑通过）。新增 fix/ui-problems-short-list-flake；同步仿真第二次审计退回 Codex"
     }
   ]
 }
