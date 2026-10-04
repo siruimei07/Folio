@@ -2,17 +2,18 @@
 // No imports and no Node APIs: `build` inlines this file into the page with the `export`
 // keywords removed, so the page and the CLI derive statuses, paths and prompts the same way.
 
-export const STATUSES = ['done', 'review', 'wip', 'planned', 'dropped'];
+export const STATUSES = ['done', 'review', 'wip', 'claimed', 'planned', 'dropped'];
 
 /** What a lane shows as: stored status, or for a planned lane whether its dependencies landed. */
 export const DISPLAY = {
-  done: { label: '已完成', mark: '✅', order: 6 },
-  review: { label: '待评审 / 合并', mark: '🟡', order: 1 },
+  done: { label: '已完成', mark: '✅', order: 7 },
+  review: { label: '待评审 / 合并', mark: '🟡', order: 2 },
   wip: { label: '进行中', mark: '🔄', order: 0 },
-  ready: { label: '可以开始', mark: '🟢', order: 2 },
-  queued: { label: '排队', mark: '⏳', order: 3 },
-  locked: { label: '未解锁', mark: '🔒', order: 4 },
-  dropped: { label: '已放弃', mark: '⊘', order: 7 },
+  claimed: { label: '已领取', mark: '🙋', order: 1 },
+  ready: { label: '可以开始', mark: '🟢', order: 3 },
+  queued: { label: '排队', mark: '⏳', order: 4 },
+  locked: { label: '未解锁', mark: '🔒', order: 5 },
+  dropped: { label: '已放弃', mark: '⊘', order: 8 },
 };
 
 export const GATES = {
@@ -123,6 +124,17 @@ export function displayStatus(lane, lanes) {
   const blocked = lane.deps.some((dep) => lanes.get(dep)?.status !== 'done');
   if (blocked) return 'locked';
   return lane.hold ? 'queued' : 'ready';
+}
+
+/**
+ * The status the explorer's claim button would set, or null when it shows no button: a ready or
+ * queued lane can be claimed (Sirui opened a session for it, which has not reported `wip` yet),
+ * and a claimed lane can go back to planned. Gates are never claimed.
+ */
+export function claimToggle(lane, lanes) {
+  if (lane.kind === 'gate') return null;
+  if (lane.status === 'claimed') return 'planned';
+  return ['ready', 'queued'].includes(displayStatus(lane, lanes)) ? 'claimed' : null;
 }
 
 /** id → ids of the lanes that list it in `deps`. */
@@ -274,7 +286,7 @@ export function startTemplate(lane) {
 /**
  * The copyable prompt for a lane: for a Codex lane its handoff (or, once in review, its audit);
  * otherwise its own lines, a template with its fields (`{ template?, extra }`, the start
- * template for its kind when `template` is left out), or, for a planned lane, that start template.
+ * template for its kind when `template` is left out), or, for a planned or claimed lane, that start template.
  */
 export function composePrompt(data, lane) {
   if (isCodex(lane)) {
@@ -283,7 +295,7 @@ export function composePrompt(data, lane) {
   }
   if (Array.isArray(lane.prompt)) return fill(data, lane, lane.prompt);
   if (lane.prompt) return fill(data, lane, data.prompts[lane.prompt.template ?? startTemplate(lane)] ?? [], lane.prompt.extra);
-  if (lane.status === 'planned') return fill(data, lane, data.prompts[startTemplate(lane)] ?? data.prompts.start);
+  if (lane.status === 'planned' || lane.status === 'claimed') return fill(data, lane, data.prompts[startTemplate(lane)] ?? data.prompts.start);
   return null;
 }
 
@@ -393,7 +405,7 @@ export function validate(data) {
     if (!STATUSES.includes(lane.status)) err(`${at}: status must be one of ${STATUSES.join(', ')}`);
     if (!DATE.test(lane.updated ?? '')) err(`${at}: updated must be YYYY-MM-DD`);
     if (lane.landed !== undefined && !DATE.test(lane.landed)) err(`${at}: landed must be YYYY-MM-DD`);
-    if (lane.hold !== undefined && lane.status !== 'planned') err(`${at}: hold only applies to planned lanes`);
+    if (lane.hold !== undefined && !['planned', 'claimed'].includes(lane.status)) err(`${at}: hold only applies to planned or claimed lanes`);
     for (const key of ['deps', 'landAfter']) {
       if (key === 'deps' && !Array.isArray(lane.deps)) {
         err(`${at}: deps must be an array`);
@@ -422,12 +434,16 @@ export function validate(data) {
         if (!['template', 'extra'].includes(key)) err(`${at}: unknown prompt field "${key}"`);
     }
     if (['review', 'wip'].includes(lane.status) && !lane.next) warnings.push(`${at}: an active lane should say what is next`);
+    if (lane.status === 'claimed' && lane.kind === 'gate') err(`${at}: a gate cannot be claimed`);
   }
 
   const lanes = byId(data);
   const topo = topoOrder(data);
   if (topo.cycle) err(`dependency cycle: ${topo.cycle.join(' → ')}`);
   for (const lane of data.lanes) {
+    if (lane.status === 'claimed')
+      for (const dep of lane.deps)
+        if (lanes.get(dep) && lanes.get(dep).status !== 'done') warnings.push(`lane ${lane.id} is claimed but its dependency ${dep} has not landed`);
     if (lane.status !== 'done') continue;
     for (const dep of lane.deps)
       if (lanes.get(dep) && lanes.get(dep).status !== 'done') err(`lane ${lane.id} is done but its dependency ${dep} is not`);

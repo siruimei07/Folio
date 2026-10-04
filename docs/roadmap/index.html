@@ -29,6 +29,7 @@
   --st-done: #3d8a57;
   --st-review: #c48500;
   --st-wip: #2a78d6;
+  --st-claimed: #0a8796;
   --st-ready: #0b8a0b;
   --st-queued: #cf5f2b;
   --st-locked: #98a0ad;
@@ -62,7 +63,7 @@
     --bg: #0d1015; --surface: #161a21; --surface-2: #1d222b; --band: #13171d; --band-2: #191e26;
     --ink: #e8ebf0; --ink-2: #b6bcc8; --muted: #8d94a3; --line: #272d37; --line-strong: #39414e;
     --accent: #6f9cff; --accent-soft: #1d2a45; --accent-ink: #0d1015; --down: #b28cf0; --down-soft: #2a2140;
-    --st-done: #5cae78; --st-review: #e9ad2c; --st-wip: #5b9cf0; --st-ready: #2fbf2f; --st-queued: #ec8656; --st-locked: #6c7482; --st-dropped: #4f5664;
+    --st-done: #5cae78; --st-review: #e9ad2c; --st-wip: #5b9cf0; --st-claimed: #35c2cf; --st-ready: #2fbf2f; --st-queued: #ec8656; --st-locked: #6c7482; --st-dropped: #4f5664;
     --g-pass: #2fbf2f; --g-partial: #e9ad2c; --g-fail: #ec6767; --g-todo: #6c7482; --g-na: #343b47;
     --t-core: #3987e5; --t-ui: #d95926; --t-design: #199e70; --t-verify: #c98500; --t-flow: #d55181;
     --risk-high: #ec6767; --risk-med: #ec8656; --risk-low: #6c7482;
@@ -74,7 +75,7 @@
   --bg: #0d1015; --surface: #161a21; --surface-2: #1d222b; --band: #13171d; --band-2: #191e26;
   --ink: #e8ebf0; --ink-2: #b6bcc8; --muted: #8d94a3; --line: #272d37; --line-strong: #39414e;
   --accent: #6f9cff; --accent-soft: #1d2a45; --accent-ink: #0d1015; --down: #b28cf0; --down-soft: #2a2140;
-  --st-done: #5cae78; --st-review: #e9ad2c; --st-wip: #5b9cf0; --st-ready: #2fbf2f; --st-queued: #ec8656; --st-locked: #6c7482; --st-dropped: #4f5664;
+  --st-done: #5cae78; --st-review: #e9ad2c; --st-wip: #5b9cf0; --st-claimed: #35c2cf; --st-ready: #2fbf2f; --st-queued: #ec8656; --st-locked: #6c7482; --st-dropped: #4f5664;
   --g-pass: #2fbf2f; --g-partial: #e9ad2c; --g-fail: #ec6767; --g-todo: #6c7482; --g-na: #343b47;
   --t-core: #3987e5; --t-ui: #d95926; --t-design: #199e70; --t-verify: #c98500; --t-flow: #d55181;
   --risk-high: #ec6767; --risk-med: #ec8656; --risk-low: #6c7482;
@@ -137,8 +138,9 @@ section[role="tabpanel"] { display: grid; gap: 20px; }
 .mark { width: 10px; height: 10px; border-radius: 50%; flex: none; background: var(--st); border: 2px solid var(--st); }
 .mark[data-s="ready"], .mark[data-s="queued"] { background: transparent; }
 .mark[data-s="locked"] { background: transparent; border-style: dashed; }
+.mark[data-s="claimed"] { background: radial-gradient(circle, var(--st) 0 1.5px, transparent 2px); }
 .mark[data-s="wip"] { box-shadow: 0 0 0 3px color-mix(in srgb, var(--st) 25%, transparent); }
-[data-s="done"] { --st: var(--st-done); } [data-s="review"] { --st: var(--st-review); } [data-s="wip"] { --st: var(--st-wip); }
+[data-s="done"] { --st: var(--st-done); } [data-s="review"] { --st: var(--st-review); } [data-s="wip"] { --st: var(--st-wip); } [data-s="claimed"] { --st: var(--st-claimed); }
 [data-s="ready"] { --st: var(--st-ready); } [data-s="queued"] { --st: var(--st-queued); } [data-s="locked"] { --st: var(--st-locked); } [data-s="dropped"] { --st: var(--st-dropped); }
 [data-t="core"] { --t: var(--t-core); } [data-t="ui"] { --t: var(--t-ui); } [data-t="design"] { --t: var(--t-design); } [data-t="verify"] { --t: var(--t-verify); } [data-t="flow"] { --t: var(--t-flow); }
 .track { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--ink-2); white-space: nowrap; }
@@ -376,6 +378,8 @@ pre { margin: 0; font: 12px/1.55 var(--font-mono); white-space: pre-wrap; overfl
 <script>
 /*@lib*/
 const DATA = /*@data*/null;
+/** True only when `pnpm roadmap serve` sends the page, which can answer the claim button. */
+const LIVE = /*@live*/false;
 
 (() => {
   'use strict';
@@ -394,7 +398,7 @@ const DATA = /*@data*/null;
   const AGENT = new Map(D.agents.map((a) => [a.id, a]));
   const PHASE = new Map(D.phases.map((p, index) => [p.id, { ...p, index }]));
   const MILESTONE = new Map(D.milestones.map((m) => [m.id, m]));
-  const ORDER = ['wip', 'review', 'ready', 'queued', 'locked', 'done', 'dropped'];
+  const ORDER = ['wip', 'claimed', 'review', 'ready', 'queued', 'locked', 'done', 'dropped'];
   const FOCUS_GATE = D.lanes.find((l) => l.kind === 'gate' && l.milestone === D.now.focus);
   const CRITICAL = FOCUS_GATE ? criticalPath(D, FOCUS_GATE.id).path : [];
   const CRIT = new Set(CRITICAL);
@@ -657,8 +661,8 @@ const DATA = /*@data*/null;
             h('header', {}, h('h2', {}, '需要你')),
             decisionList(D.decisions.filter((d) => d.state === 'open' || d.state === 'recurring'))))),
       h('div', { class: 'panel' },
-        h('header', {}, h('h2', {}, '现在可以开', h('small', {}, '依赖都合并了')), h('p', {}, '⏳ 表示依赖已满足，但有理由先等一等')),
-        h('div', { class: 'cards' }, D.lanes.filter((l) => ['ready', 'queued'].includes(statusOf(l))).sort(byStatus).map(laneCard))),
+        h('header', {}, h('h2', {}, '现在可以开', h('small', {}, '依赖都合并了')), h('p', {}, '⏳ 表示依赖已满足，但有理由先等一等；🙋 已领取：你开了 session，等它开工')),
+        h('div', { class: 'cards' }, D.lanes.filter((l) => ['claimed', 'ready', 'queued'].includes(statusOf(l))).sort(byStatus).map(laneCard))),
       codexDesk(),
       h('div', { class: 'grid-2' },
         h('div', { class: 'panel' },
@@ -684,8 +688,8 @@ const DATA = /*@data*/null;
         h('p', {}, 'Codex 拿完整提示词做到 review；Claude Code 再用短提示词审计、合并。Rust 名额和 Claude 合计。')),
       h('div', { class: 'codex-desk' },
         column('可以交给 Codex', '依赖都合并了', open.filter((x) => ['ready', 'queued'].includes(x.st)).map((x) => item(x, x.p.handoff, '复制 Codex 提示词'))),
-        column('Codex 在做', '做完停在 review', open.filter((x) => x.st === 'wip' && x.p.handoff).map((x) => item(x, null))),
-        column('等 Claude 审计', '审计通过就合并', open.filter((x) => x.st === 'review' || (x.st === 'wip' && !x.p.handoff)).map((x) => item(x, x.p.audit, '复制审计提示词'))),
+        column('Codex 在做', '做完停在 review', open.filter((x) => ['wip', 'claimed'].includes(x.st) && x.p.handoff).map((x) => item(x, null))),
+        column('等 Claude 审计', '审计通过就合并', open.filter((x) => x.st === 'review' || (['wip', 'claimed'].includes(x.st) && !x.p.handoff)).map((x) => item(x, x.p.audit, '复制审计提示词'))),
         column('之后', '依赖还没合并', byMilestone.map(([m, n]) => h('li', { class: 'small' }, `${MILESTONE.get(m).short}：${n} 个`)), later.length)));
   }
   function queueList() {
@@ -703,7 +707,7 @@ const DATA = /*@data*/null;
     }));
   }
   function slotsPanel() {
-    const wip = D.lanes.filter((l) => statusOf(l) === 'wip');
+    const wip = D.lanes.filter((l) => ['wip', 'claimed'].includes(statusOf(l)));
     const ready = D.lanes.filter((l) => statusOf(l) === 'ready');
     const groups = [
       { label: 'Rust 写入', hint: '核心 / shell，Claude Code 和 Codex 合计', limit: D.limits.rustSessions, lanes: wip.filter((l) => l.track === 'core'), next: ready.filter((l) => l.track === 'core') },
@@ -715,7 +719,7 @@ const DATA = /*@data*/null;
     return h('div', { class: 'slots' },
       groups.map((g) => {
         const boxes = g.lanes.map((lane) => h('button', { type: 'button', class: 'slot full card', onclick: () => openLane(lane.id) },
-          h('span', { class: 'row' }, h('span', { class: 'mark', 'data-s': 'wip' }), h('b', {}, lane.title)), h('span', { class: 'id' }, `${lane.id} · ${agentName(lane.agent)}`)));
+          h('span', { class: 'row' }, h('span', { class: 'mark', 'data-s': statusOf(lane) }), h('b', {}, lane.title)), h('span', { class: 'id' }, `${lane.id} · ${agentName(lane.agent)}`)));
         const free = g.limit === null ? 0 : Math.max(0, g.limit - g.lanes.length);
         for (let i = 0; i < free; i += 1)
           boxes.push(h('div', { class: 'slot' }, g.next[i] ? h('span', {}, '空位 · 可以开 ', laneLink(g.next[i])) : '空位'));
@@ -872,6 +876,7 @@ const DATA = /*@data*/null;
       st === 'wip' ? s('circle', { class: 'pulse', r: 9 }) : null,
       g.critical && CRIT.has(lane.id) ? s('circle', { class: 'ring', r: 13 }) : null,
       nodeShape(lane, st),
+      st === 'claimed' ? s('circle', { r: 3, fill: 'var(--st-claimed)' }) : null,
       s('text', { class: 'label', x: 15, y: -1 }, title),
       s('text', { class: 'sub', x: 15, y: 13 }, `${lane.size} · ${agentName(lane.agent)}`));
       tipFor(node, () => [lane.title, `${DISPLAY[st].label} · ${lane.id}`, isCodex(lane) ? `Codex 实现 · Claude 审计 ${modelName(D, auditModelFor(lane, D))} · ${auditEffortFor(lane)}` : `${modelName(D, modelFor(lane, D))} · ${effortFor(lane)}`, lane.next ?? lane.hold ?? lane.summary]);
@@ -1212,7 +1217,7 @@ const DATA = /*@data*/null;
     const idCode = h('code', {}, lane.id);
     drawer.replaceChildren(
       h('header', {},
-        h('div', { class: 'row' }, pill(st), codexTag(lane), CRIT.has(id) ? h('span', { class: 'tag' }, '关键路径') : null, lane.kind === 'gate' ? h('span', { class: 'tag' }, '验收关') : null),
+        h('div', { class: 'row' }, pill(st), codexTag(lane), CRIT.has(id) ? h('span', { class: 'tag' }, '关键路径') : null, lane.kind === 'gate' ? h('span', { class: 'tag' }, '验收关') : null, claimButton(lane)),
         h('h2', { id: 'drawer-title', tabindex: '-1' }, lane.title),
         h('div', { class: 'row' }, idCode, lane.kind !== 'gate' ? h('button', { type: 'button', class: 'btn', onclick: () => copy(lane.id, idCode) }, '复制分支名') : null),
         h('div', { class: 'row small muted' },
@@ -1244,6 +1249,34 @@ const DATA = /*@data*/null;
     if (!keepHash) setHash();
     if (state.tab === 'graph') rerender();
     drawer.querySelector('#drawer-title').focus({ preventScroll: true });
+  }
+  /**
+   * Marks a startable lane claimed (or takes the mark back). The page `pnpm roadmap serve` sends
+   * writes roadmap.json and reloads; the published page cannot write, so it copies the command.
+   */
+  function claimButton(lane) {
+    const next = claimToggle(lane, LANES);
+    if (!next) return null;
+    const label = next === 'claimed' ? '标记已领取' : '取消领取';
+    const command = `pnpm roadmap status ${lane.id} ${next}`;
+    if (!LIVE) return h('button', { type: 'button', class: 'btn', title: command, onclick: () => copy(command) }, `${label}（复制命令）`);
+    return h('button', {
+      type: 'button',
+      class: next === 'claimed' ? 'btn primary' : 'btn',
+      onclick: async (e) => {
+        const button = e.currentTarget;
+        button.disabled = true;
+        try {
+          const res = await fetch('/claim', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ lane: lane.id, status: next }) });
+          const body = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
+          location.reload();
+        } catch (error) {
+          toast(`没有改成：${error.message}`);
+          button.disabled = false;
+        }
+      },
+    }, label);
   }
   function closeLane() {
     if (drawer.hidden) return;

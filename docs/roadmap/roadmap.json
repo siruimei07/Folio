@@ -1681,6 +1681,40 @@
       ]
     },
     {
+      "id": "docs/docs-roadmap-claimed",
+      "title": "“已领取”状态",
+      "milestone": "M2",
+      "phase": "m2-spec",
+      "track": "flow",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [],
+      "summary": "Sirui 给可以开始的 lane 开了 session 后标成“已领取”（🙋 青色）：命令 pnpm roadmap status <lane> claimed，或本地路径图 lane 详情里的按钮；agent 开工时改成 wip，“现在可以开”不再推荐它",
+      "status": "done",
+      "updated": "2026-10-04",
+      "landed": "2026-10-04",
+      "gates": {
+        "check": "partial",
+        "e2e": "na",
+        "codeReview": "pass",
+        "securityReview": "na",
+        "simplify": "na",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "docs/roadmap/tools/**",
+        "docs/roadmap/index.html",
+        "docs/roadmap/README.md"
+      ],
+      "shared": [
+        "docs/roadmap/roadmap.json"
+      ],
+      "notes": [
+        "pnpm check 10-04：check:roadmap 通过（12 个单元测试）；唯一失败是 Cowork 未提交的第 10 轮 token 导致的 tokens 过期测试，与本 lane 无关。浏览器面板里验证了领取 / 取消领取、依赖图、深色模式和 /claim 的跨站拒绝"
+      ]
+    },
+    {
       "id": "refactor/core-sta-helper",
       "title": "合并 STA 辅助函数",
       "milestone": "M1",

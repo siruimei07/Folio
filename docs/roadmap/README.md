@@ -24,6 +24,7 @@ The CLI writes canonical formatting, which keeps each lane's volatile fields (`s
 
 | Moment | Command | Commit it |
 |---|---|---|
+| Sirui opens a session for a ready lane (optional) | `pnpm roadmap status <lane> claimed`, or the button in the lane drawer of the local explorer (`pnpm roadmap serve`) | with the lane's first checkpoint, if the session has not set `wip` yet |
 | Lane starts (no entry yet: add one by hand, then `pnpm roadmap fmt`) | `pnpm roadmap status <lane> wip --next "<what you are doing>"` | with your first checkpoint |
 | Checks or reviews finish | `pnpm roadmap gate <lane> check=pass e2e=pass codeReview=pass …` | with the checkpoint |
 | Lane reaches review | `pnpm roadmap status <lane> review --next "<what Sirui approves>"`, and add it to `landingQueue` | with the last commit |
@@ -41,7 +42,7 @@ pnpm roadmap next                         where things stand
 pnpm roadmap show <lane>                  one lane: what it waits for and unblocks, gates, paths
 pnpm roadmap prompt <lane>                its copyable prompt (custom, template or the generic start prompt)
       [--codex | --audit]                 a Codex lane: the full handoff to Codex, or the short Claude Code audit
-pnpm roadmap status <lane> <status>       done | review | wip | planned | dropped
+pnpm roadmap status <lane> <status>       done | review | wip | claimed | planned | dropped
       [--next "…"] [--hold "…" | --no-hold] [--landed YYYY-MM-DD]
 pnpm roadmap gate <lane> <gate>=<state>…  gates check e2e codeReview securityReview simplify designCritique a11y;
                                           states pass partial fail todo na
@@ -78,8 +79,8 @@ A lane, in canonical field order (`?` = optional):
 | `auditModel?`, `auditEffort?` | Codex lanes only: model and effort for the Claude Code audit. Without them: S Opus · medium, M Opus · high, L Fable · xhigh |
 | `deps` | Lanes that must land before this one can start; drives ready / locked |
 | `landAfter?` | Landing order only (no code dependency) |
-| `status` | Stored: `done`, `review`, `wip`, `planned`, `dropped`. A planned lane shows as ready when every dep is done, queued when it also has `hold`, else locked |
-| `hold?` | Why a ready lane should still wait (planned only) |
+| `status` | Stored: `done`, `review`, `wip`, `claimed`, `planned`, `dropped`. A planned lane shows as ready when every dep is done, queued when it also has `hold`, else locked. `claimed` (🙋, teal) means Sirui opened a session for a ready or queued lane and it has not set `wip` yet: `pnpm roadmap next` lists it under Claimed instead of "Can start now", and `planned` takes the mark back |
+| `hold?` | Why a ready lane should still wait (planned or claimed) |
 | `updated`, `landed?` | `YYYY-MM-DD` |
 | `next?` | The next step, for active lanes |
 | `gates?` | Check results: `pass`, `partial`, `fail`, `todo`, `na` |
@@ -110,4 +111,7 @@ After changing the data on main (or when Sirui asks for a fresh view):
 3. `meta.explorer` in `roadmap.json` holds the same URL; the page shows it under "给 agent".
 
 Locally, `pnpm roadmap serve` (or `preview_start roadmap`) shows the working copy at
-<http://localhost:5199>, rebuilt on every reload.
+<http://localhost:5199>, rebuilt on every reload. Only this page can write: its "标记已领取" /
+"取消领取" button in the lane drawer POSTs to `/claim`, which accepts same-origin JSON only and
+sets nothing but `claimed` and back to `planned` (`claimToggle` in `tools/lib.mjs`). On the
+published page the same button copies the `pnpm roadmap status` command instead.

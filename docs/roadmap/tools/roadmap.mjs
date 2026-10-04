@@ -17,6 +17,7 @@ import {
   auditModelFor,
   byId,
   canonical,
+  claimToggle,
   codexPrompts,
   composePrompt,
   criticalPath,
@@ -135,6 +136,11 @@ function next() {
   const ui = active.filter((l) => l.track === 'ui').length;
   console.log(`\n## In progress (Rust ${rust}/${data.limits.rustSessions}, UI ${ui}/${data.limits.uiSessions})`);
   for (const lane of active) console.log(`- ${lane.id} (${lane.agent}, ${session(data, lane)}): ${lane.next ?? ''}`);
+  const claimed = data.lanes.filter((l) => l.status === 'claimed');
+  if (claimed.length) {
+    console.log('\n## Claimed (Sirui opened a session; it sets wip when it starts)');
+    for (const lane of claimed) console.log(`- ${tag(lane, lanes)}  ${lane.id} [${lane.track}, ${lane.size}, ${session(data, lane)}]`);
+  }
 
   const codexOpen = data.lanes.filter((l) => codexPrompts(data, l));
   const codexReady = codexOpen.filter((l) => ['ready', 'queued'].includes(shown(l)));
@@ -221,13 +227,17 @@ function status(args) {
   lane.updated = today();
   if (typeof options.next === 'string') lane.next = options.next;
   if (typeof options.hold === 'string') lane.hold = options.hold;
-  if (options.hold === false || value !== 'planned') delete lane.hold;
+  if (options.hold === false || !['planned', 'claimed'].includes(value)) delete lane.hold;
   if (value === 'done') {
     lane.landed = typeof options.landed === 'string' ? options.landed : today();
     delete lane.next;
     data.landingQueue = data.landingQueue.filter((entry) => entry.lane !== lane.id);
   }
   save(data);
+  if (value === 'claimed') {
+    const waiting = lane.deps.filter((dep) => byId(data).get(dep)?.status !== 'done');
+    if (waiting.length) console.warn(`warning: ${lane.id} still waits for ${waiting.join(', ')}`);
+  }
   const ready = value === 'done' ? unlocks(data, lane.id) : [];
   const lanes = byId(data);
   const nowReady = ready.filter((id) => displayStatus(lanes.get(id), lanes) !== 'locked');
@@ -312,8 +322,8 @@ function doctor() {
     if (active && !fileStatus.has(lane.id)) findings.push(`${lane.id} is ${lane.status} but has no lane file on this device`);
     if (active && branches.size && !branches.has(lane.id))
       findings.push(`${lane.id} is ${lane.status} but no branch of that name exists: landed? → pnpm roadmap status ${lane.id} done`);
-    if (lane.status === 'planned' && branches.has(lane.id))
-      findings.push(`${lane.id} has a branch but the roadmap says planned → pnpm roadmap status ${lane.id} wip`);
+    if (['planned', 'claimed'].includes(lane.status) && branches.has(lane.id))
+      findings.push(`${lane.id} has a branch but the roadmap says ${lane.status} → pnpm roadmap status ${lane.id} wip`);
   }
   const overlap = sharedPaths(data).filter(({ lanes: ids }) => ids.filter((id) => lanes.get(id).status !== 'planned').length > 1);
   for (const { path: p, lanes: ids } of overlap.slice(0, 12))
@@ -322,14 +332,18 @@ function doctor() {
   for (const f of findings) console.log(`- ${f}`);
 }
 
-/** The explorer page with the shared logic and the data inlined; `wrap` adds a document skeleton. */
-function render({ wrap }) {
+/**
+ * The explorer page with the shared logic and the data inlined; `wrap` adds a document skeleton
+ * and `live` turns on the claim button, which only `serve` can answer.
+ */
+function render({ wrap, live = false }) {
   const { data } = load();
   const lib = readFileSync(path.join(TOOLS, 'lib.mjs'), 'utf8').replace(/^export /gm, '');
   const json = JSON.stringify(data).replace(/</g, '\\u003c');
   const page = readFileSync(PAGE_FILE, 'utf8')
     .replace('/*@lib*/', () => lib)
-    .replace('/*@data*/null', () => json);
+    .replace('/*@data*/null', () => json)
+    .replace('/*@live*/false', () => String(live));
   if (!wrap) return page;
   return `<!doctype html>\n<html lang="zh-CN">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n</head>\n<body>\n${page}\n</body>\n</html>\n`;
 }
@@ -342,10 +356,55 @@ function build() {
   console.log(`wrote ${path.relative(REPO, DIST_FILE).replaceAll('\\', '/')} — publish it as described in docs/roadmap/README.md`);
 }
 
+/**
+ * The local explorer's claim button: POST /claim with `{ lane, status }` sets a lane's status to
+ * what `claimToggle` allows (claimed, or back to planned) and nothing else. Only same-origin JSON
+ * requests are accepted, so another site open in the browser cannot change the file.
+ */
+function claimRequest(request, response, origins) {
+  const reply = (code, body) => response.writeHead(code, { 'content-type': 'application/json; charset=utf-8' }).end(JSON.stringify(body));
+  if (!origins.includes(request.headers.origin) || !request.headers['content-type']?.startsWith('application/json'))
+    return reply(403, { error: 'only the explorer page served here may claim lanes' });
+  let body = '';
+  request.setEncoding('utf8');
+  request.on('data', (chunk) => {
+    body += chunk;
+    if (body.length > 4096) request.destroy();
+  });
+  request.on('end', () => {
+    try {
+      let input;
+      try {
+        input = JSON.parse(body);
+      } catch {
+        return reply(400, { error: 'body is not JSON' });
+      }
+      const { data } = load();
+      const lane = data.lanes.find((l) => l.id === input?.lane);
+      if (!lane) return reply(404, { error: `no lane "${input?.lane}"` });
+      const allowed = claimToggle(lane, byId(data));
+      if (!allowed || input.status !== allowed)
+        return reply(409, { error: `${lane.id} is ${displayStatus(lane, byId(data))}; it cannot become "${input.status}" here` });
+      lane.status = allowed;
+      lane.updated = today();
+      save(data);
+      console.log(`${lane.id}: ${allowed} (from the explorer)`);
+      reply(200, { lane: lane.id, status: allowed });
+    } catch (error) {
+      reply(500, { error: String(error.message) });
+    }
+  });
+}
+
 function serve(args) {
   const port = Number(args.options.port ?? 5199);
+  const origins = [`http://localhost:${port}`, `http://127.0.0.1:${port}`];
   const server = createServer((request, response) => {
     try {
+      if (request.url === '/claim' && request.method === 'POST') {
+        claimRequest(request, response, origins);
+        return;
+      }
       if (request.url === '/roadmap.json') {
         response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
         response.end(readFileSync(DATA_FILE));
@@ -356,7 +415,7 @@ function serve(args) {
         return;
       }
       response.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
-      response.end(render({ wrap: true }));
+      response.end(render({ wrap: true, live: true }));
     } catch (error) {
       response.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' }).end(String(error.message));
     }
@@ -377,7 +436,8 @@ const HELP = `pnpm roadmap <command>
   prompt <lane> [--codex | --audit]
                                print the lane's copyable prompt; for a Codex lane --codex is the
                                full handoff to Codex and --audit the short Claude Code audit
-  status <lane> <status>       set done | review | wip | planned | dropped
+  status <lane> <status>       set done | review | wip | claimed | planned | dropped
+                               (claimed: Sirui opened a session for a ready lane; planned takes it back)
         [--next "…"] [--hold "…" | --no-hold] [--landed YYYY-MM-DD]
   gate <lane> <gate>=<state>…  gates: ${Object.keys(GATES).join(', ')}; states: ${GATE_STATES.join(', ')}
   note <lane> "<text>"         add a note to a lane

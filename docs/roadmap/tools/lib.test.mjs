@@ -7,6 +7,7 @@ import {
   auditModelFor,
   byId,
   canonical,
+  claimToggle,
   codexPrompts,
   composePrompt,
   criticalPath,
@@ -90,6 +91,25 @@ test('a planned lane is ready, queued or locked by its dependencies', () => {
   assert.equal(displayStatus(lanes.get('feat/core-c'), lanes), 'queued');
   assert.equal(displayStatus(lanes.get('feat/core-d'), lanes), 'locked');
   assert.equal(displayStatus(lanes.get('feat/core-e'), lanes), 'review');
+});
+
+test('a startable lane can be claimed and unclaimed; a locked lane, an active lane or a gate cannot', () => {
+  const data = sample();
+  const lanes = byId(data);
+  assert.equal(claimToggle(lanes.get('feat/core-b'), lanes), 'claimed');
+  assert.equal(claimToggle(lanes.get('feat/core-c'), lanes), 'claimed');
+  assert.equal(claimToggle(lanes.get('feat/core-d'), lanes), null);
+  assert.equal(claimToggle(lanes.get('feat/core-e'), lanes), null);
+  const b = lanes.get('feat/core-b');
+  b.status = 'claimed';
+  assert.equal(displayStatus(b, lanes), 'claimed');
+  assert.equal(claimToggle(b, lanes), 'planned');
+  assert.match(composePrompt(data, b), /feat\/core-b/);
+  lanes.get('feat/core-c').status = 'claimed';
+  assert.deepEqual(validate(data).errors, [], 'a claimed lane keeps its hold');
+  lanes.get('feat/core-d').status = 'claimed';
+  assert.match(validate(data).warnings.join('\n'), /feat\/core-d is claimed but its dependency feat\/core-b has not landed/);
+  assert.equal(claimToggle({ ...b, kind: 'gate' }, lanes), null);
 });
 
 test('graph helpers follow deps both ways', () => {
