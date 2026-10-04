@@ -2708,15 +2708,61 @@
         "docs/specs-history-format"
       ],
       "summary": "真实 iCloud 实测（ADR-0003 行动项 4）：冲突副本命名、NFD 文件名、大小写重命名、删除去向、固定文件夹、pack 和 head 记录先后；要你在 iPad 上配合",
-      "status": "planned",
-      "updated": "2026-10-01",
+      "status": "done",
+      "updated": "2026-10-04",
+      "landed": "2026-10-04",
+      "gates": {
+        "check": "partial",
+        "e2e": "na",
+        "codeReview": "pass"
+      },
+      "owns": [
+        "docs/research/icloud-field-test.md",
+        "docs/research/icloud-field-test/**",
+        "crates/folio-core/examples/icloud_probe.rs"
+      ],
+      "notes": [
+        "2026-10-04: run with Sirui on the iPad (iPadOS 27.0) against iCloud for Windows 15.8.118 after an earlier skip was withdrawn; every question of ADR-0003 action item 4 is answered in docs/research/icloud-field-test.md §2, with raw logs in docs/research/icloud-field-test/logs/run3/.",
+        "Findings that change the design (§4, §5): NFD names never upload from Windows and an NFC/NFD twin pair stalls every iCloud upload until removed; iPad case-only renames delete the file; Windows writes rename iPad names with invalid characters to their '_' form; conflict copies are named differently per device and the writer's own file can be renamed; renaming over a mirror file is reliable; every delete or replace also lands in iCloud's Recently Deleted.",
+        "Product bug found: WindowsRecycleBin reports failure on a cloud-only placeholder that it did delete; fix lane fix/core-recycle-cloud-placeholder.",
+        "check=partial: check:commits, check:roadmap, check:vectors and check:rust (605 tests) pass; check:web fails only on tokens.css being stale against design/design-m2-details' uncommitted token files, which this lane does not touch (it has no web files)."
+      ],
       "links": [
-        "docs/adr/ADR-0003-versioning-and-sync.md"
+        "docs/adr/ADR-0003-versioning-and-sync.md",
+        "docs/research/icloud-field-test.md",
+        "docs/research/icloud-field-test/plan.md"
       ],
       "prompt": {
         "extra": [
           "ADR-0003 action item 4, on the current iCloud for Windows (installed on DESKTOP-N7UG6S7 on 10-02), with me on the iPad: how conflict copies are named (edits and new files); how updates reach downloaded files and whether watchers see them; NFD names and names invalid on Windows; case-only renames; whether remote deletions reach the Recycle Bin; whether new files in a pinned folder inherit the pin; ordering and latency between a head record and a large pack; renaming over an existing file versus delete then move.",
           "First write a step-by-step plan I can follow (what I do on the iPad, what you script on Windows); then run it and record every observation with versions and timings in docs/research/icloud-field-test.md (a Chinese summary for me, raw logs alongside). The results feed docs/specs-sync and the simulation's fake remote."
+        ]
+      }
+    },
+    {
+      "id": "fix/core-recycle-cloud-placeholder",
+      "title": "回收站误报 iCloud 仅云端文件删除失败",
+      "milestone": "M3",
+      "phase": "m3-pre",
+      "track": "core",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "test/core-icloud-field-test"
+      ],
+      "summary": "iCloud 实测发现：WindowsRecycleBin 删除仅云端的占位符时报失败（\"the shell reported nothing in the Recycle Bin\" 或 0x8007017B），但文件其实已被删除、只在 iCloud 的「最近删除」里",
+      "status": "planned",
+      "updated": "2026-10-04",
+      "links": [
+        "docs/research/icloud-field-test.md",
+        "docs/specs/windows-adapter.md",
+        "crates/folio-core/src/win/recycle.rs"
+      ],
+      "prompt": {
+        "extra": [
+          "docs/research/icloud-field-test.md §2, §3 step 5 and §6: on iCloud for Windows 15.8, WindowsRecycleBin::recycle of a cloud-only placeholder (FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS) returns RecycleFailure::Other ('the shell reported nothing in the Recycle Bin', or 0x8007017B ERROR_CLOUD_FILE_NOT_SUPPORTED for folders) although the item is gone: iCloud moved it to iCloudDrive\\.Trash (Recently Deleted). A downloaded file recycles normally. Reproduce with `cargo run -p folio-core --example icloud_probe -- recycle <cloud-only file>`.",
+          "Decide with me (in Chinese) what Folio reports when the shell removed the item without a Recycle Bin entry: a distinct outcome such as 'removed to the cloud provider's trash' instead of a failure, so callers (library operations, M3 mirror) neither show a false error nor stop halfway. Never fall back to a permanent delete; never read or download the placeholder to recycle it.",
+          "Tests: the outcome classification with a fake shell result; an ignored test against a real iCloud folder like the other FOLIO_TEST_* ignored tests. Update docs/specs/windows-adapter.md."
         ]
       }
     },

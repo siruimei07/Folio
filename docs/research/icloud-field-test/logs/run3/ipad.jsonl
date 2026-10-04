@@ -1,0 +1,37 @@
+{"t": "2026-10-04T05:17:32.324+00:00", "step": "0", "report": "run 3 in FolioTest2 after Sirui deleted FolioTest on the iPad; iPadOS 27.0"}
+{"t": "2026-10-04T05:21:25.309+00:00", "step": "1", "report": "01-skip on the iPad shows only empty.txt and normal.txt; a.tmp, b.nosync and ~$c.docx are missing"}
+{"t": "2026-10-04T05:32:40.148+00:00", "step": "2", "report": "2a: 10 files, nfd-café.txt visible. 2b: renamed to nfd-café-ipad.txt. 2c: colon:a.txt refused ('The name \"colon:a.txt\" can't be used. Try using a name with fewer characters, or with no punctuation marks.'); q?.txt, star*.txt, pipe|.txt, quote\".txt, lt<gt>.txt, CON.txt, dot. all accepted"}
+{"t": "2026-10-04T05:33:08.039+00:00", "step": "2", "report": "Windows view: iPad renames arrived 05:32:27 as rename pairs; invalid characters became '_' (q_.txt, star_.txt, pipe_.txt, quote_.txt, lt_gt_.txt, CON_.txt, dot_.txt); the renamed café file is nfc-café.txt -> nfc-café-ipad.txt; 05:29:20 iCloud unpinned and dehydrated every file in 02-names, 05:32:20 pinned and hydrated them again, then renamed"}
+{"t": "2026-10-04T05:37:43.679+00:00", "step": "2d", "report": "a: the renamed file is nfc-café-ipad.txt, no other café file (the NFD file never reached the iPad); b: q?.txt and star*.txt show the Windows text; c: after the Windows edits the iPad names became q_.txt and star_.txt; d: the bad8 file still shows as 'dot.' on the iPad (Windows: dot_.txt)"}
+{"t": "2026-10-04T05:37:53.744+00:00", "step": "3a", "report": "harness bug: the first case-only renames at 05:37:43 were no-ops (target_of used resolve(), which restores the on-disk case); fixed and redone"}
+{"t": "2026-10-04T05:42:23.395+00:00", "step": "3", "report": "3b: the txt shows as LOWER.txt (folder name not reported). 3c: after renaming Upper.txt to upper.txt on the iPad, the file went to Recently Deleted about 10 s later on its own. 3d: refused: 'The name \"Twin\" with extension \".png\" is already taken. Please choose a different name.'"}
+{"t": "2026-10-04T05:47:34.509+00:00", "step": "3e", "report": "1: the folder shows as 'folder' on the iPad. 2: Sirui renamed Upper.txt to upper.txt three times; it came back each time. 3: Recently Deleted holds lower.txt, q_.txt, Upper.txt and Folder. 4: 03-case now holds folder, LOWER.txt, twin copy.png, twin.png (Upper.txt/upper.txt is gone)"}
+{"t": "2026-10-04T05:48:53.121+00:00", "step": "4a", "report": "duplicated win-local.png twice and renamed the copies to ipad-cloud.png and ipad-local.png"}
+{"t": "2026-10-04T05:52:02.424+00:00", "step": "4c", "report": "drew one line on win-local.png, ipad-cloud.png, ipad-local.png in that order, about 30 s apart"}
+{"t": "2026-10-04T05:55:25.758+00:00", "step": "5ab", "report": "duplicated seed.png as ipad-cloud.png, waited 30 s, then deleted win-local.txt, ipad-cloud.png and the folder 'folder'"}
+{"t": "2026-10-04T05:57:54.875+00:00", "step": "5d", "report": "screenshot screens/step5-recently-deleted.png: the iCloud Trash shows folder 1.55.13 AM, Folder, after-nfd.txt, ipad-cloud.png, win-deleted.txt, win-local.txt, win-recycled.txt, lower.txt, twin copy.png, Upper.txt, q_.txt, normal.txt: all eight items of step 5 plus the earlier ones; it matches iCloudDrive\\.Trash on Windows"}
+{"t": "2026-10-04T06:00:48.728+00:00", "step": "6ab", "report": "duplicated seed.png in 06-pin and 06-pin/pinned; saved one 19.6 MB video into pinned, then the same video into 06-pin"}
+{"t": "2026-10-04T06:01:37.021+00:00", "step": "6d", "report": "duplicated sub-seed.png in 06-pin/pinned/sub"}
+{"t": "2026-10-04T06:02:19.827+00:00", "step": "7a", "report": "posix.txt, movefile.txt, recycle.txt all show v1"}
+{"t": "2026-10-04T06:03:14.090+00:00", "step": "7c", "report": "round v2: all three show v2, no extra files"}
+{"t": "2026-10-04T06:04:59.741+00:00", "step": "7d", "report": "round v3: all three show v3, no extra files"}
+{"t": "2026-10-04T06:06:43.491+00:00", "step": "7de", "report": "round v4: all three show v4, no extra files; duplicated seed.png three times as ipad-posix.png, ipad-movefile.png, ipad-recycle.png"}
+{"t": "2026-10-04T06:09:03.570+00:00", "step": "7f", "report": "recycle-then-move on the cloud-only ipad-recycle.png: Folio's Recycle Bin reported failure ('the shell reported nothing in the Recycle Bin') yet the file was gone (iCloud .Trash only); finishing the move step by hand"}
+{"t": "2026-10-04T06:12:04.785+00:00", "step": "7g", "report": "ipad-posix.png, ipad-movefile.png, ipad-recycle.png all green, no extra files"}
+{"t": "2026-10-04T06:13:11.053+00:00", "step": "8b", "report": "head-1.json visible on the iPad (pack not yet)"}
+{"t": "2026-10-04T06:15:38.140+00:00", "step": "8b", "report": "pack visible on the iPad"}
+{"t": "2026-10-04T06:16:03.392+00:00", "step": "8c", "report": "tapping the 200 MB pack starts a download that takes about 4 s"}
+{"t": "2026-10-04T06:18:10.042+00:00", "step": "8d", "report": "saved a 431 MB video into 08-order/ipad, then right after duplicated seed.png there"}
+{"t": "2026-10-04T06:20:41.390+00:00", "step": "9a", "report": "opened p1.png and p2.png on the iPad"}
+{"t": "2026-10-04T06:21:51.384+00:00", "step": "9b", "report": "asked Sirui to go offline (airplane mode, Wi-Fi off), draw on p1.png and p2.png, wait 3 min, then reconnect"}
+{"t": "2026-10-04T06:26:25.818+00:00", "step": "9d", "report": "iPad back online after drawing on p1.png and p2.png offline"}
+{"t": "2026-10-04T06:28:26.839+00:00", "step": "9d", "report": "on the iPad p1.png and p2.png are both blue with the line drawn"}
+{"t": "2026-10-04T06:29:12.441+00:00", "step": "9d", "report": "Windows view: p2 replaced 06:26:29 and p1 06:27:49 (delete+add, new file ids) by the blue image with the iPad's line; no conflict copy; .Trash holds only the red originals (from the Windows posix replace)"}
+{"t": "2026-10-04T06:32:37.958+00:00", "step": "9e", "report": "the iPad shows a yellow 'p3 2.png' and a red-with-line 'p3 3.png'"}
+{"t": "2026-10-04T06:32:52.707+00:00", "step": "9e", "report": "Windows view 06:31:20: iCloud renamed the Windows yellow p3.png to 'p3 2.png' and added the iPad red-with-line version as 'p3(1).png' (the iPad calls it 'p3 3.png'); no p3.png left"}
+{"t": "2026-10-04T06:32:52.820+00:00", "step": "10a", "report": "asked Sirui to go offline, duplicate seed.png as new.png, wait 3 min, reconnect"}
+{"t": "2026-10-04T06:38:15.306+00:00", "step": "10c", "report": "iPad back online after creating new.png offline"}
+{"t": "2026-10-04T06:39:11.312+00:00", "step": "10c", "report": "10-conflict-new on the iPad: blue 'new 2.png', red 'new.png', red 'seed.png'; 09-conflict-edit has no p3.png"}
+{"t": "2026-10-04T06:46:47.352+00:00", "step": "10c", "report": "Windows view 06:46:21 (8 min after reconnect): iCloud renamed the Windows blue new.png to 'new 2.png'; the iPad red new.png arrived as new.png; same names on both sides"}
+{"t": "2026-10-04T06:56:58.828+00:00", "step": "11", "report": "twin test: with an NFC/NFD twin pair in 11-twin, nothing uploaded for 10 min, including 04-update/control-elsewhere.txt in another folder; deleting the NFD twin to unblock"}
+{"t": "2026-10-04T07:03:09.327+00:00", "step": "11", "report": "after deleting the NFD twin at 06:56:58, 04-update/control-elsewhere.txt uploaded at 07:02:51 (about 6 min)"}

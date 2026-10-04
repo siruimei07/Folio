@@ -1,0 +1,55 @@
+{"t": "2026-10-04T04:58:03.287+00:00", "op": "env", "windows": "10.0.26200", "windows_display": "25H2", "windows_ubr": "7840", "icloud": "15.8.118.0", "python": "3.14.7", "root": "C:\\Users\\Desktop\\iCloudDrive\\FolioTest", "staging": "C:\\Users\\Desktop\\AppData\\Local\\FolioFieldTest\\staging", "same_volume": true, "probe": true}
+{"t": "2026-10-04T04:58:03.436+00:00", "op": "init", "folders": ["01-skip", "02-names", "03-case", "04-update", "05-delete", "06-pin", "06-pin/pinned", "07-replace", "08-order", "08-order/ipad", "09-conflict-edit", "10-conflict-new"]}
+{"t": "2026-10-04T04:58:13.795+00:00", "op": "write", "path": "01-skip/a.tmp", "mode": "new", "bytes": 4, "ok": true, "sha256": "42e93b9bb77d8a73", "ms": 13.9}
+{"t": "2026-10-04T04:58:13.948+00:00", "op": "write", "path": "01-skip/b.nosync", "mode": "new", "bytes": 4, "ok": true, "sha256": "42e93b9bb77d8a73", "ms": 13.6}
+{"t": "2026-10-04T04:58:14.117+00:00", "op": "write", "path": "01-skip/~$c.docx", "mode": "new", "bytes": 4, "ok": true, "sha256": "42e93b9bb77d8a73", "ms": 14.2}
+{"t": "2026-10-04T04:58:14.281+00:00", "op": "write", "path": "01-skip/empty.txt", "mode": "new", "bytes": 0, "ok": true, "sha256": "e3b0c44298fc1c14", "ms": 13.0}
+{"t": "2026-10-04T04:58:14.436+00:00", "op": "write", "path": "01-skip/normal.txt", "mode": "new", "bytes": 6, "ok": true, "sha256": "317b32c143692b99", "ms": 17.6}
+{"t": "2026-10-04T04:58:14.595+00:00", "op": "write", "path": "02-names/nfc-café.txt", "mode": "new", "bytes": 3, "ok": true, "sha256": "8c8a7a3c5ef6f3ec", "ms": 13.7}
+{"t": "2026-10-04T04:58:14.753+00:00", "op": "write", "path": "02-names/nfd-café.txt", "mode": "new", "bytes": 3, "ok": true, "sha256": "df7353de1c454ee3", "ms": 14.3}
+{"t": "2026-10-04T04:58:14.912+00:00", "op": "write", "path": "02-names/twin-é.txt", "mode": "new", "bytes": 8, "ok": true, "sha256": "6f7822fc6430bddf", "ms": 18.9}
+{"t": "2026-10-04T04:58:15.073+00:00", "op": "write", "path": "02-names/twin-é.txt", "mode": "new", "bytes": 8, "ok": true, "sha256": "c8feaddbcb19f998", "ms": 19.6}
+{"t": "2026-10-04T04:58:15.228+00:00", "op": "write", "path": "02-names/bad1.txt", "mode": "new", "bytes": 4, "ok": true, "sha256": "ae3b0e7467d35124", "ms": 13.2}
+{"t": "2026-10-04T04:58:15.379+00:00", "op": "write", "path": "02-names/bad2.txt", "mode": "new", "bytes": 4, "ok": true, "sha256": "1df50324cf06cad7", "ms": 13.9}
+{"t": "2026-10-04T04:58:15.537+00:00", "op": "write", "path": "02-names/bad3.txt", "mode": "new", "bytes": 4, "ok": true, "sha256": "dd4bb876e7d2c971", "ms": 13.6}
+{"t": "2026-10-04T04:58:15.696+00:00", "op": "write", "path": "02-names/bad4.txt", "mode": "new", "bytes": 4, "ok": true, "sha256": "3118cebefe6dd2ab", "ms": 14.3}
+{"t": "2026-10-04T04:58:15.853+00:00", "op": "write", "path": "02-names/bad5.txt", "mode": "new", "bytes": 4, "ok": true, "sha256": "7797adb242e3de92", "ms": 13.1}
+{"t": "2026-10-04T04:58:16.012+00:00", "op": "write", "path": "02-names/bad6.txt", "mode": "new", "bytes": 4, "ok": true, "sha256": "644d2494fb598cc0", "ms": 13.9}
+{"t": "2026-10-04T04:58:16.160+00:00", "op": "write", "path": "02-names/bad7.txt", "mode": "new", "bytes": 4, "ok": true, "sha256": "637f915a3b1451c8", "ms": 12.9}
+{"t": "2026-10-04T04:58:16.320+00:00", "op": "write", "path": "02-names/bad8.txt", "mode": "new", "bytes": 4, "ok": true, "sha256": "19cdb85a0e6eff9e", "ms": 13.2}
+{"t": "2026-10-04T04:58:16.475+00:00", "op": "write", "path": "03-case/Upper.txt", "mode": "new", "bytes": 5, "ok": true, "sha256": "aee6105582920237", "ms": 18.1}
+{"t": "2026-10-04T04:58:16.633+00:00", "op": "write", "path": "03-case/lower.txt", "mode": "new", "bytes": 5, "ok": true, "sha256": "8c6fb1e9e37a1aea", "ms": 22.5}
+{"t": "2026-10-04T04:58:16.830+00:00", "op": "write", "path": "03-case/Folder/inside.txt", "mode": "new", "bytes": 6, "ok": true, "sha256": "106b086224a4d945", "ms": 23.2}
+{"t": "2026-10-04T04:58:17.015+00:00", "op": "write", "path": "03-case/twin.png", "mode": "new", "bytes": 761, "ok": true, "sha256": "9474bc29c752c3ea", "ms": 21.1}
+{"t": "2026-10-04T04:58:17.197+00:00", "op": "write", "path": "04-update/win-local.png", "mode": "new", "bytes": 761, "ok": true, "sha256": "9474bc29c752c3ea", "ms": 18.4}
+{"t": "2026-10-04T04:58:17.389+00:00", "op": "write", "path": "05-delete/win-local.txt", "mode": "new", "bytes": 5, "ok": true, "sha256": "25bf8e1a2393f110", "ms": 22.4}
+{"t": "2026-10-04T04:58:17.593+00:00", "op": "write", "path": "05-delete/folder/inside.txt", "mode": "new", "bytes": 6, "ok": true, "sha256": "106b086224a4d945", "ms": 17.9}
+{"t": "2026-10-04T04:58:17.764+00:00", "op": "write", "path": "05-delete/win-recycled.txt", "mode": "new", "bytes": 8, "ok": true, "sha256": "f3d798d8608adfbd", "ms": 22.4}
+{"t": "2026-10-04T04:58:17.938+00:00", "op": "write", "path": "05-delete/win-deleted.txt", "mode": "new", "bytes": 7, "ok": true, "sha256": "1185f37d33b0f89e", "ms": 23.8}
+{"t": "2026-10-04T04:58:18.111+00:00", "op": "write", "path": "05-delete/seed.png", "mode": "new", "bytes": 761, "ok": true, "sha256": "9474bc29c752c3ea", "ms": 18.3}
+{"t": "2026-10-04T04:58:18.283+00:00", "op": "write", "path": "06-pin/seed.png", "mode": "new", "bytes": 761, "ok": true, "sha256": "9474bc29c752c3ea", "ms": 17.5}
+{"t": "2026-10-04T04:58:18.452+00:00", "op": "write", "path": "06-pin/pinned/seed.png", "mode": "new", "bytes": 761, "ok": true, "sha256": "9474bc29c752c3ea", "ms": 18.1}
+{"t": "2026-10-04T04:58:18.631+00:00", "op": "write", "path": "07-replace/posix.txt", "mode": "new", "bytes": 2, "ok": true, "sha256": "3bfc269594ef6492", "ms": 17.8}
+{"t": "2026-10-04T04:58:18.816+00:00", "op": "write", "path": "07-replace/movefile.txt", "mode": "new", "bytes": 2, "ok": true, "sha256": "3bfc269594ef6492", "ms": 18.1}
+{"t": "2026-10-04T04:58:18.982+00:00", "op": "write", "path": "07-replace/recycle.txt", "mode": "new", "bytes": 2, "ok": true, "sha256": "3bfc269594ef6492", "ms": 16.4}
+{"t": "2026-10-04T04:58:19.164+00:00", "op": "write", "path": "07-replace/seed.png", "mode": "new", "bytes": 761, "ok": true, "sha256": "9474bc29c752c3ea", "ms": 18.2}
+{"t": "2026-10-04T04:58:19.347+00:00", "op": "write", "path": "08-order/ipad/seed.png", "mode": "new", "bytes": 761, "ok": true, "sha256": "9474bc29c752c3ea", "ms": 17.4}
+{"t": "2026-10-04T04:58:19.514+00:00", "op": "write", "path": "09-conflict-edit/p1.png", "mode": "new", "bytes": 761, "ok": true, "sha256": "9474bc29c752c3ea", "ms": 19.2}
+{"t": "2026-10-04T04:58:19.692+00:00", "op": "write", "path": "09-conflict-edit/p2.png", "mode": "new", "bytes": 761, "ok": true, "sha256": "9474bc29c752c3ea", "ms": 18.2}
+{"t": "2026-10-04T04:58:19.873+00:00", "op": "write", "path": "09-conflict-edit/p3.png", "mode": "new", "bytes": 761, "ok": true, "sha256": "9474bc29c752c3ea", "ms": 18.0}
+{"t": "2026-10-04T04:58:20.046+00:00", "op": "write", "path": "10-conflict-new/seed.png", "mode": "new", "bytes": 761, "ok": true, "sha256": "9474bc29c752c3ea", "ms": 16.9}
+{"t": "2026-10-04T04:58:20.200+00:00", "op": "pinned", "path": "06-pin/pinned", "recurse": true, "ok": true, "ms": 0.3}
+{"t": "2026-10-04T04:58:20.348+00:00", "op": "pinned", "path": "08-order/ipad", "recurse": true, "ok": true, "ms": 0.2}
+{"t": "2026-10-04T05:08:22.521+00:00", "op": "wait-timeout", "path": "01-skip/normal.txt", "until": "in-sync", "after_s": 500.0}
+{"t": "2026-10-04T05:08:49.192+00:00", "op": "park-outside-sync-root", "path": "02-names/nfd-café.txt", "reason": "test whether pending NFD names stall the upload of other files", "to": "C:\\Users\\Desktop\\AppData\\Local\\FolioFieldTest\\parked\\nfd-café.txt", "ok": true, "ms": 1.0}
+{"t": "2026-10-04T05:08:51.760+00:00", "op": "park-outside-sync-root", "path": "02-names/twin-é.txt", "reason": "test whether pending NFD names stall the upload of other files", "to": "C:\\Users\\Desktop\\AppData\\Local\\FolioFieldTest\\parked\\twin-é.txt", "ok": false, "error": "[Errno 379] MoveFileExW: 操作不受云同步提供程序支持。 (379)", "ms": 2567.7}
+{"t": "2026-10-04T05:12:55.682+00:00", "op": "wait-timeout", "path": "01-skip/normal.txt", "until": "in-sync", "after_s": 240.0}
+{"t": "2026-10-04T05:13:01.284+00:00", "op": "write", "path": "04-update/control.txt", "mode": "new", "bytes": 7, "ok": true, "sha256": "0fcd568a5cb9bdb4", "ms": 19.6}
+{"t": "2026-10-04T05:13:01.433+00:00", "op": "write", "path": "04-update/control.png", "mode": "new", "bytes": 763, "ok": true, "sha256": "8ee3189fafb3892e", "ms": 16.9}
+{"t": "2026-10-04T05:13:23.368+00:00", "op": "waited", "path": "04-update/control.png", "until": "in-sync", "after_s": 21.8}
+{"t": "2026-10-04T05:13:23.481+00:00", "op": "waited", "path": "04-update/control.txt", "until": "in-sync", "after_s": 0.0}
+{"t": "2026-10-04T05:13:35.693+00:00", "op": "delete", "path": "02-names/twin-é.txt", "ok": true, "ms": 2.2}
+{"t": "2026-10-04T05:16:39.727+00:00", "op": "wait-timeout", "path": "01-skip/normal.txt", "until": "in-sync", "after_s": 180.0}
+{"t": "2026-10-04T05:16:48.955+00:00", "op": "recycle", "path": "04-update/control.png", "ok": false, "error": "[Errno 1] [{\"event\": \"recycle-start\", \"path\": \"C:\\\\Users\\\\Desktop\\\\iCloudDrive\\\\FolioTest\\\\04-update\\\\control.png\", \"t_ms\": \"1791091008942\"}, {\"error\": \"RecycleError { path: \\\"C:\\\\\\\\Users\\\\\\\\Desktop\\\\\\\\iCloudDrive\\\\\\\\FolioTest\\\\\\\\04-update\\\\\\\\control.png\\\", failure: NotFound, detail: \\\"系统找不到指定的文件。 (0x80070002)\\\" }\", \"event\": \"error\", \"os\": null, \"t_ms\": \"1791091008953\"}]", "ms": 22.4}
+{"t": "2026-10-04T05:16:49.075+00:00", "op": "delete", "path": "04-update/control.txt", "ok": false, "error": "[Errno 3] DeleteFileW: 系统找不到指定的路径。 (3)", "ms": 0.1}
+{"t": "2026-10-04T05:16:57.118+00:00", "op": "trash-done", "entries": 0}

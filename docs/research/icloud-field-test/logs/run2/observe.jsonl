@@ -1,0 +1,279 @@
+{"t": "2026-10-04T04:58:06.678+00:00", "kind": "observe-start", "root": "C:\\Users\\Desktop\\iCloudDrive\\FolioTest", "interval_s": 1.0, "probe": true}
+{"t": "2026-10-04T04:58:06.680+00:00", "kind": "baseline", "entries": {"01-skip": {"name": "01-skip", "attrs": "DIRECTORY|REPARSE", "size": 0, "file_id": "0000000000000000001d000000116b42", "mtime": "2026-10-04T04:58:03.434+00:00", "tag": "0x9000201a", "pin": "unspecified", "in_sync": false}, "02-names": {"name": "02-names", "attrs": "DIRECTORY|REPARSE", "size": 0, "file_id": "00000000000000000010000000116b44", "mtime": "2026-10-04T04:58:03.434+00:00", "tag": "0x9000201a", "pin": "unspecified", "in_sync": false}, "03-case": {"name": "03-case", "attrs": "DIRECTORY|REPARSE", "size": 0, "file_id": "00000000000000000010000000116b45", "mtime": "2026-10-04T04:58:03.435+00:00", "tag": "0x9000201a", "pin": "unspecified", "in_sync": false}, "04-update": {"name": "04-update", "attrs": "DIRECTORY|REPARSE", "size": 0, "file_id": "0000000000000000000c000000116b46", "mtime": "2026-10-04T04:58:03.435+00:00", "tag": "0x9000201a", "pin": "unspecified", "in_sync": false}, "05-delete": {"name": "05-delete", "attrs": "DIRECTORY|REPARSE", "size": 0, "file_id": "0000000000000000000f000000116b47", "mtime": "2026-10-04T04:58:03.435+00:00", "tag": "0x9000201a", "pin": "unspecified", "in_sync": false}, "06-pin": {"name": "06-pin", "attrs": "DIRECTORY|REPARSE", "size": 0, "file_id": "0000000000000000000e000000116b48", "mtime": "2026-10-04T04:58:03.435+00:00", "tag": "0x9000201a", "pin": "unspecified", "in_sync": false}, "07-replace": {"name": "07-replace", "attrs": "DIRECTORY|REPARSE", "size": 0, "file_id": "0000000000000000000c000000116b4c", "mtime": "2026-10-04T04:58:03.436+00:00", "tag": "0x9000201a", "pin": "unspecified", "in_sync": false}, "08-order": {"name": "08-order", "attrs": "DIRECTORY|REPARSE", "size": 0, "file_id": "0000000000000000000d000000116b4d", "mtime": "2026-10-04T04:58:03.436+00:00", "tag": "0x9000201a", "pin": "unspecified", "in_sync": false}, "09-conflict-edit": {"name": "09-conflict-edit", "attrs": "DIRECTORY|REPARSE", "size": 0, "file_id": "0000000000000000000d000000116b4f", "mtime": "2026-10-04T04:58:03.436+00:00", "tag": "0x9000201a", "pin": "unspecified", "in_sync": false}, "10-conflict-new": {"name": "10-conflict-new", "attrs": "DIRECTORY|REPARSE", "size": 0, "file_id": "00000000000000000006000000116b50", "mtime": "2026-10-04T04:58:03.436+00:00", "tag": "0x9000201a", "pin": "unspecified", "in_sync": false}, "08-order/ipad": {"name": "ipad", "attrs": "DIRECTORY|REPARSE", "size": 0, "file_id": "0000000000000000000c000000116b4e", "mtime": "2026-10-04T04:58:03.436+00:00", "tag": "0x9000201a", "pin": "unspecified", "in_sync": false}, "06-pin/pinned": {"name": "pinned", "attrs": "DIRECTORY|REPARSE", "size": 0, "file_id": "00000000000000000010000000116b4b", "mtime": "2026-10-04T04:58:03.435+00:00", "tag": "0x9000201a", "pin": "unspecified", "in_sync": false}}}
+{"t": "2026-10-04T04:58:11.705+00:00", "kind": "changed", "path": "01-skip", "changes": {"in_sync": [false, true], "tag": ["0x9000201a", "0x9000601a"]}}
+{"t": "2026-10-04T04:58:11.708+00:00", "kind": "changed", "path": "02-names", "changes": {"in_sync": [false, true], "tag": ["0x9000201a", "0x9000601a"]}}
+{"t": "2026-10-04T04:58:11.708+00:00", "kind": "changed", "path": "03-case", "changes": {"in_sync": [false, true], "tag": ["0x9000201a", "0x9000601a"]}}
+{"t": "2026-10-04T04:58:11.709+00:00", "kind": "changed", "path": "04-update", "changes": {"in_sync": [false, true], "tag": ["0x9000201a", "0x9000601a"]}}
+{"t": "2026-10-04T04:58:11.709+00:00", "kind": "changed", "path": "05-delete", "changes": {"in_sync": [false, true], "tag": ["0x9000201a", "0x9000601a"]}}
+{"t": "2026-10-04T04:58:11.709+00:00", "kind": "changed", "path": "06-pin", "changes": {"in_sync": [false, true], "tag": ["0x9000201a", "0x9000601a"]}}
+{"t": "2026-10-04T04:58:11.710+00:00", "kind": "changed", "path": "06-pin/pinned", "changes": {"in_sync": [false, true], "tag": ["0x9000201a", "0x9000601a"]}}
+{"t": "2026-10-04T04:58:11.710+00:00", "kind": "changed", "path": "07-replace", "changes": {"in_sync": [false, true], "tag": ["0x9000201a", "0x9000601a"]}}
+{"t": "2026-10-04T04:58:11.710+00:00", "kind": "changed", "path": "08-order", "changes": {"in_sync": [false, true], "tag": ["0x9000201a", "0x9000601a"]}}
+{"t": "2026-10-04T04:58:11.710+00:00", "kind": "changed", "path": "08-order/ipad", "changes": {"in_sync": [false, true], "tag": ["0x9000201a", "0x9000601a"]}}
+{"t": "2026-10-04T04:58:11.710+00:00", "kind": "changed", "path": "09-conflict-edit", "changes": {"in_sync": [false, true], "tag": ["0x9000201a", "0x9000601a"]}}
+{"t": "2026-10-04T04:58:11.711+00:00", "kind": "changed", "path": "10-conflict-new", "changes": {"in_sync": [false, true], "tag": ["0x9000201a", "0x9000601a"]}}
+{"t": "2026-10-04T04:58:13.792+00:00", "kind": "watch", "action": "added", "path": "01-skip/a.tmp", "size": 4, "attrs": "ARCHIVE", "file_id": "000c000000116b6a"}
+{"t": "2026-10-04T04:58:13.793+00:00", "kind": "watch", "action": "modified", "path": "01-skip", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "001d000000116b42"}
+{"t": "2026-10-04T04:58:13.945+00:00", "kind": "watch", "action": "added", "path": "01-skip/b.nosync", "size": 4, "attrs": "ARCHIVE", "file_id": "000c000000116b6b"}
+{"t": "2026-10-04T04:58:13.946+00:00", "kind": "watch", "action": "modified", "path": "01-skip", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "001d000000116b42"}
+{"t": "2026-10-04T04:58:14.115+00:00", "kind": "watch", "action": "added", "path": "01-skip/~$c.docx", "size": 4, "attrs": "ARCHIVE", "file_id": "000b000000116b6c"}
+{"t": "2026-10-04T04:58:14.115+00:00", "kind": "watch", "action": "modified", "path": "01-skip", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "001d000000116b42"}
+{"t": "2026-10-04T04:58:14.278+00:00", "kind": "watch", "action": "added", "path": "01-skip/empty.txt", "size": 0, "attrs": "ARCHIVE", "file_id": "000c000000116b6d"}
+{"t": "2026-10-04T04:58:14.279+00:00", "kind": "watch", "action": "modified", "path": "01-skip", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "001d000000116b42"}
+{"t": "2026-10-04T04:58:14.433+00:00", "kind": "watch", "action": "added", "path": "01-skip/normal.txt", "size": 6, "attrs": "ARCHIVE", "file_id": "000d000000116b6e"}
+{"t": "2026-10-04T04:58:14.434+00:00", "kind": "watch", "action": "modified", "path": "01-skip", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "001d000000116b42"}
+{"t": "2026-10-04T04:58:14.592+00:00", "kind": "watch", "action": "added", "path": "02-names/nfc-café.txt", "form": "NFC", "code_points": "U+00E9", "size": 3, "attrs": "ARCHIVE", "file_id": "000c000000116b6f"}
+{"t": "2026-10-04T04:58:14.593+00:00", "kind": "watch", "action": "modified", "path": "02-names", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "0010000000116b44"}
+{"t": "2026-10-04T04:58:14.726+00:00", "kind": "appeared", "path": "01-skip/a.tmp", "name": "a.tmp", "attrs": "ARCHIVE", "size": 4, "file_id": "0000000000000000000c000000116b6a", "mtime": "2026-10-04T04:58:13.790+00:00"}
+{"t": "2026-10-04T04:58:14.727+00:00", "kind": "appeared", "path": "01-skip/b.nosync", "name": "b.nosync", "attrs": "ARCHIVE", "size": 4, "file_id": "0000000000000000000c000000116b6b", "mtime": "2026-10-04T04:58:13.944+00:00"}
+{"t": "2026-10-04T04:58:14.727+00:00", "kind": "appeared", "path": "01-skip/empty.txt", "name": "empty.txt", "attrs": "ARCHIVE", "size": 0, "file_id": "0000000000000000000c000000116b6d", "mtime": "2026-10-04T04:58:14.277+00:00"}
+{"t": "2026-10-04T04:58:14.727+00:00", "kind": "appeared", "path": "01-skip/normal.txt", "name": "normal.txt", "attrs": "ARCHIVE", "size": 6, "file_id": "0000000000000000000d000000116b6e", "mtime": "2026-10-04T04:58:14.431+00:00"}
+{"t": "2026-10-04T04:58:14.727+00:00", "kind": "appeared", "path": "01-skip/~$c.docx", "name": "~$c.docx", "attrs": "ARCHIVE", "size": 4, "file_id": "0000000000000000000b000000116b6c", "mtime": "2026-10-04T04:58:14.113+00:00"}
+{"t": "2026-10-04T04:58:14.727+00:00", "kind": "appeared", "path": "02-names/nfc-café.txt", "name": "nfc-café.txt", "form": "NFC", "code_points": "U+00E9", "attrs": "ARCHIVE", "size": 3, "file_id": "0000000000000000000c000000116b6f", "mtime": "2026-10-04T04:58:14.590+00:00"}
+{"t": "2026-10-04T04:58:14.730+00:00", "kind": "changed", "path": "01-skip", "changes": {"mtime": ["2026-10-04T04:58:03.434+00:00", "2026-10-04T04:58:14.432+00:00"]}}
+{"t": "2026-10-04T04:58:14.730+00:00", "kind": "changed", "path": "02-names", "changes": {"mtime": ["2026-10-04T04:58:03.434+00:00", "2026-10-04T04:58:14.591+00:00"]}}
+{"t": "2026-10-04T04:58:14.750+00:00", "kind": "watch", "action": "added", "path": "02-names/nfd-café.txt", "form": "NFD", "code_points": "U+0301", "size": 3, "attrs": "ARCHIVE", "file_id": "000d000000116b70"}
+{"t": "2026-10-04T04:58:14.751+00:00", "kind": "watch", "action": "modified", "path": "02-names", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "0010000000116b44"}
+{"t": "2026-10-04T04:58:14.910+00:00", "kind": "watch", "action": "added", "path": "02-names/twin-é.txt", "form": "NFC", "code_points": "U+00E9", "size": 8, "attrs": "ARCHIVE", "file_id": "000b000000116b71"}
+{"t": "2026-10-04T04:58:14.910+00:00", "kind": "watch", "action": "modified", "path": "02-names", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "0010000000116b44"}
+{"t": "2026-10-04T04:58:15.070+00:00", "kind": "watch", "action": "added", "path": "02-names/twin-é.txt", "form": "NFD", "code_points": "U+0301", "size": 8, "attrs": "ARCHIVE", "file_id": "000b000000116b72"}
+{"t": "2026-10-04T04:58:15.071+00:00", "kind": "watch", "action": "modified", "path": "02-names", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "0010000000116b44"}
+{"t": "2026-10-04T04:58:15.225+00:00", "kind": "watch", "action": "added", "path": "02-names/bad1.txt", "size": 4, "attrs": "ARCHIVE", "file_id": "000b000000116b73"}
+{"t": "2026-10-04T04:58:15.226+00:00", "kind": "watch", "action": "modified", "path": "02-names", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "0010000000116b44"}
+{"t": "2026-10-04T04:58:15.377+00:00", "kind": "watch", "action": "added", "path": "02-names/bad2.txt", "size": 4, "attrs": "ARCHIVE", "file_id": "000c000000116b74"}
+{"t": "2026-10-04T04:58:15.377+00:00", "kind": "watch", "action": "modified", "path": "02-names", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "0010000000116b44"}
+{"t": "2026-10-04T04:58:15.535+00:00", "kind": "watch", "action": "added", "path": "02-names/bad3.txt", "size": 4, "attrs": "ARCHIVE", "file_id": "0008000000116b75"}
+{"t": "2026-10-04T04:58:15.535+00:00", "kind": "watch", "action": "modified", "path": "02-names", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "0010000000116b44"}
+{"t": "2026-10-04T04:58:15.694+00:00", "kind": "watch", "action": "added", "path": "02-names/bad4.txt", "size": 4, "attrs": "ARCHIVE", "file_id": "0008000000116b76"}
+{"t": "2026-10-04T04:58:15.694+00:00", "kind": "watch", "action": "modified", "path": "02-names", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "0010000000116b44"}
+{"t": "2026-10-04T04:58:15.739+00:00", "kind": "appeared", "path": "02-names/bad1.txt", "name": "bad1.txt", "attrs": "ARCHIVE", "size": 4, "file_id": "0000000000000000000b000000116b73", "mtime": "2026-10-04T04:58:15.224+00:00"}
+{"t": "2026-10-04T04:58:15.739+00:00", "kind": "appeared", "path": "02-names/bad2.txt", "name": "bad2.txt", "attrs": "ARCHIVE", "size": 4, "file_id": "0000000000000000000c000000116b74", "mtime": "2026-10-04T04:58:15.375+00:00"}
+{"t": "2026-10-04T04:58:15.739+00:00", "kind": "appeared", "path": "02-names/bad3.txt", "name": "bad3.txt", "attrs": "ARCHIVE", "size": 4, "file_id": "00000000000000000008000000116b75", "mtime": "2026-10-04T04:58:15.534+00:00"}
+{"t": "2026-10-04T04:58:15.743+00:00", "kind": "appeared", "path": "02-names/bad4.txt", "name": "bad4.txt", "attrs": "ARCHIVE", "size": 4, "file_id": "00000000000000000008000000116b76", "mtime": "2026-10-04T04:58:15.692+00:00"}
+{"t": "2026-10-04T04:58:15.743+00:00", "kind": "appeared", "path": "02-names/nfd-café.txt", "name": "nfd-café.txt", "form": "NFD", "code_points": "U+0301", "attrs": "ARCHIVE", "size": 3, "file_id": "0000000000000000000d000000116b70", "mtime": "2026-10-04T04:58:14.749+00:00"}
+{"t": "2026-10-04T04:58:15.744+00:00", "kind": "appeared", "path": "02-names/twin-é.txt", "name": "twin-é.txt", "form": "NFD", "code_points": "U+0301", "attrs": "ARCHIVE", "size": 8, "file_id": "0000000000000000000b000000116b72", "mtime": "2026-10-04T04:58:15.069+00:00"}
+{"t": "2026-10-04T04:58:15.744+00:00", "kind": "appeared", "path": "02-names/twin-é.txt", "name": "twin-é.txt", "form": "NFC", "code_points": "U+00E9", "attrs": "ARCHIVE", "size": 8, "file_id": "0000000000000000000b000000116b71", "mtime": "2026-10-04T04:58:14.908+00:00"}
+{"t": "2026-10-04T04:58:15.747+00:00", "kind": "changed", "path": "02-names", "changes": {"mtime": ["2026-10-04T04:58:14.591+00:00", "2026-10-04T04:58:15.693+00:00"]}}
+{"t": "2026-10-04T04:58:15.851+00:00", "kind": "watch", "action": "added", "path": "02-names/bad5.txt", "size": 4, "attrs": "ARCHIVE", "file_id": "0008000000116b77"}
+{"t": "2026-10-04T04:58:15.851+00:00", "kind": "watch", "action": "modified", "path": "02-names", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "0010000000116b44"}
+{"t": "2026-10-04T04:58:16.010+00:00", "kind": "watch", "action": "added", "path": "02-names/bad6.txt", "size": 4, "attrs": "ARCHIVE", "file_id": "0008000000116b78"}
+{"t": "2026-10-04T04:58:16.010+00:00", "kind": "watch", "action": "modified", "path": "02-names", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "0010000000116b44"}
+{"t": "2026-10-04T04:58:16.158+00:00", "kind": "watch", "action": "added", "path": "02-names/bad7.txt", "size": 4, "attrs": "ARCHIVE", "file_id": "0008000000116b79"}
+{"t": "2026-10-04T04:58:16.158+00:00", "kind": "watch", "action": "modified", "path": "02-names", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "0010000000116b44"}
+{"t": "2026-10-04T04:58:16.318+00:00", "kind": "watch", "action": "added", "path": "02-names/bad8.txt", "size": 4, "attrs": "ARCHIVE", "file_id": "000c000000116b7a"}
+{"t": "2026-10-04T04:58:16.318+00:00", "kind": "watch", "action": "modified", "path": "02-names", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "0010000000116b44"}
+{"t": "2026-10-04T04:58:16.473+00:00", "kind": "watch", "action": "added", "path": "03-case/Upper.txt", "size": 5, "attrs": "ARCHIVE", "file_id": "000b000000116b7b"}
+{"t": "2026-10-04T04:58:16.473+00:00", "kind": "watch", "action": "modified", "path": "03-case", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "0010000000116b45"}
+{"t": "2026-10-04T04:58:16.631+00:00", "kind": "watch", "action": "added", "path": "03-case/lower.txt", "size": 5, "attrs": "ARCHIVE", "file_id": "000a000000116b7c"}
+{"t": "2026-10-04T04:58:16.631+00:00", "kind": "watch", "action": "modified", "path": "03-case", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "0010000000116b45"}
+{"t": "2026-10-04T04:58:16.674+00:00", "kind": "watch", "action": "added", "path": "03-case/Folder", "size": 0, "attrs": "DIRECTORY", "file_id": "001f000000116b69"}
+{"t": "2026-10-04T04:58:16.675+00:00", "kind": "watch", "action": "modified", "path": "03-case", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "0010000000116b45"}
+{"t": "2026-10-04T04:58:16.756+00:00", "kind": "appeared", "path": "02-names/bad5.txt", "name": "bad5.txt", "attrs": "ARCHIVE", "size": 4, "file_id": "00000000000000000008000000116b77", "mtime": "2026-10-04T04:58:15.848+00:00"}
+{"t": "2026-10-04T04:58:16.756+00:00", "kind": "appeared", "path": "02-names/bad6.txt", "name": "bad6.txt", "attrs": "ARCHIVE", "size": 4, "file_id": "00000000000000000008000000116b78", "mtime": "2026-10-04T04:58:16.008+00:00"}
+{"t": "2026-10-04T04:58:16.756+00:00", "kind": "appeared", "path": "02-names/bad7.txt", "name": "bad7.txt", "attrs": "ARCHIVE", "size": 4, "file_id": "00000000000000000008000000116b79", "mtime": "2026-10-04T04:58:16.156+00:00"}
+{"t": "2026-10-04T04:58:16.757+00:00", "kind": "appeared", "path": "02-names/bad8.txt", "name": "bad8.txt", "attrs": "ARCHIVE", "size": 4, "file_id": "0000000000000000000c000000116b7a", "mtime": "2026-10-04T04:58:16.316+00:00"}
+{"t": "2026-10-04T04:58:16.757+00:00", "kind": "appeared", "path": "03-case/Folder", "name": "Folder", "attrs": "DIRECTORY", "size": 0, "file_id": "0000000000000000001f000000116b69", "mtime": "2026-10-04T04:58:16.674+00:00"}
+{"t": "2026-10-04T04:58:16.758+00:00", "kind": "appeared", "path": "03-case/Upper.txt", "name": "Upper.txt", "attrs": "ARCHIVE", "size": 5, "file_id": "0000000000000000000b000000116b7b", "mtime": "2026-10-04T04:58:16.471+00:00"}
+{"t": "2026-10-04T04:58:16.758+00:00", "kind": "appeared", "path": "03-case/lower.txt", "name": "lower.txt", "attrs": "ARCHIVE", "size": 5, "file_id": "0000000000000000000a000000116b7c", "mtime": "2026-10-04T04:58:16.629+00:00"}
+{"t": "2026-10-04T04:58:16.758+00:00", "kind": "changed", "path": "02-names", "changes": {"mtime": ["2026-10-04T04:58:15.693+00:00", "2026-10-04T04:58:16.317+00:00"]}}
+{"t": "2026-10-04T04:58:16.759+00:00", "kind": "changed", "path": "03-case", "changes": {"mtime": ["2026-10-04T04:58:03.435+00:00", "2026-10-04T04:58:16.674+00:00"]}}
+{"t": "2026-10-04T04:58:16.828+00:00", "kind": "watch", "action": "added", "path": "03-case/Folder/inside.txt", "size": 6, "attrs": "ARCHIVE", "file_id": "000b000000116b7e"}
+{"t": "2026-10-04T04:58:16.828+00:00", "kind": "watch", "action": "modified", "path": "03-case/Folder", "size": 0, "attrs": "DIRECTORY", "file_id": "001f000000116b69"}
+{"t": "2026-10-04T04:58:17.012+00:00", "kind": "watch", "action": "added", "path": "03-case/twin.png", "size": 761, "attrs": "ARCHIVE", "file_id": "000b000000116b7f"}
+{"t": "2026-10-04T04:58:17.013+00:00", "kind": "watch", "action": "modified", "path": "03-case", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "0010000000116b45"}
+{"t": "2026-10-04T04:58:17.194+00:00", "kind": "watch", "action": "added", "path": "04-update/win-local.png", "size": 761, "attrs": "ARCHIVE", "file_id": "000b000000116b80"}
+{"t": "2026-10-04T04:58:17.195+00:00", "kind": "watch", "action": "modified", "path": "04-update", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "000c000000116b46"}
+{"t": "2026-10-04T04:58:17.386+00:00", "kind": "watch", "action": "added", "path": "05-delete/win-local.txt", "size": 5, "attrs": "ARCHIVE", "file_id": "000e000000116b81"}
+{"t": "2026-10-04T04:58:17.387+00:00", "kind": "watch", "action": "modified", "path": "05-delete", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "000f000000116b47"}
+{"t": "2026-10-04T04:58:17.449+00:00", "kind": "watch", "action": "added", "path": "05-delete/folder", "size": 0, "attrs": "DIRECTORY", "file_id": "000f000000116b7d"}
+{"t": "2026-10-04T04:58:17.449+00:00", "kind": "watch", "action": "modified", "path": "05-delete", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "000f000000116b47"}
+{"t": "2026-10-04T04:58:17.591+00:00", "kind": "watch", "action": "added", "path": "05-delete/folder/inside.txt", "size": 6, "attrs": "ARCHIVE", "file_id": "000c000000116b83"}
+{"t": "2026-10-04T04:58:17.591+00:00", "kind": "watch", "action": "modified", "path": "05-delete/folder", "size": 0, "attrs": "DIRECTORY", "file_id": "000f000000116b7d"}
+{"t": "2026-10-04T04:58:17.761+00:00", "kind": "watch", "action": "added", "path": "05-delete/win-recycled.txt", "size": 8, "attrs": "ARCHIVE", "file_id": "000d000000116b84"}
+{"t": "2026-10-04T04:58:17.761+00:00", "kind": "watch", "action": "modified", "path": "05-delete", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "000f000000116b47"}
+{"t": "2026-10-04T04:58:17.768+00:00", "kind": "appeared", "path": "03-case/Folder/inside.txt", "name": "inside.txt", "attrs": "ARCHIVE", "size": 6, "file_id": "0000000000000000000b000000116b7e", "mtime": "2026-10-04T04:58:16.827+00:00"}
+{"t": "2026-10-04T04:58:17.769+00:00", "kind": "appeared", "path": "03-case/twin.png", "name": "twin.png", "attrs": "ARCHIVE", "size": 761, "file_id": "0000000000000000000b000000116b7f", "mtime": "2026-10-04T04:58:17.011+00:00"}
+{"t": "2026-10-04T04:58:17.769+00:00", "kind": "appeared", "path": "04-update/win-local.png", "name": "win-local.png", "attrs": "ARCHIVE", "size": 761, "file_id": "0000000000000000000b000000116b80", "mtime": "2026-10-04T04:58:17.193+00:00"}
+{"t": "2026-10-04T04:58:17.772+00:00", "kind": "appeared", "path": "05-delete/folder", "name": "folder", "attrs": "DIRECTORY", "size": 0, "file_id": "0000000000000000000f000000116b7d", "mtime": "2026-10-04T04:58:17.590+00:00"}
+{"t": "2026-10-04T04:58:17.773+00:00", "kind": "appeared", "path": "05-delete/folder/inside.txt", "name": "inside.txt", "attrs": "ARCHIVE", "size": 6, "file_id": "0000000000000000000c000000116b83", "mtime": "2026-10-04T04:58:17.589+00:00"}
+{"t": "2026-10-04T04:58:17.773+00:00", "kind": "appeared", "path": "05-delete/win-local.txt", "name": "win-local.txt", "attrs": "ARCHIVE", "size": 5, "file_id": "0000000000000000000e000000116b81", "mtime": "2026-10-04T04:58:17.385+00:00"}
+{"t": "2026-10-04T04:58:17.774+00:00", "kind": "appeared", "path": "05-delete/win-recycled.txt", "name": "win-recycled.txt", "attrs": "ARCHIVE", "size": 8, "file_id": "0000000000000000000d000000116b84", "mtime": "2026-10-04T04:58:17.759+00:00"}
+{"t": "2026-10-04T04:58:17.777+00:00", "kind": "changed", "path": "03-case", "changes": {"mtime": ["2026-10-04T04:58:16.674+00:00", "2026-10-04T04:58:17.011+00:00"]}}
+{"t": "2026-10-04T04:58:17.777+00:00", "kind": "changed", "path": "03-case/Folder", "changes": {"mtime": ["2026-10-04T04:58:16.674+00:00", "2026-10-04T04:58:16.827+00:00"]}}
+{"t": "2026-10-04T04:58:17.777+00:00", "kind": "changed", "path": "04-update", "changes": {"mtime": ["2026-10-04T04:58:03.435+00:00", "2026-10-04T04:58:17.194+00:00"]}}
+{"t": "2026-10-04T04:58:17.778+00:00", "kind": "changed", "path": "05-delete", "changes": {"mtime": ["2026-10-04T04:58:03.435+00:00", "2026-10-04T04:58:17.760+00:00"]}}
+{"t": "2026-10-04T04:58:17.935+00:00", "kind": "watch", "action": "added", "path": "05-delete/win-deleted.txt", "size": 7, "attrs": "ARCHIVE", "file_id": "000b000000116b85"}
+{"t": "2026-10-04T04:58:17.935+00:00", "kind": "watch", "action": "modified", "path": "05-delete", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "000f000000116b47"}
+{"t": "2026-10-04T04:58:18.109+00:00", "kind": "watch", "action": "added", "path": "05-delete/seed.png", "size": 761, "attrs": "ARCHIVE", "file_id": "000b000000116b86"}
+{"t": "2026-10-04T04:58:18.109+00:00", "kind": "watch", "action": "modified", "path": "05-delete", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "000f000000116b47"}
+{"t": "2026-10-04T04:58:18.281+00:00", "kind": "watch", "action": "added", "path": "06-pin/seed.png", "size": 761, "attrs": "ARCHIVE", "file_id": "000d000000116b87"}
+{"t": "2026-10-04T04:58:18.281+00:00", "kind": "watch", "action": "modified", "path": "06-pin", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "000e000000116b48"}
+{"t": "2026-10-04T04:58:18.450+00:00", "kind": "watch", "action": "added", "path": "06-pin/pinned/seed.png", "size": 761, "attrs": "ARCHIVE", "file_id": "000b000000116b89"}
+{"t": "2026-10-04T04:58:18.450+00:00", "kind": "watch", "action": "modified", "path": "06-pin/pinned", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "0010000000116b4b"}
+{"t": "2026-10-04T04:58:18.628+00:00", "kind": "watch", "action": "added", "path": "07-replace/posix.txt", "size": 2, "attrs": "ARCHIVE", "file_id": "000b000000116b8a"}
+{"t": "2026-10-04T04:58:18.628+00:00", "kind": "watch", "action": "modified", "path": "07-replace", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "000c000000116b4c"}
+{"t": "2026-10-04T04:58:18.788+00:00", "kind": "appeared", "path": "05-delete/seed.png", "name": "seed.png", "attrs": "ARCHIVE", "size": 761, "file_id": "0000000000000000000b000000116b86", "mtime": "2026-10-04T04:58:18.108+00:00"}
+{"t": "2026-10-04T04:58:18.789+00:00", "kind": "appeared", "path": "05-delete/win-deleted.txt", "name": "win-deleted.txt", "attrs": "ARCHIVE", "size": 7, "file_id": "0000000000000000000b000000116b85", "mtime": "2026-10-04T04:58:17.932+00:00"}
+{"t": "2026-10-04T04:58:18.791+00:00", "kind": "appeared", "path": "06-pin/pinned/seed.png", "name": "seed.png", "attrs": "ARCHIVE", "size": 761, "file_id": "0000000000000000000b000000116b89", "mtime": "2026-10-04T04:58:18.448+00:00"}
+{"t": "2026-10-04T04:58:18.792+00:00", "kind": "appeared", "path": "06-pin/seed.png", "name": "seed.png", "attrs": "ARCHIVE", "size": 761, "file_id": "0000000000000000000d000000116b87", "mtime": "2026-10-04T04:58:18.279+00:00"}
+{"t": "2026-10-04T04:58:18.792+00:00", "kind": "appeared", "path": "07-replace/posix.txt", "name": "posix.txt", "attrs": "ARCHIVE", "size": 2, "file_id": "0000000000000000000b000000116b8a", "mtime": "2026-10-04T04:58:18.626+00:00"}
+{"t": "2026-10-04T04:58:18.792+00:00", "kind": "changed", "path": "05-delete", "changes": {"mtime": ["2026-10-04T04:58:17.760+00:00", "2026-10-04T04:58:18.108+00:00"]}}
+{"t": "2026-10-04T04:58:18.792+00:00", "kind": "changed", "path": "06-pin", "changes": {"mtime": ["2026-10-04T04:58:03.435+00:00", "2026-10-04T04:58:18.280+00:00"]}}
+{"t": "2026-10-04T04:58:18.792+00:00", "kind": "changed", "path": "06-pin/pinned", "changes": {"mtime": ["2026-10-04T04:58:03.435+00:00", "2026-10-04T04:58:18.449+00:00"]}}
+{"t": "2026-10-04T04:58:18.793+00:00", "kind": "changed", "path": "07-replace", "changes": {"mtime": ["2026-10-04T04:58:03.436+00:00", "2026-10-04T04:58:18.627+00:00"]}}
+{"t": "2026-10-04T04:58:18.813+00:00", "kind": "watch", "action": "added", "path": "07-replace/movefile.txt", "size": 2, "attrs": "ARCHIVE", "file_id": "000b000000116b8b"}
+{"t": "2026-10-04T04:58:18.813+00:00", "kind": "watch", "action": "modified", "path": "07-replace", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "000c000000116b4c"}
+{"t": "2026-10-04T04:58:18.980+00:00", "kind": "watch", "action": "added", "path": "07-replace/recycle.txt", "size": 2, "attrs": "ARCHIVE", "file_id": "000c000000116b8c"}
+{"t": "2026-10-04T04:58:18.980+00:00", "kind": "watch", "action": "modified", "path": "07-replace", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "000c000000116b4c"}
+{"t": "2026-10-04T04:58:19.162+00:00", "kind": "watch", "action": "added", "path": "07-replace/seed.png", "size": 761, "attrs": "ARCHIVE", "file_id": "000b000000116b8d"}
+{"t": "2026-10-04T04:58:19.162+00:00", "kind": "watch", "action": "modified", "path": "07-replace", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "000c000000116b4c"}
+{"t": "2026-10-04T04:58:19.344+00:00", "kind": "watch", "action": "added", "path": "08-order/ipad/seed.png", "size": 761, "attrs": "ARCHIVE", "file_id": "000c000000116b8e"}
+{"t": "2026-10-04T04:58:19.345+00:00", "kind": "watch", "action": "modified", "path": "08-order/ipad", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "000c000000116b4e"}
+{"t": "2026-10-04T04:58:19.511+00:00", "kind": "watch", "action": "added", "path": "09-conflict-edit/p1.png", "size": 761, "attrs": "ARCHIVE", "file_id": "000a000000116b8f"}
+{"t": "2026-10-04T04:58:19.512+00:00", "kind": "watch", "action": "modified", "path": "09-conflict-edit", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "000d000000116b4f"}
+{"t": "2026-10-04T04:58:19.689+00:00", "kind": "watch", "action": "added", "path": "09-conflict-edit/p2.png", "size": 761, "attrs": "ARCHIVE", "file_id": "0009000000116b90"}
+{"t": "2026-10-04T04:58:19.690+00:00", "kind": "watch", "action": "modified", "path": "09-conflict-edit", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "000d000000116b4f"}
+{"t": "2026-10-04T04:58:19.802+00:00", "kind": "appeared", "path": "07-replace/movefile.txt", "name": "movefile.txt", "attrs": "ARCHIVE", "size": 2, "file_id": "0000000000000000000b000000116b8b", "mtime": "2026-10-04T04:58:18.812+00:00"}
+{"t": "2026-10-04T04:58:19.803+00:00", "kind": "appeared", "path": "07-replace/recycle.txt", "name": "recycle.txt", "attrs": "ARCHIVE", "size": 2, "file_id": "0000000000000000000c000000116b8c", "mtime": "2026-10-04T04:58:18.978+00:00"}
+{"t": "2026-10-04T04:58:19.803+00:00", "kind": "appeared", "path": "07-replace/seed.png", "name": "seed.png", "attrs": "ARCHIVE", "size": 761, "file_id": "0000000000000000000b000000116b8d", "mtime": "2026-10-04T04:58:19.160+00:00"}
+{"t": "2026-10-04T04:58:19.803+00:00", "kind": "appeared", "path": "08-order/ipad/seed.png", "name": "seed.png", "attrs": "ARCHIVE", "size": 761, "file_id": "0000000000000000000c000000116b8e", "mtime": "2026-10-04T04:58:19.342+00:00"}
+{"t": "2026-10-04T04:58:19.803+00:00", "kind": "appeared", "path": "09-conflict-edit/p1.png", "name": "p1.png", "attrs": "ARCHIVE", "size": 761, "file_id": "0000000000000000000a000000116b8f", "mtime": "2026-10-04T04:58:19.510+00:00"}
+{"t": "2026-10-04T04:58:19.803+00:00", "kind": "appeared", "path": "09-conflict-edit/p2.png", "name": "p2.png", "attrs": "ARCHIVE", "size": 761, "file_id": "00000000000000000009000000116b90", "mtime": "2026-10-04T04:58:19.688+00:00"}
+{"t": "2026-10-04T04:58:19.804+00:00", "kind": "changed", "path": "07-replace", "changes": {"mtime": ["2026-10-04T04:58:18.627+00:00", "2026-10-04T04:58:19.161+00:00"]}}
+{"t": "2026-10-04T04:58:19.804+00:00", "kind": "changed", "path": "08-order/ipad", "changes": {"mtime": ["2026-10-04T04:58:03.436+00:00", "2026-10-04T04:58:19.344+00:00"]}}
+{"t": "2026-10-04T04:58:19.804+00:00", "kind": "changed", "path": "09-conflict-edit", "changes": {"mtime": ["2026-10-04T04:58:03.436+00:00", "2026-10-04T04:58:19.689+00:00"]}}
+{"t": "2026-10-04T04:58:19.870+00:00", "kind": "watch", "action": "added", "path": "09-conflict-edit/p3.png", "size": 761, "attrs": "ARCHIVE", "file_id": "0009000000116b91"}
+{"t": "2026-10-04T04:58:19.871+00:00", "kind": "watch", "action": "modified", "path": "09-conflict-edit", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "000d000000116b4f"}
+{"t": "2026-10-04T04:58:20.044+00:00", "kind": "watch", "action": "added", "path": "10-conflict-new/seed.png", "size": 761, "attrs": "ARCHIVE", "file_id": "0009000000116b92"}
+{"t": "2026-10-04T04:58:20.044+00:00", "kind": "watch", "action": "modified", "path": "10-conflict-new", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "0006000000116b50"}
+{"t": "2026-10-04T04:58:20.811+00:00", "kind": "appeared", "path": "09-conflict-edit/p3.png", "name": "p3.png", "attrs": "ARCHIVE", "size": 761, "file_id": "00000000000000000009000000116b91", "mtime": "2026-10-04T04:58:19.869+00:00"}
+{"t": "2026-10-04T04:58:20.811+00:00", "kind": "appeared", "path": "10-conflict-new/seed.png", "name": "seed.png", "attrs": "ARCHIVE", "size": 761, "file_id": "00000000000000000009000000116b92", "mtime": "2026-10-04T04:58:20.042+00:00"}
+{"t": "2026-10-04T04:58:20.811+00:00", "kind": "changed", "path": "06-pin/pinned", "changes": {"attrs": ["DIRECTORY|REPARSE", "DIRECTORY|REPARSE|PINNED"], "pin": ["unspecified", "pinned"]}}
+{"t": "2026-10-04T04:58:20.811+00:00", "kind": "changed", "path": "06-pin/pinned/seed.png", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|PINNED"]}}
+{"t": "2026-10-04T04:58:20.812+00:00", "kind": "changed", "path": "08-order/ipad", "changes": {"attrs": ["DIRECTORY|REPARSE", "DIRECTORY|REPARSE|PINNED"], "pin": ["unspecified", "pinned"]}}
+{"t": "2026-10-04T04:58:20.812+00:00", "kind": "changed", "path": "08-order/ipad/seed.png", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|PINNED"]}}
+{"t": "2026-10-04T04:58:20.812+00:00", "kind": "changed", "path": "09-conflict-edit", "changes": {"mtime": ["2026-10-04T04:58:19.689+00:00", "2026-10-04T04:58:19.869+00:00"]}}
+{"t": "2026-10-04T04:58:20.813+00:00", "kind": "changed", "path": "10-conflict-new", "changes": {"mtime": ["2026-10-04T04:58:03.436+00:00", "2026-10-04T04:58:20.043+00:00"]}}
+{"t": "2026-10-04T04:58:21.827+00:00", "kind": "changed", "path": "01-skip/a.tmp", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE|PINNED|UNPINNED"], "in_sync": [null, true], "pin": [null, "excluded"], "tag": [null, "0x9000601a"]}}
+{"t": "2026-10-04T04:58:21.827+00:00", "kind": "changed", "path": "01-skip/b.nosync", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE|PINNED|UNPINNED"], "in_sync": [null, true], "pin": [null, "excluded"], "tag": [null, "0x9000601a"]}}
+{"t": "2026-10-04T04:58:21.827+00:00", "kind": "changed", "path": "01-skip/empty.txt", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:21.828+00:00", "kind": "changed", "path": "01-skip/~$c.docx", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE|PINNED|UNPINNED"], "in_sync": [null, true], "pin": [null, "excluded"], "tag": [null, "0x9000601a"]}}
+{"t": "2026-10-04T04:58:22.839+00:00", "kind": "changed", "path": "01-skip/normal.txt", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:22.840+00:00", "kind": "changed", "path": "02-names/nfc-café.txt", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:22.841+00:00", "kind": "changed", "path": "02-names/nfd-café.txt", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:22.843+00:00", "kind": "changed", "path": "02-names/twin-é.txt", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:23.856+00:00", "kind": "changed", "path": "02-names/bad1.txt", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:23.857+00:00", "kind": "changed", "path": "02-names/bad2.txt", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:23.857+00:00", "kind": "changed", "path": "02-names/twin-é.txt", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:24.868+00:00", "kind": "changed", "path": "02-names/bad3.txt", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:24.869+00:00", "kind": "changed", "path": "02-names/bad4.txt", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:24.869+00:00", "kind": "changed", "path": "02-names/bad5.txt", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:24.869+00:00", "kind": "changed", "path": "02-names/bad6.txt", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:25.880+00:00", "kind": "changed", "path": "02-names/bad7.txt", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:25.880+00:00", "kind": "changed", "path": "02-names/bad8.txt", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:25.880+00:00", "kind": "changed", "path": "03-case/Upper.txt", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:26.898+00:00", "kind": "changed", "path": "03-case/Folder", "changes": {"attrs": ["DIRECTORY", "DIRECTORY|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:26.899+00:00", "kind": "changed", "path": "03-case/Folder/inside.txt", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:26.899+00:00", "kind": "changed", "path": "03-case/lower.txt", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:26.899+00:00", "kind": "changed", "path": "03-case/twin.png", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:26.900+00:00", "kind": "changed", "path": "04-update/win-local.png", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:27.915+00:00", "kind": "changed", "path": "05-delete/folder", "changes": {"attrs": ["DIRECTORY", "DIRECTORY|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:27.915+00:00", "kind": "changed", "path": "05-delete/folder/inside.txt", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:27.916+00:00", "kind": "changed", "path": "05-delete/win-local.txt", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:27.916+00:00", "kind": "changed", "path": "05-delete/win-recycled.txt", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:28.935+00:00", "kind": "changed", "path": "05-delete/seed.png", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:28.935+00:00", "kind": "changed", "path": "05-delete/win-deleted.txt", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:28.935+00:00", "kind": "changed", "path": "06-pin/seed.png", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:29.951+00:00", "kind": "changed", "path": "06-pin/pinned/seed.png", "changes": {"attrs": ["ARCHIVE|PINNED", "ARCHIVE|REPARSE|PINNED"], "in_sync": [null, false], "pin": [null, "pinned"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:29.952+00:00", "kind": "changed", "path": "07-replace/movefile.txt", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:29.954+00:00", "kind": "changed", "path": "07-replace/posix.txt", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:30.967+00:00", "kind": "changed", "path": "07-replace/recycle.txt", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:30.967+00:00", "kind": "changed", "path": "07-replace/seed.png", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:30.967+00:00", "kind": "changed", "path": "08-order/ipad/seed.png", "changes": {"attrs": ["ARCHIVE|PINNED", "ARCHIVE|REPARSE|PINNED"], "in_sync": [null, false], "pin": [null, "pinned"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:30.967+00:00", "kind": "changed", "path": "09-conflict-edit/p1.png", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:31.986+00:00", "kind": "changed", "path": "09-conflict-edit/p2.png", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:31.986+00:00", "kind": "changed", "path": "09-conflict-edit/p3.png", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:31.986+00:00", "kind": "changed", "path": "10-conflict-new/seed.png", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T04:58:35.034+00:00", "kind": "changed", "path": "03-case/Folder", "changes": {"in_sync": [false, true], "tag": ["0x9000201a", "0x9000601a"]}}
+{"t": "2026-10-04T04:58:35.034+00:00", "kind": "changed", "path": "05-delete/folder", "changes": {"in_sync": [false, true], "tag": ["0x9000201a", "0x9000601a"]}}
+{"t": "2026-10-04T04:58:46.202+00:00", "kind": "changed", "path": "05-delete/seed.png", "changes": {"in_sync": [false, true], "tag": ["0x9000201a", "0x9000601a"]}}
+{"t": "2026-10-04T04:58:46.202+00:00", "kind": "changed", "path": "06-pin/pinned/seed.png", "changes": {"in_sync": [false, true], "tag": ["0x9000201a", "0x9000601a"]}}
+{"t": "2026-10-04T04:58:46.202+00:00", "kind": "changed", "path": "06-pin/seed.png", "changes": {"in_sync": [false, true], "tag": ["0x9000201a", "0x9000601a"]}}
+{"t": "2026-10-04T04:59:03.484+00:00", "kind": "changed", "path": "04-update/win-local.png", "changes": {"in_sync": [false, true], "tag": ["0x9000201a", "0x9000601a"]}}
+{"t": "2026-10-04T04:59:03.485+00:00", "kind": "changed", "path": "07-replace/seed.png", "changes": {"in_sync": [false, true], "tag": ["0x9000201a", "0x9000601a"]}}
+{"t": "2026-10-04T04:59:03.485+00:00", "kind": "changed", "path": "08-order/ipad/seed.png", "changes": {"in_sync": [false, true], "tag": ["0x9000201a", "0x9000601a"]}}
+{"t": "2026-10-04T04:59:03.485+00:00", "kind": "changed", "path": "09-conflict-edit/p1.png", "changes": {"in_sync": [false, true], "tag": ["0x9000201a", "0x9000601a"]}}
+{"t": "2026-10-04T04:59:03.485+00:00", "kind": "changed", "path": "09-conflict-edit/p2.png", "changes": {"in_sync": [false, true], "tag": ["0x9000201a", "0x9000601a"]}}
+{"t": "2026-10-04T04:59:03.485+00:00", "kind": "changed", "path": "09-conflict-edit/p3.png", "changes": {"in_sync": [false, true], "tag": ["0x9000201a", "0x9000601a"]}}
+{"t": "2026-10-04T04:59:03.485+00:00", "kind": "changed", "path": "10-conflict-new/seed.png", "changes": {"in_sync": [false, true], "tag": ["0x9000201a", "0x9000601a"]}}
+{"t": "2026-10-04T05:08:49.192+00:00", "kind": "watch", "action": "removed", "path": "02-names/nfd-café.txt", "form": "NFD", "code_points": "U+0301", "size": 3, "attrs": "ARCHIVE", "file_id": "000d000000116b70"}
+{"t": "2026-10-04T05:08:49.634+00:00", "kind": "vanished", "path": "02-names/nfd-café.txt", "file_id": "0000000000000000000d000000116b70"}
+{"t": "2026-10-04T05:08:49.634+00:00", "kind": "changed", "path": "02-names", "changes": {"mtime": ["2026-10-04T04:58:16.317+00:00", "2026-10-04T05:08:49.192+00:00"]}}
+{"t": "2026-10-04T05:13:01.282+00:00", "kind": "watch", "action": "added", "path": "04-update/control.txt", "size": 7, "attrs": "ARCHIVE", "file_id": "0001000000117150"}
+{"t": "2026-10-04T05:13:01.282+00:00", "kind": "watch", "action": "modified", "path": "04-update", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "000c000000116b46"}
+{"t": "2026-10-04T05:13:01.430+00:00", "kind": "watch", "action": "added", "path": "04-update/control.png", "size": 763, "attrs": "ARCHIVE", "file_id": "0001000000117151"}
+{"t": "2026-10-04T05:13:01.431+00:00", "kind": "watch", "action": "modified", "path": "04-update", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "000c000000116b46"}
+{"t": "2026-10-04T05:13:01.924+00:00", "kind": "appeared", "path": "04-update/control.png", "name": "control.png", "attrs": "ARCHIVE", "size": 763, "file_id": "00000000000000000001000000117151", "mtime": "2026-10-04T05:13:01.429+00:00"}
+{"t": "2026-10-04T05:13:01.924+00:00", "kind": "appeared", "path": "04-update/control.txt", "name": "control.txt", "attrs": "ARCHIVE", "size": 7, "file_id": "00000000000000000001000000117150", "mtime": "2026-10-04T05:13:01.280+00:00"}
+{"t": "2026-10-04T05:13:01.924+00:00", "kind": "changed", "path": "04-update", "changes": {"mtime": ["2026-10-04T04:58:17.194+00:00", "2026-10-04T05:13:01.430+00:00"]}}
+{"t": "2026-10-04T05:13:02.931+00:00", "kind": "changed", "path": "04-update/control.png", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T05:13:02.931+00:00", "kind": "changed", "path": "04-update/control.txt", "changes": {"attrs": ["ARCHIVE", "ARCHIVE|REPARSE"], "in_sync": [null, false], "pin": [null, "unspecified"], "tag": [null, "0x9000201a"]}}
+{"t": "2026-10-04T05:13:07.961+00:00", "kind": "changed", "path": "04-update/control.txt", "changes": {"in_sync": [false, true], "tag": ["0x9000201a", "0x9000601a"]}}
+{"t": "2026-10-04T05:13:24.034+00:00", "kind": "changed", "path": "04-update/control.png", "changes": {"in_sync": [false, true], "tag": ["0x9000201a", "0x9000601a"]}}
+{"t": "2026-10-04T05:13:35.693+00:00", "kind": "watch", "action": "removed", "path": "02-names/twin-é.txt", "form": "NFD", "code_points": "U+0301", "size": 8, "attrs": "ARCHIVE|REPARSE", "file_id": "000b000000116b72"}
+{"t": "2026-10-04T05:13:35.694+00:00", "kind": "watch", "action": "modified", "path": "02-names", "size": 0, "attrs": "DIRECTORY|REPARSE", "file_id": "0010000000116b44"}
+{"t": "2026-10-04T05:13:36.077+00:00", "kind": "vanished", "path": "02-names/twin-é.txt", "file_id": "0000000000000000000b000000116b72"}
+{"t": "2026-10-04T05:13:36.077+00:00", "kind": "changed", "path": "02-names", "changes": {"mtime": ["2026-10-04T05:08:49.192+00:00", "2026-10-04T05:13:35.693+00:00"]}}
+{"t": "2026-10-04T05:14:54.356+00:00", "kind": "appeared", "path": "./", "error": "[Errno 2] open .: 系统找不到指定的文件。 (2)"}
+{"t": "2026-10-04T05:14:54.356+00:00", "kind": "vanished", "path": "01-skip", "file_id": "0000000000000000001d000000116b42"}
+{"t": "2026-10-04T05:14:54.356+00:00", "kind": "vanished", "path": "01-skip/a.tmp", "file_id": "0000000000000000000c000000116b6a"}
+{"t": "2026-10-04T05:14:54.356+00:00", "kind": "vanished", "path": "01-skip/b.nosync", "file_id": "0000000000000000000c000000116b6b"}
+{"t": "2026-10-04T05:14:54.356+00:00", "kind": "vanished", "path": "01-skip/empty.txt", "file_id": "0000000000000000000c000000116b6d"}
+{"t": "2026-10-04T05:14:54.356+00:00", "kind": "vanished", "path": "01-skip/normal.txt", "file_id": "0000000000000000000d000000116b6e"}
+{"t": "2026-10-04T05:14:54.357+00:00", "kind": "vanished", "path": "01-skip/~$c.docx", "file_id": "0000000000000000000b000000116b6c"}
+{"t": "2026-10-04T05:14:54.357+00:00", "kind": "vanished", "path": "02-names", "file_id": "00000000000000000010000000116b44"}
+{"t": "2026-10-04T05:14:54.357+00:00", "kind": "vanished", "path": "02-names/bad1.txt", "file_id": "0000000000000000000b000000116b73"}
+{"t": "2026-10-04T05:14:54.357+00:00", "kind": "vanished", "path": "02-names/bad2.txt", "file_id": "0000000000000000000c000000116b74"}
+{"t": "2026-10-04T05:14:54.357+00:00", "kind": "vanished", "path": "02-names/bad3.txt", "file_id": "00000000000000000008000000116b75"}
+{"t": "2026-10-04T05:14:54.357+00:00", "kind": "vanished", "path": "02-names/bad4.txt", "file_id": "00000000000000000008000000116b76"}
+{"t": "2026-10-04T05:14:54.357+00:00", "kind": "vanished", "path": "02-names/bad5.txt", "file_id": "00000000000000000008000000116b77"}
+{"t": "2026-10-04T05:14:54.357+00:00", "kind": "vanished", "path": "02-names/bad6.txt", "file_id": "00000000000000000008000000116b78"}
+{"t": "2026-10-04T05:14:54.358+00:00", "kind": "vanished", "path": "02-names/bad7.txt", "file_id": "00000000000000000008000000116b79"}
+{"t": "2026-10-04T05:14:54.358+00:00", "kind": "vanished", "path": "02-names/bad8.txt", "file_id": "0000000000000000000c000000116b7a"}
+{"t": "2026-10-04T05:14:54.358+00:00", "kind": "vanished", "path": "02-names/nfc-café.txt", "file_id": "0000000000000000000c000000116b6f"}
+{"t": "2026-10-04T05:14:54.358+00:00", "kind": "vanished", "path": "02-names/twin-é.txt", "file_id": "0000000000000000000b000000116b71"}
+{"t": "2026-10-04T05:14:54.358+00:00", "kind": "vanished", "path": "03-case", "file_id": "00000000000000000010000000116b45"}
+{"t": "2026-10-04T05:14:54.358+00:00", "kind": "vanished", "path": "03-case/Folder", "file_id": "0000000000000000001f000000116b69"}
+{"t": "2026-10-04T05:14:54.358+00:00", "kind": "vanished", "path": "03-case/Folder/inside.txt", "file_id": "0000000000000000000b000000116b7e"}
+{"t": "2026-10-04T05:14:54.359+00:00", "kind": "vanished", "path": "03-case/Upper.txt", "file_id": "0000000000000000000b000000116b7b"}
+{"t": "2026-10-04T05:14:54.359+00:00", "kind": "vanished", "path": "03-case/lower.txt", "file_id": "0000000000000000000a000000116b7c"}
+{"t": "2026-10-04T05:14:54.359+00:00", "kind": "vanished", "path": "03-case/twin.png", "file_id": "0000000000000000000b000000116b7f"}
+{"t": "2026-10-04T05:14:54.359+00:00", "kind": "vanished", "path": "04-update", "file_id": "0000000000000000000c000000116b46"}
+{"t": "2026-10-04T05:14:54.359+00:00", "kind": "vanished", "path": "04-update/control.png", "file_id": "00000000000000000001000000117151"}
+{"t": "2026-10-04T05:14:54.359+00:00", "kind": "vanished", "path": "04-update/control.txt", "file_id": "00000000000000000001000000117150"}
+{"t": "2026-10-04T05:14:54.359+00:00", "kind": "vanished", "path": "04-update/win-local.png", "file_id": "0000000000000000000b000000116b80"}
+{"t": "2026-10-04T05:14:54.359+00:00", "kind": "vanished", "path": "05-delete", "file_id": "0000000000000000000f000000116b47"}
+{"t": "2026-10-04T05:14:54.360+00:00", "kind": "vanished", "path": "05-delete/folder", "file_id": "0000000000000000000f000000116b7d"}
+{"t": "2026-10-04T05:14:54.360+00:00", "kind": "vanished", "path": "05-delete/folder/inside.txt", "file_id": "0000000000000000000c000000116b83"}
+{"t": "2026-10-04T05:14:54.360+00:00", "kind": "vanished", "path": "05-delete/seed.png", "file_id": "0000000000000000000b000000116b86"}
+{"t": "2026-10-04T05:14:54.360+00:00", "kind": "vanished", "path": "05-delete/win-deleted.txt", "file_id": "0000000000000000000b000000116b85"}
+{"t": "2026-10-04T05:14:54.360+00:00", "kind": "vanished", "path": "05-delete/win-local.txt", "file_id": "0000000000000000000e000000116b81"}
+{"t": "2026-10-04T05:14:54.360+00:00", "kind": "vanished", "path": "05-delete/win-recycled.txt", "file_id": "0000000000000000000d000000116b84"}
+{"t": "2026-10-04T05:14:54.360+00:00", "kind": "vanished", "path": "06-pin", "file_id": "0000000000000000000e000000116b48"}
+{"t": "2026-10-04T05:14:54.360+00:00", "kind": "vanished", "path": "06-pin/pinned", "file_id": "00000000000000000010000000116b4b"}
+{"t": "2026-10-04T05:14:54.361+00:00", "kind": "vanished", "path": "06-pin/pinned/seed.png", "file_id": "0000000000000000000b000000116b89"}
+{"t": "2026-10-04T05:14:54.361+00:00", "kind": "vanished", "path": "06-pin/seed.png", "file_id": "0000000000000000000d000000116b87"}
+{"t": "2026-10-04T05:14:54.361+00:00", "kind": "vanished", "path": "07-replace", "file_id": "0000000000000000000c000000116b4c"}
+{"t": "2026-10-04T05:14:54.361+00:00", "kind": "vanished", "path": "07-replace/movefile.txt", "file_id": "0000000000000000000b000000116b8b"}
+{"t": "2026-10-04T05:14:54.361+00:00", "kind": "vanished", "path": "07-replace/posix.txt", "file_id": "0000000000000000000b000000116b8a"}
+{"t": "2026-10-04T05:14:54.361+00:00", "kind": "vanished", "path": "07-replace/recycle.txt", "file_id": "0000000000000000000c000000116b8c"}
+{"t": "2026-10-04T05:14:54.361+00:00", "kind": "vanished", "path": "07-replace/seed.png", "file_id": "0000000000000000000b000000116b8d"}
+{"t": "2026-10-04T05:14:54.361+00:00", "kind": "vanished", "path": "08-order", "file_id": "0000000000000000000d000000116b4d"}
+{"t": "2026-10-04T05:14:54.362+00:00", "kind": "vanished", "path": "08-order/ipad", "file_id": "0000000000000000000c000000116b4e"}
+{"t": "2026-10-04T05:14:54.362+00:00", "kind": "vanished", "path": "08-order/ipad/seed.png", "file_id": "0000000000000000000c000000116b8e"}
+{"t": "2026-10-04T05:14:54.362+00:00", "kind": "vanished", "path": "09-conflict-edit", "file_id": "0000000000000000000d000000116b4f"}
+{"t": "2026-10-04T05:14:54.362+00:00", "kind": "vanished", "path": "09-conflict-edit/p1.png", "file_id": "0000000000000000000a000000116b8f"}
+{"t": "2026-10-04T05:14:54.362+00:00", "kind": "vanished", "path": "09-conflict-edit/p2.png", "file_id": "00000000000000000009000000116b90"}
+{"t": "2026-10-04T05:14:54.362+00:00", "kind": "vanished", "path": "09-conflict-edit/p3.png", "file_id": "00000000000000000009000000116b91"}
+{"t": "2026-10-04T05:14:54.362+00:00", "kind": "vanished", "path": "10-conflict-new", "file_id": "00000000000000000006000000116b50"}
+{"t": "2026-10-04T05:14:54.362+00:00", "kind": "vanished", "path": "10-conflict-new/seed.png", "file_id": "00000000000000000009000000116b92"}

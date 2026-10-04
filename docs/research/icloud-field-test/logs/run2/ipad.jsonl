@@ -1,0 +1,3 @@
+{"t": "2026-10-04T04:59:56.451+00:00", "step": "0", "report": "iPadOS 27.0; FolioTest and its folders 01-skip to 10-conflict-new are visible"}
+{"t": "2026-10-04T05:16:48.704+00:00", "step": "5-pre", "report": "Sirui: Windows has no permission to delete iCloud files; only Apple devices (macOS, iPad) can delete them"}
+{"t": "2026-10-04T05:16:56.842+00:00", "step": "5-pre", "report": "Sirui deleted all files of FolioTest on the iPad (around 05:16 UTC) and asked to retry the upload test"}
