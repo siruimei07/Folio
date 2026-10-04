@@ -17,13 +17,13 @@
     ]
   },
   "now": {
-    "stage": "M2 版本记录：M3 前置验证有了结果，M2 设计待提交，再开 M2 合约",
+    "stage": "M2 版本记录：设计和历史格式都已合并，M2 合约可以开始",
     "focus": "M2",
     "summary": [
-      "10-04 已合并：问题列表分页测试的修复（c5776a3，问题在测试不在组件，CI 37179299152 绿）；iCloud 实测（80b3f26、42d195b，你在 iPad 上配合，iCloud for Windows 15.8.118 + iPadOS 27.0，结果在 docs/research/icloud-field-test.md）。之前：M1 验收（v0.1）、课程徽标、历史格式规格。",
-      "待审计：`test/core-sync-simulation`（同步仿真，Claude Code 按 Codex 提示词做完；长跑 3,962 个种子、约 2.8 万次崩溃注入全过）：用 Opus 5.5 · xhigh 跑审计提示词。待提交和合并：`design/design-m2-details`（Cowork 做完，文件未提交；它的 token 没重新生成，所以现在每个 session 的完整 pnpm check 都卡在 token 测试上），合并后才开 M2 合约。进行中：`chore/build-deps-m2`（Codex，checkpoint）。",
-      "现在就能开：`docs/specs-sync`（同步仿真合并后；要用实测和仿真的发现，含 pack 删除竞态的修正，决策 pack-deletion-race）、`fix/core-recycle-cloud-placeholder`（实测发现：删云端占位文件时 Folio 报失败，其实已经删了）。合并一次一个，每个等上一个在 main 上的 CI 跑完。",
-      "按你批准的 versioning.md §19：差异和恢复也等正文抽取；AI 提交说明等差异做完再开；M3 新增 `feat/core-retention`（Word 旧版本稀疏保留）；M1 的三处资料库细节由新的 `feat/ui-library-m1-notes` 做。关键路径：设计 → M2 合约 → 对象库 → 工作区 → 提交和历史 → 差异和恢复 → AI 提交说明 → M2 验收。",
+      "10-04 已合并：M2 设计细节（ed245bf、ab61012、56ff81a：workspace-history.md 和第 10 轮 token，你的 30B～35A 六个决定）；iCloud 实测（80b3f26，iPad 上配合，结果在 docs/research/icloud-field-test.md）；问题列表分页测试的修复（c5776a3）。之前：M1 验收（v0.1）、课程徽标、历史格式规格。完整 pnpm check 不再卡在 token 测试上。",
+      "现在可以开始：`feat/ipc-m2-contract`（M2 合约，关键路径的第一步；Opus 5.5 · xhigh，Fable 暂停中）；`feat/ui-library-m1-notes`（M1 留下的三处资料库细节，S）；`fix/core-recycle-cloud-placeholder`（删云端占位文件时误报失败，S）。合并一次一个，每个等上一个在 main 上的 CI 跑完。",
+      "同步仿真 `test/core-sync-simulation`：Claude 审计后退回 Codex 修改（进行中）；它合并后 `docs/specs-sync` 才能开（要用实测和仿真的发现，含 pack 删除竞态，决策 pack-deletion-race）。进行中：`chore/build-deps-m2`（Codex，checkpoint；装依赖是整个工作区的操作，要等别的 lane 都在 checkpoint 或 review）。",
+      "按你批准的 versioning.md §19：差异和恢复也等正文抽取；AI 提交说明等差异做完再开；M3 新增 `feat/core-retention`（Word 旧版本稀疏保留）；M1 的三处资料库细节由新的 `feat/ui-library-m1-notes` 做。关键路径：M2 合约 → 对象库 → 工作区 → 提交和历史 → 差异和恢复 → AI 提交说明 → M2 验收。",
       "模型：Fable 5.1 暂停（你 10-03 的决定）：推荐给它的 lane（关卡、规格、IPC 合约、推理强度 max）都由 Opus 5.5 用同样的推理强度代替；界面、核心、测试、设计用 Opus 5.5，只改文档和只合并的用 Sonnet 5.5。恢复时删掉 meta.pausedModels 里的 fable 即可。",
       "Codex 的项目级 skills（`AGENTS.md`、`.agents/skills/`、`.codex/`、`.claude/skills/`）和 CLAUDE.md 里的两处改动不进仓库，由 Codex 管理：任何 lane 都不提交、不丢弃。"
     ]
@@ -1709,6 +1709,37 @@
       ],
       "notes": [
         "检查：pnpm roadmap check 和路线图单元测试通过；完整 pnpm check 只会卡在 design/design-m2-details 未提交的 token 上，与本 lane 无关"
+      ]
+    },
+    {
+      "id": "docs/docs-roadmap-design-landed",
+      "title": "M2 设计合并后的路线图刷新",
+      "milestone": "M2",
+      "phase": "m2-spec",
+      "track": "flow",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "design/design-m2-details"
+      ],
+      "summary": "M2 设计合并后更新 now（M2 合约可以开始），记下 Sirui 在设计 lane 里的六个决定",
+      "status": "done",
+      "updated": "2026-10-04",
+      "landed": "2026-10-04",
+      "gates": {
+        "check": "pass",
+        "e2e": "na",
+        "codeReview": "na",
+        "securityReview": "na",
+        "simplify": "na",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "docs/roadmap/roadmap.json"
+      ],
+      "notes": [
+        "检查：路线图检查、单元测试和 web 684 个测试通过；cargo fmt 只在另一个 session 正在改、尚未提交的 sync_sim 文件上失败，与本 lane 无关"
       ]
     },
     {
@@ -3568,6 +3599,14 @@
       "item": "同步仿真发现已批准的 remote-format.md §10.1 删除 pack 有竞态（两台设备可能各删掉对方那份）；只影响 M3 的删除旧 pack，不改历史格式 1 的字节。由 docs/specs-sync 提出修正方案给你选",
       "type": "decide",
       "state": "locked"
+    },
+    {
+      "id": "m2-design",
+      "when": "2026-10-03",
+      "item": "M2 设计细节（design/design-m2-details，workspace-history.md §1）",
+      "type": "decide",
+      "state": "done",
+      "result": "30B 窄窗口的工作区把提交栏固定在底部；31A「未同步」列出最近三个提交；32A 第一次提交自动记录（\"Start history\"）；33B 标签筛选最多两行，其余收进「+N」；34A 快捷视图跟当前学期；35A 课程或文件夹网格里的文件夹显示成一排 48 px 卡片。10-04 合并（ed245bf、ab61012）"
     }
   ],
   "looseEnds": [
@@ -4071,6 +4110,11 @@
       "at": "2026-10-04",
       "by": "Claude Code",
       "text": "路线图：iCloud 实测（已合并）和同步仿真（review）的发现交给 docs/specs-sync（它现在也等同步仿真）；新增待定决策 pack-deletion-race；两条待办：夜间 CI 在 Linux 上验证、共用假 IntersectionObserver"
+    },
+    {
+      "at": "2026-10-04",
+      "by": "Claude Code",
+      "text": "合并：design/design-m2-details（ed245bf、ab61012、56ff81a）；M2 合约可以开始；记下设计决定 30B～35A"
     }
   ]
 }
