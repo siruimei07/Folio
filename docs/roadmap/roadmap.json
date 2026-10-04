@@ -17,12 +17,12 @@
     ]
   },
   "now": {
-    "stage": "M2 版本记录：历史格式已批准，下一步合并 M2 设计，再开 M2 合约",
+    "stage": "M2 版本记录：M3 前置验证有了结果，M2 设计待提交，再开 M2 合约",
     "focus": "M2",
     "summary": [
-      "10-03 已合并：M1 验收（v0.1）；课程徽标取课程代码（adbe08a，徽标字号改 9 px、窄窗口 8.5 px，你选的 B）；历史格式规格（remote-format.md 历史格式 1 含 golden vectors、versioning.md、ADR-0006 Word 旧版本稀疏保留，你已批准，1a8488b，CI 37174106955 绿）。",
-      "待提交和合并：`design/design-m2-details`（Cowork 做完：workspace-history.md 和第 10 轮 token，文件还没提交），要一个 Claude Code session 提交、重新生成 token 并合并。M2 合约等它合并后再开（合约要用设计里的恢复预览、历史字段等）；「未同步」列表你已定为按 31A 显示最近三个提交（合约 lane 顺带改 versioning.md §9.1）。",
-      "现在就能开：`chore/build-deps-m2` 和 `test/core-sync-simulation`（交给 Codex）、`test/core-icloud-field-test`（Opus 5.5 · high，要你在 iPad 上配合）、`fix/ui-problems-paging-flake`（一个偶尔失败的测试）。合并一次一个，每个等上一个在 main 上的 CI 跑完。",
+      "10-04 已合并：问题列表分页测试的修复（c5776a3，问题在测试不在组件，CI 37179299152 绿）；iCloud 实测（80b3f26、42d195b，你在 iPad 上配合，iCloud for Windows 15.8.118 + iPadOS 27.0，结果在 docs/research/icloud-field-test.md）。之前：M1 验收（v0.1）、课程徽标、历史格式规格。",
+      "待审计：`test/core-sync-simulation`（同步仿真，Claude Code 按 Codex 提示词做完；长跑 3,962 个种子、约 2.8 万次崩溃注入全过）：用 Opus 5.5 · xhigh 跑审计提示词。待提交和合并：`design/design-m2-details`（Cowork 做完，文件未提交；它的 token 没重新生成，所以现在每个 session 的完整 pnpm check 都卡在 token 测试上），合并后才开 M2 合约。进行中：`chore/build-deps-m2`（Codex，checkpoint）。",
+      "现在就能开：`docs/specs-sync`（同步仿真合并后；要用实测和仿真的发现，含 pack 删除竞态的修正，决策 pack-deletion-race）、`fix/core-recycle-cloud-placeholder`（实测发现：删云端占位文件时 Folio 报失败，其实已经删了）。合并一次一个，每个等上一个在 main 上的 CI 跑完。",
       "按你批准的 versioning.md §19：差异和恢复也等正文抽取；AI 提交说明等差异做完再开；M3 新增 `feat/core-retention`（Word 旧版本稀疏保留）；M1 的三处资料库细节由新的 `feat/ui-library-m1-notes` 做。关键路径：设计 → M2 合约 → 对象库 → 工作区 → 提交和历史 → 差异和恢复 → AI 提交说明 → M2 验收。",
       "模型：Fable 5.1 暂停（你 10-03 的决定）：推荐给它的 lane（关卡、规格、IPC 合约、推理强度 max）都由 Opus 5.5 用同样的推理强度代替；界面、核心、测试、设计用 Opus 5.5，只改文档和只合并的用 Sonnet 5.5。恢复时删掉 meta.pausedModels 里的 fable 即可。",
       "Codex 的项目级 skills（`AGENTS.md`、`.agents/skills/`、`.codex/`、`.claude/skills/`）和 CLAUDE.md 里的两处改动不进仓库，由 Codex 管理：任何 lane 都不提交、不丢弃。"
@@ -1681,6 +1681,37 @@
       ]
     },
     {
+      "id": "docs/docs-roadmap-m3-pre-refresh",
+      "title": "M3 前置验证后的路线图刷新",
+      "milestone": "M2",
+      "phase": "m2-spec",
+      "track": "flow",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "test/core-icloud-field-test"
+      ],
+      "summary": "iCloud 实测合并、同步仿真到 review 之后刷新路线图：两边的发现交给同步规格，记下 pack 删除竞态的待定决策、夜间 CI 和共用测试 helper 两条待办，更新 now",
+      "status": "done",
+      "updated": "2026-10-04",
+      "landed": "2026-10-04",
+      "gates": {
+        "check": "pass",
+        "e2e": "na",
+        "codeReview": "na",
+        "securityReview": "na",
+        "simplify": "na",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "docs/roadmap/roadmap.json"
+      ],
+      "notes": [
+        "检查：pnpm roadmap check 和路线图单元测试通过；完整 pnpm check 只会卡在 design/design-m2-details 未提交的 token 上，与本 lane 无关"
+      ]
+    },
+    {
       "id": "docs/docs-roadmap-claimed",
       "title": "“已领取”状态",
       "milestone": "M2",
@@ -2803,7 +2834,8 @@
       "size": "M",
       "effort": "max",
       "deps": [
-        "test/core-icloud-field-test"
+        "test/core-icloud-field-test",
+        "test/core-sync-simulation"
       ],
       "summary": "同步的 spec",
       "status": "planned",
@@ -2813,13 +2845,17 @@
         "docs/research/icloud-field-test.md",
         "docs/specs/remote-format.md",
         "docs/specs/versioning.md",
-        "docs/adr/ADR-0006-history-retention.md"
+        "docs/adr/ADR-0006-history-retention.md",
+        "crates/folio-core/tests/sync_sim/README.md"
       ],
       "prompt": {
         "extra": [
           "Write docs/specs/sync.md from ADR-0003 §5–§12 and the field test (docs/research/icloud-field-test.md): the remote layout as used; choosing the canonical head; one sync round (pull, import direct edits, rebase, land files with deletions to the Recycle Bin, push); the snapshot before a sync and recovery after an interruption; mirror rules and invalid names; merge rules; placeholders and freeing space (on by default, my 09-26 decision); watching the remote; creating and joining a remote.",
           "Every rule names the simulation invariant that checks it; list what the field test could not settle and how the design stays safe anyway. End with the M3 contract outline and a check of the planned M3 lanes.",
-          "Specify remote compaction for feat/core-retention (ADR-0006): when packs may be deleted, how other devices learn of it, and which simulation invariant checks it."
+          "Specify remote compaction for feat/core-retention (ADR-0006): when packs may be deleted, how other devices learn of it, and which simulation invariant checks it.",
+          "Field test (docs/research/icloud-field-test.md §2 and §5, iCloud for Windows 15.8 with the iPad): NFD names never upload from Windows; an NFC/NFD twin pair stalls every upload until one is removed (about 6 min to recover); an iPad case-only rename deletes the file; a name invalid on Windows becomes its \"_\" form on iCloud when Windows writes it; conflict copies are named per device (\"p3 2.png\", \"p3(1).png\" on Windows, \"p3 3.png\" on the iPad), the writer's own file can be renamed and the original path can vanish; renaming over a mirror file is reliable, also over cloud-only files; every delete or replace also lands in Recently Deleted; a head record arrived about 2.5 min before a 200 MB pack; pins are inherited.",
+          "Sync simulation (crates/folio-core/tests/sync_sim/README.md, \"Rules the reference model adds\"): 18 rules ADR-0003 leaves open, each from a failing seed. Settle each one in sync.md with its invariant. In particular remote-format.md §10.1 pack deletion has a real race (two devices can each delete the other's copy; the model keeps only a smaller-named pack as \"the other copy\"); an abandoned intent must expire; a head is published only after every mirror write; a file without stored versions never gets a new path whose content the device cannot obtain; timers run on a monotonic clock. The §10.1 fix changes an approved format document: bring it to me as a decision with options (decision pack-deletion-race).",
+          "The simulation's iCloud assumptions (identical concurrent uploads do not conflict; an iCloud-updated file gets a new file id or size) were made before the field test ran: confirm or correct them against the results and tell the simulation which to change."
         ]
       }
     },
@@ -2894,7 +2930,8 @@
       "links": [
         "docs/specs/sync.md",
         "docs/specs/remote-format.md",
-        "docs/adr/ADR-0003-versioning-and-sync.md"
+        "docs/adr/ADR-0003-versioning-and-sync.md",
+        "crates/folio-core/tests/sync_sim/README.md"
       ],
       "prompt": [
         "The remote side of docs/specs/sync.md and remote-format.md: the remote layout in iCloud Drive; packs pushed before head records; every pulled object verified (BLAKE3) before use; choosing the canonical head (ADR-0003 §6). Never overwrite or delete anything on the remote another device may still need; tolerate missing, late, duplicated and conflict-copied files.",
@@ -2918,7 +2955,8 @@
       "links": [
         "docs/specs/sync.md",
         "docs/research/icloud-field-test.md",
-        "docs/adr/ADR-0003-versioning-and-sync.md"
+        "docs/adr/ADR-0003-versioning-and-sync.md",
+        "crates/folio-core/tests/sync_sim/README.md"
       ],
       "prompt": [
         "The plain-folder mirror (ADR-0003 §7, docs/specs/sync.md): import before overwrite, so a direct edit made on the iPad or a Mac is never lost; recognise those edits; names invalid on Windows; conflict copies in the patterns the field test recorded. Deletions go to the Recycle Bin, never permanently.",
@@ -2945,11 +2983,13 @@
       "links": [
         "docs/specs/sync.md",
         "docs/adr/ADR-0003-versioning-and-sync.md",
-        "docs/adr/ADR-0006-history-retention.md"
+        "docs/adr/ADR-0006-history-retention.md",
+        "crates/folio-core/tests/sync_sim/README.md"
       ],
       "prompt": [
         "Critical path. One sync round as docs/specs/sync.md defines it: pull → import direct edits → rebase → land files (deletions to the Recycle Bin) → push; a snapshot before each sync and recovery after an interruption at any step.",
-        "Done means the long simulation run is green across many seeds with every invariant holding (nothing canonical lost, convergence, no silent overwrite, one linear history). Report the seeds and the run time in the handoff."
+        "Done means the long simulation run is green across many seeds with every invariant holding (nothing canonical lost, convergence, no silent overwrite, one linear history). Report the seeds and the run time in the handoff.",
+        "Replace the simulation's reference model with this engine as crates/folio-core/tests/sync_sim/README.md \"Plugging in the real engine\" describes; the 18 regression replays and the long run must stay green."
       ]
     },
     {
@@ -2970,7 +3010,8 @@
         "docs/adr/ADR-0006-history-retention.md",
         "docs/specs/versioning.md",
         "docs/specs/sync.md",
-        "docs/specs/remote-format.md"
+        "docs/specs/remote-format.md",
+        "crates/folio-core/tests/sync_sim/README.md"
       ],
       "prompt": [
         "ADR-0006: the thinning job that keeps fewer old Word versions as they age, prune commits that record it, and compaction of the local store and of the remote (as docs/specs/sync.md specifies). Thinning is decided per device and must be safe against wrong clocks (ADR-0006).",
@@ -3515,6 +3556,13 @@
       "type": "decide",
       "state": "done",
       "result": "按 31A：M2 的「未同步」显示最近三个提交；feat/ipc-m2-contract 把 versioning.md §9.1 改成一致，从 list_history 取"
+    },
+    {
+      "id": "pack-deletion-race",
+      "when": "docs/specs-sync 写完时",
+      "item": "同步仿真发现已批准的 remote-format.md §10.1 删除 pack 有竞态（两台设备可能各删掉对方那份）；只影响 M3 的删除旧 pack，不改历史格式 1 的字节。由 docs/specs-sync 提出修正方案给你选",
+      "type": "decide",
+      "state": "locked"
     }
   ],
   "looseEnds": [
@@ -3637,6 +3685,16 @@
       "state": "open",
       "item": "Cowork 的 Design System 页面「Folio Design System」还没更新到第 10 轮 token（diff、历史相关）；以 design/tokens/ 为准",
       "lane": "design/design-sync"
+    },
+    {
+      "state": "open",
+      "item": "同步仿真的夜间长跑放在 ubuntu-24.04（每天 15 分钟、每月约 600 分钟），folio-core 在 Linux 上编译没在本地验证过：合并后手动触发一次 sync-simulation.yml，不行就改 windows-2022（私有仓库按 2 倍计费）",
+      "lane": "test/core-sync-simulation"
+    },
+    {
+      "state": "open",
+      "item": "会记住「已滚到底」的假 IntersectionObserver 在 problems.test.tsx 和 SearchDialog.test.tsx 各写了一份：工作区列表要第三份之前合成 src/test/ 里的共用 helper",
+      "lane": "feat/ui-changes-view"
     }
   ],
   "risks": [
@@ -4003,6 +4061,11 @@
       "at": "2026-10-03",
       "by": "Claude Code",
       "text": "Sirui：M2 的「未同步」按 31A 显示最近三个提交（合约 lane 改 versioning.md §9.1）"
+    },
+    {
+      "at": "2026-10-04",
+      "by": "Claude Code",
+      "text": "路线图：iCloud 实测（已合并）和同步仿真（review）的发现交给 docs/specs-sync（它现在也等同步仿真）；新增待定决策 pack-deletion-race；两条待办：夜间 CI 在 Linux 上验证、共用假 IntersectionObserver"
     }
   ]
 }
