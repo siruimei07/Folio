@@ -1,0 +1,153 @@
+{
+  "description": "BLAKE3 in hash mode (content hashes and blob ids) and in derive_key mode (tree and commit ids). input_pattern and material_pattern: the bytes i mod 251 for i = 0 .. length - 1. derive_key outputs are 32 bytes.",
+  "blob_ids": [
+    {
+      "name": "empty",
+      "input_hex": "",
+      "blob_id": "b3:af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262"
+    },
+    {
+      "name": "abc",
+      "input_hex": "616263",
+      "blob_id": "b3:6437b3ac38465133ffb63b75273a8db548c558465d79db03fd359c6cd5bd9d85"
+    },
+    {
+      "name": "chinese-text",
+      "input_hex": "2320e7acac33e8aeb220e789b9e5be81e580bc0a0a2d20e789b9e5be81e5a49ae9a1b9e5bc8f0a",
+      "blob_id": "b3:fbbd743f87fd3e63897682fa5d92352c5d9989d42c5c9261f1a5110e9efead66"
+    },
+    {
+      "name": "pattern-1",
+      "input_pattern": {
+        "length": 1
+      },
+      "blob_id": "b3:2d3adedff11b61f14c886e35afa036736dcd87a74d27b5c1510225d0f592e213"
+    },
+    {
+      "name": "pattern-63",
+      "input_pattern": {
+        "length": 63
+      },
+      "blob_id": "b3:e9bc37a594daad83be9470df7f7b3798297c3d834ce80ba85d6e207627b7db7b"
+    },
+    {
+      "name": "pattern-64",
+      "input_pattern": {
+        "length": 64
+      },
+      "blob_id": "b3:4eed7141ea4a5cd4b788606bd23f46e212af9cacebacdc7d1f4c6dc7f2511b98"
+    },
+    {
+      "name": "pattern-65",
+      "input_pattern": {
+        "length": 65
+      },
+      "blob_id": "b3:de1e5fa0be70df6d2be8fffd0e99ceaa8eb6e8c93a63f2d8d1c30ecb6b263dee"
+    },
+    {
+      "name": "pattern-1023",
+      "input_pattern": {
+        "length": 1023
+      },
+      "blob_id": "b3:10108970eeda3eb932baac1428c7a2163b0e924c9a9e25b35bba72b28f70bd11"
+    },
+    {
+      "name": "pattern-1024",
+      "input_pattern": {
+        "length": 1024
+      },
+      "blob_id": "b3:42214739f095a406f3fc83deb889744ac00df831c10daa55189b5d121c855af7"
+    },
+    {
+      "name": "pattern-1025",
+      "input_pattern": {
+        "length": 1025
+      },
+      "blob_id": "b3:d00278ae47eb27b34faecf67b4fe263f82d5412916c1ffd97c8cb7fb814b8444"
+    },
+    {
+      "name": "pattern-2048",
+      "input_pattern": {
+        "length": 2048
+      },
+      "blob_id": "b3:e776b6028c7cd22a4d0ba182a8bf62205d2ef576467e838ed6f2529b85fba24a"
+    },
+    {
+      "name": "pattern-2049",
+      "input_pattern": {
+        "length": 2049
+      },
+      "blob_id": "b3:5f4d72f40d7a5f82b15ca2b2e44b1de3c2ef86c426c95c1af0b6879522563030"
+    },
+    {
+      "name": "pattern-3072",
+      "input_pattern": {
+        "length": 3072
+      },
+      "blob_id": "b3:b98cb0ff3623be03326b373de6b9095218513e64f1ee2edd2525c7ad1e5cffd2"
+    },
+    {
+      "name": "pattern-3073",
+      "input_pattern": {
+        "length": 3073
+      },
+      "blob_id": "b3:7124b49501012f81cc7f11ca069ec9226cecb8a2c850cfe644e327d22d3e1cd3"
+    },
+    {
+      "name": "pattern-4097",
+      "input_pattern": {
+        "length": 4097
+      },
+      "blob_id": "b3:9b4052b38f1c5fc8b1f9ff7ac7b27cd242487b3d890d15c96a1c25b8aa0fb995"
+    },
+    {
+      "name": "pattern-102400",
+      "input_pattern": {
+        "length": 102400
+      },
+      "blob_id": "b3:bc3e3d41a1146b069abffad3c0d44860cf664390afce4d9661f7902e7943e085"
+    },
+    {
+      "name": "pattern-1048577",
+      "input_pattern": {
+        "length": 1048577
+      },
+      "blob_id": "b3:2f053cd7472cf0cd2f9adaf45c1180255b91b9a865404a63671a0ee5f792ed33"
+    }
+  ],
+  "derive_key": [
+    {
+      "name": "empty-tree",
+      "context": "folio tree v1",
+      "material_hex": "7b22656e7472696573223a5b5d7d",
+      "output": "9b8b2fc76f6386c5507b9f545e0c960472b47ae5c4a4a906b952377ff33460d3"
+    },
+    {
+      "name": "empty-material-tree",
+      "context": "folio tree v1",
+      "material_hex": "",
+      "output": "0e737f5c1bfbddac83ba227c39ca37b3a853f22ffa05a5a9ba751cc582a5b789"
+    },
+    {
+      "name": "empty-tree-bytes-as-commit",
+      "context": "folio commit v1",
+      "material_hex": "7b22656e7472696573223a5b5d7d",
+      "output": "afd3360dd4bc0385163e79d92e47edc96c4521537c3822e3eb1c3e8c6709ed55"
+    },
+    {
+      "name": "pattern-1025-tree",
+      "context": "folio tree v1",
+      "material_pattern": {
+        "length": 1025
+      },
+      "output": "f677c9d87ea5ec27f5b5e2b42893b76ecfce942468a20353a3bf306aa4c98667"
+    }
+  ],
+  "domain_separation": {
+    "note": "The same bytes as a blob, a tree and a commit have three different ids.",
+    "bytes_hex": "7b22656e7472696573223a5b5d7d",
+    "blob_id": "b3:17e235e6291b29a843c8ac8962bec2b1923e9d4ea624888548725e13141e8439",
+    "tree_id": "b3:9b8b2fc76f6386c5507b9f545e0c960472b47ae5c4a4a906b952377ff33460d3",
+    "commit_id": "b3:afd3360dd4bc0385163e79d92e47edc96c4521537c3822e3eb1c3e8c6709ed55"
+  }
+}

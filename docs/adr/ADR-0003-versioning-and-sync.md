@@ -1,6 +1,8 @@
 # ADR-0003: Versioning and sync format
 
-- **Status:** Accepted (Sirui, 2026-09-26)
+- **Status:** Accepted (Sirui, 2026-09-26). Refined on 2026-10-03, when Sirui approved
+  [`remote-format.md`](../specs/remote-format.md), whose §14 lists the refinements, and
+  [ADR-0006](ADR-0006-history-retention.md).
 - **Date:** 2026-09-26
 - **Deciders:** Sirui Mei
 - **Inputs:**
@@ -52,30 +54,36 @@ consistent folder. Options considered explains the choice.
 - **Content hash.** The BLAKE3-256 hash of a file's raw bytes, written `b3:<64 hex digits>`. It is
   used for every file in trees, in the catalog (ADR-0002), and to verify the mirror.
 - **Blob.** The raw bytes of a stored file version. Its id is its content hash.
-- **Tree.** One directory: entries sorted by name, each `{name, kind: file|dir, hash, size, stored}`.
+- **Tree.** One directory: entries in ascending byte order of name, each `{name, kind: file|dir,
+  hash}`, and for a file also `size` and `stored`.
   - `hash` is the content hash of a file, or the id of a subtree.
-  - `stored` says whether a blob exists. That is true for text and Word files under the size
-    limit, according to `.folio/library.json` at commit time.
+  - `stored` says whether the version's blob is kept. It is true for text and Word files under the
+    size limit, by the rules in the same commit's `.folio/library.json`, and for every file under
+    `.folio/`, so equal content under equal rules gives equal trees.
 - **Commit.** Its fields:
 
   | Field | Meaning |
   |---|---|
-  | `parent` | Previous commit; `null` for the first |
+  | `parent` | Previous commit; left out on the first |
   | `tree` | Root tree |
   | `device` | `{id, name}` of the device that made it |
-  | `time` | UTC, RFC 3339, whole seconds |
-  | `kind` | `commit`, or `import` (direct edits found in the remote) |
-  | `message` | Commit message |
-  | `changes` | `{op: add|modify|delete|move, path, from_path?, old_hash?, new_hash?}` per change |
+  | `time` | UTC, `YYYY-MM-DDTHH:MM:SSZ` |
+  | `kind` | `commit`, `import` (direct edits found in the remote) or `prune` (thinning, ADR-0006) |
+  | `summary`, `body` | The commit message: a one-line summary and optional details, the two fields of the commit box |
+  | `changes` | Optional: `{op: add|modify|delete|move, kind: file|dir, path, from?, old?, new?}` per change, where `old` and `new` are `{hash, size, stored}`. Folders have records, and a folder move covers what moved with it |
   | `rebased_from` | Optional; the commit this one was rebased from |
+  | `pruned` | Prune commits only: the blobs thinned out |
 
-  `changes` duplicates what the trees already say. It is kept so the history view is fast, and
-  tests check that it matches.
-- **Encoding.** Trees and commits are canonical JSON: UTF-8, keys sorted by byte order, no
-  insignificant whitespace, integers only. Their ids use BLAKE3's `derive_key` mode with the
-  contexts `folio tree v1` and `folio commit v1`, so a tree or commit id can never equal a blob id.
-- **Paths and names.** Unicode NFC, `/` as separator, valid on Windows.
-  - Trees cover the whole library, including the `.folio/` metadata files (ADR-0002).
+  `changes` duplicates what the trees already say. It is kept so the history view is fast and moves
+  are recorded, and readers check that it matches (remote-format.md §8).
+- **Encoding.** Trees and commits are canonical JSON, the RFC 8785 subset of remote-format.md §5:
+  UTF-8, keys sorted by byte order, no insignificant whitespace, no `null`, integers from 0 to
+  2^53 − 1 only, at most 16 levels deep. Their ids use BLAKE3's `derive_key` mode with the contexts
+  `folio tree v1` and `folio commit v1`, so a tree or commit id can never equal a blob id.
+- **Paths and names.** Unicode NFC, `/` as separator, valid on Windows, at most 32,767 UTF-16 code
+  units per path.
+  - Trees cover the whole library, including the `.folio/` metadata files (ADR-0002);
+    remote-format.md §7.4 fixes what `.folio/` may hold.
   - They exclude `.folio/local/` and ignored files.
 - **Local operation log.** Sync, reword and uncommit events in the history view come from
   `.folio/local/oplog.jsonl`, not from commits.
@@ -83,15 +91,18 @@ consistent folder. Options considered explains the choice.
 ### 3. Packs
 
 - Objects live only in packs, never one file per object. This keeps iCloud's file count low.
-- **Layout**, in order:
+- **Layout**, in order, with little-endian fields of fixed width (remote-format.md §9):
   1. Header: magic `FOLIOPK1` and the format version.
   2. Records: type, flags, id, raw length, stored length, payload. The payload is compressed with
-     zstd at level 3, except for already-compressed formats such as `.docx`.
+     zstd at level 3, except for already-compressed formats such as `.docx`. A frame fits an 8 MiB
+     window and decodes to exactly the raw length.
   3. Index: ids in sorted order, with their offsets.
-  4. Footer: the index offset, and the BLAKE3 hash of every byte before the footer.
-- A pack's file name is its footer hash, so every pack verifies itself.
-- **Local store:** one pack per commit. **Remote store:** one pack per push; a push may carry
-  several commits.
+  4. Trailer: the number of index entries, an end magic, and the BLAKE3 hash of every byte before
+     the hash, the count included.
+- A pack's file name is its trailer hash, so every pack verifies itself.
+- **Local store:** one or more packs per commit. **Remote store:** one or more packs per push; a
+  push may carry several commits. A large Word version gets a pack of its own, so thinning can
+  delete it whole (ADR-0006).
 - Which pack and offset holds each object is recorded in a derived table in the catalog
   (ADR-0002). It can be rebuilt from the pack indexes.
 - No deltas between objects in v1.
@@ -102,7 +113,7 @@ consistent folder. Options considered explains the choice.
 
 ```text
 .folio/local/
-  packs/<hash>.pack   one per commit
+  packs/<hash>.pack   one or more per commit
   HEAD                local head commit id (replaced atomically)
   remote.json         last integrated canonical head and its Lamport value
   oplog.jsonl         local operation log (sync, reword, uncommit, restore)
@@ -125,10 +136,12 @@ consistent folder. Options considered explains the choice.
 
 Rules for `.folio/store/`:
 
-- **Write once.** Every file is written once and never modified, renamed or deleted in place.
-  v1 has no remote garbage collection.
-- **Device-owned paths.** Each device writes only under its own device id. No two writers ever
-  touch the same path, so iCloud has nothing to turn into a conflict copy.
+- **Write once.** Every file is written once and never modified or renamed in place. Packs are the
+  only files ever deleted: after thinning, under remote-format.md §10.1 (ADR-0006, which replaces
+  "v1 has no remote garbage collection").
+- **Device-owned paths.** Each device writes only under its own device id, and its intents and head
+  records share one counter. No two writers ever touch the same path, so iCloud has nothing to turn
+  into a conflict copy.
 - **Single-rename publishing.** A file is written in a staging folder outside the sync root on the
   same NTFS volume, flushed, and moved into place with one rename.
 - **Safe names.** Names avoid the patterns iCloud skips (`.tmp`, `.nosync`, `~$…`) and there are
@@ -158,9 +171,10 @@ A head record:
 
 - **Lamport value.** Each head record's Lamport value is 1 plus the largest Lamport value the device
   has seen.
-- **Canonical head.** The head record with the greatest (Lamport, device id) whose commit chain and
-  packs are fully present and verified. A record whose packs have not arrived yet is *pending*,
-  never an error.
+- **Canonical head.** The head record with the greatest (Lamport, device id) that is complete:
+  every object reachable from its head is present and verified in some pack, or pruned, wherever it
+  is (remote-format.md §10.3). A record whose objects have not arrived yet is *pending*, never an
+  error.
 - **Pushing.** A device pushes only commits that sit on top of the canonical head it has
   integrated.
 - **Simultaneous pushes.** Two devices pushing at the same moment get the same Lamport value, and
@@ -280,7 +294,8 @@ line, at a finer granularity.
 
 ### 11. Crash safety
 
-- **Commit.** Write the pack in `staging/`, rename it into `packs/`, then replace `HEAD`.
+- **Commit.** Write the packs in `staging/`, record the operation in a journal, rename the packs
+  into `packs/`, then replace `HEAD`, the commit point (versioning.md §7.5).
 - **Sync.** The journal records the round's plan and each completed step. Remote writes are either
   content-addressed or device-owned, so repeating them is harmless.
 
@@ -298,11 +313,14 @@ line, at a finer granularity.
 ### 13. Format documentation and compatibility
 
 - `docs/specs/remote-format.md` is the normative, language-neutral spec, with golden test vectors in
-  the repository. It covers canonical JSON, the BLAKE3 contexts, the pack layout, zstd frames, the
-  records and the mirror rules. It is written before M2, because the local store uses the same
-  objects and packs.
-- `FORMAT.json` and every record carry `format_version`. A version newer than the app knows makes
-  the remote read-only and prompts for an update.
+  the repository. It covers canonical JSON, the BLAKE3 contexts, the objects, the pack layout, zstd
+  frames and the remote's records; the mirror rules belong to `docs/specs/sync.md`. It is written
+  before M2, because the local store uses the same objects and packs.
+- Each part of the format has its own version, which a reader reads first: the pack header,
+  `FORMAT.json` and every record carry one (remote-format.md §3). Readers are strict within a
+  version, every change raises it, and writers write the lowest version a file needs. Newer data is
+  not interpreted: a newer pack makes the local history read-only, and a newer remote file makes the
+  remote read-only; both prompt for an update.
 - A Swift app can use the official BLAKE3 C code and facebook/zstd's Swift package, or reuse
   `folio-core` through UniFFI (ADR-0001).
 
@@ -330,7 +348,7 @@ line, at a finer granularity.
 | Option | Verdict |
 |---|---|
 | One file per object | Rejected: tens of thousands of small files slow iCloud for Windows down badly and create more partially-arrived states |
-| **One pack per push (chosen)** | Few files. A push arrives as one pack plus one head record |
+| **Packs: one or a few per push (chosen)** | Few files. A push arrives as its packs plus one head record |
 
 ### Mirror updates
 
@@ -357,7 +375,7 @@ line, at a finer granularity.
   - Every text version is stored with zstd, without deltas.
   - The mirror is a second full copy of the library, because hard links are impossible in the sync
     root. Unpinning mirror files after a push mitigates this.
-  - The number of packs grows by one per push; compaction comes later.
+  - The number of packs grows with every push; compaction comes later, with thinning (ADR-0006).
 - **What Folio cannot fix.** iCloud's slowness with many files, stalled uploads, and conflicts that
   Apple devices resolve silently among themselves before Folio sees them. Folio's history protects
   everything Folio has seen, and its status shows what is still in flight.
@@ -378,7 +396,8 @@ line, at a finer granularity.
 - There are more than about 1,000 packs, or the remote store grows large. Then add compaction: new
   packs, tombstones, and deletion only after a grace period of at least 30 days (the kopia and
   Duplicacy pattern).
-- Word history grows too large. Then consider a retention policy.
+- Word history grows too large. Then consider a retention policy (decided ahead of time: ADR-0006,
+  2026-10-03).
 - Real-iCloud tests contradict an assumption, such as conflict naming or how replaced files behave.
 - A second Folio device is used regularly. Then add merging of orphaned commits from absent devices.
 
@@ -386,7 +405,8 @@ line, at a finer granularity.
 
 1. [x] Sirui approves; set Status to Accepted. Sirui also confirmed that free up space is on by
    default (2026-09-26).
-2. [ ] Before M2, write `docs/specs/remote-format.md` with golden test vectors.
+2. [x] Before M2, write `docs/specs/remote-format.md` with golden test vectors (approved by Sirui on
+   2026-10-03; its §14 refinements are applied above).
 3. [ ] Before M3, build the sync simulation harness.
    - **The fake remote** is an eventually consistent folder that simulates:
      - per-file delays and reordering;
@@ -400,7 +420,8 @@ line, at a finer granularity.
      sequences, with a crash injected at every journal step.
    - **Invariants:**
      - nothing that was ever canonical is lost: it is stored in a pack, or present in the library,
-       the mirror or the Recycle Bin;
+       the mirror or the Recycle Bin, unless a prune commit lists it and each device's own
+       evaluation agrees (ADR-0006);
      - devices converge after quiet periods;
      - no direct edit is ever silently overwritten;
      - there is one linear canonical history.

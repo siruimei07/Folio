@@ -1,0 +1,562 @@
+{
+  "description": "Value rules of §6. A value_pattern stands for repeat × count followed by then. Names: rule is the first broken rule, in the order of §6.4 (informative).",
+  "names": [
+    {
+      "value": "2026 秋",
+      "hex": "3230323620e7a78b",
+      "valid": true
+    },
+    {
+      "value": "第3讲 特征值.pptx",
+      "hex": "e7acac33e8aeb220e789b9e5be81e580bc2e70707478",
+      "valid": true
+    },
+    {
+      "value": ".gitignore",
+      "hex": "2e67697469676e6f7265",
+      "valid": true
+    },
+    {
+      "value": " leading space",
+      "hex": "206c656164696e67207370616365",
+      "valid": true
+    },
+    {
+      "value": "CONSOLE",
+      "hex": "434f4e534f4c45",
+      "valid": true
+    },
+    {
+      "value": "COM10",
+      "hex": "434f4d3130",
+      "valid": true
+    },
+    {
+      "value": "LPT",
+      "hex": "4c5054",
+      "valid": true
+    },
+    {
+      "value": "NUL-notes.md",
+      "hex": "4e554c2d6e6f7465732e6d64",
+      "valid": true
+    },
+    {
+      "value": "résumé.docx",
+      "hex": "72c3a973756dc3a92e646f6378",
+      "valid": true
+    },
+    {
+      "value": "ab",
+      "hex": "617f62",
+      "valid": true
+    },
+    {
+      "value": "Files & Backup.md",
+      "hex": "46696c65732026204261636b75702e6d64",
+      "valid": true
+    },
+    {
+      "value_pattern": {
+        "repeat": "😀",
+        "count": 127,
+        "then": "a"
+      },
+      "valid": true
+    },
+    {
+      "value_pattern": {
+        "repeat": "a",
+        "count": 255,
+        "then": ""
+      },
+      "valid": true
+    },
+    {
+      "value": "",
+      "hex": "",
+      "valid": false,
+      "rule": "empty"
+    },
+    {
+      "value": ".",
+      "hex": "2e",
+      "valid": false,
+      "rule": "dotName"
+    },
+    {
+      "value": "..",
+      "hex": "2e2e",
+      "valid": false,
+      "rule": "dotName"
+    },
+    {
+      "value": "a/b",
+      "hex": "612f62",
+      "valid": false,
+      "rule": "invalidCharacter"
+    },
+    {
+      "value": "a\\b",
+      "hex": "615c62",
+      "valid": false,
+      "rule": "invalidCharacter"
+    },
+    {
+      "value": "a:b",
+      "hex": "613a62",
+      "valid": false,
+      "rule": "invalidCharacter"
+    },
+    {
+      "value": "a?b",
+      "hex": "613f62",
+      "valid": false,
+      "rule": "invalidCharacter"
+    },
+    {
+      "value": "a*b",
+      "hex": "612a62",
+      "valid": false,
+      "rule": "invalidCharacter"
+    },
+    {
+      "value": "a\"b",
+      "hex": "612262",
+      "valid": false,
+      "rule": "invalidCharacter"
+    },
+    {
+      "value": "a<b",
+      "hex": "613c62",
+      "valid": false,
+      "rule": "invalidCharacter"
+    },
+    {
+      "value": "a>b",
+      "hex": "613e62",
+      "valid": false,
+      "rule": "invalidCharacter"
+    },
+    {
+      "value": "a|b",
+      "hex": "617c62",
+      "valid": false,
+      "rule": "invalidCharacter"
+    },
+    {
+      "value": "a\u0000b",
+      "hex": "610062",
+      "valid": false,
+      "rule": "invalidCharacter"
+    },
+    {
+      "value": "a\tb",
+      "hex": "610962",
+      "valid": false,
+      "rule": "invalidCharacter"
+    },
+    {
+      "value": "a\u001fb",
+      "hex": "611f62",
+      "valid": false,
+      "rule": "invalidCharacter"
+    },
+    {
+      "value": "notes.",
+      "hex": "6e6f7465732e",
+      "valid": false,
+      "rule": "trailingDotOrSpace"
+    },
+    {
+      "value": "notes ",
+      "hex": "6e6f74657320",
+      "valid": false,
+      "rule": "trailingDotOrSpace"
+    },
+    {
+      "value": "CON",
+      "hex": "434f4e",
+      "valid": false,
+      "rule": "reservedName"
+    },
+    {
+      "value": "con.txt",
+      "hex": "636f6e2e747874",
+      "valid": false,
+      "rule": "reservedName"
+    },
+    {
+      "value": "CON .txt",
+      "hex": "434f4e202e747874",
+      "valid": false,
+      "rule": "reservedName"
+    },
+    {
+      "value": "Nul.tar.gz",
+      "hex": "4e756c2e7461722e677a",
+      "valid": false,
+      "rule": "reservedName"
+    },
+    {
+      "value": "CONIN$",
+      "hex": "434f4e494e24",
+      "valid": false,
+      "rule": "reservedName"
+    },
+    {
+      "value": "conout$.log",
+      "hex": "636f6e6f7574242e6c6f67",
+      "valid": false,
+      "rule": "reservedName"
+    },
+    {
+      "value": "COM0",
+      "hex": "434f4d30",
+      "valid": false,
+      "rule": "reservedName"
+    },
+    {
+      "value": "lpt9.md",
+      "hex": "6c7074392e6d64",
+      "valid": false,
+      "rule": "reservedName"
+    },
+    {
+      "value": "COM¹",
+      "hex": "434f4dc2b9",
+      "valid": false,
+      "rule": "reservedName"
+    },
+    {
+      "value": "LPT³.txt",
+      "hex": "4c5054c2b32e747874",
+      "valid": false,
+      "rule": "reservedName"
+    },
+    {
+      "value_pattern": {
+        "repeat": "😀",
+        "count": 128,
+        "then": ""
+      },
+      "valid": false,
+      "rule": "tooLong"
+    },
+    {
+      "value_pattern": {
+        "repeat": "a",
+        "count": 256,
+        "then": ""
+      },
+      "valid": false,
+      "rule": "tooLong"
+    },
+    {
+      "value": "résumé.docx",
+      "hex": "7265cc8173756d65cc812e646f6378",
+      "valid": false,
+      "rule": "notNfc"
+    }
+  ],
+  "paths": [
+    {
+      "value": "2026 秋/线性代数/第3讲 特征值.pptx",
+      "valid": true
+    },
+    {
+      "value": "a",
+      "valid": true
+    },
+    {
+      "value": "",
+      "valid": false,
+      "rule": "empty"
+    },
+    {
+      "value": "/a",
+      "valid": false,
+      "rule": "empty"
+    },
+    {
+      "value": "a/",
+      "valid": false,
+      "rule": "empty"
+    },
+    {
+      "value": "a//b",
+      "valid": false,
+      "rule": "empty"
+    },
+    {
+      "value": "a/../b",
+      "valid": false,
+      "rule": "dotName"
+    },
+    {
+      "value": "a./b",
+      "valid": false,
+      "rule": "trailingDotOrSpace"
+    },
+    {
+      "value_pattern": {
+        "repeat": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/",
+        "count": 162,
+        "then": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "valid": true
+    },
+    {
+      "value_pattern": {
+        "repeat": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/",
+        "count": 162,
+        "then": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "valid": false,
+      "rule": "pathTooLong"
+    }
+  ],
+  "times": [
+    {
+      "value": "2026-10-03T21:11:00Z",
+      "valid": true
+    },
+    {
+      "value": "1970-01-01T00:00:00Z",
+      "valid": true
+    },
+    {
+      "value": "9999-12-31T23:59:59Z",
+      "valid": true
+    },
+    {
+      "value": "2028-02-29T12:00:00Z",
+      "valid": true
+    },
+    {
+      "value": "2026-02-29T12:00:00Z",
+      "valid": false,
+      "note": "not a leap year"
+    },
+    {
+      "value": "2100-02-29T12:00:00Z",
+      "valid": false,
+      "note": "not a leap year"
+    },
+    {
+      "value": "2026-10-03T21:11:00.5Z",
+      "valid": false,
+      "note": "fraction"
+    },
+    {
+      "value": "2026-10-03T21:11:00+00:00",
+      "valid": false,
+      "note": "offset"
+    },
+    {
+      "value": "2026-10-03 21:11:00Z",
+      "valid": false,
+      "note": "space"
+    },
+    {
+      "value": "2026-10-03T24:00:00Z",
+      "valid": false,
+      "note": "hour 24"
+    },
+    {
+      "value": "2026-10-03T23:59:60Z",
+      "valid": false,
+      "note": "leap second"
+    },
+    {
+      "value": "1969-12-31T23:59:59Z",
+      "valid": false,
+      "note": "before 1970"
+    },
+    {
+      "value": "2026-1-03T21:11:00Z",
+      "valid": false,
+      "note": "one-digit month"
+    }
+  ],
+  "display_names": [
+    {
+      "value": "G16",
+      "valid": true
+    },
+    {
+      "value": "台式机",
+      "valid": true
+    },
+    {
+      "value": "Sirui’s Surface",
+      "valid": true
+    },
+    {
+      "value_pattern": {
+        "repeat": "x",
+        "count": 128,
+        "then": ""
+      },
+      "valid": true
+    },
+    {
+      "value_pattern": {
+        "repeat": "x",
+        "count": 129,
+        "then": ""
+      },
+      "valid": false
+    },
+    {
+      "value": "",
+      "valid": false
+    },
+    {
+      "value": " G16",
+      "valid": false
+    },
+    {
+      "value": "G16 ",
+      "valid": false
+    },
+    {
+      "value": "G16　",
+      "valid": false,
+      "note": "ideographic space"
+    },
+    {
+      "value": "a\nb",
+      "valid": false
+    },
+    {
+      "value": "ab",
+      "valid": false,
+      "note": "NEL is a control character"
+    }
+  ],
+  "summaries": [
+    {
+      "value": "MAT232: add lecture 5 slides",
+      "valid": true
+    },
+    {
+      "value_pattern": {
+        "repeat": "x",
+        "count": 256,
+        "then": ""
+      },
+      "valid": true
+    },
+    {
+      "value_pattern": {
+        "repeat": "x",
+        "count": 257,
+        "then": ""
+      },
+      "valid": false
+    },
+    {
+      "value": "",
+      "valid": false
+    },
+    {
+      "value": "line\nbreak",
+      "valid": false
+    },
+    {
+      "value": " padded",
+      "valid": false
+    },
+    {
+      "value": "tab\tinside",
+      "valid": false
+    }
+  ],
+  "bodies": [
+    {
+      "value": "- one\n- two",
+      "valid": true
+    },
+    {
+      "value": "\tindented\n\n  second paragraph",
+      "valid": true
+    },
+    {
+      "value_pattern": {
+        "repeat": "x",
+        "count": 16384,
+        "then": ""
+      },
+      "valid": true
+    },
+    {
+      "value_pattern": {
+        "repeat": "x",
+        "count": 16385,
+        "then": ""
+      },
+      "valid": false
+    },
+    {
+      "value": "",
+      "valid": false
+    },
+    {
+      "value": "\nstarts with a line break",
+      "valid": false
+    },
+    {
+      "value": "ends with a line break\n",
+      "valid": false
+    },
+    {
+      "value": "ends with a space ",
+      "valid": false
+    },
+    {
+      "value": "carriage\r\nreturn",
+      "valid": false
+    },
+    {
+      "value": "bell\u0007",
+      "valid": false
+    }
+  ],
+  "object_ids": [
+    {
+      "value": "b3:0000000000000000000000000000000000000000000000000000000000000000",
+      "valid": true
+    },
+    {
+      "value": "b3:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "valid": false
+    },
+    {
+      "value": "b3:000000000000000000000000000000000000000000000000000000000000000",
+      "valid": false
+    },
+    {
+      "value": "B3:0000000000000000000000000000000000000000000000000000000000000000",
+      "valid": false
+    },
+    {
+      "value": "0000000000000000000000000000000000000000000000000000000000000000",
+      "valid": false
+    }
+  ],
+  "ids_128": [
+    {
+      "value": "48ffdfb335860f2c15c8bccf2a90e720",
+      "valid": true
+    },
+    {
+      "value": "48FFDFB335860F2C15C8BCCF2A90E720",
+      "valid": false
+    },
+    {
+      "value": "8ffdfb335860f2c15c8bccf2a90e720",
+      "valid": false
+    }
+  ]
+}

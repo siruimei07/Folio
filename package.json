@@ -10,10 +10,11 @@
     "dev": "tauri dev",
     "build:app": "tauri build --debug --no-bundle",
     "bundle": "tauri build",
-    "check": "pnpm run check:commits && pnpm run check:roadmap && pnpm run check:web && pnpm run check:rust",
+    "check": "pnpm run check:commits && pnpm run check:roadmap && pnpm run check:vectors && pnpm run check:web && pnpm run check:rust",
     "check:commits": "node --test scripts/check-commits.test.mjs && node scripts/check-commits.mjs",
     "check:roadmap": "node --test docs/roadmap/tools/lib.test.mjs && node docs/roadmap/tools/roadmap.mjs check",
     "check:rust": "cargo fmt --all --check && cargo clippy --workspace --all-targets --locked -- -D warnings && cargo test --workspace --locked",
+    "check:vectors": "node docs/specs/remote-format-vectors/generate.mjs --check",
     "check:web": "pnpm -r run typecheck && pnpm -r run lint && pnpm -r run test",
     "e2e": "pnpm run build:app && pnpm --filter @folio/e2e run e2e",
     "roadmap": "node docs/roadmap/tools/roadmap.mjs"

@@ -1,0 +1,2070 @@
+{
+  "description": "Rules that need trees (§7.3–§7.5, §8). commits: a commit read with its parent (a commit of objects.json, by name) and the trees of objects.json; absent_trees are trees the reader does not have. changes: change records against small flattened trees. root: flattened root trees against §7.4 (other entries omitted). availability: whether an absent blob of an entry is pruned or missing, and whether a store may delete a blob, with the history up to head. reason: informative.",
+  "commits": [
+    {
+      "name": "c2-as-written",
+      "commit": {
+        "changes": [
+          {
+            "kind": "file",
+            "new": {
+              "hash": "b3:7a3453f90847ff15417ed3fec7ff23fb88ee969cb6e0b3434963c95a7040aede",
+              "size": 232,
+              "stored": true
+            },
+            "old": {
+              "hash": "b3:e8e1204419b76955311a2fea49c1e09b03f355672ed3f9cfead77b58e3790e76",
+              "size": 239,
+              "stored": true
+            },
+            "op": "modify",
+            "path": ".folio/meta/2026 秋/线性代数.json"
+          },
+          {
+            "from": "2026 秋/线性代数/作业/hw2.pdf",
+            "kind": "file",
+            "op": "move",
+            "path": "2026 秋/线性代数/hw2.pdf",
+            "new": {
+              "hash": "b3:cfe88aa7c316af0e859e84b98009b0fab6f2fe1490e5ff68a84a04c2dc4648f3",
+              "size": 2048,
+              "stored": false
+            },
+            "old": {
+              "hash": "b3:cfe88aa7c316af0e859e84b98009b0fab6f2fe1490e5ff68a84a04c2dc4648f3",
+              "size": 2048,
+              "stored": false
+            }
+          },
+          {
+            "kind": "dir",
+            "op": "delete",
+            "path": "2026 秋/线性代数/作业"
+          },
+          {
+            "kind": "file",
+            "new": {
+              "hash": "b3:1981fb6f6a6cc49db599cc3e76c30542fbf577fa7a1ef99ef67e1c74ff42e02b",
+              "size": 1536,
+              "stored": true
+            },
+            "old": {
+              "hash": "b3:a3d7ca49ab4001410f429b31e14381e3dadac9a987ac85f1f73995464ac6913c",
+              "size": 1024,
+              "stored": true
+            },
+            "op": "modify",
+            "path": "2026 秋/线性代数/报告.docx"
+          },
+          {
+            "kind": "file",
+            "new": {
+              "hash": "b3:cd7eba00fd7ffec147fd180d528d10c9c709efa5c1fb2c1ad667f7cc28b7363c",
+              "size": 66,
+              "stored": true
+            },
+            "old": {
+              "hash": "b3:fbbd743f87fd3e63897682fa5d92352c5d9989d42c5c9261f1a5110e9efead66",
+              "size": 39,
+              "stored": true
+            },
+            "op": "modify",
+            "path": "2026 秋/线性代数/第3讲 特征值.md"
+          },
+          {
+            "from": "2026 秋/线性代数/Lectures",
+            "kind": "dir",
+            "op": "move",
+            "path": "2026 秋/线性代数/讲义"
+          },
+          {
+            "from": "2026 秋/线性代数/Lectures/L2.md",
+            "kind": "file",
+            "op": "move",
+            "path": "2026 秋/线性代数/讲义/L2.md",
+            "new": {
+              "hash": "b3:79c0471915614b1ca2ae5b5af08d7dd57afb8fca9942131e3f3183cf469e8e8c",
+              "size": 27,
+              "stored": true
+            },
+            "old": {
+              "hash": "b3:657c91e3eccc4053126c44ffbb21fb193acec7e7db1dc654cb2d136cee4deb25",
+              "size": 12,
+              "stored": true
+            }
+          },
+          {
+            "kind": "file",
+            "op": "delete",
+            "path": "a.md",
+            "old": {
+              "hash": "b3:68edba1127de9d497f7300c73f20915b6ad7bb532a6c11cb78823c7860a767d8",
+              "size": 14,
+              "stored": true
+            }
+          }
+        ],
+        "device": {
+          "id": "8c1e0d2b4a6f43e19d7c5b3a2f1e0d9c",
+          "name": "G16"
+        },
+        "kind": "commit",
+        "parent": "b3:434047baa8d304d26ff65dbaf5c0e08b07e04c92587395729cc036fd338f5b94",
+        "summary": "MAT232: update 3 files, move 2 items; Library: delete 1 file",
+        "time": "2026-10-03T23:30:00Z",
+        "tree": "b3:cc6fc6ea6b183fb1da36b089eb819bb6b4639353b54dce3f6740349b2c46fca3"
+      },
+      "parent": "c1",
+      "expect": "valid"
+    },
+    {
+      "name": "c4-prune",
+      "commit": {
+        "device": {
+          "id": "8c1e0d2b4a6f43e19d7c5b3a2f1e0d9c",
+          "name": "G16"
+        },
+        "kind": "prune",
+        "parent": "b3:75cc39145385b55e8533ef08db52ae99f7e492fd730087754e35005a6dcd8e6d",
+        "pruned": [
+          "b3:a3d7ca49ab4001410f429b31e14381e3dadac9a987ac85f1f73995464ac6913c"
+        ],
+        "time": "2026-12-10T03:00:00Z",
+        "tree": "b3:f126b1110879d57d0627e6d9372ab5f15f2de612014cd24f12d9b2c14f00bb11"
+      },
+      "parent": "c3",
+      "expect": "valid"
+    },
+    {
+      "name": "c5-brings-a-pruned-version-back",
+      "commit": {
+        "changes": [
+          {
+            "kind": "file",
+            "new": {
+              "hash": "b3:a3d7ca49ab4001410f429b31e14381e3dadac9a987ac85f1f73995464ac6913c",
+              "size": 1024,
+              "stored": true
+            },
+            "old": {
+              "hash": "b3:1981fb6f6a6cc49db599cc3e76c30542fbf577fa7a1ef99ef67e1c74ff42e02b",
+              "size": 1536,
+              "stored": true
+            },
+            "op": "modify",
+            "path": "2026 秋/线性代数/报告.docx"
+          }
+        ],
+        "device": {
+          "id": "8c1e0d2b4a6f43e19d7c5b3a2f1e0d9c",
+          "name": "G16"
+        },
+        "kind": "commit",
+        "parent": "b3:15d92289379e0bc982b48376b5800546a6a7e5b7253e2d8eb6de4b9671582a15",
+        "summary": "MAT232: restore 报告.docx",
+        "time": "2026-12-11T10:00:00Z",
+        "tree": "b3:f83a9833e2b36307798b2503988cc4bea7be1eabe95951a17c6b1b53b7d1eaa9"
+      },
+      "parent": "c4",
+      "expect": "valid"
+    },
+    {
+      "name": "missing-record",
+      "commit": {
+        "changes": [
+          {
+            "from": "2026 秋/线性代数/作业/hw2.pdf",
+            "kind": "file",
+            "op": "move",
+            "path": "2026 秋/线性代数/hw2.pdf",
+            "new": {
+              "hash": "b3:cfe88aa7c316af0e859e84b98009b0fab6f2fe1490e5ff68a84a04c2dc4648f3",
+              "size": 2048,
+              "stored": false
+            },
+            "old": {
+              "hash": "b3:cfe88aa7c316af0e859e84b98009b0fab6f2fe1490e5ff68a84a04c2dc4648f3",
+              "size": 2048,
+              "stored": false
+            }
+          },
+          {
+            "kind": "dir",
+            "op": "delete",
+            "path": "2026 秋/线性代数/作业"
+          },
+          {
+            "kind": "file",
+            "new": {
+              "hash": "b3:1981fb6f6a6cc49db599cc3e76c30542fbf577fa7a1ef99ef67e1c74ff42e02b",
+              "size": 1536,
+              "stored": true
+            },
+            "old": {
+              "hash": "b3:a3d7ca49ab4001410f429b31e14381e3dadac9a987ac85f1f73995464ac6913c",
+              "size": 1024,
+              "stored": true
+            },
+            "op": "modify",
+            "path": "2026 秋/线性代数/报告.docx"
+          },
+          {
+            "kind": "file",
+            "new": {
+              "hash": "b3:cd7eba00fd7ffec147fd180d528d10c9c709efa5c1fb2c1ad667f7cc28b7363c",
+              "size": 66,
+              "stored": true
+            },
+            "old": {
+              "hash": "b3:fbbd743f87fd3e63897682fa5d92352c5d9989d42c5c9261f1a5110e9efead66",
+              "size": 39,
+              "stored": true
+            },
+            "op": "modify",
+            "path": "2026 秋/线性代数/第3讲 特征值.md"
+          },
+          {
+            "from": "2026 秋/线性代数/Lectures",
+            "kind": "dir",
+            "op": "move",
+            "path": "2026 秋/线性代数/讲义"
+          },
+          {
+            "from": "2026 秋/线性代数/Lectures/L2.md",
+            "kind": "file",
+            "op": "move",
+            "path": "2026 秋/线性代数/讲义/L2.md",
+            "new": {
+              "hash": "b3:79c0471915614b1ca2ae5b5af08d7dd57afb8fca9942131e3f3183cf469e8e8c",
+              "size": 27,
+              "stored": true
+            },
+            "old": {
+              "hash": "b3:657c91e3eccc4053126c44ffbb21fb193acec7e7db1dc654cb2d136cee4deb25",
+              "size": 12,
+              "stored": true
+            }
+          },
+          {
+            "kind": "file",
+            "op": "delete",
+            "path": "a.md",
+            "old": {
+              "hash": "b3:68edba1127de9d497f7300c73f20915b6ad7bb532a6c11cb78823c7860a767d8",
+              "size": 14,
+              "stored": true
+            }
+          }
+        ],
+        "device": {
+          "id": "8c1e0d2b4a6f43e19d7c5b3a2f1e0d9c",
+          "name": "G16"
+        },
+        "kind": "commit",
+        "parent": "b3:434047baa8d304d26ff65dbaf5c0e08b07e04c92587395729cc036fd338f5b94",
+        "summary": "MAT232: update 3 files, move 2 items; Library: delete 1 file",
+        "time": "2026-10-03T23:30:00Z",
+        "tree": "b3:cc6fc6ea6b183fb1da36b089eb819bb6b4639353b54dce3f6740349b2c46fca3"
+      },
+      "parent": "c1",
+      "expect": "invalid",
+      "reason": "coverage"
+    },
+    {
+      "name": "wrong-old-side",
+      "commit": {
+        "changes": [
+          {
+            "kind": "file",
+            "new": {
+              "hash": "b3:7a3453f90847ff15417ed3fec7ff23fb88ee969cb6e0b3434963c95a7040aede",
+              "size": 232,
+              "stored": true
+            },
+            "old": {
+              "hash": "b3:e8e1204419b76955311a2fea49c1e09b03f355672ed3f9cfead77b58e3790e76",
+              "size": 240,
+              "stored": true
+            },
+            "op": "modify",
+            "path": ".folio/meta/2026 秋/线性代数.json"
+          },
+          {
+            "from": "2026 秋/线性代数/作业/hw2.pdf",
+            "kind": "file",
+            "op": "move",
+            "path": "2026 秋/线性代数/hw2.pdf",
+            "new": {
+              "hash": "b3:cfe88aa7c316af0e859e84b98009b0fab6f2fe1490e5ff68a84a04c2dc4648f3",
+              "size": 2048,
+              "stored": false
+            },
+            "old": {
+              "hash": "b3:cfe88aa7c316af0e859e84b98009b0fab6f2fe1490e5ff68a84a04c2dc4648f3",
+              "size": 2048,
+              "stored": false
+            }
+          },
+          {
+            "kind": "dir",
+            "op": "delete",
+            "path": "2026 秋/线性代数/作业"
+          },
+          {
+            "kind": "file",
+            "new": {
+              "hash": "b3:1981fb6f6a6cc49db599cc3e76c30542fbf577fa7a1ef99ef67e1c74ff42e02b",
+              "size": 1536,
+              "stored": true
+            },
+            "old": {
+              "hash": "b3:a3d7ca49ab4001410f429b31e14381e3dadac9a987ac85f1f73995464ac6913c",
+              "size": 1024,
+              "stored": true
+            },
+            "op": "modify",
+            "path": "2026 秋/线性代数/报告.docx"
+          },
+          {
+            "kind": "file",
+            "new": {
+              "hash": "b3:cd7eba00fd7ffec147fd180d528d10c9c709efa5c1fb2c1ad667f7cc28b7363c",
+              "size": 66,
+              "stored": true
+            },
+            "old": {
+              "hash": "b3:fbbd743f87fd3e63897682fa5d92352c5d9989d42c5c9261f1a5110e9efead66",
+              "size": 39,
+              "stored": true
+            },
+            "op": "modify",
+            "path": "2026 秋/线性代数/第3讲 特征值.md"
+          },
+          {
+            "from": "2026 秋/线性代数/Lectures",
+            "kind": "dir",
+            "op": "move",
+            "path": "2026 秋/线性代数/讲义"
+          },
+          {
+            "from": "2026 秋/线性代数/Lectures/L2.md",
+            "kind": "file",
+            "op": "move",
+            "path": "2026 秋/线性代数/讲义/L2.md",
+            "new": {
+              "hash": "b3:79c0471915614b1ca2ae5b5af08d7dd57afb8fca9942131e3f3183cf469e8e8c",
+              "size": 27,
+              "stored": true
+            },
+            "old": {
+              "hash": "b3:657c91e3eccc4053126c44ffbb21fb193acec7e7db1dc654cb2d136cee4deb25",
+              "size": 12,
+              "stored": true
+            }
+          },
+          {
+            "kind": "file",
+            "op": "delete",
+            "path": "a.md",
+            "old": {
+              "hash": "b3:68edba1127de9d497f7300c73f20915b6ad7bb532a6c11cb78823c7860a767d8",
+              "size": 14,
+              "stored": true
+            }
+          }
+        ],
+        "device": {
+          "id": "8c1e0d2b4a6f43e19d7c5b3a2f1e0d9c",
+          "name": "G16"
+        },
+        "kind": "commit",
+        "parent": "b3:434047baa8d304d26ff65dbaf5c0e08b07e04c92587395729cc036fd338f5b94",
+        "summary": "MAT232: update 3 files, move 2 items; Library: delete 1 file",
+        "time": "2026-10-03T23:30:00Z",
+        "tree": "b3:cc6fc6ea6b183fb1da36b089eb819bb6b4639353b54dce3f6740349b2c46fca3"
+      },
+      "parent": "c1",
+      "expect": "invalid",
+      "reason": "side"
+    },
+    {
+      "name": "move-as-delete-and-add",
+      "commit": {
+        "changes": [
+          {
+            "kind": "file",
+            "new": {
+              "hash": "b3:7a3453f90847ff15417ed3fec7ff23fb88ee969cb6e0b3434963c95a7040aede",
+              "size": 232,
+              "stored": true
+            },
+            "old": {
+              "hash": "b3:e8e1204419b76955311a2fea49c1e09b03f355672ed3f9cfead77b58e3790e76",
+              "size": 239,
+              "stored": true
+            },
+            "op": "modify",
+            "path": ".folio/meta/2026 秋/线性代数.json"
+          },
+          {
+            "kind": "file",
+            "new": {
+              "hash": "b3:cfe88aa7c316af0e859e84b98009b0fab6f2fe1490e5ff68a84a04c2dc4648f3",
+              "size": 2048,
+              "stored": false
+            },
+            "op": "add",
+            "path": "2026 秋/线性代数/hw2.pdf"
+          },
+          {
+            "kind": "dir",
+            "op": "delete",
+            "path": "2026 秋/线性代数/作业"
+          },
+          {
+            "kind": "file",
+            "old": {
+              "hash": "b3:cfe88aa7c316af0e859e84b98009b0fab6f2fe1490e5ff68a84a04c2dc4648f3",
+              "size": 2048,
+              "stored": false
+            },
+            "op": "delete",
+            "path": "2026 秋/线性代数/作业/hw2.pdf"
+          },
+          {
+            "kind": "file",
+            "new": {
+              "hash": "b3:1981fb6f6a6cc49db599cc3e76c30542fbf577fa7a1ef99ef67e1c74ff42e02b",
+              "size": 1536,
+              "stored": true
+            },
+            "old": {
+              "hash": "b3:a3d7ca49ab4001410f429b31e14381e3dadac9a987ac85f1f73995464ac6913c",
+              "size": 1024,
+              "stored": true
+            },
+            "op": "modify",
+            "path": "2026 秋/线性代数/报告.docx"
+          },
+          {
+            "kind": "file",
+            "new": {
+              "hash": "b3:cd7eba00fd7ffec147fd180d528d10c9c709efa5c1fb2c1ad667f7cc28b7363c",
+              "size": 66,
+              "stored": true
+            },
+            "old": {
+              "hash": "b3:fbbd743f87fd3e63897682fa5d92352c5d9989d42c5c9261f1a5110e9efead66",
+              "size": 39,
+              "stored": true
+            },
+            "op": "modify",
+            "path": "2026 秋/线性代数/第3讲 特征值.md"
+          },
+          {
+            "from": "2026 秋/线性代数/Lectures",
+            "kind": "dir",
+            "op": "move",
+            "path": "2026 秋/线性代数/讲义"
+          },
+          {
+            "from": "2026 秋/线性代数/Lectures/L2.md",
+            "kind": "file",
+            "op": "move",
+            "path": "2026 秋/线性代数/讲义/L2.md",
+            "new": {
+              "hash": "b3:79c0471915614b1ca2ae5b5af08d7dd57afb8fca9942131e3f3183cf469e8e8c",
+              "size": 27,
+              "stored": true
+            },
+            "old": {
+              "hash": "b3:657c91e3eccc4053126c44ffbb21fb193acec7e7db1dc654cb2d136cee4deb25",
+              "size": 12,
+              "stored": true
+            }
+          },
+          {
+            "kind": "file",
+            "op": "delete",
+            "path": "a.md",
+            "old": {
+              "hash": "b3:68edba1127de9d497f7300c73f20915b6ad7bb532a6c11cb78823c7860a767d8",
+              "size": 14,
+              "stored": true
+            }
+          }
+        ],
+        "device": {
+          "id": "8c1e0d2b4a6f43e19d7c5b3a2f1e0d9c",
+          "name": "G16"
+        },
+        "kind": "commit",
+        "parent": "b3:434047baa8d304d26ff65dbaf5c0e08b07e04c92587395729cc036fd338f5b94",
+        "summary": "MAT232: update 3 files, move 2 items; Library: delete 1 file",
+        "time": "2026-10-03T23:30:00Z",
+        "tree": "b3:cc6fc6ea6b183fb1da36b089eb819bb6b4639353b54dce3f6740349b2c46fca3"
+      },
+      "parent": "c1",
+      "expect": "valid"
+    },
+    {
+      "name": "modify-as-delete-and-add",
+      "commit": {
+        "changes": [
+          {
+            "kind": "file",
+            "old": {
+              "hash": "b3:e8e1204419b76955311a2fea49c1e09b03f355672ed3f9cfead77b58e3790e76",
+              "size": 239,
+              "stored": true
+            },
+            "op": "delete",
+            "path": ".folio/meta/2026 秋/线性代数.json"
+          },
+          {
+            "kind": "file",
+            "new": {
+              "hash": "b3:7a3453f90847ff15417ed3fec7ff23fb88ee969cb6e0b3434963c95a7040aede",
+              "size": 232,
+              "stored": true
+            },
+            "op": "add",
+            "path": ".folio/meta/2026 秋/线性代数.json"
+          },
+          {
+            "from": "2026 秋/线性代数/作业/hw2.pdf",
+            "kind": "file",
+            "op": "move",
+            "path": "2026 秋/线性代数/hw2.pdf",
+            "new": {
+              "hash": "b3:cfe88aa7c316af0e859e84b98009b0fab6f2fe1490e5ff68a84a04c2dc4648f3",
+              "size": 2048,
+              "stored": false
+            },
+            "old": {
+              "hash": "b3:cfe88aa7c316af0e859e84b98009b0fab6f2fe1490e5ff68a84a04c2dc4648f3",
+              "size": 2048,
+              "stored": false
+            }
+          },
+          {
+            "kind": "dir",
+            "op": "delete",
+            "path": "2026 秋/线性代数/作业"
+          },
+          {
+            "kind": "file",
+            "new": {
+              "hash": "b3:1981fb6f6a6cc49db599cc3e76c30542fbf577fa7a1ef99ef67e1c74ff42e02b",
+              "size": 1536,
+              "stored": true
+            },
+            "old": {
+              "hash": "b3:a3d7ca49ab4001410f429b31e14381e3dadac9a987ac85f1f73995464ac6913c",
+              "size": 1024,
+              "stored": true
+            },
+            "op": "modify",
+            "path": "2026 秋/线性代数/报告.docx"
+          },
+          {
+            "kind": "file",
+            "new": {
+              "hash": "b3:cd7eba00fd7ffec147fd180d528d10c9c709efa5c1fb2c1ad667f7cc28b7363c",
+              "size": 66,
+              "stored": true
+            },
+            "old": {
+              "hash": "b3:fbbd743f87fd3e63897682fa5d92352c5d9989d42c5c9261f1a5110e9efead66",
+              "size": 39,
+              "stored": true
+            },
+            "op": "modify",
+            "path": "2026 秋/线性代数/第3讲 特征值.md"
+          },
+          {
+            "from": "2026 秋/线性代数/Lectures",
+            "kind": "dir",
+            "op": "move",
+            "path": "2026 秋/线性代数/讲义"
+          },
+          {
+            "from": "2026 秋/线性代数/Lectures/L2.md",
+            "kind": "file",
+            "op": "move",
+            "path": "2026 秋/线性代数/讲义/L2.md",
+            "new": {
+              "hash": "b3:79c0471915614b1ca2ae5b5af08d7dd57afb8fca9942131e3f3183cf469e8e8c",
+              "size": 27,
+              "stored": true
+            },
+            "old": {
+              "hash": "b3:657c91e3eccc4053126c44ffbb21fb193acec7e7db1dc654cb2d136cee4deb25",
+              "size": 12,
+              "stored": true
+            }
+          },
+          {
+            "kind": "file",
+            "op": "delete",
+            "path": "a.md",
+            "old": {
+              "hash": "b3:68edba1127de9d497f7300c73f20915b6ad7bb532a6c11cb78823c7860a767d8",
+              "size": 14,
+              "stored": true
+            }
+          }
+        ],
+        "device": {
+          "id": "8c1e0d2b4a6f43e19d7c5b3a2f1e0d9c",
+          "name": "G16"
+        },
+        "kind": "commit",
+        "parent": "b3:434047baa8d304d26ff65dbaf5c0e08b07e04c92587395729cc036fd338f5b94",
+        "summary": "MAT232: update 3 files, move 2 items; Library: delete 1 file",
+        "time": "2026-10-03T23:30:00Z",
+        "tree": "b3:cc6fc6ea6b183fb1da36b089eb819bb6b4639353b54dce3f6740349b2c46fca3"
+      },
+      "parent": "c1",
+      "expect": "valid"
+    },
+    {
+      "name": "folder-move-and-its-content-twice",
+      "commit": {
+        "changes": [
+          {
+            "kind": "file",
+            "new": {
+              "hash": "b3:7a3453f90847ff15417ed3fec7ff23fb88ee969cb6e0b3434963c95a7040aede",
+              "size": 232,
+              "stored": true
+            },
+            "old": {
+              "hash": "b3:e8e1204419b76955311a2fea49c1e09b03f355672ed3f9cfead77b58e3790e76",
+              "size": 239,
+              "stored": true
+            },
+            "op": "modify",
+            "path": ".folio/meta/2026 秋/线性代数.json"
+          },
+          {
+            "from": "2026 秋/线性代数/作业/hw2.pdf",
+            "kind": "file",
+            "op": "move",
+            "path": "2026 秋/线性代数/hw2.pdf",
+            "new": {
+              "hash": "b3:cfe88aa7c316af0e859e84b98009b0fab6f2fe1490e5ff68a84a04c2dc4648f3",
+              "size": 2048,
+              "stored": false
+            },
+            "old": {
+              "hash": "b3:cfe88aa7c316af0e859e84b98009b0fab6f2fe1490e5ff68a84a04c2dc4648f3",
+              "size": 2048,
+              "stored": false
+            }
+          },
+          {
+            "kind": "dir",
+            "op": "delete",
+            "path": "2026 秋/线性代数/作业"
+          },
+          {
+            "kind": "file",
+            "new": {
+              "hash": "b3:1981fb6f6a6cc49db599cc3e76c30542fbf577fa7a1ef99ef67e1c74ff42e02b",
+              "size": 1536,
+              "stored": true
+            },
+            "old": {
+              "hash": "b3:a3d7ca49ab4001410f429b31e14381e3dadac9a987ac85f1f73995464ac6913c",
+              "size": 1024,
+              "stored": true
+            },
+            "op": "modify",
+            "path": "2026 秋/线性代数/报告.docx"
+          },
+          {
+            "kind": "file",
+            "new": {
+              "hash": "b3:cd7eba00fd7ffec147fd180d528d10c9c709efa5c1fb2c1ad667f7cc28b7363c",
+              "size": 66,
+              "stored": true
+            },
+            "old": {
+              "hash": "b3:fbbd743f87fd3e63897682fa5d92352c5d9989d42c5c9261f1a5110e9efead66",
+              "size": 39,
+              "stored": true
+            },
+            "op": "modify",
+            "path": "2026 秋/线性代数/第3讲 特征值.md"
+          },
+          {
+            "from": "2026 秋/线性代数/Lectures",
+            "kind": "dir",
+            "op": "move",
+            "path": "2026 秋/线性代数/讲义"
+          },
+          {
+            "from": "2026 秋/线性代数/Lectures/L1.md",
+            "kind": "file",
+            "new": {
+              "hash": "b3:a0d2230e3789a318b2487a2dd9486471a09df7c374b64bdbc3a16e3e81eeec94",
+              "size": 12,
+              "stored": true
+            },
+            "old": {
+              "hash": "b3:a0d2230e3789a318b2487a2dd9486471a09df7c374b64bdbc3a16e3e81eeec94",
+              "size": 12,
+              "stored": true
+            },
+            "op": "move",
+            "path": "2026 秋/线性代数/讲义/L1.md"
+          },
+          {
+            "from": "2026 秋/线性代数/Lectures/L2.md",
+            "kind": "file",
+            "op": "move",
+            "path": "2026 秋/线性代数/讲义/L2.md",
+            "new": {
+              "hash": "b3:79c0471915614b1ca2ae5b5af08d7dd57afb8fca9942131e3f3183cf469e8e8c",
+              "size": 27,
+              "stored": true
+            },
+            "old": {
+              "hash": "b3:657c91e3eccc4053126c44ffbb21fb193acec7e7db1dc654cb2d136cee4deb25",
+              "size": 12,
+              "stored": true
+            }
+          },
+          {
+            "kind": "file",
+            "op": "delete",
+            "path": "a.md",
+            "old": {
+              "hash": "b3:68edba1127de9d497f7300c73f20915b6ad7bb532a6c11cb78823c7860a767d8",
+              "size": 14,
+              "stored": true
+            }
+          }
+        ],
+        "device": {
+          "id": "8c1e0d2b4a6f43e19d7c5b3a2f1e0d9c",
+          "name": "G16"
+        },
+        "kind": "commit",
+        "parent": "b3:434047baa8d304d26ff65dbaf5c0e08b07e04c92587395729cc036fd338f5b94",
+        "summary": "MAT232: update 3 files, move 2 items; Library: delete 1 file",
+        "time": "2026-10-03T23:30:00Z",
+        "tree": "b3:cc6fc6ea6b183fb1da36b089eb819bb6b4639353b54dce3f6740349b2c46fca3"
+      },
+      "parent": "c1",
+      "expect": "invalid",
+      "reason": "coverage"
+    },
+    {
+      "name": "folder-move-without-its-edited-file",
+      "commit": {
+        "changes": [
+          {
+            "kind": "file",
+            "new": {
+              "hash": "b3:7a3453f90847ff15417ed3fec7ff23fb88ee969cb6e0b3434963c95a7040aede",
+              "size": 232,
+              "stored": true
+            },
+            "old": {
+              "hash": "b3:e8e1204419b76955311a2fea49c1e09b03f355672ed3f9cfead77b58e3790e76",
+              "size": 239,
+              "stored": true
+            },
+            "op": "modify",
+            "path": ".folio/meta/2026 秋/线性代数.json"
+          },
+          {
+            "from": "2026 秋/线性代数/作业/hw2.pdf",
+            "kind": "file",
+            "op": "move",
+            "path": "2026 秋/线性代数/hw2.pdf",
+            "new": {
+              "hash": "b3:cfe88aa7c316af0e859e84b98009b0fab6f2fe1490e5ff68a84a04c2dc4648f3",
+              "size": 2048,
+              "stored": false
+            },
+            "old": {
+              "hash": "b3:cfe88aa7c316af0e859e84b98009b0fab6f2fe1490e5ff68a84a04c2dc4648f3",
+              "size": 2048,
+              "stored": false
+            }
+          },
+          {
+            "kind": "dir",
+            "op": "delete",
+            "path": "2026 秋/线性代数/作业"
+          },
+          {
+            "kind": "file",
+            "new": {
+              "hash": "b3:1981fb6f6a6cc49db599cc3e76c30542fbf577fa7a1ef99ef67e1c74ff42e02b",
+              "size": 1536,
+              "stored": true
+            },
+            "old": {
+              "hash": "b3:a3d7ca49ab4001410f429b31e14381e3dadac9a987ac85f1f73995464ac6913c",
+              "size": 1024,
+              "stored": true
+            },
+            "op": "modify",
+            "path": "2026 秋/线性代数/报告.docx"
+          },
+          {
+            "kind": "file",
+            "new": {
+              "hash": "b3:cd7eba00fd7ffec147fd180d528d10c9c709efa5c1fb2c1ad667f7cc28b7363c",
+              "size": 66,
+              "stored": true
+            },
+            "old": {
+              "hash": "b3:fbbd743f87fd3e63897682fa5d92352c5d9989d42c5c9261f1a5110e9efead66",
+              "size": 39,
+              "stored": true
+            },
+            "op": "modify",
+            "path": "2026 秋/线性代数/第3讲 特征值.md"
+          },
+          {
+            "from": "2026 秋/线性代数/Lectures",
+            "kind": "dir",
+            "op": "move",
+            "path": "2026 秋/线性代数/讲义"
+          },
+          {
+            "kind": "file",
+            "op": "delete",
+            "path": "a.md",
+            "old": {
+              "hash": "b3:68edba1127de9d497f7300c73f20915b6ad7bb532a6c11cb78823c7860a767d8",
+              "size": 14,
+              "stored": true
+            }
+          }
+        ],
+        "device": {
+          "id": "8c1e0d2b4a6f43e19d7c5b3a2f1e0d9c",
+          "name": "G16"
+        },
+        "kind": "commit",
+        "parent": "b3:434047baa8d304d26ff65dbaf5c0e08b07e04c92587395729cc036fd338f5b94",
+        "summary": "MAT232: update 3 files, move 2 items; Library: delete 1 file",
+        "time": "2026-10-03T23:30:00Z",
+        "tree": "b3:cc6fc6ea6b183fb1da36b089eb819bb6b4639353b54dce3f6740349b2c46fca3"
+      },
+      "parent": "c1",
+      "expect": "invalid",
+      "reason": "coverage"
+    },
+    {
+      "name": "changes-left-out",
+      "commit": {
+        "device": {
+          "id": "8c1e0d2b4a6f43e19d7c5b3a2f1e0d9c",
+          "name": "G16"
+        },
+        "kind": "commit",
+        "parent": "b3:434047baa8d304d26ff65dbaf5c0e08b07e04c92587395729cc036fd338f5b94",
+        "summary": "MAT232: update 3 files, move 2 items; Library: delete 1 file",
+        "time": "2026-10-03T23:30:00Z",
+        "tree": "b3:cc6fc6ea6b183fb1da36b089eb819bb6b4639353b54dce3f6740349b2c46fca3"
+      },
+      "parent": "c1",
+      "expect": "valid"
+    },
+    {
+      "name": "empty-commit",
+      "commit": {
+        "changes": [
+          {
+            "kind": "file",
+            "new": {
+              "hash": "b3:7a3453f90847ff15417ed3fec7ff23fb88ee969cb6e0b3434963c95a7040aede",
+              "size": 232,
+              "stored": true
+            },
+            "old": {
+              "hash": "b3:e8e1204419b76955311a2fea49c1e09b03f355672ed3f9cfead77b58e3790e76",
+              "size": 239,
+              "stored": true
+            },
+            "op": "modify",
+            "path": ".folio/meta/2026 秋/线性代数.json"
+          },
+          {
+            "from": "2026 秋/线性代数/作业/hw2.pdf",
+            "kind": "file",
+            "op": "move",
+            "path": "2026 秋/线性代数/hw2.pdf",
+            "new": {
+              "hash": "b3:cfe88aa7c316af0e859e84b98009b0fab6f2fe1490e5ff68a84a04c2dc4648f3",
+              "size": 2048,
+              "stored": false
+            },
+            "old": {
+              "hash": "b3:cfe88aa7c316af0e859e84b98009b0fab6f2fe1490e5ff68a84a04c2dc4648f3",
+              "size": 2048,
+              "stored": false
+            }
+          },
+          {
+            "kind": "dir",
+            "op": "delete",
+            "path": "2026 秋/线性代数/作业"
+          },
+          {
+            "kind": "file",
+            "new": {
+              "hash": "b3:1981fb6f6a6cc49db599cc3e76c30542fbf577fa7a1ef99ef67e1c74ff42e02b",
+              "size": 1536,
+              "stored": true
+            },
+            "old": {
+              "hash": "b3:a3d7ca49ab4001410f429b31e14381e3dadac9a987ac85f1f73995464ac6913c",
+              "size": 1024,
+              "stored": true
+            },
+            "op": "modify",
+            "path": "2026 秋/线性代数/报告.docx"
+          },
+          {
+            "kind": "file",
+            "new": {
+              "hash": "b3:cd7eba00fd7ffec147fd180d528d10c9c709efa5c1fb2c1ad667f7cc28b7363c",
+              "size": 66,
+              "stored": true
+            },
+            "old": {
+              "hash": "b3:fbbd743f87fd3e63897682fa5d92352c5d9989d42c5c9261f1a5110e9efead66",
+              "size": 39,
+              "stored": true
+            },
+            "op": "modify",
+            "path": "2026 秋/线性代数/第3讲 特征值.md"
+          },
+          {
+            "from": "2026 秋/线性代数/Lectures",
+            "kind": "dir",
+            "op": "move",
+            "path": "2026 秋/线性代数/讲义"
+          },
+          {
+            "from": "2026 秋/线性代数/Lectures/L2.md",
+            "kind": "file",
+            "op": "move",
+            "path": "2026 秋/线性代数/讲义/L2.md",
+            "new": {
+              "hash": "b3:79c0471915614b1ca2ae5b5af08d7dd57afb8fca9942131e3f3183cf469e8e8c",
+              "size": 27,
+              "stored": true
+            },
+            "old": {
+              "hash": "b3:657c91e3eccc4053126c44ffbb21fb193acec7e7db1dc654cb2d136cee4deb25",
+              "size": 12,
+              "stored": true
+            }
+          },
+          {
+            "kind": "file",
+            "op": "delete",
+            "path": "a.md",
+            "old": {
+              "hash": "b3:68edba1127de9d497f7300c73f20915b6ad7bb532a6c11cb78823c7860a767d8",
+              "size": 14,
+              "stored": true
+            }
+          }
+        ],
+        "device": {
+          "id": "8c1e0d2b4a6f43e19d7c5b3a2f1e0d9c",
+          "name": "G16"
+        },
+        "kind": "commit",
+        "parent": "b3:434047baa8d304d26ff65dbaf5c0e08b07e04c92587395729cc036fd338f5b94",
+        "summary": "MAT232: update 3 files, move 2 items; Library: delete 1 file",
+        "time": "2026-10-03T23:30:00Z",
+        "tree": "b3:e61996fc4086c1dbb335f7fd8183121388377558cbcb9021a38e3832fd2c06be"
+      },
+      "parent": "c1",
+      "expect": "invalid",
+      "reason": "empty-commit"
+    },
+    {
+      "name": "prune-changes-tree",
+      "commit": {
+        "device": {
+          "id": "8c1e0d2b4a6f43e19d7c5b3a2f1e0d9c",
+          "name": "G16"
+        },
+        "kind": "prune",
+        "parent": "b3:75cc39145385b55e8533ef08db52ae99f7e492fd730087754e35005a6dcd8e6d",
+        "pruned": [
+          "b3:a3d7ca49ab4001410f429b31e14381e3dadac9a987ac85f1f73995464ac6913c"
+        ],
+        "time": "2026-12-10T03:00:00Z",
+        "tree": "b3:e61996fc4086c1dbb335f7fd8183121388377558cbcb9021a38e3832fd2c06be"
+      },
+      "parent": "c3",
+      "expect": "invalid",
+      "reason": "prune-tree"
+    },
+    {
+      "name": "prune-current-version",
+      "commit": {
+        "device": {
+          "id": "8c1e0d2b4a6f43e19d7c5b3a2f1e0d9c",
+          "name": "G16"
+        },
+        "kind": "prune",
+        "parent": "b3:75cc39145385b55e8533ef08db52ae99f7e492fd730087754e35005a6dcd8e6d",
+        "pruned": [
+          "b3:1981fb6f6a6cc49db599cc3e76c30542fbf577fa7a1ef99ef67e1c74ff42e02b"
+        ],
+        "time": "2026-12-10T03:00:00Z",
+        "tree": "b3:f126b1110879d57d0627e6d9372ab5f15f2de612014cd24f12d9b2c14f00bb11"
+      },
+      "parent": "c3",
+      "expect": "invalid",
+      "reason": "prune-current"
+    },
+    {
+      "name": "subtree-not-arrived",
+      "commit": {
+        "changes": [
+          {
+            "kind": "file",
+            "new": {
+              "hash": "b3:7a3453f90847ff15417ed3fec7ff23fb88ee969cb6e0b3434963c95a7040aede",
+              "size": 232,
+              "stored": true
+            },
+            "old": {
+              "hash": "b3:e8e1204419b76955311a2fea49c1e09b03f355672ed3f9cfead77b58e3790e76",
+              "size": 239,
+              "stored": true
+            },
+            "op": "modify",
+            "path": ".folio/meta/2026 秋/线性代数.json"
+          },
+          {
+            "from": "2026 秋/线性代数/作业/hw2.pdf",
+            "kind": "file",
+            "op": "move",
+            "path": "2026 秋/线性代数/hw2.pdf",
+            "new": {
+              "hash": "b3:cfe88aa7c316af0e859e84b98009b0fab6f2fe1490e5ff68a84a04c2dc4648f3",
+              "size": 2048,
+              "stored": false
+            },
+            "old": {
+              "hash": "b3:cfe88aa7c316af0e859e84b98009b0fab6f2fe1490e5ff68a84a04c2dc4648f3",
+              "size": 2048,
+              "stored": false
+            }
+          },
+          {
+            "kind": "dir",
+            "op": "delete",
+            "path": "2026 秋/线性代数/作业"
+          },
+          {
+            "kind": "file",
+            "new": {
+              "hash": "b3:1981fb6f6a6cc49db599cc3e76c30542fbf577fa7a1ef99ef67e1c74ff42e02b",
+              "size": 1536,
+              "stored": true
+            },
+            "old": {
+              "hash": "b3:a3d7ca49ab4001410f429b31e14381e3dadac9a987ac85f1f73995464ac6913c",
+              "size": 1024,
+              "stored": true
+            },
+            "op": "modify",
+            "path": "2026 秋/线性代数/报告.docx"
+          },
+          {
+            "kind": "file",
+            "new": {
+              "hash": "b3:cd7eba00fd7ffec147fd180d528d10c9c709efa5c1fb2c1ad667f7cc28b7363c",
+              "size": 66,
+              "stored": true
+            },
+            "old": {
+              "hash": "b3:fbbd743f87fd3e63897682fa5d92352c5d9989d42c5c9261f1a5110e9efead66",
+              "size": 39,
+              "stored": true
+            },
+            "op": "modify",
+            "path": "2026 秋/线性代数/第3讲 特征值.md"
+          },
+          {
+            "from": "2026 秋/线性代数/Lectures",
+            "kind": "dir",
+            "op": "move",
+            "path": "2026 秋/线性代数/讲义"
+          },
+          {
+            "from": "2026 秋/线性代数/Lectures/L2.md",
+            "kind": "file",
+            "op": "move",
+            "path": "2026 秋/线性代数/讲义/L2.md",
+            "new": {
+              "hash": "b3:79c0471915614b1ca2ae5b5af08d7dd57afb8fca9942131e3f3183cf469e8e8c",
+              "size": 27,
+              "stored": true
+            },
+            "old": {
+              "hash": "b3:657c91e3eccc4053126c44ffbb21fb193acec7e7db1dc654cb2d136cee4deb25",
+              "size": 12,
+              "stored": true
+            }
+          },
+          {
+            "kind": "file",
+            "op": "delete",
+            "path": "a.md",
+            "old": {
+              "hash": "b3:68edba1127de9d497f7300c73f20915b6ad7bb532a6c11cb78823c7860a767d8",
+              "size": 14,
+              "stored": true
+            }
+          }
+        ],
+        "device": {
+          "id": "8c1e0d2b4a6f43e19d7c5b3a2f1e0d9c",
+          "name": "G16"
+        },
+        "kind": "commit",
+        "parent": "b3:434047baa8d304d26ff65dbaf5c0e08b07e04c92587395729cc036fd338f5b94",
+        "summary": "MAT232: update 3 files, move 2 items; Library: delete 1 file",
+        "time": "2026-10-03T23:30:00Z",
+        "tree": "b3:cc6fc6ea6b183fb1da36b089eb819bb6b4639353b54dce3f6740349b2c46fca3"
+      },
+      "parent": "c1",
+      "absent_trees": [
+        "b3:cef0fa7cf42c96940b1621e136231f0bee209625c03c6dc8e5da39e1eae82b05"
+      ],
+      "expect": "missing"
+    }
+  ],
+  "changes": [
+    {
+      "name": "replaced-by-a-moved-file",
+      "parent_tree": {
+        "x": {
+          "kind": "file",
+          "hash": "b3:d33fb48ab5adff269ae172b29a6913ff04f6f266207a7a8e976f2ecd571d4492",
+          "size": 3,
+          "stored": true
+        },
+        "y": {
+          "kind": "file",
+          "hash": "b3:dc770fff53f50835f8cc957e01c0d5731d3c2ed544c375493a28c09be5e09763",
+          "size": 3,
+          "stored": true
+        }
+      },
+      "tree": {
+        "x": {
+          "kind": "file",
+          "hash": "b3:dc770fff53f50835f8cc957e01c0d5731d3c2ed544c375493a28c09be5e09763",
+          "size": 3,
+          "stored": true
+        }
+      },
+      "changes": [
+        {
+          "kind": "file",
+          "old": {
+            "hash": "b3:d33fb48ab5adff269ae172b29a6913ff04f6f266207a7a8e976f2ecd571d4492",
+            "size": 3,
+            "stored": true
+          },
+          "op": "delete",
+          "path": "x"
+        },
+        {
+          "from": "y",
+          "kind": "file",
+          "new": {
+            "hash": "b3:dc770fff53f50835f8cc957e01c0d5731d3c2ed544c375493a28c09be5e09763",
+            "size": 3,
+            "stored": true
+          },
+          "old": {
+            "hash": "b3:dc770fff53f50835f8cc957e01c0d5731d3c2ed544c375493a28c09be5e09763",
+            "size": 3,
+            "stored": true
+          },
+          "op": "move",
+          "path": "x"
+        }
+      ],
+      "valid": true
+    },
+    {
+      "name": "replaced-by-a-moved-file-without-the-delete",
+      "parent_tree": {
+        "x": {
+          "kind": "file",
+          "hash": "b3:d33fb48ab5adff269ae172b29a6913ff04f6f266207a7a8e976f2ecd571d4492",
+          "size": 3,
+          "stored": true
+        },
+        "y": {
+          "kind": "file",
+          "hash": "b3:dc770fff53f50835f8cc957e01c0d5731d3c2ed544c375493a28c09be5e09763",
+          "size": 3,
+          "stored": true
+        }
+      },
+      "tree": {
+        "x": {
+          "kind": "file",
+          "hash": "b3:dc770fff53f50835f8cc957e01c0d5731d3c2ed544c375493a28c09be5e09763",
+          "size": 3,
+          "stored": true
+        }
+      },
+      "changes": [
+        {
+          "from": "y",
+          "kind": "file",
+          "new": {
+            "hash": "b3:dc770fff53f50835f8cc957e01c0d5731d3c2ed544c375493a28c09be5e09763",
+            "size": 3,
+            "stored": true
+          },
+          "old": {
+            "hash": "b3:dc770fff53f50835f8cc957e01c0d5731d3c2ed544c375493a28c09be5e09763",
+            "size": 3,
+            "stored": true
+          },
+          "op": "move",
+          "path": "x"
+        }
+      ],
+      "valid": false,
+      "reason": "coverage"
+    },
+    {
+      "name": "swap-as-moves",
+      "parent_tree": {
+        "a": {
+          "kind": "file",
+          "hash": "b3:d33fb48ab5adff269ae172b29a6913ff04f6f266207a7a8e976f2ecd571d4492",
+          "size": 3,
+          "stored": true
+        },
+        "b": {
+          "kind": "file",
+          "hash": "b3:dc770fff53f50835f8cc957e01c0d5731d3c2ed544c375493a28c09be5e09763",
+          "size": 3,
+          "stored": true
+        }
+      },
+      "tree": {
+        "a": {
+          "kind": "file",
+          "hash": "b3:dc770fff53f50835f8cc957e01c0d5731d3c2ed544c375493a28c09be5e09763",
+          "size": 3,
+          "stored": true
+        },
+        "b": {
+          "kind": "file",
+          "hash": "b3:d33fb48ab5adff269ae172b29a6913ff04f6f266207a7a8e976f2ecd571d4492",
+          "size": 3,
+          "stored": true
+        }
+      },
+      "changes": [
+        {
+          "from": "b",
+          "kind": "file",
+          "new": {
+            "hash": "b3:dc770fff53f50835f8cc957e01c0d5731d3c2ed544c375493a28c09be5e09763",
+            "size": 3,
+            "stored": true
+          },
+          "old": {
+            "hash": "b3:dc770fff53f50835f8cc957e01c0d5731d3c2ed544c375493a28c09be5e09763",
+            "size": 3,
+            "stored": true
+          },
+          "op": "move",
+          "path": "a"
+        },
+        {
+          "from": "a",
+          "kind": "file",
+          "new": {
+            "hash": "b3:d33fb48ab5adff269ae172b29a6913ff04f6f266207a7a8e976f2ecd571d4492",
+            "size": 3,
+            "stored": true
+          },
+          "old": {
+            "hash": "b3:d33fb48ab5adff269ae172b29a6913ff04f6f266207a7a8e976f2ecd571d4492",
+            "size": 3,
+            "stored": true
+          },
+          "op": "move",
+          "path": "b"
+        }
+      ],
+      "valid": true
+    },
+    {
+      "name": "swap-as-deletes-and-adds",
+      "parent_tree": {
+        "a": {
+          "kind": "file",
+          "hash": "b3:d33fb48ab5adff269ae172b29a6913ff04f6f266207a7a8e976f2ecd571d4492",
+          "size": 3,
+          "stored": true
+        },
+        "b": {
+          "kind": "file",
+          "hash": "b3:dc770fff53f50835f8cc957e01c0d5731d3c2ed544c375493a28c09be5e09763",
+          "size": 3,
+          "stored": true
+        }
+      },
+      "tree": {
+        "a": {
+          "kind": "file",
+          "hash": "b3:dc770fff53f50835f8cc957e01c0d5731d3c2ed544c375493a28c09be5e09763",
+          "size": 3,
+          "stored": true
+        },
+        "b": {
+          "kind": "file",
+          "hash": "b3:d33fb48ab5adff269ae172b29a6913ff04f6f266207a7a8e976f2ecd571d4492",
+          "size": 3,
+          "stored": true
+        }
+      },
+      "changes": [
+        {
+          "kind": "file",
+          "old": {
+            "hash": "b3:d33fb48ab5adff269ae172b29a6913ff04f6f266207a7a8e976f2ecd571d4492",
+            "size": 3,
+            "stored": true
+          },
+          "op": "delete",
+          "path": "a"
+        },
+        {
+          "kind": "file",
+          "new": {
+            "hash": "b3:dc770fff53f50835f8cc957e01c0d5731d3c2ed544c375493a28c09be5e09763",
+            "size": 3,
+            "stored": true
+          },
+          "op": "add",
+          "path": "a"
+        },
+        {
+          "kind": "file",
+          "old": {
+            "hash": "b3:dc770fff53f50835f8cc957e01c0d5731d3c2ed544c375493a28c09be5e09763",
+            "size": 3,
+            "stored": true
+          },
+          "op": "delete",
+          "path": "b"
+        },
+        {
+          "kind": "file",
+          "new": {
+            "hash": "b3:d33fb48ab5adff269ae172b29a6913ff04f6f266207a7a8e976f2ecd571d4492",
+            "size": 3,
+            "stored": true
+          },
+          "op": "add",
+          "path": "b"
+        }
+      ],
+      "valid": true
+    },
+    {
+      "name": "file-becomes-a-folder",
+      "parent_tree": {
+        "n": {
+          "kind": "file",
+          "hash": "b3:d33fb48ab5adff269ae172b29a6913ff04f6f266207a7a8e976f2ecd571d4492",
+          "size": 3,
+          "stored": true
+        }
+      },
+      "tree": {
+        "n": {
+          "kind": "dir"
+        },
+        "n/x": {
+          "kind": "file",
+          "hash": "b3:d33fb48ab5adff269ae172b29a6913ff04f6f266207a7a8e976f2ecd571d4492",
+          "size": 3,
+          "stored": true
+        }
+      },
+      "changes": [
+        {
+          "kind": "file",
+          "old": {
+            "hash": "b3:d33fb48ab5adff269ae172b29a6913ff04f6f266207a7a8e976f2ecd571d4492",
+            "size": 3,
+            "stored": true
+          },
+          "op": "delete",
+          "path": "n"
+        },
+        {
+          "kind": "dir",
+          "op": "add",
+          "path": "n"
+        },
+        {
+          "kind": "file",
+          "new": {
+            "hash": "b3:d33fb48ab5adff269ae172b29a6913ff04f6f266207a7a8e976f2ecd571d4492",
+            "size": 3,
+            "stored": true
+          },
+          "op": "add",
+          "path": "n/x"
+        }
+      ],
+      "valid": true
+    },
+    {
+      "name": "stored-flag-only",
+      "parent_tree": {
+        "r": {
+          "kind": "file",
+          "hash": "b3:d33fb48ab5adff269ae172b29a6913ff04f6f266207a7a8e976f2ecd571d4492",
+          "size": 3,
+          "stored": true
+        }
+      },
+      "tree": {
+        "r": {
+          "kind": "file",
+          "hash": "b3:d33fb48ab5adff269ae172b29a6913ff04f6f266207a7a8e976f2ecd571d4492",
+          "size": 3,
+          "stored": false
+        }
+      },
+      "changes": [
+        {
+          "kind": "file",
+          "new": {
+            "hash": "b3:d33fb48ab5adff269ae172b29a6913ff04f6f266207a7a8e976f2ecd571d4492",
+            "size": 3,
+            "stored": false
+          },
+          "old": {
+            "hash": "b3:d33fb48ab5adff269ae172b29a6913ff04f6f266207a7a8e976f2ecd571d4492",
+            "size": 3,
+            "stored": true
+          },
+          "op": "modify",
+          "path": "r"
+        }
+      ],
+      "valid": true
+    },
+    {
+      "name": "folder-renamed-and-created-again-as-one-move",
+      "parent_tree": {
+        "作业": {
+          "kind": "dir"
+        },
+        "作业/hw1.txt": {
+          "kind": "file",
+          "hash": "b3:d33fb48ab5adff269ae172b29a6913ff04f6f266207a7a8e976f2ecd571d4492",
+          "size": 3,
+          "stored": true
+        }
+      },
+      "tree": {
+        "作业": {
+          "kind": "dir"
+        },
+        "作业-old": {
+          "kind": "dir"
+        },
+        "作业-old/hw1.txt": {
+          "kind": "file",
+          "hash": "b3:d33fb48ab5adff269ae172b29a6913ff04f6f266207a7a8e976f2ecd571d4492",
+          "size": 3,
+          "stored": true
+        }
+      },
+      "changes": [
+        {
+          "from": "作业",
+          "kind": "dir",
+          "op": "move",
+          "path": "作业-old"
+        }
+      ],
+      "valid": false,
+      "reason": "coverage"
+    },
+    {
+      "name": "folder-renamed-and-created-again",
+      "parent_tree": {
+        "作业": {
+          "kind": "dir"
+        },
+        "作业/hw1.txt": {
+          "kind": "file",
+          "hash": "b3:d33fb48ab5adff269ae172b29a6913ff04f6f266207a7a8e976f2ecd571d4492",
+          "size": 3,
+          "stored": true
+        }
+      },
+      "tree": {
+        "作业": {
+          "kind": "dir"
+        },
+        "作业-old": {
+          "kind": "dir"
+        },
+        "作业-old/hw1.txt": {
+          "kind": "file",
+          "hash": "b3:d33fb48ab5adff269ae172b29a6913ff04f6f266207a7a8e976f2ecd571d4492",
+          "size": 3,
+          "stored": true
+        }
+      },
+      "changes": [
+        {
+          "kind": "dir",
+          "op": "add",
+          "path": "作业-old"
+        },
+        {
+          "from": "作业/hw1.txt",
+          "kind": "file",
+          "new": {
+            "hash": "b3:d33fb48ab5adff269ae172b29a6913ff04f6f266207a7a8e976f2ecd571d4492",
+            "size": 3,
+            "stored": true
+          },
+          "old": {
+            "hash": "b3:d33fb48ab5adff269ae172b29a6913ff04f6f266207a7a8e976f2ecd571d4492",
+            "size": 3,
+            "stored": true
+          },
+          "op": "move",
+          "path": "作业-old/hw1.txt"
+        }
+      ],
+      "valid": true
+    },
+    {
+      "name": "moved-with-a-copy-left-behind-as-a-move",
+      "parent_tree": {
+        "a": {
+          "kind": "file",
+          "hash": "b3:d33fb48ab5adff269ae172b29a6913ff04f6f266207a7a8e976f2ecd571d4492",
+          "size": 3,
+          "stored": true
+        }
+      },
+      "tree": {
+        "a": {
+          "kind": "file",
+          "hash": "b3:d33fb48ab5adff269ae172b29a6913ff04f6f266207a7a8e976f2ecd571d4492",
+          "size": 3,
+          "stored": true
+        },
+        "b": {
+          "kind": "file",
+          "hash": "b3:d33fb48ab5adff269ae172b29a6913ff04f6f266207a7a8e976f2ecd571d4492",
+          "size": 3,
+          "stored": true
+        }
+      },
+      "changes": [
+        {
+          "from": "a",
+          "kind": "file",
+          "new": {
+            "hash": "b3:d33fb48ab5adff269ae172b29a6913ff04f6f266207a7a8e976f2ecd571d4492",
+            "size": 3,
+            "stored": true
+          },
+          "old": {
+            "hash": "b3:d33fb48ab5adff269ae172b29a6913ff04f6f266207a7a8e976f2ecd571d4492",
+            "size": 3,
+            "stored": true
+          },
+          "op": "move",
+          "path": "b"
+        }
+      ],
+      "valid": false,
+      "reason": "coverage"
+    },
+    {
+      "name": "moved-with-a-copy-left-behind",
+      "parent_tree": {
+        "a": {
+          "kind": "file",
+          "hash": "b3:d33fb48ab5adff269ae172b29a6913ff04f6f266207a7a8e976f2ecd571d4492",
+          "size": 3,
+          "stored": true
+        }
+      },
+      "tree": {
+        "a": {
+          "kind": "file",
+          "hash": "b3:d33fb48ab5adff269ae172b29a6913ff04f6f266207a7a8e976f2ecd571d4492",
+          "size": 3,
+          "stored": true
+        },
+        "b": {
+          "kind": "file",
+          "hash": "b3:d33fb48ab5adff269ae172b29a6913ff04f6f266207a7a8e976f2ecd571d4492",
+          "size": 3,
+          "stored": true
+        }
+      },
+      "changes": [
+        {
+          "kind": "file",
+          "new": {
+            "hash": "b3:d33fb48ab5adff269ae172b29a6913ff04f6f266207a7a8e976f2ecd571d4492",
+            "size": 3,
+            "stored": true
+          },
+          "op": "add",
+          "path": "b"
+        }
+      ],
+      "valid": true
+    }
+  ],
+  "root": [
+    {
+      "name": "minimal",
+      "tree": {
+        ".folio": {
+          "kind": "dir"
+        },
+        ".folio/library.json": {
+          "kind": "file",
+          "hash": "b3:3ae7d805f6789a6402acb70ad4096a85a56bf6804eaf25c0493ac697548d30b5",
+          "size": 1,
+          "stored": true
+        }
+      },
+      "valid": true
+    },
+    {
+      "name": "every-metadata-file",
+      "tree": {
+        ".folio": {
+          "kind": "dir"
+        },
+        ".folio/library.json": {
+          "kind": "file",
+          "hash": "b3:3ae7d805f6789a6402acb70ad4096a85a56bf6804eaf25c0493ac697548d30b5",
+          "size": 1,
+          "stored": true
+        },
+        ".folio/tags.json": {
+          "kind": "file",
+          "hash": "b3:3ae7d805f6789a6402acb70ad4096a85a56bf6804eaf25c0493ac697548d30b5",
+          "size": 1,
+          "stored": true
+        },
+        ".folio/ignore": {
+          "kind": "file",
+          "hash": "b3:3ae7d805f6789a6402acb70ad4096a85a56bf6804eaf25c0493ac697548d30b5",
+          "size": 1,
+          "stored": true
+        },
+        ".folio/meta": {
+          "kind": "dir"
+        },
+        ".folio/meta/_root.json": {
+          "kind": "file",
+          "hash": "b3:3ae7d805f6789a6402acb70ad4096a85a56bf6804eaf25c0493ac697548d30b5",
+          "size": 1,
+          "stored": true
+        },
+        ".folio/meta/2026 秋": {
+          "kind": "dir"
+        },
+        ".folio/meta/2026 秋/_group.json": {
+          "kind": "file",
+          "hash": "b3:3ae7d805f6789a6402acb70ad4096a85a56bf6804eaf25c0493ac697548d30b5",
+          "size": 1,
+          "stored": true
+        },
+        ".folio/meta/2026 秋/__杂项.json": {
+          "kind": "file",
+          "hash": "b3:3ae7d805f6789a6402acb70ad4096a85a56bf6804eaf25c0493ac697548d30b5",
+          "size": 1,
+          "stored": true
+        }
+      },
+      "valid": true
+    },
+    {
+      "name": "a-later-metadata-file",
+      "tree": {
+        ".folio": {
+          "kind": "dir"
+        },
+        ".folio/library.json": {
+          "kind": "file",
+          "hash": "b3:3ae7d805f6789a6402acb70ad4096a85a56bf6804eaf25c0493ac697548d30b5",
+          "size": 1,
+          "stored": true
+        },
+        ".folio/views.json": {
+          "kind": "file",
+          "hash": "b3:3ae7d805f6789a6402acb70ad4096a85a56bf6804eaf25c0493ac697548d30b5",
+          "size": 1,
+          "stored": true
+        }
+      },
+      "valid": true
+    },
+    {
+      "name": "any-file-name-in-meta",
+      "tree": {
+        ".folio": {
+          "kind": "dir"
+        },
+        ".folio/library.json": {
+          "kind": "file",
+          "hash": "b3:3ae7d805f6789a6402acb70ad4096a85a56bf6804eaf25c0493ac697548d30b5",
+          "size": 1,
+          "stored": true
+        },
+        ".folio/meta": {
+          "kind": "dir"
+        },
+        ".folio/meta/s": {
+          "kind": "dir"
+        },
+        ".folio/meta/s/notes.txt": {
+          "kind": "file",
+          "hash": "b3:3ae7d805f6789a6402acb70ad4096a85a56bf6804eaf25c0493ac697548d30b5",
+          "size": 1,
+          "stored": true
+        }
+      },
+      "valid": true
+    },
+    {
+      "name": "a-new-folder",
+      "tree": {
+        ".folio": {
+          "kind": "dir"
+        },
+        ".folio/library.json": {
+          "kind": "file",
+          "hash": "b3:3ae7d805f6789a6402acb70ad4096a85a56bf6804eaf25c0493ac697548d30b5",
+          "size": 1,
+          "stored": true
+        },
+        ".folio/cache": {
+          "kind": "dir"
+        }
+      },
+      "valid": false,
+      "reason": "folio-path"
+    },
+    {
+      "name": "meta-in-upper-case",
+      "tree": {
+        ".folio": {
+          "kind": "dir"
+        },
+        ".folio/library.json": {
+          "kind": "file",
+          "hash": "b3:3ae7d805f6789a6402acb70ad4096a85a56bf6804eaf25c0493ac697548d30b5",
+          "size": 1,
+          "stored": true
+        },
+        ".folio/META": {
+          "kind": "dir"
+        }
+      },
+      "valid": false,
+      "reason": "folio-path"
+    },
+    {
+      "name": "folder-three-levels-deep",
+      "tree": {
+        ".folio": {
+          "kind": "dir"
+        },
+        ".folio/library.json": {
+          "kind": "file",
+          "hash": "b3:3ae7d805f6789a6402acb70ad4096a85a56bf6804eaf25c0493ac697548d30b5",
+          "size": 1,
+          "stored": true
+        },
+        ".folio/meta": {
+          "kind": "dir"
+        },
+        ".folio/meta/s": {
+          "kind": "dir"
+        },
+        ".folio/meta/s/c": {
+          "kind": "dir"
+        }
+      },
+      "valid": false,
+      "reason": "folio-path"
+    },
+    {
+      "name": "file-named-local",
+      "tree": {
+        ".folio": {
+          "kind": "dir"
+        },
+        ".folio/library.json": {
+          "kind": "file",
+          "hash": "b3:3ae7d805f6789a6402acb70ad4096a85a56bf6804eaf25c0493ac697548d30b5",
+          "size": 1,
+          "stored": true
+        },
+        ".folio/local": {
+          "kind": "file",
+          "hash": "b3:3ae7d805f6789a6402acb70ad4096a85a56bf6804eaf25c0493ac697548d30b5",
+          "size": 1,
+          "stored": true
+        }
+      },
+      "valid": false,
+      "reason": "folio-private"
+    },
+    {
+      "name": "no-library-file",
+      "tree": {
+        ".folio": {
+          "kind": "dir"
+        }
+      },
+      "valid": false,
+      "reason": "folio-missing"
+    },
+    {
+      "name": "folio-is-a-file",
+      "tree": {
+        ".folio": {
+          "kind": "file",
+          "hash": "b3:3ae7d805f6789a6402acb70ad4096a85a56bf6804eaf25c0493ac697548d30b5",
+          "size": 1,
+          "stored": true
+        }
+      },
+      "valid": false,
+      "reason": "folio-missing"
+    },
+    {
+      "name": "folio-in-upper-case",
+      "tree": {
+        ".folio": {
+          "kind": "dir"
+        },
+        ".folio/library.json": {
+          "kind": "file",
+          "hash": "b3:3ae7d805f6789a6402acb70ad4096a85a56bf6804eaf25c0493ac697548d30b5",
+          "size": 1,
+          "stored": true
+        },
+        ".FOLIO": {
+          "kind": "dir"
+        }
+      },
+      "valid": false,
+      "reason": "folio-name"
+    },
+    {
+      "name": "folio-with-dotless-i",
+      "tree": {
+        ".folio": {
+          "kind": "dir"
+        },
+        ".folio/library.json": {
+          "kind": "file",
+          "hash": "b3:3ae7d805f6789a6402acb70ad4096a85a56bf6804eaf25c0493ac697548d30b5",
+          "size": 1,
+          "stored": true
+        },
+        ".folıo": {
+          "kind": "dir"
+        }
+      },
+      "valid": false,
+      "reason": "folio-name"
+    },
+    {
+      "name": "local-folder",
+      "tree": {
+        ".folio": {
+          "kind": "dir"
+        },
+        ".folio/library.json": {
+          "kind": "file",
+          "hash": "b3:3ae7d805f6789a6402acb70ad4096a85a56bf6804eaf25c0493ac697548d30b5",
+          "size": 1,
+          "stored": true
+        },
+        ".folio/local": {
+          "kind": "dir"
+        }
+      },
+      "valid": false,
+      "reason": "folio-private"
+    },
+    {
+      "name": "store-in-upper-case",
+      "tree": {
+        ".folio": {
+          "kind": "dir"
+        },
+        ".folio/library.json": {
+          "kind": "file",
+          "hash": "b3:3ae7d805f6789a6402acb70ad4096a85a56bf6804eaf25c0493ac697548d30b5",
+          "size": 1,
+          "stored": true
+        },
+        ".folio/STORE": {
+          "kind": "dir"
+        }
+      },
+      "valid": false,
+      "reason": "folio-private"
+    },
+    {
+      "name": "store-with-long-s",
+      "tree": {
+        ".folio": {
+          "kind": "dir"
+        },
+        ".folio/library.json": {
+          "kind": "file",
+          "hash": "b3:3ae7d805f6789a6402acb70ad4096a85a56bf6804eaf25c0493ac697548d30b5",
+          "size": 1,
+          "stored": true
+        },
+        ".folio/ſtore": {
+          "kind": "dir"
+        }
+      },
+      "valid": false,
+      "reason": "folio-private"
+    },
+    {
+      "name": "not-stored",
+      "tree": {
+        ".folio": {
+          "kind": "dir"
+        },
+        ".folio/library.json": {
+          "kind": "file",
+          "hash": "b3:3ae7d805f6789a6402acb70ad4096a85a56bf6804eaf25c0493ac697548d30b5",
+          "size": 1,
+          "stored": true
+        },
+        ".folio/tags.json": {
+          "kind": "file",
+          "hash": "b3:3ae7d805f6789a6402acb70ad4096a85a56bf6804eaf25c0493ac697548d30b5",
+          "size": 1,
+          "stored": false
+        }
+      },
+      "valid": false,
+      "reason": "folio-not-stored"
+    },
+    {
+      "name": "path-at-the-limit",
+      "tree_pattern": {
+        "base": "minimal",
+        "folder_name": {
+          "repeat": "a",
+          "count": 200
+        },
+        "depth": 163,
+        "file_name": "a",
+        "longest_path_utf16": 32764
+      },
+      "valid": true
+    },
+    {
+      "name": "path-too-long",
+      "tree_pattern": {
+        "base": "minimal",
+        "folder_name": {
+          "repeat": "a",
+          "count": 200
+        },
+        "depth": 164,
+        "file_name": "a",
+        "longest_path_utf16": 32965
+      },
+      "valid": false,
+      "reason": "path-too-long"
+    }
+  ],
+  "availability": [
+    {
+      "name": "thinned-version",
+      "head": "c5",
+      "blob": "b3:a3d7ca49ab4001410f429b31e14381e3dadac9a987ac85f1f73995464ac6913c",
+      "entry_commit": "c1",
+      "expect": "pruned"
+    },
+    {
+      "name": "restored-version",
+      "head": "c5",
+      "blob": "b3:a3d7ca49ab4001410f429b31e14381e3dadac9a987ac85f1f73995464ac6913c",
+      "entry_commit": "c5",
+      "expect": "missing"
+    },
+    {
+      "name": "never-thinned",
+      "head": "c5",
+      "blob": "b3:1981fb6f6a6cc49db599cc3e76c30542fbf577fa7a1ef99ef67e1c74ff42e02b",
+      "entry_commit": "c2",
+      "expect": "missing"
+    }
+  ],
+  "deletion": [
+    {
+      "name": "thinned-at-c4",
+      "head": "c4",
+      "blob": "b3:a3d7ca49ab4001410f429b31e14381e3dadac9a987ac85f1f73995464ac6913c",
+      "deletable": true
+    },
+    {
+      "name": "restored-at-c5",
+      "head": "c5",
+      "blob": "b3:a3d7ca49ab4001410f429b31e14381e3dadac9a987ac85f1f73995464ac6913c",
+      "deletable": false
+    },
+    {
+      "name": "current-at-c4",
+      "head": "c4",
+      "blob": "b3:1981fb6f6a6cc49db599cc3e76c30542fbf577fa7a1ef99ef67e1c74ff42e02b",
+      "deletable": false
+    }
+  ]
+}

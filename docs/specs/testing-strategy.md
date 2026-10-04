@@ -31,7 +31,7 @@ Living document. Update it when a new kind of test or tool is added.
 | Core unit | `cargo test` | Pure logic: path normalisation, canonical JSON, hashing, pack encode/decode, merge rules, tokenizer, ignore evaluation | Every change; CI |
 | Core property | `proptest` | Invariants such as `decode(encode(x)) == x`, tokenizer offsets on character boundaries, contiguous-substring matching, rebuilt catalog equals incremental catalog | Every change; CI |
 | Core integration | `cargo test` with temp dirs and fake adapters | Migrations (`validate()` plus one fixture per released schema), metadata formats including older and newer `format_version`, commit and restore on a temp library, watcher reconciliation. The formats v0.1 released are frozen in `crates/folio-core/tests/fixtures/formats/v0.1/` and opened by `tests/format_fixtures.rs` (ADR-0002 §3) | Every change; CI |
-| Golden vectors | `cargo test` | Remote format: fixed inputs must produce fixed ids and bytes (ADR-0003 §13) | CI |
+| Golden vectors | `cargo test` | History format: fixed inputs must produce fixed ids and bytes, and every refused input is refused (ADR-0003 §13). The vectors are language-neutral JSON in `docs/specs/remote-format-vectors/v1/` ([remote-format.md](remote-format.md) §12) | CI |
 | Sync simulation (M3) | `cargo test`; long runs nightly or on demand | ADR-0003 Action item 3: eventually consistent fake remote, two devices plus an iPad writer, crash injection at every journal step | Short seeds on every change; long runs nightly |
 | IPC contract | `cargo test` in `folio-app` | Every command rejects bad input (paths outside the library, oversized values) and maps failures to the typed error union. Generated bindings match the Rust types. The commands Tauri runs are exactly those in the app manifest and the capabilities; planned ones are in none of them ([ipc-m1.md](ipc-m1.md) §3, §19) | CI |
 | UI component | Vitest + Testing Library (jsdom), user-event | Small components with the `ipc` module mocked (`vi.mock`); views and data hooks with `renderApp` / `renderAppHook` (`src/test/render.tsx`) against the fake shell; loading, empty, error and success states from the handoff specs. `tsc` (part of `pnpm check`) fails on a `t()` key that the `en` locale lacks | Every change; CI |
@@ -170,9 +170,13 @@ Every M1 user flow has an e2e on the real app (docs/specs/m1-acceptance.md §1).
 unit, property and integration tests for paths, metadata files (with golden bytes and the frozen
 v0.1 fixtures), the catalog, search, library scans and operations. Scan tests run on `MemFs`, an
 in-memory file system with NTFS-like file ids in `test_support` (unit tests only), plus tests on
-real folders; `tests/scan_benchmark.rs` times a 50,000-file library. Coverage tooling, the public
-`testkit` module, golden vectors for the remote format and the simulation harness arrive with
-the modules that need them (M2–M3).
+real folders; `tests/scan_benchmark.rs` times a 50,000-file library. The golden vectors of the
+history format exist (2026-10-03): an independent JavaScript implementation writes them, a separate
+program recomputed every hash, id, pack layout and canonical encoding once with the official Rust
+crates and `folio-core`'s name rules ([remote-format.md](remote-format.md) §12), and `pnpm check`
+keeps them equal to their generator (`check:vectors`). `folio-core`'s test of them arrives with
+`feat/core-object-store`. Coverage tooling, the public `testkit` module and the simulation harness
+arrive with the modules that need them (M2–M3).
 
 The Windows adapters ([windows-adapter.md](windows-adapter.md)) are tested on the real OS in
 temporary folders on NTFS, on CI too. Tests that need another file system are ignored by default

@@ -1,0 +1,206 @@
+{
+  "description": "Documents to read (hex: the exact bytes, authoritative; text: the same bytes for reading) and values to write. A reader accepts a document only if it is canonical; reason names the first rule broken (informative). encode: the canonical bytes of each value.",
+  "documents": [
+    {
+      "name": "order-and-nesting",
+      "canonical": true,
+      "text": "{\"a\":[true,false,\"x\"],\"b\":1,\"c\":{\"y\":0,\"z\":\"\"}}",
+      "hex": "7b2261223a5b747275652c66616c73652c2278225d2c2262223a312c2263223a7b2279223a302c227a223a22227d7d"
+    },
+    {
+      "name": "escapes",
+      "canonical": true,
+      "text": "{\"s\":\"quote\\\" backslash\\\\ \\b\\f\\n\\r\\t nul\\u0000 us\\u001f del slash/ ls  中文 😀\"}",
+      "hex": "7b2273223a2271756f74655c22206261636b736c6173685c5c205c625c665c6e5c725c74206e756c5c75303030302075735c75303031662064656c7f20736c6173682f206c73e280a820e4b8ade6968720f09f9880227d"
+    },
+    {
+      "name": "largest-integer",
+      "canonical": true,
+      "text": "{\"n\":9007199254740991}",
+      "hex": "7b226e223a393030373139393235343734303939317d"
+    },
+    {
+      "name": "empty-containers",
+      "canonical": true,
+      "text": "{\"a\":{},\"b\":[]}",
+      "hex": "7b2261223a7b7d2c2262223a5b5d7d"
+    },
+    {
+      "name": "keys-by-utf8-bytes",
+      "canonical": true,
+      "text": "{\"B\":1,\"_\":2,\"a\":3,\"é\":4}",
+      "hex": "7b2242223a312c225f223a322c2261223a332c22c3a9223a347d"
+    },
+    {
+      "name": "nested-16-levels",
+      "canonical": true,
+      "text": "{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{}}}}}}}}}}}}}}}}",
+      "hex": "7b2261223a7b2261223a7b2261223a7b2261223a7b2261223a7b2261223a7b2261223a7b2261223a7b2261223a7b2261223a7b2261223a7b2261223a7b2261223a7b2261223a7b2261223a7b7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d"
+    },
+    {
+      "name": "whitespace",
+      "canonical": false,
+      "reason": "noncanonical",
+      "hex": "7b2261223a20317d"
+    },
+    {
+      "name": "key-order",
+      "canonical": false,
+      "reason": "noncanonical",
+      "hex": "7b2262223a312c2261223a327d"
+    },
+    {
+      "name": "escaped-slash",
+      "canonical": false,
+      "reason": "noncanonical",
+      "hex": "7b2261223a225c2f227d"
+    },
+    {
+      "name": "upper-case-escape",
+      "canonical": false,
+      "reason": "noncanonical",
+      "hex": "7b2261223a225c7530303146227d"
+    },
+    {
+      "name": "unneeded-escape-ascii",
+      "canonical": false,
+      "reason": "noncanonical",
+      "hex": "7b2261223a225c7530303431227d"
+    },
+    {
+      "name": "unneeded-escape-cjk",
+      "canonical": false,
+      "reason": "noncanonical",
+      "hex": "7b2261223a225c7537656266227d"
+    },
+    {
+      "name": "long-escape-for-newline",
+      "canonical": false,
+      "reason": "noncanonical",
+      "hex": "7b2261223a225c7530303061227d"
+    },
+    {
+      "name": "escaped-del",
+      "canonical": false,
+      "reason": "noncanonical",
+      "hex": "7b2261223a225c7530303766227d"
+    },
+    {
+      "name": "trailing-newline",
+      "canonical": false,
+      "reason": "noncanonical",
+      "hex": "7b2261223a317d0a"
+    },
+    {
+      "name": "byte-order-mark",
+      "canonical": false,
+      "reason": "json",
+      "hex": "efbbbf7b2261223a317d"
+    },
+    {
+      "name": "leading-zero",
+      "canonical": false,
+      "reason": "json",
+      "hex": "7b2261223a30317d"
+    },
+    {
+      "name": "negative",
+      "canonical": false,
+      "reason": "number",
+      "hex": "7b2261223a2d317d"
+    },
+    {
+      "name": "negative-zero",
+      "canonical": false,
+      "reason": "number",
+      "hex": "7b2261223a2d307d"
+    },
+    {
+      "name": "fraction",
+      "canonical": false,
+      "reason": "number",
+      "hex": "7b2261223a312e307d"
+    },
+    {
+      "name": "exponent",
+      "canonical": false,
+      "reason": "number",
+      "hex": "7b2261223a3165337d"
+    },
+    {
+      "name": "integer-too-large",
+      "canonical": false,
+      "reason": "number",
+      "hex": "7b2261223a393030373139393235343734303939327d"
+    },
+    {
+      "name": "null",
+      "canonical": false,
+      "reason": "null",
+      "hex": "7b2261223a6e756c6c7d"
+    },
+    {
+      "name": "duplicate-key",
+      "canonical": false,
+      "reason": "duplicate-key",
+      "hex": "7b2261223a312c2261223a317d"
+    },
+    {
+      "name": "lone-surrogate",
+      "canonical": false,
+      "reason": "lone-surrogate",
+      "hex": "7b2261223a225c7564383030227d"
+    },
+    {
+      "name": "raw-control-character",
+      "canonical": false,
+      "reason": "json",
+      "hex": "7b2261223a2209227d"
+    },
+    {
+      "name": "invalid-utf8",
+      "canonical": false,
+      "reason": "utf8",
+      "hex": "7b2261223a22c0af227d"
+    },
+    {
+      "name": "truncated",
+      "canonical": false,
+      "reason": "json",
+      "hex": "7b2261223a31"
+    },
+    {
+      "name": "nested-17-levels",
+      "canonical": false,
+      "reason": "depth",
+      "hex": "7b2261223a7b2261223a7b2261223a7b2261223a7b2261223a7b2261223a7b2261223a7b2261223a7b2261223a7b2261223a7b2261223a7b2261223a7b2261223a7b2261223a7b2261223a7b2261223a7b7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d7d"
+    }
+  ],
+  "encode": [
+    {
+      "name": "sorts-keys-and-escapes",
+      "value": {
+        "z": [
+          1,
+          0,
+          9007199254740991
+        ],
+        "a": "tab\tquote\"",
+        "B": {
+          "y": false,
+          "x": true
+        }
+      },
+      "canonical_hex": "7b2242223a7b2278223a747275652c2279223a66616c73657d2c2261223a227461625c7471756f74655c22222c227a223a5b312c302c393030373139393235343734303939315d7d"
+    },
+    {
+      "name": "unicode-stays-raw",
+      "value": {
+        "name": "2026 秋/线性代数/第3讲 特征值.md",
+        "emoji": "😀",
+        "ls": " "
+      },
+      "canonical_hex": "7b22656d6f6a69223a22f09f9880222c226c73223a22e280a8222c226e616d65223a223230323620e7a78b2fe7babfe680a7e4bba3e695b02fe7acac33e8aeb220e789b9e5be81e580bc2e6d64227d"
+    }
+  ]
+}

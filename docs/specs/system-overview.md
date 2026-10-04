@@ -68,8 +68,9 @@ ADRs; this file describes the current shape of the system.
 |   library    scan, watch, ignore rules, courses, tags, file kinds    |
 |   catalog    SQLite catalog + full-text index (derived, rebuildable) |
 |   extract    text from md / code / txt / docx (pdf, pptx later)      |
-|   versioning working state vs last commit, content store, commits,  |
-|              diff, restore                                           |
+|   versioning working state vs last commit, content store, commits,   |
+|              diff, restore (store, workspace, history, diff,         |
+|              restore: versioning.md §3)                              |
 |   sync       remote layout, pull / push, conflicts, placeholders     |
 |   ai         commit-message request builder and HTTP client          |
 |   jobs       background queue: progress, cancellation, one writer   |
@@ -100,11 +101,12 @@ Rules:
 4. **Search**: debounced query, one catalog query (names, paths, tags, full text), top results.
 5. **Preview**: the UI asks for a file by catalog id; bytes come through the scoped protocol with
    range support; Office and PDF rendering happens in the UI; thumbnails are cached by content hash.
-6. **Commit**: selected changes plus an optional message.
-   - The core writes one pack holding blobs for stored files, trees and the commit, then replaces
-     `HEAD` (ADR-0003 §3, §11).
-   - It optionally asks the AI module for a message, using the template on failure.
-   - It emits `history.changed`.
+6. **Commit** ([versioning.md](versioning.md) §7): selected changes plus a message.
+   - The UI supplies the message: typed, from the AI module, or its template on failure
+     (versioning.md §8).
+   - The core writes blobs for stored files, trees and the commit into one or more packs, then
+     replaces `HEAD`, the commit point, through a journal (ADR-0003 §3, §11).
+   - It emits `WorkspaceChanged` and `HistoryChanged`.
 7. **Sync**, one round per ADR-0003 §8:
    1. fetch and verify packs, and find the canonical head;
    2. import direct edits from the mirror;
@@ -144,7 +146,7 @@ derived, rebuildable catalog. `<app-id>` is the Tauri bundle identifier.
 | User files | Library folder | Yes | No |
 | Library config, ignore rules, tag definitions | `.folio/library.json`, `.folio/ignore`, `.folio/tags.json` | Yes | No |
 | Semester and course settings, tag assignments | `.folio/meta/<semester>/<course>.json` (JSON, one file per course) | Yes | No |
-| History: commits and stored versions | `.folio/`, mirrored to the remote (ADR-0003) | Yes | No |
+| History: commits and stored versions | `.folio/local/` ([versioning.md](versioning.md) §4), pushed to the remote's `.folio/store/` ([remote-format.md](remote-format.md) §10) | By Folio's sync | No |
 | Catalog, extracted text, full-text index | `%LOCALAPPDATA%\<app-id>\libraries\<library-id>\catalog.sqlite` | No | Yes |
 | Thumbnails | `%LOCALAPPDATA%\<app-id>\cache\` (LRU, 2 GB) | No | Yes |
 | Settings (per machine) | `%LOCALAPPDATA%\<app-id>\settings.json` | No | No (small) |
@@ -167,7 +169,7 @@ derived, rebuildable catalog. `<app-id>` is the Tauri bundle identifier.
 | Crash during commit or sync | Journalled steps; on restart, finish or roll back, never leave half a record |
 | iCloud placeholder not downloaded | Trigger hydration, wait with progress, time out with `PlaceholderNotDownloaded` |
 | Head record arrived before its pack, or mirror file not yet updated | Pending, not an error: wait for iCloud and show what is outstanding (ADR-0003 §6, §8) |
-| iCloud conflict copies (`name 2.ext`, `name (1).ext`) | Cannot occur in the history area (immutable, device-owned files). In the mirror they are imported and flagged |
+| iCloud conflict copies (`name 2.ext`, `name (1).ext`) | Rare in the history area: its files are written once and device-owned, and two devices that write one pack name write the same bytes. A copy's name matches no pattern there, so readers ignore and report it (remote-format.md §10.1). In the mirror they are imported and flagged |
 | Direct edit on iPad or Mac collides with a push | Import before overwrite: a push never replaces a mirror file that differs from its base record |
 | File locked by another app (e.g. Word) | Retry later; show it as pending, not failed |
 | Invalid Windows file name from iPad or Mac | Keep it out of the local tree and explain in the sync result |

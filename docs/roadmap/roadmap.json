@@ -2103,8 +2103,16 @@
         "gate/m1-acceptance"
       ],
       "summary": "remote-format.md（与语言无关的格式说明和 golden vectors，ADR-0003 行动项 2）和 versioning.md（本机对象库、工作区、提交日志、差异、恢复）",
-      "status": "planned",
+      "status": "done",
       "updated": "2026-10-03",
+      "landed": "2026-10-03",
+      "gates": {
+        "check": "pass",
+        "e2e": "na",
+        "codeReview": "pass",
+        "securityReview": "na",
+        "simplify": "na"
+      },
       "links": [
         "docs/adr/ADR-0003-versioning-and-sync.md",
         "docs/adr/ADR-0002-data-storage.md",
