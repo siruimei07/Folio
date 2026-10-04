@@ -91,15 +91,24 @@ export function CourseRows({
           const codeId = rowInputId(idPrefix, row.key, 'code');
           const nameId = rowInputId(idPrefix, row.key, 'name');
           const locked = busy || row.done;
+          // The course the row makes, for its badge; none until it has a name.
+          const preview =
+            row.name.trim() === ''
+              ? null
+              : {
+                  abbr: null,
+                  code: row.code.trim(),
+                  name: row.name.trim(),
+                  color: row.color,
+                  folder: { id: '', path: row.name },
+                };
           return (
             <li key={row.key} className="course-row" data-done={row.done || undefined}>
               <div className="course-row__fields">
-                {row.name.trim() === '' ? (
+                {preview === null ? (
                   <span className="course-row__placeholder" aria-hidden />
                 ) : (
-                  <CourseBadge
-                    course={{ abbr: null, name: row.name.trim(), color: row.color, folder: { id: '', path: row.name } }}
-                  />
+                  <CourseBadge course={preview} />
                 )}
                 <input
                   id={codeId}
@@ -149,7 +158,7 @@ export function CourseRows({
                 <ColourButton
                   label={t('courseRows.colourLabel', { number, colour: t(`colour.names.${row.color}`) })}
                   color={row.color}
-                  badge={row.name.trim() === '' ? '' : courseBadgeText({ abbr: null, name: row.name.trim() })}
+                  badge={preview === null ? '' : courseBadgeText(preview)}
                   isDisabled={locked}
                   onChange={(color) => {
                     onChange(row.key, { color });

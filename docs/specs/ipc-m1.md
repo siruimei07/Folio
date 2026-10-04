@@ -330,7 +330,7 @@ only after the user confirmed (lane `feat/core-discard-move`, 2026-10-03; Sirui'
 type Semester = { folder: EntryRef; name: string; archived: boolean };
 type Course = {
   folder: EntryRef; name: string;
-  abbr: string | null;    // badge text, 1–3 characters; null: the UI derives it from the name
+  abbr: string | null;    // badge text, 1–3 characters; null: the UI derives it from the code, else the name
   code: string | null;    // e.g. "MAT232", typed by the user
   color: string | null;   // a palette key; null: the UI's default
   archived: boolean;

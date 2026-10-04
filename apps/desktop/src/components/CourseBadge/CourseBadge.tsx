@@ -5,7 +5,7 @@ import type { Course } from '../../ipc';
 import { courseBadgeText, courseColor } from '../../lib/courses';
 
 export interface CourseBadgeProps {
-  course: Pick<Course, 'abbr' | 'name' | 'color' | 'folder'>;
+  course: Pick<Course, 'abbr' | 'code' | 'name' | 'color' | 'folder'>;
   /**
    * regular 22 px; compact 20 px with smaller letters (the narrow window); mini, below 20 px, a
    * colour square without text in a 16 px box (23A).

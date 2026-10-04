@@ -15,8 +15,8 @@
   --font-size-heading: 15px;
   --font-size-dialog-title: 16px;
   --font-size-display: 24px;
-  --font-size-badge: 10px;
-  --font-size-badge-compact: 9.5px;
+  --font-size-badge: 9px;
+  --font-size-badge-compact: 8.5px;
   --font-size-code: 13px;
   --font-size-diff: 12.5px;
   --font-size-search-input: 16px;
@@ -25,7 +25,7 @@
   --font-weight-regular: 400;
   --font-weight-strong: 600;
   --font-weight-badge: 700;
-  --font-letter-spacing-badge: -0.1px;
+  --font-letter-spacing-badge: -0.3px;
   --font-line-height-body: 1.45;
   --font-line-height-reading: 1.65;
   --font-line-height-code: 1.7;

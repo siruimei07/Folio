@@ -201,7 +201,7 @@ Board: "第 2 步 · 建学期和课程（新资料库）".
 
 | Part | Spec |
 |---|---|
-| Badge preview | The course badge (app-shell §10) at 22 px from the name and colour; while the name is empty, a 22 px square with a 1.5 px dashed `color.border.strong` border. `aria-hidden` |
+| Badge preview | The course badge (app-shell §10) at 22 px from the code, name and colour ("CSC" for CSC207, "Cal" for Calculus without a code); while the name is empty, a 22 px square with a 1.5 px dashed `color.border.strong` border. `aria-hidden` |
 | Code | Input 104 px, placeholder "Code", `aria-label` "Course 3 code" |
 | Name | Input filling the row, placeholder "Course name", `aria-label` "Course 3 name" |
 | Colour | Button 46 × 34: a 12 px dot in `palette.<color>.dot` and a 12 px chevron; `aria-label` "Course 3 colour: orange"; opens the colour popover |
@@ -211,7 +211,7 @@ Board: "第 2 步 · 建学期和课程（新资料库）".
   `shadow.menu`, padding 10, `z-index.menu`; caption "Colour" (`font.size.caption`, 600,
   `color.text.tertiary`); a radio group of the ten palette colours, 5 × 2, 28 px buttons with 18 px
   dots in `palette.<name>.dot`, the selected one ringed (2 px `color.surface.panel` gap, then 2 px
-  `color.text.primary`); a footer line "Orange · badge “Cal”" (`font.size.small`,
+  `color.text.primary`); a footer line "Orange · badge “CSC”" (`font.size.small`,
   `color.text.secondary`). Each swatch is named ("Orange") in its label and tooltip.
 - "Add course" (outline, 30 px, `plus` icon) and help "Press Enter in a name to add another row. You
   can change colours and badge letters later in Library settings."

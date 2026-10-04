@@ -48,7 +48,7 @@ the app; feature behaviour stays in the brief and the specs.
 | 20 | Change status | A: outlined square + glyph (GitButler style), no letters |
 | 21 | Changes list | A: flat list with the course in the path prefix (grouping stays available as a toggle) |
 | 22 | Commit message | A: summary + description |
-| 23 | Badge text | A: first three letters of the course name (Cal); colour only below 20 px |
+| 23 | Badge text | A: first three letters of the course code (CSC for CSC207; Sirui, 2026-10-03, after trying v0.1), else of the course name (Cal); colour only below 20 px |
 | 24 | Palette | B: Morandi |
 | 25 | Settings | A: two dialogs — gear = Library settings, avatar = App settings |
 | 26 | Course code in the tree | C: code first (600), then the course name in `color.text.secondary` at `font.size.label` (13 px) |
@@ -336,7 +336,7 @@ Behaviour: modal (`aria-modal`, focus trapped), initial focus on the active nav 
 
 | Component | Spec |
 |---|---|
-| Course badge (12B, 23A) | `size.badge` square, `radius.badge`, 1.5 px border and fill `palette.<color>.tint`, text `palette.<color>.text`, three letters (`font.size.badge`, 700, letter spacing −0.1 px). Default text: the first three letters of the course name, first letter upper case ("Cal" for Calculus of Several Variables, "Sof" for Software Design); editable per course, for names where the first three letters say little ("The" for Theory of Computation). Below 20 px: a 58 % square in `palette.<color>.dot`, no text |
+| Course badge (12B, 23A) | `size.badge` square, `radius.badge`, 1.5 px border and fill `palette.<color>.tint`, text `palette.<color>.text`, three letters (`font.size.badge` 9 px, 700, `font.letter-spacing.badge` −0.3 px, so three capitals such as "COM" fit; 9 px and −0.3 px since 2026-10-03, Sirui). Default text (`courseBadgeText` in `apps/desktop/src/lib/courses.ts`): the first letters of the course code, at most three, in upper case ("CSC" for CSC207, "MAT" for MAT232, "CS" for CS-101); without a code, or with a code that has no letters ("207"), the first three letters of the course name, first letter upper case ("Cal" for Calculus of Several Variables, "Sof" for Software Design). Text in a wide script (Chinese, Japanese, Korean) takes two characters ("线代"). Two courses with the same letters (CSC207, CSC236) share the badge and differ by colour. Editable per course, for codes and names whose first letters say little ("ToC" for Theory of Computation). Below 20 px: a 58 % square in `palette.<color>.dot`, no text |
 | Course label (26C, 27B) | In the tree, grouped change headers, course grid headers and Settings → Courses: the code (600, tabular figures) first, then the name (`color.text.secondary` in the tree and headers). In paths, search locations and commit titles: the code ("MAT232/", "MAT232: …"). A course without a code uses its name everywhere |
 | Tag dot | 7 px circle, `palette.<color>.dot` |
 | Tag chip | see section 5; in the preview header with a remove button |
@@ -391,7 +391,7 @@ Build requirements from the review:
    and [library-core](../../specs/library-core.md) currently store `course: {abbr, archived, color, order}`; adding
    `code` needs an ADR-0002 amendment and a catalog column. Suggested default: fill it from a
    course folder name that starts with a code (`^[A-Z]{3}\d{3}`), editable in Settings → Courses.
-   The badge abbreviation (`abbr`) defaults to the first three letters of the course name.
+   The badge abbreviation (`abbr`) defaults to the first three letters of the course code, else of the course name (section 10).
 2. **Not drawn yet**: Changes and History in the narrow window (default in section 2), the toolbar
    sync states (section 3), the drop target (section 5), context menus, an error state for failed
    window commands (today they only reach the console; coordinator notes, WP-02), first-run and

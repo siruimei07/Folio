@@ -101,6 +101,19 @@ describe('step 2, a new library', () => {
     });
   });
 
+  it('previews the badge from the code once the row has a name', async () => {
+    const { user } = await newLibrary();
+    await user.type(input('Course 1 code'), 'CSC207');
+    // Without a name the row is not a course yet: the dashed placeholder stays.
+    expect(document.querySelector('.course-row .course-badge')).toBeNull();
+    await user.type(input('Course 1 name'), 'Software Design');
+    expect(document.querySelector('.course-row .course-badge')).toHaveTextContent('CSC');
+
+    await user.click(screen.getByRole('button', { name: 'Course 1 colour: Red' }));
+    const popover = await screen.findByRole('dialog', { name: common.colour.caption });
+    expect(within(popover).getByText('Red · badge “CSC”')).toBeInTheDocument();
+  });
+
   it('a click on a swatch chooses it and closes the popover', async () => {
     const { user } = await newLibrary();
     await user.click(screen.getByRole('button', { name: 'Course 1 colour: Red' }));

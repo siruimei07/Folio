@@ -28,20 +28,37 @@ export function courseColor(course: Pick<Course, 'color' | 'folder'>): PaletteCo
   return PALETTE[hash % PALETTE.length] ?? 'stone';
 }
 
+/** The first run of letters of every script, without digits: what a code's badge is made of. */
+const CODE_LETTERS = /\p{L}+/u;
+
 /**
- * The badge text: the course's own abbreviation, else the first three letters of its name with
- * the first in upper case ("Cal" for Calculus of Several Variables). Names that start in a wide
- * script (Chinese, Japanese, Korean) take two characters, which fit the badge.
+ * The badge text (app-shell handoff 23): the course's own abbreviation; else the first letters of
+ * its code in upper case ("CSC" for CSC207, "CS" for CS-101); else, for a course without a code or
+ * a code without letters, the first three letters of its name with the first in upper case ("Cal"
+ * for Calculus of Several Variables). Text that starts in a wide script (Chinese, Japanese,
+ * Korean) takes two characters, which fit the badge.
  */
-export function courseBadgeText(course: Pick<Course, 'abbr' | 'name'>): string {
+export function courseBadgeText(course: Pick<Course, 'abbr' | 'code' | 'name'>): string {
   if (course.abbr !== null && course.abbr !== '') return course.abbr;
-  const letters = Array.from(graphemes.segment(course.name), ({ segment }) => segment).filter(
-    (segment) => LETTER.test(segment),
+  const codeLetters = course.code?.match(CODE_LETTERS)?.[0];
+  if (codeLetters !== undefined) {
+    return firstLetters(graphemesOf(codeLetters), (three) => three.join('').toLocaleUpperCase('en'));
+  }
+  return firstLetters(
+    graphemesOf(course.name).filter((segment) => LETTER.test(segment)),
+    ([first = '', ...rest]) => first.toLocaleUpperCase('en') + rest.join('').toLocaleLowerCase('en'),
   );
+}
+
+/** Two characters when the first is in a wide script, which fit the badge; else three, cased. */
+function firstLetters(letters: readonly string[], cased: (three: readonly string[]) => string): string {
   const first = letters[0];
   if (first === undefined) return '';
-  if (WIDE.test(first)) return letters.slice(0, 2).join('');
-  return first.toLocaleUpperCase('en') + letters.slice(1, 3).join('').toLocaleLowerCase('en');
+  return WIDE.test(first) ? letters.slice(0, 2).join('') : cased(letters.slice(0, 3));
+}
+
+function graphemesOf(text: string): string[] {
+  return Array.from(graphemes.segment(text), ({ segment }) => segment);
 }
 
 /** The course's code, or `null` when it has none (an empty code counts as none). */

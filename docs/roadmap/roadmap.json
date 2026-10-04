@@ -2188,8 +2188,18 @@
         "gate/m1-acceptance"
       ],
       "summary": "课程徽标默认取课程代码的前三个字母（CSC207 → CSC、MAT232 → MAT）；没有代码时仍取课程名的前三个字母；手填的徽标优先（你试用 v0.1 后提的）",
-      "status": "planned",
+      "status": "done",
       "updated": "2026-10-03",
+      "landed": "2026-10-03",
+      "gates": {
+        "check": "pass",
+        "e2e": "pass",
+        "codeReview": "pass",
+        "simplify": "pass",
+        "designCritique": "pass",
+        "a11y": "pass",
+        "securityReview": "na"
+      },
       "owns": [
         "apps/desktop/src/lib/courses.ts"
       ],

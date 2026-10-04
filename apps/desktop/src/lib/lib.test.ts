@@ -26,14 +26,36 @@ describe('courses', () => {
     expect(courseColor({ color: null, folder: folder('a') })).toBe(PALETTE[0xe40c292c % 10]);
   });
 
-  it('writes the badge from the first three letters, or two wide characters', () => {
-    const badge = (name: string, abbr: string | null = null) => courseBadgeText({ name, abbr });
+  it('writes the badge from the first three letters of the name, or two wide characters', () => {
+    const badge = (name: string, abbr: string | null = null) => courseBadgeText({ name, abbr, code: null });
     expect(badge('Calculus of Several Variables')).toBe('Cal');
     expect(badge('software design')).toBe('Sof');
     expect(badge('1 Intro')).toBe('1in');
     expect(badge('线性代数')).toBe('线性');
     expect(badge('Theory of Computation', 'ToC')).toBe('ToC');
     expect(badge('---')).toBe('');
+  });
+
+  it('writes the badge from the letters of the code first, in upper case', () => {
+    const badge = (code: string | null, name = 'Calculus', abbr: string | null = null) =>
+      courseBadgeText({ code, name, abbr });
+    expect(badge('CSC207')).toBe('CSC');
+    expect(badge('ECO101')).toBe('ECO');
+    expect(badge('MAT232')).toBe('MAT');
+    expect(badge('STA256')).toBe('STA');
+    expect(badge('mat232')).toBe('MAT');
+    // At most three letters, and only the first run of them.
+    expect(badge('COMP1511')).toBe('COM');
+    expect(badge('CS-101')).toBe('CS');
+    expect(badge('2A03')).toBe('A');
+    // A code without letters, or no code, falls back to the name.
+    expect(badge('207')).toBe('Cal');
+    expect(badge('')).toBe('Cal');
+    expect(badge(null)).toBe('Cal');
+    // A wide script takes two characters, as names do.
+    expect(badge('线代101', '线性代数')).toBe('线代');
+    // An explicit badge still wins.
+    expect(badge('CSC207', 'Software Design', 'SD')).toBe('SD');
   });
 
   it('labels a course by its code, else its name', () => {

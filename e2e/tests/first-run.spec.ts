@@ -65,6 +65,9 @@ test('creates a library, its semester and courses, and opens it in the Library',
   const tree = page.getByRole('tree', { name: library.tree.label.replace('{{semester}}', 'Fall 2026') });
   await expect(tree.getByRole('treeitem', { name: /^MAT232 Calculus/ })).toHaveAttribute('aria-selected', 'true');
   await expect(tree.getByRole('treeitem', { name: /^Linear Algebra/ })).toBeVisible();
+  // Badges: the letters of the code, else of the name (app-shell handoff 23).
+  await expect(tree.getByRole('treeitem', { name: /^MAT232 Calculus/ }).locator('.course-badge')).toHaveText('MAT');
+  await expect(tree.getByRole('treeitem', { name: /^Linear Algebra/ }).locator('.course-badge')).toHaveText('Lin');
   expect(await exists(path.join(libraryDir, 'Fall 2026', 'Calculus'))).toBe(true);
   expect(await exists(path.join(libraryDir, 'Fall 2026', 'Linear Algebra'))).toBe(true);
   expect(JSON.parse(await readFile(path.join(libraryDir, '.folio', 'library.json'), 'utf8')) as unknown).toMatchObject({

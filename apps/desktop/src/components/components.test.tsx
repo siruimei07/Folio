@@ -57,12 +57,13 @@ describe('Button and IconButton', () => {
 });
 
 describe('course and tag parts', () => {
-  it('writes the badge from the abbreviation or the name, and shows only colour when mini', () => {
+  it('writes the badge from the abbreviation, the code or the name, and shows only colour when mini', () => {
     const { container } = render(
       <>
-        <CourseBadge course={{ folder, name: 'Calculus of Several Variables', abbr: null, color: 'orange' }} />
-        <CourseBadge course={{ folder, name: 'Theory of Computation', abbr: 'ToC', color: null }} size="compact" />
-        <CourseBadge course={{ folder, name: 'Calculus', abbr: null, color: 'orange' }} size="mini" />
+        <CourseBadge course={{ folder, name: 'Calculus of Several Variables', abbr: null, code: null, color: 'orange' }} />
+        <CourseBadge course={{ folder, name: 'Theory of Computation', abbr: 'ToC', code: 'CSC463', color: null }} size="compact" />
+        <CourseBadge course={{ folder, name: 'Calculus', abbr: null, code: 'MAT232', color: 'orange' }} size="mini" />
+        <CourseBadge course={{ folder, name: 'Software Design', abbr: null, code: 'CSC207', color: 'teal' }} />
       </>,
     );
     const badges = container.querySelectorAll('.course-badge');
@@ -70,6 +71,7 @@ describe('course and tag parts', () => {
     expect(badges[0]).toHaveAttribute('data-palette', 'orange');
     expect(badges[1]).toHaveTextContent('ToC');
     expect(badges[2]).toBeEmptyDOMElement();
+    expect(badges[3]).toHaveTextContent('CSC');
     // Decorative: the label next to the badge names the course.
     badges.forEach((badge) => {
       expect(badge).toHaveAttribute('aria-hidden', 'true');

@@ -153,7 +153,8 @@ Value rules:
   including the former gray key, are not rewritten or recoloured on open.
 - `abbr` is 1–3 extended grapheme clusters without whitespace or control characters;
   `MAX_ABBR_GRAPHEMES` is exposed by core. Operation inputs trim and NFC-normalize it before
-  validation/storage. Missing/null means no explicit badge; the UI derives it from the name.
+  validation/storage. Missing/null means no explicit badge; the UI derives it from the code, else
+  the name (app-shell handoff §10).
 - `code` is 1–32 Unicode scalar values without surrounding whitespace or control characters;
   `MAX_COURSE_CODE_CHARS` is exposed by core. Operation inputs trim and NFC-normalize it before
   validation/storage. Missing/null means no code; an empty string is invalid, so callers clear

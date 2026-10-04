@@ -50,7 +50,11 @@ export function EditCourseDialog({ course, semester, onClose }: EditCourseDialog
   const badgeInput = useRef<HTMLInputElement>(null);
 
   const values = { semester: semester.name };
-  const defaultBadge = courseBadgeText({ abbr: null, name: name.trim() === '' ? course.name : name.trim() });
+  const defaultBadge = courseBadgeText({
+    abbr: null,
+    code: code.trim(),
+    name: name.trim() === '' ? course.name : name.trim(),
+  });
 
   const save = async () => {
     if (saving) return;

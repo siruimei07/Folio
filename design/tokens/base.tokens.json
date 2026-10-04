@@ -78,15 +78,15 @@
       "badge": {
         "$type": "dimension",
         "$value": {
-          "value": 10,
+          "value": 9,
           "unit": "px"
         },
-        "$description": "Three-letter course badge text at 22 px."
+        "$description": "Three-letter course badge text at 22 px; three capitals of a course code fit (Sirui, 2026-10-03)."
       },
       "badge-compact": {
         "$type": "dimension",
         "$value": {
-          "value": 9.5,
+          "value": 8.5,
           "unit": "px"
         },
         "$description": "Course badge text at 20 px (narrow window)."
@@ -153,10 +153,10 @@
       "badge": {
         "$type": "dimension",
         "$value": {
-          "value": -0.1,
+          "value": -0.3,
           "unit": "px"
         },
-        "$description": "Course badge letters, slightly tightened so three fit."
+        "$description": "Course badge letters, tightened so three capitals fit (COM, MGT, WGS)."
       }
     },
     "line-height": {
