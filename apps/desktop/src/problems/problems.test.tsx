@@ -3,7 +3,7 @@
 // list scrolls, the refetch on ProblemsChanged, the empty, loading and error states, and the
 // footer's scan time.
 import { act, screen, waitFor, within } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { ActivityControl } from '../app/activity/ActivityControl';
 import { noteFinished, resetJobNotes } from '../app/activity/notes';
@@ -17,17 +17,31 @@ import { renderApp, toastTexts } from '../test/render';
 import { ProblemsDialog } from './ProblemsDialog';
 
 // The end-of-list watcher uses an IntersectionObserver (a no-op in jsdom's setup): this one
-// remembers its callbacks, and `reachEnd` tells every watcher it came into view, as scrolling to
-// the end of the list would. A new watcher reports at once, as the real one does.
+// remembers its callbacks, and `reachEnd` tells every watcher the end came into view, as scrolling
+// to the end of the list would. The end then stays in view until rows are added above it, and a
+// new watcher reports at once whether it is in view, as the real one does: reaching the end just
+// before the list watches it anew still counts.
 const watchers = new Set<IntersectionObserverCallback>();
+/** The whole list fits: its end is in view whatever it holds. */
 let endInView = false;
+/** How many rows the list held when it was last scrolled to its end. */
+let reachedAt: number | null = null;
+
+function rowCount(): number {
+  return document.querySelectorAll('.problems__row').length;
+}
+
+function inView(callback: IntersectionObserverCallback): void {
+  callback([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+}
+
 vi.stubGlobal(
   'IntersectionObserver',
   class {
     constructor(private readonly callback: IntersectionObserverCallback) {}
     observe() {
       watchers.add(this.callback);
-      if (endInView) this.callback([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+      if (endInView || reachedAt === rowCount()) inView(this.callback);
     }
     unobserve = vi.fn();
     disconnect() {
@@ -36,12 +50,14 @@ vi.stubGlobal(
   },
 );
 
+/** Scrolls to the end outside act, so React's pending work stays pending. */
+function notifyEnd(): void {
+  reachedAt = rowCount();
+  for (const callback of [...watchers]) inView(callback);
+}
+
 function reachEnd(): void {
-  act(() => {
-    for (const callback of [...watchers]) {
-      callback([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
-    }
-  });
+  act(notifyEnd);
 }
 
 const SAMPLE: Problem[] = [
@@ -56,6 +72,7 @@ function renderProblems(problems: Problem[], options: Parameters<typeof renderAp
   closeDialog();
   resetJobNotes();
   endInView = false;
+  reachedAt = null;
   const onClose = vi.fn();
   const rendered = renderApp(<ProblemsDialog isOpen params={undefined} onClose={onClose} />, {
     fixture: libraryFixture(() => undefined, { problems }),
@@ -248,6 +265,31 @@ describe('ProblemsDialog', () => {
     });
     expect(screen.queryByText('Loading more problems…')).toBeNull();
     expect(screen.getByRole('region', { name: "Shortcuts Folio doesn't follow, 450 items" })).toBeInTheDocument();
+  });
+
+  it('loads the next page when the end is reached the moment a page shows', async () => {
+    renderProblems(manyLinks(450));
+    await rowTitle('Links/link 0');
+    // Reaches the end in the microtask after the commit that shows 400 rows, before React has
+    // run that commit's effects: the earliest a user could scroll there.
+    let reached = false;
+    const scroll = new MutationObserver(() => {
+      if (rowCount() !== 400) return;
+      scroll.disconnect();
+      reached = true;
+      notifyEnd();
+    });
+    scroll.observe(document.body, { childList: true, subtree: true });
+    onTestFinished(() => {
+      scroll.disconnect();
+    });
+    reachEnd();
+    await waitFor(() => {
+      expect(reached).toBe(true);
+    });
+    await waitFor(() => {
+      expect(screen.getAllByRole('listitem')).toHaveLength(450);
+    });
   });
 
   it('asks for the next page by itself while the end of a short list is in view', async () => {

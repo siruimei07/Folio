@@ -2633,8 +2633,18 @@
         "feat/ui-problems-list"
       ],
       "summary": "problems.test.tsx 的「滚到底再加载一页」在完整 pnpm check 负载高时偶尔失败（期望 450 实际 400）；查清是测试还是组件的问题，去掉对时间的依赖",
-      "status": "planned",
+      "status": "done",
       "updated": "2026-10-04",
+      "landed": "2026-10-04",
+      "gates": {
+        "check": "pass",
+        "e2e": "pass",
+        "codeReview": "pass",
+        "simplify": "pass",
+        "designCritique": "na",
+        "a11y": "na",
+        "securityReview": "na"
+      },
       "owns": [
         "apps/desktop/src/problems/**"
       ],
