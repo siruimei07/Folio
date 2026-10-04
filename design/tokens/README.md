@@ -108,7 +108,9 @@ Round 10 (2026-10-03, lane `design/design-m2-details`) added what the M2 screens
 `color.diff.removed-emphasis` for the words that changed inside a changed line; `size.diff-line-number`,
 `diff-sign`, `diff-fold` and `diff-summary` for the diff view; `size.composer-summary` and
 `commit-bar-field` for the commit box and the narrow window's commit bar; `size.folder-card` and
-`folder-card-min` for folder cards in a course grid (decision 35A).
+`folder-card-min` for folder cards in a course grid (decision 35A); `size.icon-folder-card` and
+`size.grid-group-label` for their icon and the grid's "Folders" and "Files" label rows (added by
+`feat/ui-library-m1-notes`).
 
 ## Modes
 

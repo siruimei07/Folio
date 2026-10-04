@@ -2,7 +2,7 @@ import './collections.css';
 
 import { type KeyboardEvent, type ReactNode, type Ref, useRef } from 'react';
 
-import { handleCollectionKey, ignoreRepeat } from './keys';
+import { acrossItems, handleCollectionKey, ignoreRepeat } from './keys';
 import { delegateRowEvents, eventIndex, type RowPointerHandlers } from './rows';
 import type { Move } from './selection';
 import { findByName, useNameMatcher, useTypeahead } from './useTypeahead';
@@ -155,6 +155,7 @@ export function VirtualTree({
     onKeyDown?.(event, index);
     if (event.defaultPrevented || index === null) return;
     const row = rowAt(index);
+    const next = (from: number, step: 1 | -1) => nextFocusable(rowAt, count, from, step);
     const plain = !event.ctrlKey && !event.shiftKey && !event.altKey && !event.metaKey;
     let handled = true;
     if (event.key === 'ArrowRight' && plain) {
@@ -178,9 +179,8 @@ export function VirtualTree({
       handled = handleCollectionKey(event, {
         index,
         count,
-        next: (from, step) => nextFocusable(rowAt, count, from, step),
-        page: Math.max(1, Math.floor((scroller?.clientHeight ?? 0) / (rowHeight(index) || 1)) - 1),
-        vertical: 1,
+        next,
+        across: acrossItems(count, next, 1, Math.max(1, Math.floor((scroller?.clientHeight ?? 0) / (rowHeight(index) || 1)) - 1)),
         navigate,
         onToggle,
         onAction,

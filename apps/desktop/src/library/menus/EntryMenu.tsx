@@ -63,7 +63,6 @@ export function TagsSubmenu({ targets }: TagsSubmenuProps) {
   const { t } = useTranslation('library');
   const tags = useTags().data ?? NO_TAG_LIST;
   const commands = useLibraryCommands();
-  const canEdit = useCanOpenDialog('librarySettings');
   // What the menu set on the targets' own tags while open: the rows update when the catalog event
   // arrives, the menu now.
   const [changed, setChanged] = useState<ReadonlyMap<string, boolean>>(new Map());
@@ -100,12 +99,7 @@ export function TagsSubmenu({ targets }: TagsSubmenuProps) {
   };
 
   return (
-    <Menu
-      aria-label={t('menu.tags')}
-      onAction={(key) => {
-        if (key === 'editTags') openDialog('librarySettings', TAGS_PAGE);
-      }}
-    >
+    <Menu aria-label={t('menu.tags')}>
       <MenuSection
         aria-label={t('menu.tags')}
         selectionMode="multiple"
@@ -125,15 +119,30 @@ export function TagsSubmenu({ targets }: TagsSubmenuProps) {
           </MenuItem>
         ))}
       </MenuSection>
-      {canEdit && <MenuSeparator />}
-      {canEdit && (
-        <MenuSection aria-label={t('menu.editTags')}>
-          <MenuItem id="editTags" icon={Settings}>
-            {t('menu.editTags')}
-          </MenuItem>
-        </MenuSection>
-      )}
+      <EditTagsSection />
     </Menu>
+  );
+}
+
+/** "Edit tags…" after a menu's tags, once Library settings is registered: opens its Tags page. */
+export function EditTagsSection() {
+  const { t } = useTranslation('library');
+  if (!useCanOpenDialog('librarySettings')) return null;
+  return (
+    <>
+      <MenuSeparator />
+      <MenuSection aria-label={t('menu.editTags')}>
+        <MenuItem
+          id="editTags"
+          icon={Settings}
+          onAction={() => {
+            openDialog('librarySettings', TAGS_PAGE);
+          }}
+        >
+          {t('menu.editTags')}
+        </MenuItem>
+      </MenuSection>
+    </>
   );
 }
 

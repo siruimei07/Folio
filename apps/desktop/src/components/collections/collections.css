@@ -30,8 +30,17 @@
   outline-offset: calc(-1 * var(--focus-ring-width));
 }
 
+/* One track as tall as the row: tiles never stretch it, whatever their content asks for. */
 .virtual-collection__tiles {
   display: grid;
+  grid-template-rows: minmax(0, 1fr);
+}
+
+/* A section's label row of a grid with sections. */
+.virtual-collection__label {
+  display: flex;
+  box-sizing: border-box;
+  align-items: center;
 }
 
 .virtual-collection__tile {

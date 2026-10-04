@@ -144,13 +144,12 @@
   padding: 0 var(--space-6);
 }
 
-.entry-tile {
+/* A file tile, and a folder card (35A): the same box, hover and selection. */
+.entry-tile,
+.folder-card {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-8);
   box-sizing: border-box;
   height: 100%;
-  padding: var(--space-8);
   border: var(--border-width) solid var(--color-border-default);
   border-radius: var(--radius-control);
   background: var(--color-surface-panel);
@@ -158,13 +157,71 @@
   transition: background-color var(--motion-duration-fast) var(--motion-easing-standard);
 }
 
-.virtual-collection__tile:hover > .entry-tile {
+.entry-tile {
+  flex-direction: column;
+  gap: var(--space-8);
+  padding: var(--space-8);
+}
+
+.virtual-collection__tile:hover > .entry-tile,
+.virtual-collection__tile:hover > .folder-card {
   background: var(--color-surface-hover);
 }
 
-.virtual-collection__tile > .entry-tile[data-selected] {
+.virtual-collection__tile > .entry-tile[data-selected],
+.virtual-collection__tile > .folder-card[data-selected] {
   border-color: var(--color-selection-indicator);
   background: var(--color-surface-selected);
+}
+
+/* A folder card: the icon, then the name over how many files it holds. */
+.folder-card {
+  align-items: center;
+  gap: var(--space-10);
+  padding: 0 var(--space-12);
+}
+
+.folder-card__icon {
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+.folder-card__text {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.folder-card__name {
+  overflow: hidden;
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-strong);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folder-card__count {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-caption);
+}
+
+/* "Folders 5", "Files 12": the label rows of a grid with both. */
+.entry-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  height: 100%;
+  font-size: var(--font-size-small);
+}
+
+.entry-group__name {
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-strong);
+}
+
+.entry-group__count {
+  color: var(--color-text-tertiary);
 }
 
 .entry-tile[data-busy] {

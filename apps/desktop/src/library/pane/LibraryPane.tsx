@@ -14,7 +14,7 @@ import { Skeleton } from '../../components/Skeleton/Skeleton';
 import { useChildren, useEntry, useFiles } from '../../data/entries';
 import { useCourses } from '../../data/groups';
 import { useCount } from '../../data/paged';
-import type { EntryRef, EntryRow } from '../../ipc';
+import type { EntryRef, EntryRow, Semester } from '../../ipc';
 import { courseCode, courseNameAfterCode } from '../../lib/courses';
 import { nameOf, parentOf } from '../../lib/paths';
 import { SIZE } from '../../tokens/tokens';
@@ -133,24 +133,29 @@ function FolderPane({ entry, onBack }: { entry: EntryRef; onBack?: () => void })
   );
 }
 
-/** "Recently added" or "Untagged": the files of the whole library that match (§5). */
-function QuickPane({ view, onBack }: { view: QuickView; onBack?: () => void }) {
+/** "Recently added" or "Untagged": the files of the current semester that match (§5, 34A). */
+function QuickPane({ view, semester, onBack }: { view: QuickView; semester: Semester; onBack?: () => void }) {
   const { t } = useTranslation('library');
   const sort = usePreferences((state) => state.sort);
   const filter = useOpenQuickFilter(view);
   const [range, setRange] = useState<IndexRange | null>(null);
-  const list = useFiles(null, filter, sort, range);
+  const list = useFiles(semester.folder, filter, sort, range);
   const name = t(`tree.quick.${view}`);
   const Icon = view === 'recent' ? Clock : TagX;
   const empty =
     view === 'recent' ? (
-      <StateBlock icon={Clock} placement="preview" title={t('pane.recentEmpty.title')} text={t('pane.recentEmpty.text')} />
+      <StateBlock
+        icon={Clock}
+        placement="preview"
+        title={t('pane.recentEmpty.title', { semester: semester.name })}
+        text={t('pane.recentEmpty.text')}
+      />
     ) : (
       <StateBlock
         tone="success"
         icon={CircleCheck}
         placement="preview"
-        title={t('pane.untaggedEmpty.title')}
+        title={t('pane.untaggedEmpty.title', { semester: semester.name })}
         text={t('pane.untaggedEmpty.text')}
       />
     );
@@ -202,6 +207,8 @@ function targetOf(row: EntryRow) {
 }
 
 export interface LibraryPaneProps {
+  /** The current semester, which the quick views show the files of. */
+  semester: Semester | null;
   /** The semester has no courses, or there is no semester: "Add courses to get started". */
   noCourses: boolean;
 }
@@ -211,7 +218,7 @@ export interface LibraryPaneProps {
  * course, folder or quick view, or a file's preview. In a narrow window it covers the list while
  * it shows a file or a quick view, with "Back" (§2).
  */
-export function LibraryPane({ noCourses }: LibraryPaneProps) {
+export function LibraryPane({ semester, noCourses }: LibraryPaneProps) {
   const { t } = useTranslation('library');
   const active = useLibraryView((state) => state.active);
   const narrow = useLayout() === 'narrow';
@@ -221,15 +228,23 @@ export function LibraryPane({ noCourses }: LibraryPaneProps) {
       }
     : undefined;
 
+  const empty = noCourses ? (
+    <EmptyPreview title={t('pane.start.title')} text={t('pane.start.text')} />
+  ) : (
+    <EmptyPreview title={t('pane.empty.title')} text={t('pane.empty.text')} />
+  );
   let body;
   if (active === null) {
-    body = noCourses ? (
-      <EmptyPreview title={t('pane.start.title')} text={t('pane.start.text')} />
-    ) : (
-      <EmptyPreview title={t('pane.empty.title')} text={t('pane.empty.text')} />
-    );
+    body = empty;
   } else if (active.kind === 'quick') {
-    body = <QuickPane key={active.view} view={active.view} onBack={back} />;
+    // A quick view follows the current semester; a semester chosen elsewhere (Library settings, a
+    // new one) starts it over. Without a semester there is nothing to show.
+    body =
+      semester === null ? (
+        empty
+      ) : (
+        <QuickPane key={`${active.view}:${semester.folder.id}`} view={active.view} semester={semester} onBack={back} />
+      );
   } else if (active.kind === 'folder') {
     body = <FolderPane key={active.entry.id} entry={active.entry} onBack={back} />;
   } else {

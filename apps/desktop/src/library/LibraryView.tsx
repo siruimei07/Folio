@@ -54,7 +54,7 @@ function LibraryScreen() {
   return (
     <div className="library-view" data-covered={(narrow && covered) || undefined}>
       <LibraryPanel info={info} />
-      <LibraryPane noCourses={noCourses} />
+      <LibraryPane semester={info.semester} noCourses={noCourses} />
       <LibraryMenu />
       <LibraryDialogs />
     </div>

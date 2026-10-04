@@ -117,6 +117,8 @@ export const SIZE = {
   commitBarField: 32,
   folderCard: 48,
   folderCardMin: 180,
+  gridGroupLabel: 18,
+  iconFolderCard: 18,
 } as const;
 
 /** The `space.*` tokens in CSS pixels, for overlay offsets and other code. */

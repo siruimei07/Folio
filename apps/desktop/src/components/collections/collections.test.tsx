@@ -236,6 +236,11 @@ describe('VirtualList', () => {
   });
 });
 
+/** One section of 150 px tiles, 12 px apart. */
+const tiles = (count: number) => [{ count, minTileWidth: 150, tileHeight: 150, gap: 12 }];
+const NAME_TILES = tiles(NAMES.length);
+const PHOTO_TILES = tiles(1000);
+
 function Grid() {
   const [focused, setFocused] = useState<number | null>(null);
   const itemAt = (index: number): CollectionItem => ({ key: String(index), selected: false, name: NAMES[index] });
@@ -244,9 +249,7 @@ function Grid() {
       label="Files in Algebra"
       count={NAMES.length}
       itemAt={itemAt}
-      minTileWidth={150}
-      tileHeight={150}
-      gap={12}
+      sections={NAME_TILES}
       padding={14}
       renderItem={(index) => NAMES[index]}
       focusedIndex={focused}
@@ -287,9 +290,7 @@ describe('VirtualGrid', () => {
         label="Photos"
         count={1000}
         itemAt={(index) => ({ key: String(index), selected: false, name: `IMG_${String(index)}` })}
-        minTileWidth={150}
-        tileHeight={150}
-        gap={12}
+        sections={PHOTO_TILES}
         padding={14}
         renderItem={(index) => `IMG_${String(index)}`}
         focusedIndex={null}

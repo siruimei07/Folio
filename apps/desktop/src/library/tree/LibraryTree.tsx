@@ -28,7 +28,7 @@ export function BrowseTree({ semester, courses, quickViews }: BrowseTreeProps) {
   const { t } = useTranslation('library');
   const [range, setRange] = useState<IndexRange | null>(null);
   const layout = useTreeData({ semester, courses, quickViews, range });
-  return <TreeView model={layout} label={t('tree.label', { semester: semester.name })} onRangeChange={setRange} />;
+  return <TreeView model={layout} semester={semester.folder} label={t('tree.label', { semester: semester.name })} onRangeChange={setRange} />;
 }
 
 export interface FilteredTreeProps extends BrowseTreeProps {
@@ -96,7 +96,7 @@ export function FilteredTree({ semester, courses, quickViews, filter }: Filtered
           }
         />
       )}
-      <TreeView model={layout} label={t('tree.label', { semester: semester.name })} />
+      <TreeView model={layout} semester={semester.folder} label={t('tree.label', { semester: semester.name })} />
     </>
   );
 }

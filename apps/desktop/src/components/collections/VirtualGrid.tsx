@@ -1,7 +1,8 @@
 import './collections.css';
 
-import { type KeyboardEvent, type ReactNode, type Ref, type RefObject, useCallback, useRef, useState } from 'react';
+import { type KeyboardEvent, type ReactNode, type Ref, type RefObject, useCallback, useMemo, useRef, useState } from 'react';
 
+import { GridLayout, type GridSection } from './gridLayout';
 import { handleCollectionKey, ignoreRepeat } from './keys';
 import { delegateRowEvents, eventIndex, type RowPointerHandlers } from './rows';
 import type { Move } from './selection';
@@ -9,16 +10,19 @@ import { findByName, useNameMatcher, useTypeahead } from './useTypeahead';
 import { type CollectionHandle, type IndexRange, useVirtualRows } from './useVirtualRows';
 import type { CollectionItem } from './VirtualList';
 
+export { columnsFor, type GridSection } from './gridLayout';
+
 export interface VirtualGridProps extends RowPointerHandlers {
   /** The grid's accessible name. */
   label: string;
   count: number;
   itemAt: (index: number) => CollectionItem;
-  /** Tiles are at least this wide; the columns share the rest. */
-  minTileWidth: number;
-  tileHeight: number;
-  /** Between tiles, both ways. */
-  gap: number;
+  /** The tiles: one section of every item, or several of their own sizes; their counts add up to `count`. */
+  sections: readonly GridSection[];
+  /** A section's label row's height. */
+  labelHeight?: number;
+  /** Below a label row, and between one section's tiles and the next section. */
+  sectionGap?: number;
   /** Around the tiles. */
   padding: number;
   /** The tile's content; the grid renders the `gridcell` around it. */
@@ -35,11 +39,6 @@ export interface VirtualGridProps extends RowPointerHandlers {
   onOffsetChange?: (offset: number) => void;
   className?: string;
   ref?: Ref<CollectionHandle>;
-}
-
-/** How many tiles fit a row: ⌊(width + gap) / (min + gap)⌋, at least one (UI architecture §8.1). */
-export function columnsFor(width: number, minTileWidth: number, gap: number, padding: number): number {
-  return Math.max(1, Math.floor((width - 2 * padding + gap) / (minTileWidth + gap)));
 }
 
 /**
@@ -70,15 +69,16 @@ function useMeasuredScroller(scrollRef: RefObject<HTMLDivElement | null>) {
  * A virtualised grid of tiles (WAI-ARIA layout grid with multiple selection, UI architecture
  * §7.2, §8.1): rows of as many tiles as fit, `aria-rowcount` and `aria-colcount`, a roving tab
  * stop, arrows in both directions, Home, End, Page Up, Page Down, Space, Ctrl+A, Enter and
- * type-ahead. Only rows on screen are rendered.
+ * type-ahead. Only rows on screen are rendered. Sections of other tile sizes may follow each
+ * other in one grid, with label rows that are for the eye only: the tiles' names say what they are.
  */
 export function VirtualGrid({
   label,
   count,
   itemAt,
-  minTileWidth,
-  tileHeight,
-  gap,
+  sections,
+  labelHeight = 0,
+  sectionGap = 0,
   padding,
   renderItem,
   focusedIndex,
@@ -97,25 +97,28 @@ export function VirtualGrid({
   const tabStop = count === 0 ? null : Math.min(focusedIndex ?? 0, count - 1);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { width, attach } = useMeasuredScroller(scrollRef);
-  const columns = columnsFor(width, minTileWidth, gap, padding);
-  const rows = Math.ceil(count / columns);
+  const layout = useMemo(
+    () => new GridLayout({ sections, width, padding, labelHeight, sectionGap }),
+    [sections, width, padding, labelHeight, sectionGap],
+  );
   const { virtualizer, items, requestFocus } = useVirtualRows({
     scrollRef,
-    count: rows,
-    estimateSize: (row) => (row === rows - 1 ? tileHeight : tileHeight + gap),
-    focusedRow: tabStop === null ? null : Math.floor(tabStop / columns),
+    count: layout.rows.length,
+    estimateSize: (row) => layout.rows[row]?.size ?? 0,
+    sizesKey: layout.sizesKey,
+    focusedRow: tabStop === null ? null : layout.rowOfItem(tabStop),
     initialOffset,
     paddingStart: padding,
     paddingEnd: padding,
     onRangeChange:
       onRangeChange &&
       ((range) => {
-        onRangeChange({ start: range.start * columns, end: Math.min(count - 1, range.end * columns + columns - 1) });
+        const shown = layout.itemRange(range.start, range.end);
+        if (shown !== null) onRangeChange(shown);
       }),
     onOffsetChange,
     focusedElement: (element) => element.querySelector<HTMLElement>('[role="gridcell"][tabindex="0"]'),
-    rowOfItem: (index) => Math.floor(index / columns),
-    itemsPerRow: columns,
+    rowOfItem: (index) => layout.rowOfItem(index),
     ref,
   });
   const matches = useNameMatcher();
@@ -135,13 +138,12 @@ export function VirtualGrid({
     const index = element === null ? null : eventIndex(event.target, element);
     onKeyDown?.(event, index);
     if (event.defaultPrevented || index === null) return;
-    const rowsShown = Math.max(1, Math.floor((element?.clientHeight ?? 0) / (tileHeight + gap)));
     const handled = handleCollectionKey(event, {
       index,
       count,
       next: (from) => (from >= 0 && from < count ? from : null),
-      page: rowsShown * columns,
-      vertical: columns,
+      // Rows differ in height, so a page is the rows that start within the view's height.
+      across: (from, step, page) => layout.move(from, step, page && { height: element?.clientHeight ?? 0 }),
       grid: true,
       navigate,
       onToggle,
@@ -158,31 +160,44 @@ export function VirtualGrid({
       role="grid"
       aria-label={label}
       aria-multiselectable
-      aria-rowcount={rows}
-      aria-colcount={columns}
+      aria-rowcount={layout.tileRows.length}
+      aria-colcount={layout.maxColumns}
       className={className === undefined ? 'virtual-collection' : `virtual-collection ${className}`}
       onKeyDown={handleKeyDown}
       {...delegateRowEvents(() => true, pointer)}
     >
       <div role="none" className="virtual-collection__sizer" style={{ height: virtualizer.getTotalSize() }}>
         {items.map((virtual) => {
-          const first = virtual.index * columns;
-          const indexes = Array.from({ length: Math.min(columns, count - first) }, (_, column) => first + column);
+          const row = layout.rows[virtual.index];
+          if (row === undefined) return null;
+          if (row.kind === 'label') {
+            return (
+              <div
+                key={virtual.index}
+                aria-hidden
+                className="virtual-collection__row virtual-collection__label"
+                style={{ height: labelHeight, transform: `translateY(${String(virtual.start)}px)`, paddingInline: padding }}
+              >
+                {row.label}
+              </div>
+            );
+          }
           return (
             <div
               key={virtual.index}
               role="row"
-              aria-rowindex={virtual.index + 1}
+              aria-rowindex={row.tileRow + 1}
               className="virtual-collection__row virtual-collection__tiles"
               style={{
-                height: tileHeight,
+                height: row.tileHeight,
                 transform: `translateY(${String(virtual.start)}px)`,
-                gridTemplateColumns: `repeat(${String(columns)}, minmax(0, 1fr))`,
-                gap,
+                gridTemplateColumns: `repeat(${String(row.columns)}, minmax(0, 1fr))`,
+                gap: row.gap,
                 paddingInline: padding,
               }}
             >
-              {indexes.map((index) => {
+              {Array.from({ length: row.count }, (_, column) => {
+                const index = row.first + column;
                 const item = itemAt(index);
                 const focused = index === tabStop;
                 return (
@@ -190,7 +205,8 @@ export function VirtualGrid({
                     key={item.key}
                     role="gridcell"
                     aria-label={item.label}
-                    aria-colindex={index - first + 1}
+                    aria-describedby={item.description}
+                    aria-colindex={column + 1}
                     aria-selected={item.selected}
                     aria-busy={item.busy === true || undefined}
                     tabIndex={focused ? 0 : -1}

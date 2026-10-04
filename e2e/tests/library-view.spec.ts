@@ -138,31 +138,32 @@ test('switches semesters from the toolbar, and the quick views list recent and u
   const otherCourse = other === 'Fall 2026' ? COURSE : 'STA247 Probability';
   await expect(treeRow(page, otherCourse, other)).toBeVisible();
 
-  // The quick views list the whole library's files.
+  // The quick views list the current semester's files only (workspace-history §12.2, 34A).
   const pane = page.getByRole('region', { name: library.pane.label });
+  const otherFile = other === 'Fall 2026' ? 'notes.md' : 'ch1.pdf';
   await treeRow(page, library.tree.quick.recent, other).click();
   const recent = pane.getByRole('grid', { name: library.tree.quick.recent });
-  await expect(recent.getByRole('gridcell')).toHaveCount(2);
+  await expect(recent.getByRole('gridcell')).toHaveCount(1);
   await treeRow(page, library.tree.quick.untagged, other).click();
   const untagged = pane.getByRole('grid', { name: library.tree.quick.untagged });
-  await expect(untagged.getByRole('gridcell')).toHaveCount(2);
+  await expect(untagged.getByRole('gridcell')).toHaveCount(1);
+  await expect(untagged.getByRole('gridcell', { name: otherFile })).toBeVisible();
 
-  // A tag from anywhere takes the file out of Untagged.
+  // A tag takes the file out of Untagged, which then says the semester is all tagged.
   const courses = await invoke<Course[]>(page, 'list_courses', {
     request: { semester: null },
   });
-  const statistics = courses.find((course) => course.name === 'STA247 Probability');
-  if (!statistics) throw new Error('No STA247 course');
+  const course = courses.find((candidate) => candidate.name === (other === 'Fall 2026' ? COURSE : 'STA247 Probability'));
+  if (!course) throw new Error(`No course in ${other}`);
   const files = await invoke<EntryPage<EntryRow>>(page, 'list_children', {
-    request: { folder: statistics.folder, page: { offset: 0, limit: 50 }, sort: { key: 'name', descending: false } },
+    request: { folder: course.folder, page: { offset: 0, limit: 50 }, sort: { key: 'name', descending: false } },
   });
-  const chapter = files.items.find((item) => item.name === 'ch1.pdf');
-  if (!chapter) throw new Error('No ch1.pdf');
+  const file = files.items.find((item) => item.name === otherFile);
+  if (!file) throw new Error(`No ${otherFile}`);
   await invoke(page, 'set_entry_tags', {
-    request: { entries: [{ id: chapter.id, path: chapter.path }], add: ['slides'], remove: [] },
+    request: { entries: [{ id: file.id, path: file.path }], add: ['slides'], remove: [] },
   });
-  await expect(untagged.getByRole('gridcell')).toHaveCount(1);
-  await expect(untagged.getByRole('gridcell', { name: /^notes\.md/ })).toBeVisible();
+  await expect(pane.getByRole('heading', { name: library.pane.untaggedEmpty.title.replace('{{semester}}', other) })).toBeVisible();
 });
 
 test('keeps rows and tiles still under reduced motion', async ({ folio }) => {

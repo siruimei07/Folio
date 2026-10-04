@@ -2,7 +2,7 @@ import './collections.css';
 
 import { type KeyboardEvent, type ReactNode, type Ref, useRef } from 'react';
 
-import { handleCollectionKey, ignoreRepeat } from './keys';
+import { acrossItems, handleCollectionKey, ignoreRepeat } from './keys';
 import { delegateRowEvents, eventIndex, type RowPointerHandlers } from './rows';
 import type { Move } from './selection';
 import { findByName, useNameMatcher, useTypeahead } from './useTypeahead';
@@ -19,6 +19,8 @@ export interface CollectionItem {
   busy?: boolean;
   /** The accessible name, when the row's text alone does not say it all ("MAT232 …, 10 files"). */
   label?: string;
+  /** The id of an element that says more about it (`aria-describedby`), such as a folder's count. */
+  description?: string;
 }
 
 export interface VirtualListProps extends RowPointerHandlers {
@@ -105,12 +107,12 @@ export function VirtualList({
     const index = scroller === null ? null : eventIndex(event.target, scroller);
     onKeyDown?.(event, index);
     if (event.defaultPrevented || index === null) return;
+    const next = (from: number) => (from >= 0 && from < count ? from : null);
     const handled = handleCollectionKey(event, {
       index,
       count,
-      next: (from) => (from >= 0 && from < count ? from : null),
-      page: Math.max(1, Math.floor((scroller?.clientHeight ?? 0) / itemHeight) - 1),
-      vertical: 1,
+      next,
+      across: acrossItems(count, next, 1, Math.max(1, Math.floor((scroller?.clientHeight ?? 0) / itemHeight) - 1)),
       navigate,
       onToggle,
       onAction,

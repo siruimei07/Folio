@@ -1212,6 +1212,22 @@
         "unit": "px"
       },
       "$description": "Smallest width of a folder card; the grid fits as many as this allows."
+    },
+    "grid-group-label": {
+      "$type": "dimension",
+      "$value": {
+        "value": 18,
+        "unit": "px"
+      },
+      "$description": "Height of the \"Folders\" and \"Files\" label rows in a course or folder grid (decision 35A): one line of font.size.small."
+    },
+    "icon-folder-card": {
+      "$type": "dimension",
+      "$value": {
+        "value": 18,
+        "unit": "px"
+      },
+      "$description": "The folder icon of a folder card (decision 35A)."
     }
   },
   "radius": {

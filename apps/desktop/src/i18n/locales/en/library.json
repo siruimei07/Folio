@@ -32,6 +32,12 @@
     "label": "Filter by tag",
     "all": "All",
     "full": "A filter can have up to {{count, number}} tags.",
+    "more": "+{{count, number}}",
+    "moreOn": "+{{count, number}} · {{on, number}} on",
+    "moreLabel_one": "{{count, number}} more tag",
+    "moreLabel_other": "{{count, number}} more tags",
+    "moreLabelOn_one": "{{count, number}} more tag, {{on, number}} selected",
+    "moreLabelOn_other": "{{count, number}} more tags, {{on, number}} selected",
     "capped": "Showing the first {{count, number}} matching files.",
     "showList": "Show all in the list"
   },
@@ -123,11 +129,11 @@
       "text": "Drop files here to add them, or choose Add files. They're copied into {{name}}; the originals stay where they are."
     },
     "recentEmpty": {
-      "title": "Nothing added in the last 7 days",
+      "title": "Nothing added to {{semester}} in the last 7 days",
       "text": "Files you add or save into the library show up here for a week."
     },
     "untaggedEmpty": {
-      "title": "Every file has a tag",
+      "title": "Every file in {{semester}} has a tag",
       "text": "Files without tags show up here."
     }
   },
@@ -155,6 +161,14 @@
     "editTags": "Edit tags…",
     "fromFolder": "From folder",
     "readOnlyTags": "Tags can't change until you update Folio"
+  },
+  "cards": {
+    "folders": "Folders",
+    "files": "Files",
+    "folder": "{{name}}, folder",
+    "folderFiles_one": "{{count, number}} file",
+    "folderFiles_other": "{{count, number}} files",
+    "countFailed": "Couldn't count files"
   },
   "semester": {
     "menu": "Semesters",

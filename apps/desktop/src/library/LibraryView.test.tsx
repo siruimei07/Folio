@@ -7,15 +7,15 @@ import { describe, expect, it } from 'vitest';
 import { nameOf } from '../lib/paths';
 import { usePreferences } from './preferences';
 import { useLibraryView } from './state';
-import { FALL, findRow, getRow, MAT, queryRow, renderLibrary, rowNames, smallLibraryWith, tree } from './test/render';
+import { FALL, findRow, getRow, libraryFixture, MAT, queryRow, renderLibrary, rowNames, smallLibraryWith, tree } from './test/render';
 
 describe('the tree', () => {
   it('lists the quick views, then the courses of the current semester in their order', async () => {
     renderLibrary();
     await findRow('MAT232');
     expect(rowNames()).toEqual([
-      'Recently added, 10 files',
-      'Untagged, 20 files',
+      'Recently added, 7 files',
+      'Untagged, 10 files',
       'MAT232 Calculus of Several Variables, 27 files',
       'MAT223 线性代数, 7 files',
       'CSC148 Introduction to Computer Science, 14 files',
@@ -170,6 +170,85 @@ describe('the tree', () => {
 });
 
 describe('the third column', () => {
+  it('shows a course\'s folders as cards in a "Folders" group above its files (35A)', async () => {
+    const { user } = renderLibrary();
+    await user.click(await findRow('MAT232'));
+    const pane = screen.getByRole('region', { name: 'Preview' });
+    const grid = await within(pane).findByRole('grid', { name: 'Files in MAT232' });
+    // The label rows are for the eye: "Folders 3", "Files 2".
+    expect(within(grid).getByText('Folders').parentElement).toHaveTextContent('Folders3');
+    expect(within(grid).getByText('Files').parentElement).toHaveTextContent('Files2');
+    expect(within(grid).getAllByRole('row')).toHaveLength(2);
+    const [cards, tiles] = within(grid).getAllByRole('row');
+    if (cards === undefined || tiles === undefined) throw new Error('No rows');
+    expect(within(cards).getAllByRole('gridcell').map((cell) => cell.getAttribute('aria-label'))).toEqual([
+      'Problem sets, folder, tags Homework',
+      'Lectures, folder, tags Slides',
+      'Exams, folder',
+    ]);
+    // Each card says how many files it holds, at any depth.
+    const lectures = within(cards).getByRole('gridcell', { name: /^Lectures/ });
+    await waitFor(() => {
+      expect(lectures).toHaveAccessibleDescription('12 files');
+    });
+    expect(lectures).toHaveTextContent('Lectures12 files');
+    expect(within(tiles).getAllByRole('gridcell')).toHaveLength(2);
+
+    // Arrows treat the cards and the tiles as one grid.
+    await user.click(lectures);
+    await user.keyboard('{ArrowDown}');
+    expect(within(tiles).getAllByRole('gridcell')[1]).toHaveFocus();
+    await user.keyboard('{ArrowUp}');
+    expect(lectures).toHaveFocus();
+    await user.keyboard('{ArrowRight}{ArrowRight}');
+    expect(within(tiles).getAllByRole('gridcell')[0]).toHaveFocus();
+
+    // A double-click opens the folder, as Enter does.
+    await user.dblClick(lectures);
+    expect(await within(pane).findByRole('grid', { name: 'Files in Lectures' })).toBeInTheDocument();
+  });
+
+  it('says on a folder card when its files could not be counted', async () => {
+    // One semester: the current one, without list_files to find the newest file.
+    const fixture = libraryFixture((builder) => {
+      builder.folder('Fall 2026/CSC148', { group: { order: 1 } });
+      builder.file('Fall 2026/CSC148/Lectures/week1.pdf');
+    });
+    const { user } = renderLibrary({ fixture, fail: [{ command: 'list_files', code: 'Internal' }] });
+    await user.click(await findRow('CSC148'));
+    const pane = screen.getByRole('region', { name: 'Preview' });
+    const grid = await within(pane).findByRole('grid', { name: 'Files in CSC148' });
+    const lectures = await within(grid).findByRole('gridcell', { name: 'Lectures, folder' });
+    await waitFor(() => {
+      expect(lectures).toHaveAccessibleDescription("Couldn't count files");
+    });
+  });
+
+  it('leaves the group labels out when a grid has only folders or only files', async () => {
+    const fixture = libraryFixture((builder) => {
+      builder.folder('Fall 2026/CSC148', { group: { order: 1 } });
+      builder.folder('Fall 2026/CSC148/Labs');
+      builder.folder('Fall 2026/CSC148/Labs/Lab 1');
+      builder.folder('Fall 2026/CSC148/Labs/Lab 2');
+      builder.file('Fall 2026/CSC148/Labs/Lab 1/lab1.py');
+    });
+    const { user } = renderLibrary({ fixture });
+    await user.click(await findRow('CSC148'));
+    await user.click(await findRow('Labs'));
+    const pane = screen.getByRole('region', { name: 'Preview' });
+    const folders = await within(pane).findByRole('grid', { name: 'Files in Labs' });
+    expect(within(folders).getAllByRole('gridcell').map((cell) => cell.getAttribute('aria-label'))).toEqual([
+      'Lab 1, folder',
+      'Lab 2, folder',
+    ]);
+    expect(within(folders).queryByText('Folders')).toBeNull();
+
+    await user.dblClick(within(folders).getByRole('gridcell', { name: 'Lab 1, folder' }));
+    const files = await within(pane).findByRole('grid', { name: 'Files in Lab 1' });
+    expect(within(files).getByRole('gridcell', { name: 'lab1.py' })).toBeInTheDocument();
+    expect(within(files).queryByText('Files')).toBeNull();
+  });
+
   it('switches a course between grid and list, and sorts', async () => {
     const { user } = renderLibrary();
     await user.click(await findRow('MAT232'));
@@ -195,10 +274,41 @@ describe('the third column', () => {
     usePreferences.setState({ pane: 'list' });
     await user.click(await findRow('Recently added'));
     const pane = screen.getByRole('region', { name: 'Preview' });
-    expect(within(pane).getByRole('heading')).toHaveTextContent('Recently added· 10 files');
+    expect(within(pane).getByRole('heading')).toHaveTextContent('Recently added· 7 files');
     const list = await within(pane).findByRole('listbox', { name: 'Recently added' });
     expect(within(list).getByRole('option', { name: /^笔记\.md/ })).toHaveTextContent('MAT223/笔记.md');
     expect(getRow('Recently added')).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('counts and lists the quick views in the current semester only (34A)', async () => {
+    const fixture = libraryFixture((builder) => {
+      builder.folder('Fall 2026/CSC148', { group: { order: 1 } });
+      builder.file('Fall 2026/CSC148/new.md', { added: 1, modified: 0.5 });
+      builder.file('Fall 2026/CSC148/tagged.md', { added: 2, tags: ['homework'] });
+      builder.file('Fall 2026/CSC148/old.md', { added: 30 });
+      builder.folder('Winter 2027/MAT237', { group: { order: 1 } });
+      builder.file('Winter 2027/MAT237/winter.md', { added: 3 });
+      // Beside the semesters: in no semester, so in no quick view.
+      builder.file('loose.md', { added: 1 });
+    });
+    const { user } = renderLibrary({ fixture, toolbar: true });
+    expect(await findRow('Recently added, 2 files')).toBeInTheDocument();
+    expect(getRow('Untagged, 2 files')).toBeInTheDocument();
+
+    usePreferences.setState({ pane: 'list' });
+    await user.click(getRow('Recently added'));
+    const pane = screen.getByRole('region', { name: 'Preview' });
+    const list = await within(pane).findByRole('listbox', { name: 'Recently added' });
+    expect(within(list).getAllByRole('option')).toHaveLength(2);
+    expect(within(list).queryByRole('option', { name: /^loose\.md/ })).toBeNull();
+    expect(within(list).queryByRole('option', { name: /^winter\.md/ })).toBeNull();
+
+    // Another semester closes the quick view and counts again.
+    await user.click(screen.getByRole('button', { name: 'Switch semester, current Fall 2026' }));
+    await user.click(await screen.findByRole('menuitemradio', { name: 'Winter 2027' }));
+    expect(await findRow('Recently added, 1 file', 'Winter 2027')).toBeInTheDocument();
+    expect(getRow('Untagged, 1 file', 'Winter 2027')).toBeInTheDocument();
+    expect(useLibraryView.getState().active).toBeNull();
   });
 
   it('selects all of a long folder with Ctrl+A or Shift+End, loading the pages nobody shows', async () => {
@@ -275,8 +385,8 @@ describe('the List mode and the tag filter', () => {
     await user.click(within(bar).getByRole('button', { name: 'Notes' }));
     await waitFor(() => {
       expect(rowNames()).toEqual([
-        'Recently added, 10 files',
-        'Untagged, 20 files',
+        'Recently added, 7 files',
+        'Untagged, 10 files',
         'MAT232 Calculus of Several Variables, 3 files',
         'Exams',
         'Midterm',

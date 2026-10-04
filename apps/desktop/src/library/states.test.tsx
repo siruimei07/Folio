@@ -94,9 +94,9 @@ describe('empty states', () => {
     });
     const { user } = renderLibrary({ fixture });
     await user.click(await findRow('Recently added'));
-    expect(await screen.findByRole('heading', { name: 'Nothing added in the last 7 days' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Nothing added to Fall 2026 in the last 7 days' })).toBeInTheDocument();
     await user.click(getRow('Untagged'));
-    expect(await screen.findByRole('heading', { name: 'Every file has a tag' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Every file in Fall 2026 has a tag' })).toBeInTheDocument();
   });
 
   it('shows the empty preview while nothing is selected', async () => {

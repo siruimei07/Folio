@@ -1,12 +1,12 @@
 import '../tree/Tree.css';
 
 import { Folder } from 'lucide-react';
-import { useMemo, useRef, useState } from 'react';
+import { useId, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { CollectionHandle, IndexRange } from '../../components/collections/useVirtualRows';
 import { type CollectionItem, VirtualList } from '../../components/collections/VirtualList';
-import { VirtualGrid } from '../../components/collections/VirtualGrid';
+import { type GridSection, VirtualGrid } from '../../components/collections/VirtualGrid';
 import { FileTypeIcon } from '../../components/FileTypeIcon/FileTypeIcon';
 import { useCourses } from '../../data/groups';
 import type { LoadingPagedList } from '../../data/paged';
@@ -23,8 +23,10 @@ import { applySelection, entriesOf, focusedIndexOf, refOf, type SelectableRows, 
 import { loadedIndexes } from '../tree/layout';
 import { expandAll, type Region, setOffset, useLibraryView } from '../state';
 import { TagDots, useRowLabel, useTagLookup } from '../TagDots';
+import { FolderCard, GroupLabel, useLeadingFolders } from './FolderCard';
 
 const TILE_NAME = 'entry-tile__name';
+const CARD_NAME = 'folder-card__name';
 const ROW_NAME = 'entry-row__name';
 
 /** File types Windows makes thumbnails of; the others show their icon. */
@@ -133,12 +135,43 @@ export function EntriesView({ label, list, mode, onRangeChange, folder, showPlac
   // Dates read "5:05 PM" today and "Sep 27" before; today as of when the view opened.
   const [now] = useState(() => Date.now());
 
-  const focusedIndex = focusedIndexOf(selection.focus, list.total ?? 0, list.rowKey, rows.indexOfKey);
+  const total = list.total ?? 0;
+  const focusedIndex = focusedIndexOf(selection.focus, total, list.rowKey, rows.indexOfKey);
+  // The grid's folders are cards in a group of their own above the files (35A); the list keeps one
+  // kind of row. Both groups are labelled only when both have items.
+  const folders = useLeadingFolders(list, mode === 'grid');
+  const grouped = folders > 0 && folders < total;
+  const sections = useMemo<GridSection[]>(
+    () => [
+      {
+        count: folders,
+        minTileWidth: SIZE.folderCardMin,
+        tileHeight: SIZE.folderCard,
+        gap: SPACE[8],
+        label: grouped ? <GroupLabel name={t('cards.folders')} count={folders} /> : undefined,
+      },
+      {
+        count: total - folders,
+        minTileWidth: SIZE.gridTileMin,
+        tileHeight: SIZE.gridTile,
+        gap: SPACE[12],
+        label: grouped ? <GroupLabel name={t('cards.files')} count={total - folders} /> : undefined,
+      },
+    ],
+    [folders, total, grouped, t],
+  );
+  const countIds = useId();
+  const countIdOf = (row: EntryRow) => `${countIds}-${row.id}`;
 
   const itemAt = (index: number): CollectionItem => {
     const row = list.rowAt(index);
     if (row === undefined) return { key: list.rowKey(index), selected: false, busy: true, label: t('tree.loading') };
-    return { key: row.id, selected: selection.entries.has(row.id), name: row.name, label: rowLabel(row) };
+    const selected = selection.entries.has(row.id);
+    if (index < folders) {
+      const label = rowLabel({ ...row, name: t('cards.folder', { name: row.name }) });
+      return { key: row.id, selected, name: row.name, label, description: countIdOf(row) };
+    }
+    return { key: row.id, selected, name: row.name, label: rowLabel(row) };
   };
 
   /** Enter, or a double-click on a folder: a file's preview, a folder's contents. */
@@ -167,7 +200,7 @@ export function EntriesView({ label, list, mode, onRangeChange, folder, showPlac
   const common = {
     ref: handle,
     label,
-    count: list.total ?? 0,
+    count: total,
     itemAt,
     focusedIndex,
     initialOffset,
@@ -186,7 +219,7 @@ export function EntriesView({ label, list, mode, onRangeChange, folder, showPlac
       open(index);
     },
     onSelectAll: () => {
-      selectAll(region, rows, list.total ?? 0);
+      selectAll(region, rows, total);
     },
     onRowClick: (index: number, intent: 'replace' | 'toggle' | 'extend') => {
       applySelection(region, rows, index, intent);
@@ -207,13 +240,16 @@ export function EntriesView({ label, list, mode, onRangeChange, folder, showPlac
       <VirtualGrid
         {...common}
         className="entry-grid"
-        minTileWidth={SIZE.gridTileMin}
-        tileHeight={SIZE.gridTile}
-        gap={SPACE[12]}
+        sections={sections}
+        labelHeight={SIZE.gridGroupLabel}
+        sectionGap={SPACE[12]}
         padding={SPACE[14]}
         renderItem={(index, item) => {
           const row = list.rowAt(index);
           if (row === undefined) return <div className="entry-tile" data-busy aria-hidden />;
+          if (index < folders) {
+            return <FolderCard row={row} selected={item.selected} name={nameOrField(row, CARD_NAME)} countId={countIdOf(row)} />;
+          }
           return (
             <div className="entry-tile" data-selected={item.selected || undefined}>
               <Thumbnail row={row} />

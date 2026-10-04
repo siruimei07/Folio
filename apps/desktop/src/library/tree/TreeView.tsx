@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import type { CollectionHandle, IndexRange } from '../../components/collections/useVirtualRows';
 import { type TreeRow, VirtualTree } from '../../components/collections/VirtualTree';
 import { courseLabel, courseTitle } from '../../lib/courses';
+import type { EntryRef } from '../../ipc';
 import { DOUBLE_CLICK_MS } from '../../lib/timing';
 import { nameOf } from '../../lib/paths';
 import { SIZE, SPACE } from '../../tokens/tokens';
@@ -21,6 +22,8 @@ import { TreeRowView } from './TreeRowView';
 
 export interface TreeViewProps {
   model: TreeModel;
+  /** The current semester's folder, which the quick views count in. */
+  semester: EntryRef;
   /** The tree's accessible name. */
   label: string;
   /** The rows on screen, for the pages they need. */
@@ -33,7 +36,7 @@ export interface TreeViewProps {
  * toggles and shows it; clicking a file shows it; Enter shows the focused row; Ctrl and Shift
  * select several. Menus, inline rename and dragging to move work the same in both.
  */
-export function TreeView({ model: layout, label, onRangeChange }: TreeViewProps) {
+export function TreeView({ model: layout, semester, label, onRangeChange }: TreeViewProps) {
   const { t } = useTranslation('library');
   const panel = useLibraryView((state) => state.panel);
   const active = useLibraryView((state) => state.active);
@@ -42,7 +45,7 @@ export function TreeView({ model: layout, label, onRangeChange }: TreeViewProps)
   const [initialOffset] = useState(() => useLibraryView.getState().offsets.panel);
   const tags = useTagLookup();
   const rowLabel = useRowLabel(tags);
-  const counts = useQuickCounts();
+  const counts = useQuickCounts(semester);
   const activate = useActivate();
   const handle = useRef<CollectionHandle>(null);
   const slowClick = useRef<number | undefined>(undefined);

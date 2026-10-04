@@ -4,15 +4,31 @@ import type { KeyboardEvent } from 'react';
 
 import { type Move, moveOf } from './selection';
 
+/**
+ * Where Up and Down (`page` false) or Page Up and Page Down (`page` true) go from `index`,
+ * `step` -1 up and 1 down; `null` for nowhere.
+ */
+export type Across = (index: number, step: 1 | -1, page: boolean) => number | null;
+
+/**
+ * `Across` for a list or tree: an arrow moves `vertical` items and a page `page` items, both to
+ * what `next` finds focusable; a page stops at the ends.
+ */
+export function acrossItems(count: number, next: KeyContext['next'], vertical: number, page: number): Across {
+  return (index, step, paging) => {
+    if (paging) return next(Math.min(Math.max(index + step * page, 0), count - 1), step === 1 ? -1 : 1) ?? next(index, step);
+    const target = index + step * vertical;
+    return target >= 0 && target < count ? next(target, step) : null;
+  };
+}
+
 export interface KeyContext {
   index: number;
   count: number;
   /** The first focusable item from `from` going `step`, or `null`. */
   next: (from: number, step: 1 | -1) => number | null;
-  /** Items Page Up and Page Down move by. */
-  page: number;
-  /** Items Up and Down move by: 1, or a grid's columns; a grid's Left and Right move by 1. */
-  vertical: number;
+  /** Up, Down, Page Up and Page Down; a grid's Left and Right move by 1. */
+  across: Across;
   grid?: boolean;
   navigate: (index: number | null, move: Move) => void;
   onToggle: (index: number) => void;
@@ -44,15 +60,14 @@ export function ignoreRepeat(event: KeyboardEvent): boolean {
 
 /** Handles a key of a collection; says whether it did. */
 export function handleCollectionKey(event: KeyboardEvent, context: KeyContext): boolean {
-  const { index, count, next, page, vertical, grid = false, navigate } = context;
+  const { index, count, next, across, grid = false, navigate } = context;
   const move = moveOf(event);
-  const clamp = (target: number) => Math.min(Math.max(target, 0), count - 1);
   switch (event.key) {
     case 'ArrowDown':
-      navigate(index + vertical < count ? next(index + vertical, 1) : null, move);
+      navigate(across(index, 1, false), move);
       return true;
     case 'ArrowUp':
-      navigate(index - vertical >= 0 ? next(index - vertical, -1) : null, move);
+      navigate(across(index, -1, false), move);
       return true;
     case 'ArrowRight':
       if (!grid) return false;
@@ -69,10 +84,10 @@ export function handleCollectionKey(event: KeyboardEvent, context: KeyContext): 
       navigate(next(count - 1, -1), move);
       return true;
     case 'PageDown':
-      navigate(next(clamp(index + page), -1) ?? next(index, 1), move);
+      navigate(across(index, 1, true), move);
       return true;
     case 'PageUp':
-      navigate(next(clamp(index - page), 1) ?? next(index, -1), move);
+      navigate(across(index, -1, true), move);
       return true;
     case 'Enter':
       context.onAction(index);

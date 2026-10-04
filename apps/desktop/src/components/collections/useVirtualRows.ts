@@ -54,11 +54,10 @@ export interface VirtualRowsOptions {
   focusedElement: (scroller: HTMLElement) => HTMLElement | null;
   /** The virtual row an item index is in (a grid's rows hold several items). */
   rowOfItem?: (index: number) => number;
-  /** Items in a virtual row: a grid reports its range again when its columns change. */
-  itemsPerRow?: number;
   /**
-   * Changes when rows of other heights move without the count changing (the tree's separators):
-   * the virtualiser reads `estimateSize` again only then, or when the count changes.
+   * Changes when rows of other heights move without the count changing (the tree's separators), or
+   * when a grid's rows hold other items (its columns changed): the virtualiser reads `estimateSize`
+   * again only then, or when the count changes, and the range is reported again.
    */
   sizesKey?: string;
   ref?: Ref<CollectionHandle>;
@@ -76,7 +75,6 @@ export function useVirtualRows({
   onOffsetChange,
   focusedElement,
   rowOfItem = (index) => index,
-  itemsPerRow = 1,
   sizesKey,
   ref,
 }: VirtualRowsOptions) {
@@ -118,7 +116,7 @@ export function useVirtualRows({
   });
   useEffect(() => {
     if (end >= start) report({ start, end });
-  }, [start, end, itemsPerRow]);
+  }, [start, end, sizesKey]);
 
   // The offset goes to the view's store from the scroll events, never during a render.
   const reportOffset = useEffectEvent((offset: number) => {

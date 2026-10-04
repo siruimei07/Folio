@@ -2658,8 +2658,18 @@
         "design/design-m2-details"
       ],
       "summary": "按 workspace-history.md §12 做 M1 验收留下的三处资料库细节：标签筛选最多两行加「+N」、快捷视图跟当前学期、课程里的文件夹显示成一排 48 px 卡片（你在设计 lane 里选的 33B、34A、35A）",
-      "status": "planned",
+      "status": "done",
       "updated": "2026-10-04",
+      "landed": "2026-10-04",
+      "gates": {
+        "check": "pass",
+        "e2e": "pass",
+        "codeReview": "pass",
+        "simplify": "pass",
+        "designCritique": "pass",
+        "a11y": "pass",
+        "securityReview": "na"
+      },
       "links": [
         "docs/design/handoff/workspace-history.md",
         "docs/design/handoff/app-shell.md"

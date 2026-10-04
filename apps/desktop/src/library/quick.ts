@@ -1,10 +1,10 @@
 // The quick views (app-shell handoff §5; library-actions decision "Recently added"): files added
-// in the last 7 days, and files without tags, over the whole library, so files at the top level
-// of the library show there too (library-actions §16 item 6).
+// in the last 7 days, and files without tags, in the current semester, like the tree and the
+// panel's count (workspace-history handoff §12.2, decision 34A).
 import { useEffect, useState } from 'react';
 
 import { useCount } from '../data/paged';
-import type { EntryFilter } from '../ipc';
+import type { EntryFilter, EntryRef } from '../ipc';
 import type { QuickView } from './state';
 
 const RECENT_DAYS = 7;
@@ -36,13 +36,9 @@ function useRecentCutoff(): string {
 
 const UNTAGGED: EntryFilter = { tags: { kind: 'untagged' }, addedAfterMs: null };
 
-/** The filter of each quick view. */
-export function useQuickFilters(): Record<QuickView, EntryFilter> {
-  return { recent: recentFilter(useRecentCutoff()), untagged: UNTAGGED };
-}
-
-function recentFilter(after: string): EntryFilter {
-  return { tags: null, addedAfterMs: after };
+/** A quick view's filter, "Recently added" from `after`. */
+function filterOf(view: QuickView, after: string): EntryFilter {
+  return view === 'recent' ? { tags: null, addedAfterMs: after } : UNTAGGED;
 }
 
 /**
@@ -50,14 +46,14 @@ function recentFilter(after: string): EntryFilter {
  * starts over (and takes focus with it) under someone reading it; the next opening moves on.
  */
 export function useOpenQuickFilter(view: QuickView): EntryFilter {
-  const [opened] = useState(() => (view === 'recent' ? recentFilter(cutoff()) : UNTAGGED));
+  const [opened] = useState(() => filterOf(view, cutoff()));
   return opened;
 }
 
-/** How many files each quick view holds. */
-export function useQuickCounts(): Record<QuickView, number | undefined> {
-  const filters = useQuickFilters();
-  const recent = useCount({ of: 'files', scope: null, filter: filters.recent });
-  const untagged = useCount({ of: 'files', scope: null, filter: filters.untagged });
+/** How many files each quick view holds in `semester`, the current semester's folder. */
+export function useQuickCounts(semester: EntryRef): Record<QuickView, number | undefined> {
+  const after = useRecentCutoff();
+  const recent = useCount({ of: 'files', scope: semester, filter: filterOf('recent', after) });
+  const untagged = useCount({ of: 'files', scope: semester, filter: UNTAGGED });
   return { recent: recent.data, untagged: untagged.data };
 }
