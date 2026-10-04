@@ -9,16 +9,22 @@ publish.workspace = true
 
 [dependencies]
 blake3 = { workspace = true }
+encoding_rs = { workspace = true }
 getrandom = { workspace = true }
 ignore = { workspace = true }
+quick-xml = { workspace = true }
 rusqlite = { workspace = true }
 rusqlite_migration = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+similar = { workspace = true }
 thiserror = { workspace = true }
 unicode-normalization = { workspace = true }
 unicode-script = { workspace = true }
 unicode-segmentation = { workspace = true }
+ureq = { workspace = true }
+zip = { workspace = true }
+zstd = { workspace = true }
 
 # The Windows adapter (docs/specs/windows-adapter.md).
 [target.'cfg(windows)'.dependencies]
@@ -32,8 +38,10 @@ windows-core = { workspace = true }
 windows-sys = { workspace = true, features = [
   "Win32_Foundation",
   "Win32_Security",
+  "Win32_Security_Credentials",
   "Win32_Storage_FileSystem",
   "Win32_System_IO",
+  "Win32_System_Registry",
   "Win32_System_SystemServices",
   "Win32_System_Threading",
   "Win32_System_WindowsProgramming",

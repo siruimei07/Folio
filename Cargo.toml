@@ -28,6 +28,14 @@ time = "0.3.55"
 getrandom = "0.4.3"
 # Content hashes (ADR-0003 §2).
 blake3 = "1.8.7"
+# M2 history, extraction and AI transport (versioning.md §18). Defaults stay off so
+# optional ZIP codecs/writer dependencies and alternate TLS providers stay off.
+zstd = { version = "=0.14.0", default-features = false }
+similar = { version = "=3.2.0", default-features = false, features = ["std", "text", "inline"] }
+zip = { version = "=8.6.0", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+quick-xml = { version = "=0.42.0", default-features = false }
+encoding_rs = "=0.8.42"
+ureq = { version = "=3.4.2", default-features = false, features = ["rustls", "platform-verifier"] }
 # Gitignore semantics for ignore rules (ADR-0003 §10); only its `gitignore` module is used.
 ignore = "0.4.33"
 # The version Tauri's own dependencies (muda, softbuffer) already use, so it compiles only once.

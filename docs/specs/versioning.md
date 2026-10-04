@@ -837,18 +837,43 @@ Event `AiSettingsChanged`. The UI can set, test and clear the key, never read it
 
 ## 18. Crates for `chore/build-deps-m2`
 
-Candidates; the dependency lane checks maintenance, pins versions at least a day old and records
-version and licence here.
+Selected on 2026-10-04 from the approved candidates. These maintained stable releases are all
+at least a day old and not yanked (crates.io publication dates below are UTC). The workspace
+requirements are exact, and `cargo update -p <crate> --precise <version>` pins each in Cargo.lock.
+Existing locked package versions are retained; added transitive packages also meet the age rule.
 
-| Need | Crate | Licence | Notes |
-|---|---|---|---|
-| zstd (§9.3 of remote-format.md) | `zstd` (bundles libzstd through `zstd-sys`) | MIT; libzstd BSD-3-Clause | Default features off; streaming with a pledged size; decoding with a window limit of 8 MiB (remote-format.md §9.3) |
-| Text diff | `similar` | Apache-2.0 | `text` and `inline`; Patience; deadlines |
-| Word (`.docx`) | `zip` | MIT | Default features off, `deflate` only |
-| Word XML | `quick-xml` | MIT | No DTD processing |
-| Legacy encodings | `encoding_rs` | (Apache-2.0 OR MIT) AND BSD-3-Clause | GB18030 (which contains GBK) and UTF-16, as the preview decodes (§10.2) |
-| HTTPS for the AI call | `ureq` | MIT OR Apache-2.0 | Synchronous, so the core stays free of an async runtime (ADR-0002 §4); rustls with the `ring` provider (not `aws-lc-rs`, which needs CMake and NASM on Windows) and the platform verifier for the Windows certificate store; no native TLS |
-| Credential Manager, `MachineGuid` | `windows-sys` features `Win32_Security_Credentials`, `Win32_System_Registry` | MIT OR Apache-2.0 | Already a dependency |
+| Need | Crate/version | Published | Licence | Features and rationale |
+|---|---|---|---|---|
+| zstd (remote-format.md §9.3) | [`zstd` 0.14.0](https://crates.io/crates/zstd/0.14.0) | 2026-09-04 | BSD-3-Clause (wrapper and bundled libzstd) | Defaults off; bundled libzstd 1.5.7 through `zstd-safe` 8.0.0 / `zstd-sys` 2.1.0+zstd.1.5.7. Safe streaming API, pledged size and 8 MiB window cap; uses the existing C compiler, without bindgen or CMake |
+| Text diff | [`similar` 3.2.0](https://crates.io/crates/similar/3.2.0) | 2026-08-17 | Apache-2.0 | Defaults off; `std`, `text`, `inline`. Patience, deadlines (`std`) and inline changes without another diff engine |
+| Word (`.docx`) | [`zip` 8.6.0](https://crates.io/crates/zip/8.6.0) | 2026-04-25 | MIT | Defaults off; `deflate-flate2-zlib-rs` only. Reuses the locked pure-Rust flate2/zlib-rs backend; unlike `deflate`, adds no zopfli encoder. Stored entries remain supported; other optional codecs and AES stay off |
+| Word XML | [`quick-xml` 0.42.0](https://crates.io/crates/quick-xml/0.42.0) | 2026-08-22 | MIT | Defaults off; event reader, no Serde XML/DTD entity resolver. Reuses the version already locked by Tauri |
+| Legacy encodings | [`encoding_rs` 0.8.42](https://crates.io/crates/encoding_rs/0.8.42) | 2026-09-24 | (Apache-2.0 OR MIT) AND BSD-3-Clause | Default `alloc` only; GB18030 (contains GBK) and UTF-16 per §10.2 |
+| HTTPS for the AI call | [`ureq` 3.4.2](https://crates.io/crates/ureq/3.4.2) | 2026-09-13 | MIT OR Apache-2.0 | Defaults off; `rustls`, `platform-verifier`. Synchronous (ADR-0002 §4); rustls 0.23.45 with ring 0.17.14 and rustls-platform-verifier 0.7.1. No native TLS, aws-lc-rs, async runtime, gzip or ureq JSON helper; existing serde_json handles JSON |
+| Credential Manager, `MachineGuid` | `windows-sys` 0.61.2 | Existing pin | MIT OR Apache-2.0 | Add only `Win32_Security_Credentials` and `Win32_System_Registry` to the core's Windows features |
+
+Implementation notes for the feature lanes (this lane adds no parsing, store or network code):
+
+- **Packs:** use `window_log(23)` and `set_pledged_src_size`, and `window_log_max(23)` for
+  decoding. Call the fallible `Decoder::finish_frame()` before `finish()`; `finish()` discards
+  its error. A window cap alone does not check exactly one frame, its dictionary, raw length or
+  trailing bytes: enforce remote-format.md §9.3/§11 with the safe APIs re-exported as
+  `zstd::zstd_safe` and the store's own validation.
+- **Word:** explicitly reject `quick_xml::events::Event::DocType`; the event reader exposes it
+  rather than refusing it. Reject encrypted ZIP entries (legacy ZipCrypto is built in). Entry
+  count and expanded-byte limits remain the reader's job (§10.3); no macros or external process
+  is needed.
+- **AI:** build `TlsConfig` with `RootCerts::PlatformVerifier` explicitly. The supported `rustls`
+  feature also includes webpki-roots (CDLA-Permissive-2.0), and ureq defaults to those roots;
+  enabling the verifier feature alone does not select Windows trust. Disable redirects, enforce
+  HTTPS, set the connect/global deadlines and cap response reads per §12.2. Platform certificate
+  verification is synchronous with an OS retrieval timeout, so test the wall-clock bound in the
+  AI lane. Keep TRACE logging off for ureq/ureq-proto, which can log wire data (§12.5).
+
+API and feature sources: [zstd](https://docs.rs/zstd/0.14.0/zstd/),
+[similar](https://docs.rs/similar/3.2.0/similar/), [zip features](https://docs.rs/crate/zip/8.6.0/features),
+[quick-xml events](https://docs.rs/quick-xml/0.42.0/quick_xml/events/enum.Event.html),
+[ureq TLS](https://docs.rs/ureq/3.4.2/ureq/tls/index.html).
 
 Not needed: `blake3` already has `derive_key`; times in the one format of remote-format.md §6.2 and
 hexadecimal need no crate; no encoding detector, because the preview's rule decides (§10.2).
