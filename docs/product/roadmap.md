@@ -89,6 +89,7 @@
 - Codex 做完停在 review，把评审范围写进 `claude-review-handoff.md`；合并前由 Claude Code 审计：一次 `/code-review`，涉及特权层、IPC 或 unsafe 代码再加 `/security-review`，Codex 自己的 simplify 算数（你 10-02 的决定；10-03 起审计的推理强度提高，见 4.2）。
 - Codex 发现要改界面时写前端交接，不改 `apps/desktop`。
 - 关键路径（`feat/core-object-store`、`feat/core-sync-round`）交给 Codex 时要及时看进度。
+- M2 例外（你 10-05 的决定）：M2 剩下的 6 个后端 lane 不再交给 Codex，和 M2 的界面 lane 一起由路线图会话的子代理做；审计由另一组子代理做，合并按你在路线图会话里的一次授权（决策 `m2-subagents`）。M2 以外标了 Codex 的 lane（如同步仿真）照旧。
 - 所有提交都是 Sirui Mei <sirui.mei07@gmail.com>，任何 agent 都不在提交信息里写自己的信息（CLAUDE.md §7.1 第 5 条，`pnpm check` 和 CI 检查）。
 
 </details>

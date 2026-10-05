@@ -5,7 +5,7 @@
     "owner": "Sirui",
     "repo": "https://github.com/siruimei07/Folio",
     "explorer": "https://claude.ai/artifact/Mv1f9eXfrkYTbAs7fqQVDC",
-    "updated": "2026-10-03T19:55-04:00",
+    "updated": "2026-10-05T19:00-04:00",
     "updatedBy": "Claude Code",
     "models": {
       "fable": "Fable 5.1",
@@ -17,13 +17,13 @@
     ]
   },
   "now": {
-    "stage": "M2 版本记录：依赖已合并，M2 合约可以开始；先修 main 上偶尔失败的测试",
+    "stage": "M2 实现：子代理接手 M2，对象库和差异组件开工",
     "focus": "M2",
     "summary": [
-      "10-04 已合并：M2 依赖 `chore/build-deps-m2`（CI 37230017035 绿）；M1 留下的资料库细节 `feat/ui-library-m1-notes`（41539d2：标签筛选两行加「+N」、快捷视图跟当前学期、文件夹卡片）。它合并后 main 的 CI（run 37237819510）先红后绿：problems.test.tsx 的短列表分页测试偶尔失败（和这个 lane 无关），重跑通过；修复交给 fix/ui-problems-short-list-flake。 更早：M2 设计、iCloud 实测、问题列表分页修复、历史格式规格。",
-      "可以开始：`fix/ui-problems-short-list-flake`（CI 红了先修，S，Opus 5.5 · high）；`feat/ipc-m2-contract`（M2 合约，关键路径第一步，Opus 5.5 · xhigh）。对象库等 M2 核心 lane 等合约合并。合并一次一个，每个等上一个在 main 上的 CI 跑完。",
-      "进行中：`fix/core-recycle-cloud-placeholder`（你定了：只在云端的文件进提供方的回收站，记为 CloudTrash；装着这类文件的文件夹留下，报 CloudOnly；IPC 和界面文字留给之后的合约 lane）；`test/core-sync-simulation`（第二次审计没过，退回 Codex：iPad 再次移到同一个 NFD 名字仍会变成删除、补一条「路径级直接修改不丢」的不变量、锚点和压缩用同一条「自己推送已确认」规则并用单调时钟；之后第三次审计，合并后 `docs/specs-sync` 才能开）。",
-      "按你批准的 versioning.md §19：差异和恢复也等正文抽取；AI 提交说明等差异做完再开；M3 新增 `feat/core-retention`（Word 旧版本稀疏保留）；M1 的三处资料库细节由新的 `feat/ui-library-m1-notes` 做。关键路径：M2 合约 → 对象库 → 工作区 → 提交和历史 → 差异和恢复 → AI 提交说明 → M2 验收。",
+      "10-05 已合并：M2 合约 `feat/ipc-m2-contract`（cd4344b，CI 37253549014 绿：ipc-m2.md，M2 的工作区、历史和 AI 命令桩）；问题列表短列表测试的修复 `fix/ui-problems-short-list-flake`（问题在测试，组件不丢页；两处测试共用一个假 IntersectionObserver）。接着合并：`fix/core-catalog-tags-property`（文件留在原处、文件夹搬走时标签丢失，main 上的真 bug）。更早：M2 依赖、M1 资料库细节、M2 设计、iCloud 实测、历史格式规格。",
+      "你 10-05 定了：M2 剩下的 lane 全部由路线图会话的子代理做，Codex 不再接 M2 的后端；检查和独立审计都过、上一次 main CI 绿了，就由路线图会话合并并事后汇报（决策 m2-subagents）。第一批：`feat/core-object-store`（关键路径，Opus 5.5 · max）、`feat/ui-diff-viewer`（Opus 5.5 · high）、`feat/ui-settings-ai`（S）；Rust 名额空出来后开 `feat/core-text-extract`。",
+      "进行中：`fix/core-recycle-cloud-placeholder`（会话曾被归档，已恢复收尾，之后独立审计再合并）；`test/core-sync-simulation`（Codex，第二次审计退回，之后第三次审计；合并后 `docs/specs-sync` 才能开）。",
+      "按你批准的 versioning.md §19：差异和恢复也等正文抽取；AI 提交说明等差异做完再开；M3 新增 `feat/core-retention`（Word 旧版本稀疏保留）；M1 的三处资料库细节由新的 `feat/ui-library-m1-notes` 做。关键路径：对象库 → 工作区 → 提交和历史 → 差异和恢复 → AI 提交说明 → M2 验收。",
       "模型：Fable 5.1 暂停（你 10-03 的决定）：推荐给它的 lane（关卡、规格、IPC 合约、推理强度 max）都由 Opus 5.5 用同样的推理强度代替；界面、核心、测试、设计用 Opus 5.5，只改文档和只合并的用 Sonnet 5.5。恢复时删掉 meta.pausedModels 里的 fable 即可。",
       "Codex 的项目级 skills（`AGENTS.md`、`.agents/skills/`、`.codex/`、`.claude/skills/`）和 CLAUDE.md 里的两处改动不进仓库，由 Codex 管理：任何 lane 都不提交、不丢弃。"
     ]
@@ -62,12 +62,12 @@
     {
       "id": "claude-code",
       "label": "Claude Code",
-      "does": "前端、合约、规格、评审、合并"
+      "does": "前端、合约、规格、评审、合并；M2 起也做后端（路线图会话的子代理）"
     },
     {
       "id": "codex",
       "label": "Codex",
-      "does": "只做后端编码（Rust），停在 review"
+      "does": "只做后端编码（Rust），停在 review；M2 的后端 10-05 起改由 Claude 子代理做"
     },
     {
       "id": "cowork",
@@ -1805,6 +1805,35 @@
       ]
     },
     {
+      "id": "docs/docs-roadmap-m2-subagents",
+      "title": "M2 改由子代理接手的路线图刷新",
+      "milestone": "M2",
+      "phase": "m2-impl",
+      "track": "flow",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "feat/ipc-m2-contract"
+      ],
+      "summary": "M2 合约合并后更新 now；按 Sirui 10-05 的决定把 M2 的 6 个核心 lane 从 Codex 改为路线图会话的子代理，记下合并授权（决策 m2-subagents）和新规则",
+      "status": "done",
+      "updated": "2026-10-05",
+      "landed": "2026-10-05",
+      "gates": {
+        "check": "pass",
+        "e2e": "na",
+        "codeReview": "na",
+        "securityReview": "na",
+        "simplify": "na",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "docs/roadmap/roadmap.json",
+        "docs/product/roadmap.md"
+      ]
+    },
+    {
       "id": "refactor/core-sta-helper",
       "title": "合并 STA 辅助函数",
       "milestone": "M1",
@@ -2453,27 +2482,29 @@
       "milestone": "M2",
       "phase": "m2-impl",
       "track": "core",
-      "agent": "codex",
+      "agent": "claude-code",
       "size": "L",
-      "auditEffort": "max",
       "deps": [
         "feat/ipc-m2-contract",
         "chore/build-deps-m2"
       ],
       "summary": "BLAKE3 对象、pack 编解码、本机存储，golden 测试（关键路径）",
       "status": "planned",
-      "updated": "2026-10-01",
+      "updated": "2026-10-05",
       "links": [
         "docs/specs/remote-format.md",
         "docs/specs/versioning.md",
         "docs/adr/ADR-0003-versioning-and-sync.md",
         "docs/adr/ADR-0006-history-retention.md"
       ],
-      "prompt": [
-        "Critical path for M2 and M3. Implement docs/specs/remote-format.md and the local store in docs/specs/versioning.md: BLAKE3 object ids, the object kinds, immutable packs (encode and decode) and the local object store with crash-safe writes (temporary file, flush, rename; a partial pack is never visible).",
-        "The golden vectors in remote-format.md pass byte for byte. Add property-based tests (round trip, corruption detected, truncated packs rejected) and a crash-injection test for every write step. Large files stream and memory stays bounded. folio-core only, in a new module; no IPC in this lane.",
-        "versioning.md §19 item 8: pass every file of the golden vectors (remote-format.md §12, docs/specs/remote-format-vectors/) in this lane's own tests; `pnpm check` keeps the vectors equal to their generator (`check:vectors`)."
-      ]
+      "prompt": {
+        "extra": [
+          "Critical path for M2 and M3. Implement docs/specs/remote-format.md and the local store in docs/specs/versioning.md: BLAKE3 object ids, the object kinds, immutable packs (encode and decode) and the local object store with crash-safe writes (temporary file, flush, rename; a partial pack is never visible).",
+          "The golden vectors in remote-format.md pass byte for byte. Add property-based tests (round trip, corruption detected, truncated packs rejected) and a crash-injection test for every write step. Large files stream and memory stays bounded. folio-core only, in a new module; no IPC in this lane.",
+          "versioning.md §19 item 8: pass every file of the golden vectors (remote-format.md §12, docs/specs/remote-format-vectors/) in this lane's own tests; `pnpm check` keeps the vectors equal to their generator (`check:vectors`).",
+          "The independent audit of this lane runs at max effort (critical path; history format 1 bytes)."
+        ]
+      }
     },
     {
       "id": "feat/core-workspace",
@@ -2481,23 +2512,25 @@
       "milestone": "M2",
       "phase": "m2-impl",
       "track": "core",
-      "agent": "codex",
+      "agent": "claude-code",
       "size": "M",
       "deps": [
         "feat/core-object-store"
       ],
       "summary": "工作区 = 磁盘现状对比上次提交；WorkspaceChanged",
       "status": "planned",
-      "updated": "2026-10-01",
+      "updated": "2026-10-05",
       "links": [
         "docs/specs/versioning.md",
         "docs/specs/ipc-m2.md",
         "docs/specs/library-scan.md"
       ],
-      "prompt": [
-        "The workspace is the disk compared with the last commit (docs/specs/versioning.md, ADR-0003 §10). Reuse the M1 scan and catalog change detection (docs/specs/library-scan.md) instead of a second walker. Text and Word files get full versions; every other file gets change events only.",
-        "Emit WorkspaceChanged as ipc-m2.md defines; its commands stop being stubs here. Handle renames, case-only renames and unreadable files (they go to the problems list, never a crash)."
-      ]
+      "prompt": {
+        "extra": [
+          "The workspace is the disk compared with the last commit (docs/specs/versioning.md, ADR-0003 §10). Reuse the M1 scan and catalog change detection (docs/specs/library-scan.md) instead of a second walker. Text and Word files get full versions; every other file gets change events only.",
+          "Emit WorkspaceChanged as ipc-m2.md defines; its commands stop being stubs here. Handle renames, case-only renames and unreadable files (they go to the problems list, never a crash)."
+        ]
+      }
     },
     {
       "id": "feat/core-commit-history",
@@ -2505,27 +2538,29 @@
       "milestone": "M2",
       "phase": "m2-impl",
       "track": "core",
-      "agent": "codex",
+      "agent": "claude-code",
       "size": "L",
       "deps": [
         "feat/core-workspace"
       ],
       "summary": "提交（有日志，崩溃安全）、模板说明、修改说明、撤销提交、历史和单文件历史",
       "status": "planned",
-      "updated": "2026-10-03",
+      "updated": "2026-10-05",
       "links": [
         "docs/specs/versioning.md",
         "docs/specs/ipc-m2.md",
         "docs/adr/ADR-0003-versioning-and-sync.md",
         "docs/adr/ADR-0006-history-retention.md"
       ],
-      "prompt": [
-        "Commit with a journal that is crash-safe at every step (ADR-0003 §11, docs/specs/versioning.md): a commit and its objects exist completely or not at all, and the next start finishes or rolls back. Crash injection at every journal step, as the M1 move and import journals do (docs/specs/library-scan.md §7).",
-        "Also the template commit message, editing the message, undoing the last commit, and the history list and single-file history, paged for 50,000-file libraries.",
-        "Add an info level to the diagnostics log for commits, and move the successful discard of an unfinished move there: it is logged under Event::Error today (docs/specs/m1-acceptance.md §4).",
-        "versioning.md §19 item 4: this lane also records the first commit automatically (\"Start history\", §7.7, design decision 32A) and adds settings.json's device id (§4.6).",
-        "Catalog migrations are appended in landing order (§19 item 6): renumber yours when you rebase onto a lane that added one."
-      ]
+      "prompt": {
+        "extra": [
+          "Commit with a journal that is crash-safe at every step (ADR-0003 §11, docs/specs/versioning.md): a commit and its objects exist completely or not at all, and the next start finishes or rolls back. Crash injection at every journal step, as the M1 move and import journals do (docs/specs/library-scan.md §7).",
+          "Also the template commit message, editing the message, undoing the last commit, and the history list and single-file history, paged for 50,000-file libraries.",
+          "Add an info level to the diagnostics log for commits, and move the successful discard of an unfinished move there: it is logged under Event::Error today (docs/specs/m1-acceptance.md §4).",
+          "versioning.md §19 item 4: this lane also records the first commit automatically (\"Start history\", §7.7, design decision 32A) and adds settings.json's device id (§4.6).",
+          "Catalog migrations are appended in landing order (§19 item 6): renumber yours when you rebase onto a lane that added one."
+        ]
+      }
     },
     {
       "id": "feat/core-text-extract",
@@ -2533,7 +2568,7 @@
       "milestone": "M2",
       "phase": "m2-impl",
       "track": "core",
-      "agent": "codex",
+      "agent": "claude-code",
       "size": "M",
       "deps": [
         "feat/ipc-m2-contract",
@@ -2541,16 +2576,18 @@
       ],
       "summary": "从 md、代码、txt、docx 抽取文字进全文索引（正文搜索）",
       "status": "planned",
-      "updated": "2026-10-01",
+      "updated": "2026-10-05",
       "links": [
         "docs/specs/versioning.md",
         "docs/adr/ADR-0002-data-storage.md",
         "docs/specs/library-scan.md"
       ],
-      "prompt": [
-        "Extract text from md, code, txt and docx into the full-text index (ADR-0002 and its Chinese FTS5 tokenizer) so search finds file contents. Detect encodings (UTF-8 with or without BOM, UTF-16, GBK); cap the text and the time per file; never run macros or external programs; a file that fails goes to the problems list and never stops the scan.",
-        "Re-extract only when the content hash changes; measure the extra scan time on the 50,000-file fixture."
-      ]
+      "prompt": {
+        "extra": [
+          "Extract text from md, code, txt and docx into the full-text index (ADR-0002 and its Chinese FTS5 tokenizer) so search finds file contents. Detect encodings (UTF-8 with or without BOM, UTF-16, GBK); cap the text and the time per file; never run macros or external programs; a file that fails goes to the problems list and never stops the scan.",
+          "Re-extract only when the content hash changes; measure the extra scan time on the 50,000-file fixture."
+        ]
+      }
     },
     {
       "id": "feat/core-diff-restore",
@@ -2558,7 +2595,7 @@
       "milestone": "M2",
       "phase": "m2-impl",
       "track": "core",
-      "agent": "codex",
+      "agent": "claude-code",
       "size": "M",
       "deps": [
         "feat/core-commit-history",
@@ -2566,15 +2603,17 @@
       ],
       "summary": "文本和 Word 文字的差异；恢复旧版本 = 产生一条新改动",
       "status": "planned",
-      "updated": "2026-10-01",
+      "updated": "2026-10-05",
       "links": [
         "docs/specs/versioning.md",
         "docs/specs/ipc-m2.md"
       ],
-      "prompt": [
-        "Diffs for text and for Word text (by paragraph), with a summary instead of a diff for very large files; other files show change events only. Restoring an old version writes it to disk as a new change: history is never rewritten, and the current file is never lost (it stays in history or goes to the Recycle Bin).",
-        "versioning.md §19 item 1: Word diffs and text decoding use the `extract` module from feat/core-text-extract (versioning.md §10.2–§10.3): one reader for search and diffs, not two."
-      ]
+      "prompt": {
+        "extra": [
+          "Diffs for text and for Word text (by paragraph), with a summary instead of a diff for very large files; other files show change events only. Restoring an old version writes it to disk as a new change: history is never rewritten, and the current file is never lost (it stays in history or goes to the Recycle Bin).",
+          "versioning.md §19 item 1: Word diffs and text decoding use the `extract` module from feat/core-text-extract (versioning.md §10.2–§10.3): one reader for search and diffs, not two."
+        ]
+      }
     },
     {
       "id": "feat/core-ai-message",
@@ -2582,9 +2621,8 @@
       "milestone": "M2",
       "phase": "m2-impl",
       "track": "core",
-      "agent": "codex",
+      "agent": "claude-code",
       "size": "M",
-      "auditModel": "fable",
       "deps": [
         "feat/ipc-m2-contract",
         "chore/build-deps-m2",
@@ -2592,17 +2630,19 @@
       ],
       "summary": "DeepSeek（兼容 OpenAI）只从特权层请求；Key 存在 Windows 凭据管理器；失败退回模板；要 /security-review",
       "status": "planned",
-      "updated": "2026-10-01",
+      "updated": "2026-10-05",
       "links": [
         "docs/specs/versioning.md",
         "docs/specs/ipc-m2.md",
         "docs/specs/windows-adapter.md"
       ],
-      "prompt": [
-        "The AI commit message: DeepSeek through its OpenAI-compatible API, called only from the privileged layer. The key lives in Windows Credential Manager, never in settings files or logs, and is never returned to the UI. Send only what docs/specs/versioning.md allows (paths and diff excerpts under a size cap), with a timeout; any failure falls back to the template message.",
-        "The audit runs /security-review (network egress, secrets). What leaves the machine is my decision: stop and ask if the spec leaves a case open.",
-        "Sirui chose (versioning.md §19 item 2) that this lane waits for the diff: it builds the request from the selected items and their changed lines (§12.3) and owns everything that decides what leaves the machine, under one /security-review in the audit."
-      ]
+      "prompt": {
+        "extra": [
+          "The AI commit message: DeepSeek through its OpenAI-compatible API, called only from the privileged layer. The key lives in Windows Credential Manager, never in settings files or logs, and is never returned to the UI. Send only what docs/specs/versioning.md allows (paths and diff excerpts under a size cap), with a timeout; any failure falls back to the template message.",
+          "The audit runs /security-review (network egress, secrets). What leaves the machine is my decision: stop and ask if the spec leaves a case open.",
+          "Sirui chose (versioning.md §19 item 2) that this lane waits for the diff: it builds the request from the selected items and their changed lines (§12.3) and owns everything that decides what leaves the machine, under one /security-review in the audit."
+        ]
+      }
     },
     {
       "id": "feat/ui-diff-viewer",
@@ -3546,7 +3586,7 @@
     {
       "id": "approve-landing",
       "when": "每个 lane 汇报后",
-      "item": "批准合并（提示词里已写好「检查通过才合并」）",
+      "item": "批准合并（提示词里已写好「检查通过才合并」）；M2 lane 由路线图会话按你 10-05 的一次授权合并（决策 m2-subagents）",
       "type": "approve",
       "state": "recurring"
     },
@@ -3706,6 +3746,14 @@
       "type": "decide",
       "state": "done",
       "result": "30B 窄窗口的工作区把提交栏固定在底部；31A「未同步」列出最近三个提交；32A 第一次提交自动记录（\"Start history\"）；33B 标签筛选最多两行，其余收进「+N」；34A 快捷视图跟当前学期；35A 课程或文件夹网格里的文件夹显示成一排 48 px 卡片。10-04 合并（ed245bf、ab61012）"
+    },
+    {
+      "id": "m2-subagents",
+      "when": "2026-10-05",
+      "item": "M2 剩下的 lane 谁做、合并怎么批准",
+      "type": "decide",
+      "state": "done",
+      "result": "M2 剩下的 10 个 lane（6 个核心、4 个界面）和 M2 验收的准备都由路线图会话的子代理做（Opus 5.5，L 规模的核心 lane 用 max），Codex 不再接 M2 的后端。合并：你在路线图会话里一次授权，lane 的检查和独立审计都过、上一次合并的 main CI 绿了就由路线图会话合并，事后汇报；产品决定、审计反复不过、要你动手的事（AI 的 API key、M2 验收）仍先问你。同一天批准合并两个修复 lane，恢复回收站修复 lane 的会话收尾"
     }
   ],
   "looseEnds": [
@@ -3912,10 +3960,11 @@
     "独占操作放在同步点：but land、but pull、装依赖",
     "每个 lane 同样收尾：pnpm check + pnpm e2e → /code-review（+ /security-review）→ /simplify → 中文汇报 → 你批准 → but land（Codex lane 见下一条）",
     "CI 红了先修",
-    "Codex lane（标着 Codex 的后端 lane）：用「交给 Codex」提示词开工，Codex 自己跑完检查、code-review 和 simplify 后停在 review；再开 Claude Code session 用「Claude 快速审计」提示词：一次 /code-review，涉及特权层再加 /security-review，不重跑 /simplify",
+    "M2 以外的 Codex lane（标着 Codex 的后端 lane）：用「交给 Codex」提示词开工，Codex 自己跑完检查、code-review 和 simplify 后停在 review；再开 Claude Code session 用「Claude 快速审计」提示词：一次 /code-review，涉及特权层再加 /security-review，不重跑 /simplify",
     "开 session 时按路径图标签（也是提示词第一行）选模型和推理强度：Opus 5.5 是日常默认，Sonnet 5.5 给只改文档和只合并的 lane；Fable 5.1 给最难回退的工作，暂停期间（meta.pausedModels）由 Opus 5.5 代替",
     "路线图数据随 lane 更新：开工、到 review、合并前各跑一次 pnpm roadmap status，只改自己那一条",
-    "M2 起 catalog 迁移按合并顺序追加：并行的 lane rebase 到别人新加的迁移之后，自己重新编号"
+    "M2 起 catalog 迁移按合并顺序追加：并行的 lane rebase 到别人新加的迁移之后，自己重新编号",
+    "M2 起（10-05）：M2 剩下的 lane 由路线图会话的子代理做，每个 lane 走计划 → 分步实现 → 独立审计（另一组子代理，三个角度）→ 修复 → pnpm check + pnpm e2e；检查和审计都过、上一次合并的 main CI 绿了，路线图会话按 Sirui 的一次授权合并并事后汇报；产品决定、审计反复不过、要 Sirui 动手的事仍先问他"
   ],
   "prompts": {
     "land": [
@@ -4224,6 +4273,11 @@
       "at": "2026-10-04",
       "by": "Claude Code",
       "text": "合并：chore/build-deps-m2（CI 37230017035 绿）、feat/ui-library-m1-notes（41539d2；main CI 37237819510 第一次因 problems.test.tsx 短列表测试偶尔失败而红，重跑通过）。新增 fix/ui-problems-short-list-flake；同步仿真第二次审计退回 Codex"
+    },
+    {
+      "at": "2026-10-05",
+      "by": "Claude Code",
+      "text": "合并：feat/ipc-m2-contract（cd4344b，合约会话合并）、fix/ui-problems-short-list-flake。Sirui 决定 M2 剩下的 lane 由路线图会话的子代理做、合并按一次授权（m2-subagents）；6 个 M2 核心 lane 从 Codex 改为 Claude Code"
     }
   ]
 }
