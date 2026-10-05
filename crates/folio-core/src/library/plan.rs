@@ -7,14 +7,16 @@ use super::walk::Snapshot;
 use crate::catalog::{Entry, EntryChanges, EntryId, EntryRecord};
 use crate::fs::{FileKind, Metadata};
 use crate::hash::ContentHash;
-use crate::meta::{EntryKind, FileClass, Moves, VersioningRules, relocated};
+use crate::meta::{EntryKind, FileClass, Moves, VersioningRules, moved_under, relocated};
 use crate::paths::RelPath;
 
 /// What a scan changes.
 #[derive(Debug, Default)]
 pub(super) struct Plan {
     pub entries: EntryChanges,
-    /// Every moved entry: old path → new path and kind, for the metadata files.
+    /// Every moved entry: old path → new path and kind, for the metadata files. An entry that
+    /// stayed at its path below a folder that moved is a move to itself: tags and settings
+    /// follow the nearest move, so without it they would leave with the folder.
     pub moves: Moves,
     pub changes: Vec<Change>,
 }
@@ -103,6 +105,7 @@ pub(super) fn plan(
         }
     }
 
+    let below_moved_folder = moved_under(&moved_folders);
     let mut plan = Plan::default();
     for (entry, found) in current.iter().zip(&found) {
         let old = &entry.record;
@@ -128,6 +131,10 @@ pub(super) fn plan(
         let record = record(path, metadata, rules, hash);
         if *path != old.path {
             plan.moved(entry.id, old, path);
+        } else if !moved_folders.is_empty() && below_moved_folder(&old.path) {
+            // Stayed below a folder that moved: a move to itself (`Plan::moves`).
+            plan.moves
+                .insert(old.path.clone(), (old.path.clone(), old.kind));
         }
         if modified {
             plan.changes.push(Change::Modified(path.clone()));

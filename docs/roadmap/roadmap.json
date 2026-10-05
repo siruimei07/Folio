@@ -2868,6 +2868,45 @@
       }
     },
     {
+      "id": "fix/core-catalog-tags-property",
+      "title": "文件留在原处、文件夹搬走时标签丢失",
+      "milestone": "M2",
+      "phase": "m2-spec",
+      "track": "core",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [],
+      "summary": "folio-core 属性测试 a_rebuilt_catalog_equals_the_one_scans_kept_up_to_date 在 main 上用保存的种子必失败：两次扫描之间文件先移出、文件夹搬走、文件再放回原路径时，扫描把它的标签跟着文件夹搬走了；修扫描计划并提交种子",
+      "status": "done",
+      "updated": "2026-10-05",
+      "landed": "2026-10-05",
+      "gates": {
+        "check": "pass",
+        "e2e": "pass",
+        "codeReview": "pass",
+        "simplify": "pass",
+        "securityReview": "pass",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "crates/folio-core/src/library/plan.rs",
+        "crates/folio-core/src/library/tests.rs",
+        "crates/folio-core/src/meta/tree.rs",
+        "crates/folio-core/src/meta/mod.rs",
+        "crates/folio-core/proptest-regressions/library/tests/property.txt"
+      ],
+      "shared": [
+        "docs/specs/library-scan.md"
+      ],
+      "notes": [
+        "fix/ui-problems-short-list-flake 跑 pnpm check 时发现；干净的 origin/main 副本用同一种子也失败"
+      ],
+      "links": [
+        "docs/specs/library-scan.md"
+      ]
+    },
+    {
       "id": "gate/m2-acceptance",
       "kind": "gate",
       "title": "M2 验收 → v0.2",

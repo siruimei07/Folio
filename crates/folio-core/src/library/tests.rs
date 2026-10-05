@@ -1040,6 +1040,85 @@ fn tags_follow_files_inside_a_course_and_between_courses() {
 }
 
 #[test]
+fn a_file_that_stays_keeps_its_tags_when_its_folder_moves_away() {
+    let f = Fixture::new();
+    f.fs.file("2026 秋/线代/讲义/hw1.pdf", b"1");
+    f.scan();
+    set_tags(
+        f.layout(),
+        "2026 秋/线代/讲义/hw1.pdf",
+        EntryKind::File,
+        tags(["homework"]),
+    );
+    f.scan();
+
+    // Between two scans the file steps out, its folder moves away, and the file goes back to
+    // its path, in a new folder of the old name: it never moved, so its tags stay.
+    f.fs.rename("2026 秋/线代/讲义/hw1.pdf", "2026 秋/线代/hw1.pdf");
+    f.fs.rename("2026 秋/线代/讲义", "2026 秋/线代/旧讲义");
+    f.fs.rename("2026 秋/线代/hw1.pdf", "2026 秋/线代/讲义/hw1.pdf");
+    let report = f.scan();
+    assert_eq!(report.problems, []);
+    assert_eq!(f.tags("2026 秋/线代/讲义/hw1.pdf"), ["homework"]);
+    let course = f
+        .layout()
+        .read_course_meta(&course_at("2026 秋/线代"))
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        course
+            .tags
+            .iter()
+            .map(|(key, _)| key.as_str())
+            .collect::<Vec<_>>(),
+        ["讲义/hw1.pdf"]
+    );
+}
+
+#[test]
+fn a_course_that_stays_while_its_semester_moves_away_keeps_its_settings_and_tags() {
+    let f = Fixture::new();
+    f.fs.file("2026 秋/线代/hw1.pdf", b"1");
+    f.fs.folder("2026 秋/数据结构");
+    f.scan();
+    set_course(f.layout(), "2026 秋/线代", settings("线代", 1));
+    set_course(f.layout(), "2026 秋/数据结构", settings("数构", 2));
+    set_tags(
+        f.layout(),
+        "2026 秋/线代/hw1.pdf",
+        EntryKind::File,
+        tags(["homework"]),
+    );
+    f.scan();
+    // The other course's file cannot be read: it stays too, so nothing in it had to move.
+    std_fs::write(course_file(f.layout(), "2026 秋/数据结构"), "{").unwrap();
+
+    // Both courses step out, the semester moves away, and the courses go back into a new
+    // semester of the old name.
+    f.fs.rename("2026 秋/线代", "线代");
+    f.fs.rename("2026 秋/数据结构", "数据结构");
+    f.fs.rename("2026 秋", "2026 冬");
+    f.fs.rename("线代", "2026 秋/线代");
+    f.fs.rename("数据结构", "2026 秋/数据结构");
+    let report = f.scan();
+    assert!(
+        !report
+            .problems
+            .iter()
+            .any(|problem| matches!(problem, Problem::NotRelocated { .. })),
+        "{:?}",
+        report.problems
+    );
+    assert_eq!(f.tags("2026 秋/线代/hw1.pdf"), ["homework"]);
+    let course = f
+        .layout()
+        .read_course_meta(&course_at("2026 秋/线代"))
+        .unwrap()
+        .unwrap();
+    assert_eq!(course.course, Some(settings("线代", 1)));
+}
+
+#[test]
 fn settings_and_tags_follow_renamed_courses_and_semesters() {
     let f = Fixture::new();
     f.fs.file("2026 秋/线代/hw1.pdf", b"1");

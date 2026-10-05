@@ -1144,10 +1144,12 @@ impl<'a> Relocator<'a> {
     }
 
     /// The move of the nearest of `path` and its ancestors that moved, and that ancestor as
-    /// `path` spells it.
+    /// `path` spells it. `None` when that move is to itself: the entry stayed below a moved
+    /// folder (`library::plan`), so nothing at or below it moves.
     fn moved_ancestor(&self, path: &RelPath) -> Option<(&'a RelPath, RelPath)> {
         path.ancestors()
             .find_map(|ancestor| Some((self.moved(&ancestor)?, ancestor)))
+            .filter(|(from, _)| self.moves[*from].0 != **from)
     }
 
     fn kind(&self, path: &RelPath) -> Option<EntryKind> {
@@ -1161,6 +1163,13 @@ impl<'a> Relocator<'a> {
         let (from, ancestor) = self.moved_ancestor(path)?;
         Some(moved_along(path, &ancestor, &self.moves[from].0))
     }
+}
+
+/// Whether a move in `moves` covers `path`: it or one of its ancestors moved, compared as
+/// [`MetaTree::relocate`] compares them, without case.
+pub fn moved_under(moves: &Moves) -> impl Fn(&RelPath) -> bool + '_ {
+    let relocator = Relocator::new(moves);
+    move |path| relocator.moved_ancestor(path).is_some()
 }
 
 /// Where `path` is after `moves`, compared exactly: moved along with the nearest of itself and

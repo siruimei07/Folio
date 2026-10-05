@@ -27,8 +27,8 @@ pub use model::{
     TagDefinitions, TagId, ValueError, VersioningRules,
 };
 pub use tree::{
-    Content, MetaTree, Moves, Owners, ScanJournal, Settings, Stranded, StrandedCause, relocated,
-    write_content,
+    Content, MetaTree, Moves, Owners, ScanJournal, Settings, Stranded, StrandedCause, moved_under,
+    relocated, write_content,
 };
 
 use crate::files;

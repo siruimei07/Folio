@@ -208,7 +208,10 @@ case-sensitive disk allows, moves write into the one the mirror reads (§7.2).
 
 - **Tags** of the moved entry and of every path below it move to their new file and key,
   `meta::tag_location` deciding which file holds them. Assignments for paths that no longer exist
-  move too, so the tags of a file that has not arrived from sync yet follow its folder.
+  move too, so the tags of a file that has not arrived from sync yet follow its folder. An entry
+  found by id at its own path below a moved folder did not move: the scan lists it as a move to
+  itself, so its tags and settings stay (a file stepped out, its folder moved away, and the file
+  went back to its path).
 - **Settings** of a semester or course move when it stays a semester or course. Otherwise they
   stay where they were, and the file is reported as orphaned (§7.3) instead of deleted.
 - A moved assignment replaces one for the same path at the target, compared without case, so a
@@ -379,7 +382,7 @@ core §7). Problems are recomputed by every scan; the shell keeps the latest lis
 | Walk | Each step of §4 with `MemFs`, including names Windows cannot hold; unreadable folders keep their entries |
 | Ignore rules | Precedence of §5 row by row; case and NFC; invalid lines; `.gitignore` in scopes; a scope that is a `.gitignore` covers its folder, or the library at the root (it fails without that: checked once by hand) |
 | Reconcile | Add, modify, remove, kind change; moves by id of files and folders, case-only moves, swaps; id-less entries following a moved folder; entry ids survive moves; entries that stay while their folder entry moves or goes, below a folder that cannot be listed too, get the folder entry at their parent path; `added_ns` of a first scan, a later one and a library that started empty |
-| Metadata | Tags and settings follow every kind of move, also where names in `.folio/meta/` differ in case; case-only renames of files and semester folders; broken and newer files are never written; paths that would be too long |
+| Metadata | Tags and settings follow every kind of move, also where names in `.folio/meta/` differ in case; a file that stays while its folder moves away keeps its tags; case-only renames of files and semester folders; broken and newer files are never written; paths that would be too long |
 | Journal | A swap interrupted between the metadata and the catalog is undone and redone, not swapped back; a half-written move is finished; the journal of a committed scan is removed, not undone; a journal that names other files (`..`, `\`, absolute, drive or UNC paths, unescaped names) stops before touching anything and is retained through a failed rebuild; `sync_metadata` settles an interrupted scan first. Explicit operation tests cover no-id and case-only moves, second recovery crashes, conflicting/unreadable evidence, legacy journals, the size cap and cleanup failure. Discarding (`operations/entries_tests.rs`): every conflict is `UnfinishedMove` and its discard writes no metadata; a replaced catalog rebuilds by a scan with the tags where the file is; an unmoved item gets its before-images back without a user file being opened; a metadata file edited since is left with every other; a discard stopped while restoring or before the journal goes finishes on the next call; a scan's journal and a committed move's are never reverted. Mutation checks: undoing nothing, undoing committed journals, or joining the journal's paths as written, fails a test |
 | Mirror | Definitions, settings and entry tags; orphaned files; tag files of unconfigured folders; a file that cannot be read keeps what it gave; of two files that name one folder, the one spelled like it holds moved tags |
 | Hashing | Deferral, verification, locked files, cancellation, resume |
