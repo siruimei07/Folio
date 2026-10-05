@@ -71,11 +71,25 @@ function depthOf(path: string): number {
   return depth;
 }
 
+/** Whether a number fits the shell's `u32` (ipc-m1 §4). */
+export function isCount(value: number): boolean {
+  return Number.isInteger(value) && value >= 0 && value <= 0xffff_ffff;
+}
+
 /** Checks a page request as the shell does (ipc-m1 §4.1, §5.3). */
 export function checkPage(page: PageRequest, limit: number = LIMITS.pageSize): void {
-  const valid = (value: number) => Number.isInteger(value) && value >= 0 && value <= 0xffff_ffff;
-  if (!valid(page.offset) || !valid(page.limit) || page.limit > limit) {
+  if (!isCount(page.offset) || !isCount(page.limit) || page.limit > limit) {
     fail('InvalidArgument', `page ${JSON.stringify(page)} is outside the limits`);
+  }
+}
+
+/** `name (2).ext`, `name (3).ext`, …: the first name free in `folder`, ignoring case as Windows does. */
+export function freeName(library: FakeLibrary, folder: FakeNode, name: string): string {
+  const dot = name.lastIndexOf('.');
+  const [stem, extension] = dot > 0 ? [name.slice(0, dot), name.slice(dot)] : [name, ''];
+  for (let copy = 2; ; copy++) {
+    const candidate = `${stem} (${String(copy)})${extension}`;
+    if (!library.clash(folder, candidate)) return candidate;
   }
 }
 
@@ -232,6 +246,12 @@ export class FakeLibrary {
   }
 
   // ---- rows
+
+  /** The reference of the entry at `path`; `null` when there is none, or for the root. */
+  refAt(path: string): EntryRef | null {
+    const node = this.at(path);
+    return node === undefined || node === this.root ? null : this.ref(node);
+  }
 
   ref(node: FakeNode): EntryRef {
     return { id: node.id, path: node.path };

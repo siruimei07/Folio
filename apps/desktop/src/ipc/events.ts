@@ -1,19 +1,22 @@
-// Subscriptions to the shell's events (docs/specs/ipc-m1.md §15). Each returns the function that
+// Subscriptions to the shell's events (docs/specs/ipc-m1.md §15, ipc-m2.md §14). Each returns the function that
 // stops it, so a React effect can return it directly:
 // `useEffect(() => shellEvents.onCatalogChanged(refresh), [refresh])`.
 import type { Event, UnlistenFn } from '@tauri-apps/api/event';
 
 import {
+  type AiSettingsChanged,
   type AppSettingsChanged,
   type CatalogChanged,
   type DropFailed,
   type DropHover,
   events,
   type FilesDropped,
+  type HistoryChanged,
   type IgnoreRulesChanged,
   type JobChanged,
   type LibraryStateChanged,
   type ProblemsChanged,
+  type WorkspaceChanged,
 } from './bindings';
 
 /** A failed registration means a missing permission: a bug, reported to the console. */
@@ -91,4 +94,13 @@ export const shellEvents = {
   /** Folio saved new ignore rules for the library; a scan job follows. */
   onIgnoreRulesChanged: (onEvent: (payload: IgnoreRulesChanged) => void) =>
     subscribe(events.ignoreRulesChanged, onEvent),
+  /** The workspace changed: refetch the summary and the visible pages (ipc-m2 §14). */
+  onWorkspaceChanged: (onEvent: (payload: WorkspaceChanged) => void) =>
+    subscribe(events.workspaceChanged, onEvent),
+  /** A commit, reword, uncommit or restore was recorded. */
+  onHistoryChanged: (onEvent: (payload: HistoryChanged) => void) =>
+    subscribe(events.historyChanged, onEvent),
+  /** The AI settings, or whether a key is stored, changed. */
+  onAiSettingsChanged: (onEvent: (payload: AiSettingsChanged) => void) =>
+    subscribe(events.aiSettingsChanged, onEvent),
 };

@@ -19,14 +19,14 @@ const running = (kind: Job['kind'], done: number, total: number | null, permille
   id: `${kind}-running`,
   kind,
   cancellable: true,
-  status: { state: 'running', progress: { done, total, permille, current: null } },
+  status: { state: 'running', progress: { done, total, permille, bytes: null, current: null } },
 });
 const queued = (kind: Job['kind']): Job => ({ id: `${kind}-queued`, kind, cancellable: true, status: { state: 'queued' } });
 const failed = (kind: Job['kind']): Job => ({
   id: `${kind}-failed`,
   kind,
   cancellable: false,
-  status: { state: 'failed', error: { code: 'AccessDenied', detail: 'denied' } },
+  status: { state: 'failed', error: { code: 'AccessDenied', detail: 'denied' }, file: null },
 });
 const cancelled = (kind: Job['kind']): Job => ({ id: `${kind}-cancelled`, kind, cancellable: false, status: { state: 'cancelled', result: null } });
 
@@ -60,7 +60,7 @@ describe('activity status', () => {
   it('stays on Done for 10 s after the last active job ends', () => {
     vi.useFakeTimers();
     try {
-      const done: Job = { ...running('import', 12, 12), status: { state: 'failed', error: { code: 'DiskFull', detail: '' } } };
+      const done: Job = { ...running('import', 12, 12), status: { state: 'failed', error: { code: 'DiskFull', detail: '' }, file: null } };
       const { result, rerender } = renderHook(({ jobs }) => useActivityStatus(jobs, 0), {
         initialProps: { jobs: [running('import', 7, 12)] },
       });

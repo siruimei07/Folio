@@ -205,7 +205,7 @@ impl Registry {
             match result {
                 Ok(Some(result)) => JobStatus::Done { result },
                 Ok(None) => JobStatus::Cancelled { result: None },
-                Err(error) => JobStatus::Failed { error },
+                Err(error) => JobStatus::Failed { error, file: None },
             },
         )
     }
@@ -241,6 +241,7 @@ fn progress(done: u64, total: Option<u64>) -> Progress {
         done: count(done),
         total: total.map(count),
         permille: None,
+        bytes: None,
         current: None,
     }
 }
@@ -345,6 +346,7 @@ mod tests {
                     done: 2,
                     total: Some(4),
                     permille: Some(500),
+                    bytes: None,
                     current: Some("folder/current.txt".into()),
                 },
             )

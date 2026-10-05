@@ -1,8 +1,10 @@
 //! Feature-owned command handlers. New implementations replace their group's test-only stubs,
 //! then update that group's manifest.rs and capabilities/<group>.json in the same change.
 
+pub(crate) mod ai;
 pub(crate) mod browse;
 pub(crate) mod file;
+pub(crate) mod history;
 pub(crate) mod import;
 pub(crate) mod jobs;
 pub(crate) mod library;
@@ -13,9 +15,18 @@ pub(crate) mod manifest;
 pub(crate) mod operations;
 pub(crate) mod settings;
 pub(crate) mod shell;
+pub(crate) mod workspace;
 
 use crate::error::AppError;
 use crate::library::LibraryState;
+
+/// What a stub would answer. No call reaches one: Tauri's ACL rejects commands it was not given.
+#[cfg(test)]
+fn planned<T>(command: &str, _request: impl Sized) -> Result<T, AppError> {
+    Err(AppError::Internal(format!(
+        "`{command}` is declared for the bindings only"
+    )))
+}
 
 /// Runs a library call on a blocking thread: library calls wait for startup, locks and disks,
 /// never on the async runtime. `what` names the call if its thread fails.

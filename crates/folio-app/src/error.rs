@@ -8,6 +8,10 @@ use specta::Type;
 /// `apps/desktop/src/i18n/locales/en/errors.json`; `tsc` fails if a code has no message. Each
 /// case the UI words differently has its own code. `detail` is for logs and bug reports, never
 /// shown to users on its own.
+///
+/// The M2 codes (docs/specs/ipc-m2.md §15) are declared before the lanes that return them: each
+/// expects to be dead code outside tests until then, and the lane that first returns one removes
+/// its expectation (clippy fails on an expectation that no longer holds).
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, Serialize, Type)]
 #[serde(tag = "code", content = "detail")]
 pub enum AppError {
@@ -101,6 +105,213 @@ pub enum AppError {
     /// A bug or damaged state; the log has the details.
     #[error("internal error: {0}")]
     Internal(String),
+    // M2 (docs/specs/ipc-m2.md §15)
+    /// The changes changed since the UI read them (the fingerprint or the base).
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "returned once its M2 lane lands")
+    )]
+    #[error("the workspace changed: {0}")]
+    WorkspaceChanged(String),
+    /// The selection and the metadata hold no change.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "returned once its M2 lane lands")
+    )]
+    #[error("nothing to commit: {0}")]
+    NothingToCommit(String),
+    /// A file kept changing while Folio read it, or a restore's target changed before it was
+    /// replaced.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "returned once its M2 lane lands")
+    )]
+    #[error("the file changed: {0}")]
+    FileChanged(String),
+    /// `start_history`: the history has started already.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "returned once its M2 lane lands")
+    )]
+    #[error("the history exists: {0}")]
+    HistoryExists(String),
+    /// Another commit, reword, uncommit or restore is running, or recovery of an earlier one.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "returned once its M2 lane lands")
+    )]
+    #[error("another history operation is running: {0}")]
+    HistoryBusy(String),
+    /// `uncommit`: the commit is no longer the newest.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "returned once its M2 lane lands")
+    )]
+    #[error("not the newest commit: {0}")]
+    NotHead(String),
+    /// The first commit, a prune commit, or a synced one cannot be undone.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "returned once its M2 lane lands")
+    )]
+    #[error("the commit cannot be undone: {0}")]
+    CannotUncommit(String),
+    /// A prune commit's or a synced commit's message cannot be changed.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "returned once its M2 lane lands")
+    )]
+    #[error("the message cannot be changed: {0}")]
+    CannotReword(String),
+    /// A newer Folio wrote the history: commits, rewords, uncommits and restores wait for an
+    /// update.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "returned once its M2 lane lands")
+    )]
+    #[error("the history is read-only: {0}")]
+    HistoryReadOnly(String),
+    /// `HEAD`, a pack or an object is missing or damaged. The files are fine.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "returned once its M2 lane lands")
+    )]
+    #[error("the history is damaged: {0}")]
+    HistoryDamaged(String),
+    /// That version was not kept: an event-only file, or text over the size limit.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "returned once its M2 lane lands")
+    )]
+    #[error("the version was not kept: {0}")]
+    NotStored(String),
+    /// That version was thinned out.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "returned once its M2 lane lands")
+    )]
+    #[error("the version was thinned out: {0}")]
+    Pruned(String),
+    /// `restore_version`: the file already has that content.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "returned once its M2 lane lands")
+    )]
+    #[error("nothing to restore: {0}")]
+    Unchanged(String),
+    /// A commit summary is empty.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "returned once its M2 lane lands")
+    )]
+    #[error("empty summary: {0}")]
+    SummaryEmpty(String),
+    /// A commit summary is longer than `LIMITS.summaryChars`.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "returned once its M2 lane lands")
+    )]
+    #[error("summary too long: {0}")]
+    SummaryTooLong(String),
+    /// A commit summary holds a control character, a line break included.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "returned once its M2 lane lands")
+    )]
+    #[error("invalid character in the summary: {0}")]
+    SummaryInvalid(String),
+    /// A commit body is longer than `LIMITS.bodyChars`.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "returned once its M2 lane lands")
+    )]
+    #[error("body too long: {0}")]
+    BodyTooLong(String),
+    /// A commit body holds a control character other than tab and line feed.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "returned once its M2 lane lands")
+    )]
+    #[error("invalid character in the body: {0}")]
+    BodyInvalid(String),
+    /// AI is off, or no key is stored for the endpoint.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "returned once its M2 lane lands")
+    )]
+    #[error("AI is not set up: {0}")]
+    AiNotConfigured(String),
+    /// The AI service could not be reached: name, connection or TLS.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "returned once its M2 lane lands")
+    )]
+    #[error("AI network error: {0}")]
+    AiNetwork(String),
+    /// The AI service did not answer in time.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "returned once its M2 lane lands")
+    )]
+    #[error("AI timeout: {0}")]
+    AiTimeout(String),
+    /// The AI service refused the key (401, 403).
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "returned once its M2 lane lands")
+    )]
+    #[error("AI key rejected: {0}")]
+    AiRejected(String),
+    /// The AI service asks to wait (429).
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "returned once its M2 lane lands")
+    )]
+    #[error("AI rate limited: {0}")]
+    AiRateLimited(String),
+    /// The AI service failed (5xx).
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "returned once its M2 lane lands")
+    )]
+    #[error("AI service unavailable: {0}")]
+    AiUnavailable(String),
+    /// The AI service's answer could not be used.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "returned once its M2 lane lands")
+    )]
+    #[error("unusable AI answer: {0}")]
+    AiBadResponse(String),
+    /// Windows Credential Manager failed; the detail names its error code, never the key.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "returned once its M2 lane lands")
+    )]
+    #[error("credential store failed: {0}")]
+    AiCredential(String),
+    /// A typed AI endpoint is not an `https` address with a host and no user name, query or
+    /// fragment.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "returned once its M2 lane lands")
+    )]
+    #[error("invalid AI endpoint: {0}")]
+    AiEndpointInvalid(String),
+    /// A typed AI model name is empty, too long or not visible ASCII.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "returned once its M2 lane lands")
+    )]
+    #[error("invalid AI model: {0}")]
+    AiModelInvalid(String),
+    /// A typed AI key is empty, too long or not visible ASCII.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "returned once its M2 lane lands")
+    )]
+    #[error("invalid AI key: {0}")]
+    AiKeyInvalid(String),
 }
 
 #[cfg(test)]
@@ -149,6 +360,35 @@ mod tests {
             Blocked,
             Busy,
             Internal,
+            WorkspaceChanged,
+            NothingToCommit,
+            FileChanged,
+            HistoryExists,
+            HistoryBusy,
+            NotHead,
+            CannotUncommit,
+            CannotReword,
+            HistoryReadOnly,
+            HistoryDamaged,
+            NotStored,
+            Pruned,
+            Unchanged,
+            SummaryEmpty,
+            SummaryTooLong,
+            SummaryInvalid,
+            BodyTooLong,
+            BodyInvalid,
+            AiNotConfigured,
+            AiNetwork,
+            AiTimeout,
+            AiRejected,
+            AiRateLimited,
+            AiUnavailable,
+            AiBadResponse,
+            AiCredential,
+            AiEndpointInvalid,
+            AiModelInvalid,
+            AiKeyInvalid,
         ]
     }
 

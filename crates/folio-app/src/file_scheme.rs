@@ -274,6 +274,8 @@ fn error_code(error: &AppError) -> &'static str {
         AppError::NotLocal(_) => "NotLocal",
         AppError::NoThumbnail(_) => "NoThumbnail",
         AppError::FileSystem(_) => "FileSystem",
+        AppError::Pruned(_) => "Pruned",
+        AppError::HistoryDamaged(_) => "HistoryDamaged",
         _ => "Internal",
     }
 }
@@ -281,7 +283,9 @@ fn error_code(error: &AppError) -> &'static str {
 fn error_status(error: &AppError) -> StatusCode {
     match error {
         AppError::InvalidArgument(_) => StatusCode::BAD_REQUEST,
-        AppError::NotFound(_) | AppError::NoThumbnail(_) => StatusCode::NOT_FOUND,
+        AppError::NotFound(_) | AppError::NoThumbnail(_) | AppError::Pruned(_) => {
+            StatusCode::NOT_FOUND
+        }
         AppError::NoLibrary(_) => StatusCode::SERVICE_UNAVAILABLE,
         AppError::AccessDenied(_) => StatusCode::FORBIDDEN,
         AppError::InUse(_) | AppError::NotLocal(_) => StatusCode::CONFLICT,

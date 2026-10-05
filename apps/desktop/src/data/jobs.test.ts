@@ -10,7 +10,7 @@ function job(id: string, status: JobStatus, kind: Job['kind'] = 'scan'): Job {
 const queued: JobStatus = { state: 'queued' };
 const running = (done: number): JobStatus => ({
   state: 'running',
-  progress: { done, total: 100, permille: null, current: null },
+  progress: { done, total: 100, permille: null, bytes: null, current: null },
 });
 const done: JobStatus = { state: 'done', result: { kind: 'scan', changes: 0, problems: 0 } };
 

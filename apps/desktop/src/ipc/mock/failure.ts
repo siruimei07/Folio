@@ -8,10 +8,13 @@ export type ErrorCode = AppError['code'];
 export class ShellFailure extends Error {
   override readonly name = 'ShellFailure';
   readonly appError: AppError;
+  /** The library path of the file a job failed on (ipc-m2 §13), when one file caused it. */
+  readonly file: string | null;
 
-  constructor(appError: AppError) {
+  constructor(appError: AppError, file: string | null = null) {
     super(formatIpcError(appError));
     this.appError = appError;
+    this.file = file;
   }
 }
 

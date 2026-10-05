@@ -25,13 +25,17 @@
       "scan": "Scanning {{percent}}%",
       "hash": "Checking files {{percent}}%",
       "import": "Adding files {{percent}}%",
-      "rebuild": "Rebuilding index {{percent}}%"
+      "rebuild": "Rebuilding index {{percent}}%",
+      "commit": "Committing {{percent}}%",
+      "firstCommit": "Starting history {{percent}}%"
     },
     "runningUnknown": {
       "scan": "Scanning…",
       "hash": "Checking files…",
       "import": "Adding files…",
-      "rebuild": "Rebuilding index…"
+      "rebuild": "Rebuilding index…",
+      "commit": "Committing…",
+      "firstCommit": "Starting history…"
     },
     "several_one": "{{count}} task",
     "several_other": "{{count}} tasks",
@@ -44,7 +48,9 @@
       "scan": "scanning the library",
       "hash": "checking files",
       "import": "adding files",
-      "rebuild": "rebuilding the search index"
+      "rebuild": "rebuilding the search index",
+      "commit": "committing changes",
+      "firstCommit": "starting your history"
     },
     "aria": {
       "running": "Activity: {{task}}, {{percent}} percent.",
@@ -74,7 +80,9 @@
       "importCount_other": "Adding {{count}} files",
       "importCountTo_one": "Adding {{count}} file to {{target}}",
       "importCountTo_other": "Adding {{count}} files to {{target}}",
-      "rebuild": "Rebuilding the search index"
+      "rebuild": "Rebuilding the search index",
+      "commit": "Committing changes",
+      "firstCommit": "Starting history"
     },
     "runningMeta": {
       "scan": "{{done, number}} of {{total, number}} files",
@@ -83,13 +91,19 @@
       "hashSoFar": "So Folio can spot changes and moves; {{done, number}} files so far",
       "import": "{{done, number}} of {{total, number}} files",
       "importSoFar": "{{done, number}} files so far",
-      "rebuild": "{{done, number}} entries so far"
+      "rebuild": "{{done, number}} entries so far",
+      "commit": "{{done, number}} of {{total, number}} files",
+      "commitSoFar": "{{done, number}} files so far",
+      "firstCommit": "{{done, number}} of {{total, number}} files",
+      "firstCommitSoFar": "{{done, number}} files so far"
     },
     "queued": {
       "scan": "Waiting",
       "hash": "Starts when the scan finishes",
       "import": "Waiting for another import to finish",
-      "rebuild": "Waiting"
+      "rebuild": "Waiting",
+      "commit": "Waiting",
+      "firstCommit": "Waiting for the scan to finish"
     },
     "doneTitle": {
       "scan": "Scanned the library",
@@ -101,7 +115,10 @@
       "importTo_other": "Added {{count, number}} files to {{target}}",
       "importPartial": "Added {{count, number}} of {{total, number}} files",
       "importPartialTo": "Added {{count, number}} of {{total, number}} files to {{target}}",
-      "rebuild": "Rebuilt the search index"
+      "rebuild": "Rebuilt the search index",
+      "commit_one": "Committed {{count, number}} change",
+      "commit_other": "Committed {{count, number}} changes",
+      "firstCommit": "Started your history"
     },
     "doneMeta": {
       "scanNoChanges": "No changes",
@@ -121,21 +138,27 @@
       "importFailed_one": "{{count, number}} couldn't be copied. Its original stays where it is.",
       "importFailed_other": "{{count, number}} couldn't be copied. Their originals stay where they are.",
       "rebuild_one": "{{count, number}} item",
-      "rebuild_other": "{{count, number}} items"
+      "rebuild_other": "{{count, number}} items",
+      "firstCommit_one": "{{count, number}} file",
+      "firstCommit_other": "{{count, number}} files"
     },
     "failedTitle": {
       "scan": "Scan stopped",
       "hash": "Couldn't check files",
       "import": "Couldn't add files",
       "importTo": "Couldn't add files to {{target}}",
-      "rebuild": "Couldn't rebuild the index"
+      "rebuild": "Couldn't rebuild the index",
+      "commit": "Couldn't commit",
+      "firstCommit": "Couldn't start your history"
     },
     "cancelledTitle": {
       "scan": "Scan cancelled",
       "hash": "Checking cancelled",
       "import": "Stopped adding files",
       "importTo": "Stopped adding files to {{target}}",
-      "rebuild": "Rebuild cancelled"
+      "rebuild": "Rebuild cancelled",
+      "commit": "Commit cancelled",
+      "firstCommit": "Your history hasn't started"
     },
     "cancelledMeta": {
       "import_one": "{{count, number}} of {{total, number}} was added before you stopped.",
@@ -148,7 +171,9 @@
       "scan": "Cancel scan",
       "hash": "Cancel checking files",
       "import": "Cancel adding files",
-      "rebuild": "Cancel rebuild"
+      "rebuild": "Cancel rebuild",
+      "commit": "Cancel commit",
+      "firstCommit": "Cancel starting history"
     },
     "details": "Details",
     "percent": "{{percent}}%",

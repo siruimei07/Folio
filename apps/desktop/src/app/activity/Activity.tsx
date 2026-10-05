@@ -1,7 +1,17 @@
 import '../../components/tone.css';
 import './Activity.css';
 
-import { CircleX, FileCog, FolderSearch, Import, type LucideIcon, RefreshCw, X } from 'lucide-react';
+import {
+  CircleX,
+  FileCog,
+  FolderSearch,
+  GitCommitHorizontal,
+  History,
+  Import,
+  type LucideIcon,
+  RefreshCw,
+  X,
+} from 'lucide-react';
 import { type KeyboardEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button as AriaButton, Dialog, DialogTrigger, Heading } from 'react-aria-components';
@@ -39,6 +49,8 @@ const QUEUED_ICONS: Readonly<Record<JobKind, LucideIcon>> = {
   hash: FileCog,
   import: Import,
   rebuild: RefreshCw,
+  commit: GitCommitHorizontal,
+  firstCommit: History,
 };
 
 /** The button's icon: the progress ring while jobs run, else the result or the warning. */

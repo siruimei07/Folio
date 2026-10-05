@@ -926,7 +926,9 @@ error state in the browser, and the fixtures serve a few sample files through
   `?scenario=unavailable` with `?reason=<Unavailable>` and `?retry=open` (then "Try again"
   opens it), and for `first-run` `?choice=<FolderContent kind>` and `?sync=<SyncProvider>`.
   The console drives the fake through `window.__FOLIO_FAKE_SHELL__`: `finishJobs()`,
-  `dropFiles()`, `setProblems()`, `makeUnavailable()`, `setFailure()`.
+  `dropFiles()`, `setProblems()`, `makeUnavailable()`, `setFailure()`, and for M2 `editFile()`,
+  `addFile()`, `deleteFile()` and `downloadFile()`; the M2 scenarios and parameters are in
+  ipc-m2.md §17.
 - Production builds contain no fake shell: `import.meta.env.DEV` is statically false, so the import
   is removed. The fake sets `window.__FOLIO_FAKE_SHELL__`; an e2e test checks that the real app
   has no such property.

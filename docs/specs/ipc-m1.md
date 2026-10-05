@@ -28,7 +28,7 @@ reverse are in [ADR-0004](../adr/ADR-0004-ipc-contract.md); this spec fixes the 
 |---|---|
 | Library: status, choose a folder, create or take over, open | Settings beyond §22: AI, file types, start with Windows, updates |
 | Semesters and courses: list, create, update, reorder | Actions on problems: rename to NFC, reattach or discard orphaned metadata |
-| Tags: list, create, update, reorder, delete, assign | Workspace, commits and history (M2) |
+| Tags: list, create, update, reorder, delete, assign | Workspace, commits, history and AI messages (M2): [ipc-m2.md](ipc-m2.md) |
 | Entries: list, filter, get, create a folder, rename, move, delete to the Recycle Bin | Sync (M3) |
 | Search with pages | Office previews (M4) |
 | Preview: file bytes and thumbnails, open with the default app, show in File Explorer | |

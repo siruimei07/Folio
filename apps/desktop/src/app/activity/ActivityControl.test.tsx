@@ -46,13 +46,13 @@ describe('ActivityControl', () => {
       id: 'import-1',
       kind: 'import',
       cancellable: true,
-      status: { state: 'running', progress: { done: 1, total: 4, permille: null, current: null } },
+      status: { state: 'running', progress: { done: 1, total: 4, permille: null, bytes: null, current: null } },
     };
     const job: Job = {
       id: 'import-1',
       kind: 'import',
       cancellable: false,
-      status: { state: 'failed', error: { code: 'DiskFull', detail: 'full' } },
+      status: { state: 'failed', error: { code: 'DiskFull', detail: 'full' }, file: null },
     };
     act(() => {
       noteImport(job.id, { libraryId, target, label: 'CSC148', files: 4 });

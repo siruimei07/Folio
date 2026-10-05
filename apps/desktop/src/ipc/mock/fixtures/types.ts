@@ -10,6 +10,9 @@ import type {
   SyncProvider,
   Unavailable,
 } from '../../bindings';
+import type { FakeLibrary } from '../library';
+import type { AiSeed } from '../versioning/ai';
+import type { VersioningSeed } from '../versioning/model';
 
 /** Settings of a semester or course folder (`.folio/meta/`), which follow it when it moves. */
 export interface GroupSettings {
@@ -58,6 +61,8 @@ export interface LibrarySeed {
   problems: Problem[];
   /** The text of `.folio/ignore`; none by default. */
   ignoreRules?: string;
+  /** The library's history and workspace (ipc-m2), built on the opened library; none by default. */
+  history?: (library: FakeLibrary, now: number) => VersioningSeed;
 }
 
 /** One answer of the folder dialog (`pick_library_folder`); `null`: the user cancels. */
@@ -91,4 +96,6 @@ export interface Fixture {
   importSources: (ImportScript | null)[];
   /** App settings on this computer; Windows' own appearance and the name `G16` by default. */
   appSettings?: AppSettings;
+  /** AI on this computer (ipc-m2 §12); on, without a key, by default. */
+  ai?: AiSeed;
 }

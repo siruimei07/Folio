@@ -14,7 +14,7 @@ export function sampleJobs(now: number): ActivityJob[] {
         cancellable: true,
         status: {
           state: 'running',
-          progress: { done: 4210, total: 11000, permille: null, current: 'MAT232/Problem sets/ps3-solutions.docx' },
+          progress: { done: 4210, total: 11000, permille: null, bytes: null, current: 'MAT232/Problem sets/ps3-solutions.docx' },
         },
       },
     },

@@ -254,7 +254,7 @@ describe('import result', () => {
 
   it('says why an import failed as a whole', async () => {
     renderImport();
-    const job: Job = { id: 'job', kind: 'import', cancellable: false, status: { state: 'failed', error: { code: 'DiskFull', detail: 'full' } } };
+    const job: Job = { id: 'job', kind: 'import', cancellable: false, status: { state: 'failed', error: { code: 'DiskFull', detail: 'full' }, file: null } };
     openDialog('importResult', { job, target: 'MAT232' });
     const found = await screen.findByRole('dialog', { name: "Couldn't add files to MAT232" });
     expect(within(found).getByText(/^The disk is full\./)).toBeInTheDocument();

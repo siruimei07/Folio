@@ -341,7 +341,9 @@ entry's tag change is part of its item when it has one, and a row of its own oth
   item's and metadata change's key, so it is updated as items come and go and needs no sorting. A
   commit names the fingerprint it was built on (§7.1), so it never commits a set of changes the user
   did not see. A file edited again keeps its key, so the fingerprint stays. It is computed for
-  `get_workspace` and for the commit, not for every event.
+  `get_workspace` and for the commit, not for every event. Each item counts with its key and
+  whether it is includable (ready or hashing), so a file that becomes or stops being blocked changes
+  it too (ipc-m2.md §5.1, 2026-10-04).
 - `WorkspaceChanged` carries the catalog revision, the totals and `HEAD`, at most four times a
   second. It follows `CatalogChanged`, hashing batches, metadata changes and `HEAD` changes. While
   the first commit is running (§7.7) the workspace lists nothing.
@@ -505,15 +507,19 @@ committing never depends on the network.
 
 - Commits of `HEAD`'s chain and operations of the log, newest first by effective time (§5.4, which
   keeps commits in the chain's order whatever their clocks said), then by their order in the chain
-  or the log; paged (ipc-m1 §5.3), and filterable by type (brief §6.2's "All types").
+  or the log; paged (ipc-m1 §5.3), and filterable by type (brief §6.2's "All types"). An
+  operation's effective time is the later of its own time and the previous operation's; at equal
+  times an operation comes before a commit (ipc-m2.md §4).
 - An operation that names a commit a later reword rewrote shows the commit it became: a reword's
   `head_before` and `head_after` chains have equal length, so the catalog maps old ids to new ones
   by position when it reads the log (§13).
 - A commit shows its time, kind, summary, body, short id (the first 7 hexadecimal digits), device
   name (`iCloud` for imports, brief §5.6), its first changed files and their count. A prune commit
   shows how many old versions were thinned out.
-- "Not synced" marks commits after the remote's canonical head; in M2 every commit is unsynced,
-  and the not-synced list of the workspace is empty until M3.
+- "Not synced" marks commits after the remote's canonical head; in M2 every commit is unsynced.
+  The workspace's "Not synced" card lists the newest three commits, read from `list_history`, with
+  "N more in History" (Sirui, 2026-10-04, decision `not-synced-list`; design decision 31A); M3 lists
+  only the unsynced ones (ipc-m2.md §8.1).
 
 ### 9.2 Commit details
 
@@ -641,7 +647,9 @@ prove, judged by the staged file, which the journal's existence says was written
   origin (scheme, host and port) as its user name. A request goes out only when it equals the
   current endpoint's origin, and changing the endpoint to another origin deletes the key, so a key
   never reaches a host it was not entered for, whether the user switched services or a script in
-  the UI changed the setting.
+  the UI changed the setting. Storing a key for an origin other than DeepSeek's first asks the user
+  in a Windows dialog, so a script cannot point Folio at its own server and have changed text sent
+  there (Sirui, 2026-10-04; ipc-m2.md §12.3).
 - The endpoint is any OpenAI-compatible service (brief §5.7): `https` only, a host, an optional path
   (`/v1`), no user name, query or fragment. Requests go to `<endpoint>/chat/completions`.
 
@@ -774,7 +782,10 @@ The shell maps them to IPC codes (§17.4): `Newer` and `StoreError::Newer` to `H
 ## 17. M2 contract outline (for `feat/ipc-m2-contract`)
 
 The contract lane writes `docs/specs/ipc-m2.md` in the style of ipc-m1, declares every command
-(ipc-m1 §3) and updates the fake shell. This outline fixes its shape.
+(ipc-m1 §3) and updates the fake shell. This outline fixes its shape. Written 2026-10-04 in
+`feat/ipc-m2-contract`: [ipc-m2.md](ipc-m2.md) is the contract and refines this outline (a read-only
+`plan_restore`, `locate_version`, `list_commit_metadata`, `cancel_ai_request`, the `firstCommit`
+job kind, `HistoryBusy` and the AI input codes); where they differ, ipc-m2.md wins.
 
 ### 17.1 `workspace.*`
 

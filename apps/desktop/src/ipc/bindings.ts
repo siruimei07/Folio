@@ -87,32 +87,116 @@ export const commands = {
 	getIgnoreRules: () => typedError<IgnoreRules, AppError>(__TAURI_INVOKE("get_ignore_rules")),
 	/**  Saves the rules; the watcher sees `.folio/ignore` change and starts a full scan. */
 	setIgnoreRules: (request: SetIgnoreRules) => typedError<IgnoreRules, AppError>(__TAURI_INVOKE("set_ignore_rules", { request })),
+	getWorkspace: () => typedError<WorkspaceSummary, AppError>(__TAURI_INVOKE("get_workspace")),
+	listWorkspaceItems: (request: ListWorkspaceItems) => typedError<Page<WorkspaceItem>, AppError>(__TAURI_INVOKE("list_workspace_items", { request })),
+	listMetadataChanges: (request: ListMetadataChanges) => typedError<Page<MetadataChange>, AppError>(__TAURI_INVOKE("list_metadata_changes", { request })),
+	summarizeSelection: (request: SummarizeSelection) => typedError<SelectionSummary, AppError>(__TAURI_INVOKE("summarize_selection", { request })),
+	/**  Starts a commit job (kind `commit`); returns its id. */
+	commit: (request: CommitChanges) => typedError<string, AppError>(__TAURI_INVOKE("commit", { request })),
+	/**  Starts the first commit (job kind `firstCommit`); returns its id. */
+	startHistory: (request: StartHistory) => typedError<string, AppError>(__TAURI_INVOKE("start_history", { request })),
+	getWorkspaceDiff: (request: GetWorkspaceDiff) => typedError<Diff, AppError>(__TAURI_INVOKE("get_workspace_diff", { request })),
+	listHistory: (request: ListHistory) => typedError<Page<HistoryItem>, AppError>(__TAURI_INVOKE("list_history", { request })),
+	getCommit: (request: GetCommit) => typedError<CommitInfo, AppError>(__TAURI_INVOKE("get_commit", { request })),
+	listCommitChanges: (request: ListCommitChanges) => typedError<Page<ChangeRow>, AppError>(__TAURI_INVOKE("list_commit_changes", { request })),
+	listCommitMetadata: (request: ListCommitMetadata) => typedError<Page<MetadataChange>, AppError>(__TAURI_INVOKE("list_commit_metadata", { request })),
+	listFileHistory: (request: ListFileHistory) => typedError<Page<FileVersion>, AppError>(__TAURI_INVOKE("list_file_history", { request })),
+	/**  The file a version belongs to now; `null` when it was deleted since. */
+	locateVersion: (request: VersionRef) => typedError<{
+	id: string,
+	path: string,
+	/**  The last name of the path. */
+	name: string,
+	kind: EntryKind,
+	class: FileClass,
+	/**  Bytes, in decimal; `"0"` for folders. */
+	size: string,
+	/**  Milliseconds since the Unix epoch, in decimal. A hint only (ADR-0003 §10). */
+	modifiedMs: string | null,
+	/**  When the entry came into the library, in milliseconds since the Unix epoch. */
+	addedMs: string,
+	/**  Its own tag ids, in tag order. Ids that `list_tags` does not know are shown as unknown. */
+	tags: string[],
+	/**  Tag ids it gets from the folders above it (spec §8.2), not repeating `tags`. */
+	folderTags: string[],
+} | null, AppError>(__TAURI_INVOKE("locate_version", { request })),
+	/**  Writes the commit again with a new message; returns its new id. */
+	rewordCommit: (request: RewordCommit) => typedError<string, AppError>(__TAURI_INVOKE("reword_commit", { request })),
+	uncommit: (request: Uncommit) => typedError<null, AppError>(__TAURI_INVOKE("uncommit", { request })),
+	getVersionDiff: (request: GetVersionDiff) => typedError<Diff, AppError>(__TAURI_INVOKE("get_version_diff", { request })),
+	/**  What `restore_version` would do now; reads only. */
+	planRestore: (request: VersionRef) => typedError<RestorePlan, AppError>(__TAURI_INVOKE("plan_restore", { request })),
+	restoreVersion: (request: VersionRef) => typedError<Restored, AppError>(__TAURI_INVOKE("restore_version", { request })),
+	getAiSettings: () => typedError<AiSettings, AppError>(__TAURI_INVOKE("get_ai_settings")),
+	updateAiSettings: (request: UpdateAiSettings) => typedError<AiSettings, AppError>(__TAURI_INVOKE("update_ai_settings", { request })),
+	/**  Stores the key; `null` when the user declined the confirmation for another service. */
+	setAiKey: (request: SetAiKey) => typedError<{
+	enabled: boolean,
+	/**  An OpenAI-compatible service: requests go to `<endpoint>/chat/completions`. */
+	endpoint: string,
+	model: string,
+	/**  Send the changed lines of text and Word files, not only the list of changes. */
+	sendContent: boolean,
+	/**  A key is stored for this endpoint's origin. AI is on when `enabled` and `hasKey`. */
+	hasKey: boolean,
+} | null, AppError>(__TAURI_INVOKE("set_ai_key", { request })),
+	clearAiKey: () => typedError<AiSettings, AppError>(__TAURI_INVOKE("clear_ai_key")),
+	/**  Sends a minimal request with the stored key. */
+	testAi: () => typedError<null, AppError>(__TAURI_INVOKE("test_ai")),
+	/**  A message for the selection; `null` when the request was stopped. */
+	generateCommitMessage: (request: GenerateCommitMessage) => typedError<{
+	summary: string,
+	body: string | null,
+} | null, AppError>(__TAURI_INVOKE("generate_commit_message", { request })),
+	cancelAiRequest: (request: CancelAiRequest) => typedError<null, AppError>(__TAURI_INVOKE("cancel_ai_request", { request })),
 };
 
 /** Events */
 export const events = {
+	aiSettingsChanged: makeEvent<AiSettingsChanged>("ai-settings-changed"),
 	appSettingsChanged: makeEvent<AppSettingsChanged>("app-settings-changed"),
 	catalogChanged: makeEvent<CatalogChanged>("catalog-changed"),
 	dropFailed: makeEvent<DropFailed>("drop-failed"),
 	dropHover: makeEvent<DropHover>("drop-hover"),
 	filesDropped: makeEvent<FilesDropped>("files-dropped"),
+	historyChanged: makeEvent<HistoryChanged>("history-changed"),
 	ignoreRulesChanged: makeEvent<IgnoreRulesChanged>("ignore-rules-changed"),
 	jobChanged: makeEvent<JobChanged>("job-changed"),
 	libraryStateChanged: makeEvent<LibraryStateChanged>("library-state-changed"),
 	maximizeButtonChanged: makeEvent<MaximizeButtonChanged>("maximize-button-changed"),
 	problemsChanged: makeEvent<ProblemsChanged>("problems-changed"),
+	workspaceChanged: makeEvent<WorkspaceChanged>("workspace-changed"),
 };
 
 /* Constants */
+export const DEFAULT_AI_ENDPOINT = "https://api.deepseek.com" as const;
+
 export const DEFAULT_IGNORE_RULES = "# Files that operating systems leave behind\n.DS_Store\n._*\n.AppleDouble/\n.Spotlight-V100/\n.Trashes/\n.fseventsd/\n.TemporaryItems/\nThumbs.db\nehthumbs.db\ndesktop.ini\n$RECYCLE.BIN/\nSystem Volume Information/\n# Lock files of office suites\n.~lock.*#\n# Version control\n.git\n.svn/\n.hg/\n# Dependencies, caches and virtual environments of code projects\nnode_modules/\n__pycache__/\n.venv/\n.ipynb_checkpoints/\n.pytest_cache/\n.mypy_cache/\n.ruff_cache/\n.gradle/\n.idea/\n.vs/\n" as const;
 
-export const FILE_ERROR_CODES = ["InvalidArgument","NoLibrary","NotFound","AccessDenied","InUse","NotLocal","NoThumbnail","FileSystem","Internal"] as const;
+export const FILE_ERROR_CODES = ["InvalidArgument","NoLibrary","NotFound","AccessDenied","InUse","NotLocal","NoThumbnail","FileSystem","Internal","Pruned","HistoryDamaged"] as const;
 
 export const FILE_ERROR_HEADER = "X-Folio-Error" as const;
 
-export const LIMITS = {"abbrGraphemes":3,"batch":10000,"courseCodeChars":32,"displayNameChars":128,"eventEntries":200,"filterTags":16,"ignoreRulesChars":65536,"logChars":8192,"nameUnits":255,"pageSize":500,"queryChars":256,"relativePathChars":1024,"resolvePaths":64,"searchResults":500} as const;
+export const LIMITS = {"abbrGraphemes":3,"aiKeyChars":512,"batch":10000,"bodyChars":16384,"courseCodeChars":32,"descriptionChars":2000,"diffRows":500,"displayNameChars":128,"endpointChars":2048,"eventEntries":200,"filterTags":16,"ignoreRulesChars":65536,"keyChars":32800,"logChars":8192,"modelChars":128,"nameUnits":255,"pageSize":500,"queryChars":256,"relativePathChars":1024,"requestIdChars":64,"resolvePaths":64,"searchResults":500,"summaryChars":256} as const;
 
 /* Types */
+/**  App settings → AI. The key itself is never sent to the UI: only whether one is stored. */
+export type AiSettings = {
+	enabled: boolean,
+	/**  An OpenAI-compatible service: requests go to `<endpoint>/chat/completions`. */
+	endpoint: string,
+	model: string,
+	/**  Send the changed lines of text and Word files, not only the list of changes. */
+	sendContent: boolean,
+	/**  A key is stored for this endpoint's origin. AI is on when `enabled` and `hasKey`. */
+	hasKey: boolean,
+};
+
+/**  The AI settings, or whether a key is stored, changed (docs/specs/ipc-m2.md §12). */
+export type AiSettingsChanged = {
+	settings: AiSettings,
+};
+
 /**
  *  The error every command returns (CLAUDE.md §5, "No silent failures"; docs/specs/ipc-m1.md
  *  §16).
@@ -121,6 +205,10 @@ export const LIMITS = {"abbrGraphemes":3,"batch":10000,"courseCodeChars":32,"dis
  *  `apps/desktop/src/i18n/locales/en/errors.json`; `tsc` fails if a code has no message. Each
  *  case the UI words differently has its own code. `detail` is for logs and bug reports, never
  *  shown to users on its own.
+ * 
+ *  The M2 codes (docs/specs/ipc-m2.md §15) are declared before the lanes that return them: each
+ *  expects to be dead code outside tests until then, and the lane that first returns one removes
+ *  its expectation (clippy fails on an expectation that no longer holds).
  */
 export type AppError = 
 /**  The data directory could not be determined or is invalid. */
@@ -189,7 +277,74 @@ export type AppError =
 /**  The catalog is being rebuilt; try again when it is done. */
 { code: "Busy"; detail: string } | 
 /**  A bug or damaged state; the log has the details. */
-{ code: "Internal"; detail: string };
+{ code: "Internal"; detail: string } | 
+/**  The changes changed since the UI read them (the fingerprint or the base). */
+{ code: "WorkspaceChanged"; detail: string } | 
+/**  The selection and the metadata hold no change. */
+{ code: "NothingToCommit"; detail: string } | 
+/**
+ *  A file kept changing while Folio read it, or a restore's target changed before it was
+ *  replaced.
+ */
+{ code: "FileChanged"; detail: string } | 
+/**  `start_history`: the history has started already. */
+{ code: "HistoryExists"; detail: string } | 
+/**  Another commit, reword, uncommit or restore is running, or recovery of an earlier one. */
+{ code: "HistoryBusy"; detail: string } | 
+/**  `uncommit`: the commit is no longer the newest. */
+{ code: "NotHead"; detail: string } | 
+/**  The first commit, a prune commit, or a synced one cannot be undone. */
+{ code: "CannotUncommit"; detail: string } | 
+/**  A prune commit's or a synced commit's message cannot be changed. */
+{ code: "CannotReword"; detail: string } | 
+/**
+ *  A newer Folio wrote the history: commits, rewords, uncommits and restores wait for an
+ *  update.
+ */
+{ code: "HistoryReadOnly"; detail: string } | 
+/**  `HEAD`, a pack or an object is missing or damaged. The files are fine. */
+{ code: "HistoryDamaged"; detail: string } | 
+/**  That version was not kept: an event-only file, or text over the size limit. */
+{ code: "NotStored"; detail: string } | 
+/**  That version was thinned out. */
+{ code: "Pruned"; detail: string } | 
+/**  `restore_version`: the file already has that content. */
+{ code: "Unchanged"; detail: string } | 
+/**  A commit summary is empty. */
+{ code: "SummaryEmpty"; detail: string } | 
+/**  A commit summary is longer than `LIMITS.summaryChars`. */
+{ code: "SummaryTooLong"; detail: string } | 
+/**  A commit summary holds a control character, a line break included. */
+{ code: "SummaryInvalid"; detail: string } | 
+/**  A commit body is longer than `LIMITS.bodyChars`. */
+{ code: "BodyTooLong"; detail: string } | 
+/**  A commit body holds a control character other than tab and line feed. */
+{ code: "BodyInvalid"; detail: string } | 
+/**  AI is off, or no key is stored for the endpoint. */
+{ code: "AiNotConfigured"; detail: string } | 
+/**  The AI service could not be reached: name, connection or TLS. */
+{ code: "AiNetwork"; detail: string } | 
+/**  The AI service did not answer in time. */
+{ code: "AiTimeout"; detail: string } | 
+/**  The AI service refused the key (401, 403). */
+{ code: "AiRejected"; detail: string } | 
+/**  The AI service asks to wait (429). */
+{ code: "AiRateLimited"; detail: string } | 
+/**  The AI service failed (5xx). */
+{ code: "AiUnavailable"; detail: string } | 
+/**  The AI service's answer could not be used. */
+{ code: "AiBadResponse"; detail: string } | 
+/**  Windows Credential Manager failed; the detail names its error code, never the key. */
+{ code: "AiCredential"; detail: string } | 
+/**
+ *  A typed AI endpoint is not an `https` address with a host and no user name, query or
+ *  fragment.
+ */
+{ code: "AiEndpointInvalid"; detail: string } | 
+/**  A typed AI model name is empty, too long or not visible ASCII. */
+{ code: "AiModelInvalid"; detail: string } | 
+/**  A typed AI key is empty, too long or not visible ASCII. */
+{ code: "AiKeyInvalid"; detail: string };
 
 /**  Versions and the data directory, for the placeholder screen and for bug reports. */
 export type AppInfo = {
@@ -233,6 +388,20 @@ export type ButtonBounds = {
 	height: number,
 };
 
+/**  Bytes in decimal. */
+export type ByteProgress = {
+	done: string,
+	total: string,
+};
+
+/**
+ *  Stops a running `generate_commit_message`, which then answers `null`. An id that is not
+ *  running changes nothing.
+ */
+export type CancelAiRequest = {
+	requestId: string,
+};
+
 /**  Stops a queued or running job between files. */
 export type CancelJob = {
 	job: string,
@@ -258,11 +427,109 @@ export type CatalogChanged = {
 	groups: boolean,
 };
 
+export type ChangeCounts = {
+	added: number,
+	modified: number,
+	deleted: number,
+	moved: number,
+};
+
+/**  How a file or folder changed. `moved` is the Renamed status. */
+export type ChangeKind = "added" | "deleted" | "modified" | "moved";
+
+/**  One changed file or folder of a commit; `.folio/` paths are `list_commit_metadata`'s. */
+export type ChangeRow = {
+	/**  Names this change in `get_version_diff`. */
+	key: string,
+	change: ChangeKind,
+	kind: EntryKind,
+	/**  The path in this commit; the old one for a deletion. */
+	path: string,
+	/**  A move: the path in the parent. */
+	fromPath: string | null,
+	class: FileClass,
+	/**  The parent's version; `null` when added, and for folders. */
+	before: VersionSide | null,
+	/**  This commit's version; `null` when deleted, and for folders. */
+	after: VersionSide | null,
+};
+
 export type CheckImport = {
 	/**  An `ImportSource` token. */
 	source: string,
 	/**  The folder to import into. */
 	target: EntryRef,
+};
+
+/**  Commits a selection as a job of kind `commit` (spec §7.1); the answer is the job id. */
+export type CommitChanges = {
+	selection: Selection,
+	/**  `WorkspaceSummary.fingerprint` when the UI read the workspace. */
+	fingerprint: string,
+	/**
+	 *  `WorkspaceSummary.head` when the UI read the workspace. Either one changed:
+	 *  `WorkspaceChanged`, before anything is written.
+	 */
+	base: string | null,
+	/**
+	 *  What the user typed, the AI's, or the template: never empty. Trimmed, then 1 to
+	 *  `LIMITS.summaryChars` characters without control characters (spec §7.2).
+	 */
+	summary: string,
+	/**  Up to `LIMITS.bodyChars` characters; line breaks become LF. `null` or empty: none. */
+	body: string | null,
+};
+
+/**  A commit of `HEAD`'s chain. */
+export type CommitInfo = {
+	/**  `b3:` and 64 lowercase hexadecimal digits; the short id is the first 7 digits. */
+	id: string,
+	/**  `null` for the first commit. */
+	parent: string | null,
+	kind: CommitKind,
+	/**  The library's first commit ("Start history"): it cannot be undone. */
+	first: boolean,
+	/**  The newest commit: the only one `uncommit` takes. */
+	head: boolean,
+	/**  Pushed to the remote; `false` for every commit in M2. */
+	synced: boolean,
+	/**  Its own time, as its device's clock said, in milliseconds since the Unix epoch. */
+	timeMs: string,
+	/**
+	 *  The later of its own time and its parent's effective time: the timeline's order and day
+	 *  headers.
+	 */
+	effectiveMs: string,
+	/**  `null` for a prune commit. */
+	summary: string | null,
+	body: string | null,
+	device: Device,
+	/**
+	 *  Changed files, `.folio/` left out. With `folders`, the rows of `list_commit_changes`;
+	 *  for the first commit, the files the library held ("4,210 files were in your library").
+	 */
+	files: number,
+	/**  Changed folders. */
+	folders: number,
+	/**  Its tag and settings changes: the rows of `list_commit_metadata`. */
+	metadata: number,
+	/**  A prune commit: the versions it thinned out; 0 otherwise. */
+	pruned: number,
+};
+
+/**  What made a commit (history format §7.3). */
+export type CommitKind = 
+/**  Made on a device. */
+"commit" | 
+/**  Direct edits found in the remote, shown as from iCloud (M3). */
+"import" | 
+/**  Thinning out old Word versions (M3); no message. */
+"prune";
+
+/**  A message the commit box can use as it is: it already meets the rules of a commit message. */
+export type CommitMessage = {
+	summary: string,
+	body: string | null,
 };
 
 export type ConflictPolicy = 
@@ -332,6 +599,86 @@ export type DeleteTag = {
 	id: string,
 };
 
+/**  The device that made a commit. Imports show as from iCloud; the UI words them by kind. */
+export type Device = {
+	/**  32 lowercase hexadecimal digits. */
+	id: string,
+	name: string,
+};
+
+export type Diff = {
+	/**  The catalog revision it was read at. */
+	revision: number,
+	/**  `null`: nothing before (added, or a file's first version). */
+	before: DiffSide | null,
+	/**  `null`: deleted. */
+	after: DiffSide | null,
+	content: DiffContent,
+	/**  The entry's tag change, when its tags changed too. */
+	tags: TagChange | null,
+};
+
+/**  What the diff shows. Conditions that only stop the comparison are kinds, not errors. */
+export type DiffContent = 
+/**  Lines of text. */
+{ kind: "text"; text: TextDiff } | 
+/**  Paragraphs of a Word document's text. */
+{ kind: "word"; text: TextDiff } | 
+/**  A metadata change's row (the ignore rules are `text`). */
+{ kind: "metadata"; detail: MetadataDetail } | 
+/**  The content did not change: a move without edits. */
+{ kind: "same" } | 
+/**  A folder item: nothing to compare. */
+{ kind: "folder" } | 
+/**  A side is not kept: an event-only file, or text over the size limit. */
+{ kind: "notStored" } | 
+/**  A side was thinned out. */
+{ kind: "pruned" } | 
+/**  The disk side is a cloud placeholder or an offline file, which Folio never downloads. */
+{ kind: "notLocal" } | 
+/**  The disk side could not be read: `InUse`, `AccessDenied` or `FileSystem`. */
+{ kind: "unreadable"; error: AppError } | 
+/**  A text file with binary content. */
+{ kind: "binary" } | 
+/**  Over the limits: 8 MiB of text or 200,000 lines a side. `lines`: lines changed, when known. */
+{ kind: "tooLarge"; lines: number | null };
+
+/**  Line and paragraph numbers count from 1; `change` counts from 0, in order. */
+export type DiffRow = { kind: "context"; old: number; new: number; text: string } | { kind: "removed"; old: number; text: string; 
+/**  The changed words, trimmed of the spaces around them. */
+marks: TextRange[]; change: number } | { kind: "added"; new: number; text: string; marks: TextRange[]; change: number } | 
+/**  `lines` unchanged lines from these numbers, hidden. Unfold with an `unchanged` window. */
+{ kind: "fold"; old: number; new: number; lines: number };
+
+/**  One side of a diff. */
+export type DiffSide = {
+	/**  The commit of this version; `null`: the file on the disk. */
+	commit: string | null,
+	/**  That commit's time, in milliseconds since the Unix epoch. */
+	timeMs: string | null,
+	path: string,
+	/**  Bytes, in decimal. */
+	size: string,
+	/**  The content hash; `null` on the disk side until it is hashed. */
+	hash: string | null,
+	/**  History kept this version; on the disk side, whether a commit would store it now. */
+	stored: boolean,
+	pruned: boolean,
+};
+
+/**  Which rows a diff call answers with. */
+export type DiffWindow = 
+/**
+ *  Rows `offset` to `offset + limit` of the folded diff; `limit` at most `LIMITS.diffRows`,
+ *  0 for the header only.
+ */
+{ kind: "rows"; offset: number; limit: number } | 
+/**
+ *  To unfold: `count` (1 to `LIMITS.diffRows`) unchanged lines from line `line` of the after
+ *  side, which must all be unchanged.
+ */
+{ kind: "unchanged"; line: number; count: number };
+
 /**
  *  Files or folders were dropped on the window, but the shell could not take them: too many
  *  items, a name Windows stores incorrectly, an item it cannot read, or no library to add them
@@ -344,6 +691,11 @@ export type DropFailed = {
 /**  Files are dragged over the window; `position` is `null` when they leave or the drag ends. */
 export type DropHover = {
 	position: Point | null,
+};
+
+export type EncodingChange = {
+	before: TextEncoding,
+	after: TextEncoding,
 };
 
 export type EntryChange = { kind: "added"; entry: EntryRef } | 
@@ -405,6 +757,27 @@ export type FileClass = "text" | "word" |
 /**  Everything else, folders included. */
 "other";
 
+/**  The file whose history to list. */
+export type FileRef = 
+/**  A file in the Library or the Changes list. */
+{ kind: "entry"; entry: EntryRef } | 
+/**  A row of a commit in History. */
+{ kind: "version"; commit: string; path: string };
+
+/**
+ *  One entry of a file's history, newest first: the commits and restores that touched it,
+ *  following it through moves.
+ */
+export type FileVersion = { kind: "commit"; commit: CommitInfo; 
+/**  The file's own row, with the path it had then. */
+change: ChangeRow; 
+/**  The commit's other changed files: "and 2 other files in this commit". */
+others: number; 
+/**  The newest version whose content the file has on the disk now: "Current version". */
+current: boolean } | {
+	kind: "restore",
+} & RestoreEntry;
+
 /**
  *  Files or folders were dropped on the window. Import them with `check_import` and
  *  `import_files`.
@@ -441,9 +814,99 @@ export type FolderContent = { kind: "empty" } |
 /**  Content to take over: its first-level folders (the would-be semesters) and files. */
 { kind: "folders"; folders: number; files: number };
 
+/**  Asks the AI service for a commit message for a selection (versioning.md §12.3). */
+export type GenerateCommitMessage = {
+	/**
+	 *  Chosen by the UI, to stop the request with `cancel_ai_request`: 1 to
+	 *  `LIMITS.requestIdChars` ASCII letters, digits, `-` and `_`.
+	 */
+	requestId: string,
+	selection: Selection,
+	/**  `WorkspaceSummary.fingerprint`; a different one is `WorkspaceChanged`. */
+	fingerprint: string,
+	/**
+	 *  What the user typed in the description, at most `LIMITS.descriptionChars` characters;
+	 *  `""` when none.
+	 */
+	description: string,
+};
+
+/**  Names a commit of `HEAD`'s chain; any other id, a reworded one included, is `NotFound`. */
+export type GetCommit = {
+	commit: string,
+};
+
 export type GetEntry = {
 	entry: EntryRef,
 };
+
+/**  The diff of a commit's change: the parent's version against the commit's. */
+export type GetVersionDiff = {
+	commit: string,
+	/**  A key of `list_commit_changes`, `list_commit_metadata` or a `FileVersion`'s `change`. */
+	key: string,
+	window: DiffWindow,
+};
+
+/**  The diff of a workspace item or metadata change: `HEAD`'s version against the disk. */
+export type GetWorkspaceDiff = {
+	/**  A key of `list_workspace_items` or `list_metadata_changes`. */
+	key: string,
+	window: DiffWindow,
+};
+
+/**
+ *  A commit, first commit, reword, uncommit or restore was recorded: refetch the timeline, the
+ *  "Not synced" card and open file histories.
+ */
+export type HistoryChanged = {
+	/**  `HEAD`'s commit id; `null` before the first commit. */
+	head: string | null,
+	/**  The catalog revision after the change. */
+	revision: number,
+};
+
+/**  One entry of the timeline, newest first by `effectiveMs`. */
+export type HistoryItem = { kind: "commit"; commit: CommitInfo; 
+/**  The first four changed files and folders, for the file card. */
+files: ChangeRow[] } | {
+	kind: "reword",
+} & RewordEntry | {
+	kind: "uncommit",
+} & UncommitEntry | {
+	kind: "restore",
+} & RestoreEntry;
+
+/**  Where the library's history stands (spec §6.1). */
+export type HistoryState = 
+/**
+ *  No commit yet: the library waits for its first full scan and hashing, then for
+ *  `start_history`. The workspace lists nothing.
+ */
+"none" | 
+/**  The `firstCommit` job runs. The workspace lists nothing. */
+"starting" | "ready" | 
+/**
+ *  A newer Folio wrote the history: commit, reword, uncommit and restore fail with
+ *  `HistoryReadOnly`.
+ */
+"readOnly" | 
+/**
+ *  `HEAD` cannot be read or names a missing commit: those fail with `HistoryDamaged`. The
+ *  files are fine.
+ */
+"damaged";
+
+/**  The kinds of entry the timeline can show; `null` in a request shows every kind. */
+export type HistoryType = 
+/**  Every commit kind. */
+"commit" | 
+/**  Message edits. */
+"reword" | 
+/**  Undone commits. */
+"uncommit" | 
+/**  Restored versions. */
+"restore";
 
 /**
  *  Library settings → Ignore rules: what the library leaves out, in gitignore syntax, on top of
@@ -541,6 +1004,22 @@ export type ItemFailure = {
 	error: AppError,
 };
 
+/**  Another change of a bound item. */
+export type ItemPart = { kind: "entry"; change: ChangeKind; entryKind: EntryKind; path: string; fromPath: string | null } | 
+/**
+ *  The versioning rules changed so that this file is stored now, while its own change was
+ *  held back: it goes into the same commit.
+ */
+{ kind: "versioningRules" };
+
+/**  One side of a workspace item. */
+export type ItemSide = {
+	/**  Bytes, in decimal; on the disk side `"0"` while the file is not local. */
+	size: string,
+	/**  `HEAD` stored this version; on the disk side, whether a commit would store it now. */
+	stored: boolean,
+};
+
 export type Job = {
 	id: string,
 	kind: JobKind,
@@ -555,13 +1034,29 @@ export type JobChanged = {
 
 export type JobKind = "scan" | "hash" | "import" | 
 /**  "Rebuild search index": a new catalog, scanned from scratch. */
-"rebuild";
+"rebuild" | 
+/**  A commit of the workspace (`commit`). */
+"commit" | 
+/**  The library's first commit (`start_history`): "Starting history". */
+"firstCommit";
 
-export type JobResult = ({ kind: "scan"; changes: number; problems: number }) & { deferred?: never; entries?: never; hashed?: never } | ({ kind: "hash"; hashed: number; deferred: number }) & { changes?: never; entries?: never; problems?: never } | {
+export type JobResult = ({ kind: "scan"; changes: number; problems: number }) & { commit?: never; deferred?: never; entries?: never; files?: never; hashed?: never; left?: never; summary?: never } | ({ kind: "hash"; hashed: number; deferred: number }) & { changes?: never; commit?: never; entries?: never; files?: never; left?: never; problems?: never; summary?: never } | {
 	kind: "import",
-} & ImportResult | ({ kind: "rebuild"; entries: number }) & { changes?: never; deferred?: never; hashed?: never; problems?: never };
+} & ImportResult | ({ kind: "rebuild"; entries: number }) & { changes?: never; commit?: never; deferred?: never; files?: never; hashed?: never; left?: never; problems?: never; summary?: never } | 
+/**  The new commit, its summary, and the items plus metadata changes it holds. */
+({ kind: "commit"; commit: string; summary: string; changes: number }) & { deferred?: never; entries?: never; files?: never; hashed?: never; left?: never; problems?: never } | 
+/**
+ *  The first commit, the files it holds, and the items it left out (not local or
+ *  unreadable), which stay in the workspace.
+ */
+({ kind: "firstCommit"; commit: string; files: number; left: number }) & { changes?: never; deferred?: never; entries?: never; hashed?: never; problems?: never; summary?: never };
 
-export type JobStatus = { state: "queued" } | { state: "running"; progress: Progress } | { state: "done"; result: JobResult } | { state: "failed"; error: AppError } | 
+export type JobStatus = { state: "queued" } | { state: "running"; progress: Progress } | { state: "done"; result: JobResult } | { state: "failed"; error: AppError; 
+/**
+ *  The library path of the file the job failed on, when one file caused it (a commit's
+ *  `FileChanged`, `NotLocal`, `InUse`, `AccessDenied`); `null` otherwise.
+ */
+file: string | null } | 
 /**
  *  Stopped between files; what was done stays done. An import that had started reports
  *  what it did before it stopped; the other kinds, and a job cancelled while queued, have
@@ -609,6 +1104,13 @@ export type LibraryStatus =
 /**  The library folder, for display. */
 root: string; reason: Unavailable };
 
+export type LineEnding = "lf" | "crlf" | "cr" | "mixed";
+
+export type LineEndingChange = {
+	before: LineEnding,
+	after: LineEnding,
+};
+
 /**  The children of one folder, folders first. */
 export type ListChildren = {
 	/**  `null`: the library root. */
@@ -617,9 +1119,26 @@ export type ListChildren = {
 	page: PageRequest,
 };
 
+export type ListCommitChanges = {
+	commit: string,
+	page: PageRequest,
+};
+
+export type ListCommitMetadata = {
+	commit: string,
+	page: PageRequest,
+};
+
 export type ListCourses = {
 	/**  `null`: the courses of every semester, by semester, for showing course codes in paths. */
 	semester: EntryRef | null,
+};
+
+export type ListFileHistory = {
+	file: FileRef,
+	page: PageRequest,
+	/**  `null`: every type. */
+	types: HistoryType[] | null,
 };
 
 /**  Files at any depth below a folder, filtered. */
@@ -631,7 +1150,21 @@ export type ListFiles = {
 	page: PageRequest,
 };
 
+export type ListHistory = {
+	page: PageRequest,
+	/**  `null`: every type. "Not synced" asks for `["commit"]` with a page of three. */
+	types: HistoryType[] | null,
+};
+
+export type ListMetadataChanges = {
+	page: PageRequest,
+};
+
 export type ListProblems = {
+	page: PageRequest,
+};
+
+export type ListWorkspaceItems = {
 	page: PageRequest,
 };
 
@@ -664,11 +1197,51 @@ export type MaximizeButtonChanged = {
 	pressed: boolean,
 };
 
+/**
+ *  A tag or settings change that is not part of an item (versioning.md §6.4): always in the
+ *  commit, so it has no check box.
+ */
+export type MetadataChange = {
+	/**  Names the change while it exists, like an item's key. */
+	key: string,
+	/**
+	 *  `added` when nothing was committed before, `deleted` when nothing is left, else
+	 *  `modified`; never `moved`.
+	 */
+	change: ChangeKind,
+	subject: MetadataSubject,
+};
+
+/**  A tag or settings change, read as data (versioning.md §10.4). */
+export type MetadataDetail = {
+	kind: "tags",
+} & TagChange | 
+/**  A semester's, a course's or the library's settings: only the fields that changed. */
+{ kind: "settings"; changes: SettingChange[] } | { kind: "tagDefinitions"; changes: TagDefinitionChange[] };
+
 export type MetadataFailure = 
 /**  A newer Folio wrote it: the metadata is read-only until Folio is updated. */
 { kind: "newer" } | 
 /**  Not a valid metadata file. */
 { kind: "invalid" } | { kind: "unreadable"; failure: ReadFailure };
+
+/**
+ *  What a metadata change is about. In a commit's rows (`list_commit_metadata`) `entry` and
+ *  `folder` are always `null`: history names paths as they were.
+ */
+export type MetadataSubject = 
+/**  A file's or folder's own tags. */
+{ kind: "tags"; path: string; entryKind: EntryKind; entry: EntryRef | null } | 
+/**  A semester's settings. */
+{ kind: "semester"; path: string; folder: EntryRef | null } | 
+/**  A course's settings. */
+{ kind: "course"; path: string; folder: EntryRef | null } | 
+/**  `tags.json`. */
+{ kind: "tagDefinitions" } | 
+/**  `library.json`: the library's name and versioning rules. */
+{ kind: "library" } | 
+/**  `.folio/ignore`. */
+{ kind: "ignoreRules" };
 
 /**  Moves entries into a folder; tags and settings follow them. */
 export type MoveEntries = {
@@ -727,6 +1300,14 @@ export type PageRequest = {
 	/**  At most `LIMITS.pageSize`. */
 	limit: number,
 };
+
+/**
+ *  Where an item belongs: its course, else its semester, else the library root. A deleted
+ *  course or semester keeps its committed name, with `folder: null`.
+ */
+export type Place = 
+/**  Files and folders at the library root. */
+{ kind: "library" } | { kind: "semester"; path: string; folder: EntryRef | null; name: string } | { kind: "course"; path: string; folder: EntryRef | null; name: string; code: string | null };
 
 /**  A point in the window's client area, in CSS pixels. */
 export type Point = {
@@ -797,6 +1378,11 @@ export type Progress = {
 	total: number | null,
 	/**  0–1000 of the work by bytes, for jobs that measure bytes. */
 	permille: number | null,
+	/**
+	 *  Bytes done and in all, for jobs that measure bytes ("12.4 of 48.0 MB"); `null` for the
+	 *  M1 kinds for now.
+	 */
+	bytes: ByteProgress | null,
 	/**  The item in progress, for display. */
 	current: string | null,
 };
@@ -806,6 +1392,15 @@ export type ReadFailure = "denied" |
 "inUse" | 
 /**  Larger than Folio reads. */
 "tooLarge" | "other";
+
+/**  Whether an item can be committed now (versioning.md §6.2). */
+export type Readiness = "ready" | 
+/**  Not hashed yet: the commit hashes it. */
+"hashing" | 
+/**  A cloud placeholder or an offline file: not includable until it is on this disk. */
+"notLocal" | 
+/**  The hashing job could not read it: not includable until it can. */
+"unreadable";
 
 /**
  *  `on` and `off` set `data-reduce-motion` on the root, `system` follows Windows' animation
@@ -850,9 +1445,78 @@ export type ResolvePaths = {
 	paths: string[],
 };
 
+/**  A restored version (versioning.md §11). */
+export type RestoreEntry = {
+	id: string,
+	timeMs: string,
+	effectiveMs: string,
+	/**  The version's commit, as its id is now. */
+	commit: string,
+	/**  The version's path in that commit. */
+	path: string,
+	/**  That commit's time: "the version from Oct 10". */
+	versionMs: string,
+	/**  The library path written. */
+	target: string,
+	/**  The file there went to the Recycle Bin first. */
+	recycled: boolean,
+};
+
+/**  What `restore_version` would do now (spec §10). */
+export type RestoreOutcome = 
+/**  The version replaces the file at its current path. */
+"replace" | 
+/**  The file was deleted: the version goes back to its last committed path. */
+"recreate" | 
+/**  A different file took that name: the version goes beside it under the keep-both name. */
+"beside" | 
+/**  The file already has this content: nothing to do. */
+"unchanged";
+
+export type RestorePlan = {
+	outcome: RestoreOutcome,
+	/**  Where the version goes; for `unchanged`, the file's path. */
+	target: string,
+	/**
+	 *  The file there goes to the Recycle Bin first: no version of `HEAD`'s chain keeps its
+	 *  content (uncommitted changes).
+	 */
+	recycle: boolean,
+	/**  The file the version belongs to now (`locate_version`). */
+	current: EntryRow | null,
+};
+
+export type Restored = {
+	/**  The library path written. */
+	target: string,
+	/**  The file there went to the Recycle Bin first. */
+	recycled: boolean,
+};
+
 /**  Opens File Explorer with the entry selected. */
 export type RevealEntry = {
 	entry: EntryRef,
+};
+
+export type RewordCommit = {
+	commit: string,
+	/**  Trimmed, then 1 to `LIMITS.summaryChars` characters without control characters. */
+	summary: string,
+	/**  Up to `LIMITS.bodyChars` characters; `null` or empty: none. */
+	body: string | null,
+};
+
+/**  A message edit (versioning.md §8.3). */
+export type RewordEntry = {
+	/**  The operation's id: 16 lowercase hexadecimal digits. */
+	id: string,
+	timeMs: string,
+	/**  The later of its own time and the previous operation's effective time. */
+	effectiveMs: string,
+	/**  The reworded commit's id now: its new id, or a later one when it was reworded again. */
+	commit: string,
+	/**  Its id before this reword. */
+	previous: string,
 };
 
 export type Search = {
@@ -882,11 +1546,51 @@ export type SearchPage = {
 	revision: number,
 };
 
+/**
+ *  Which items a commit, a summary or an AI message covers. Metadata changes are never listed:
+ *  every commit records them.
+ */
+export type Selection = 
+/**
+ *  Every includable item (ready or hashing) but these keys: select-all and Ctrl+A, without
+ *  loading every page. Never includes an item that is not local or unreadable.
+ */
+{ kind: "allExcept"; keys: string[] } | 
+/**  These items only. One that is not local or unreadable fails the commit with its error. */
+{ kind: "only"; keys: string[] };
+
+export type SelectionSummary = {
+	/**  Included items. The commit button counts `items + metadata`. */
+	items: number,
+	/**  Metadata changes, always included. */
+	metadata: number,
+	/**  Every place with a change, in path order, the library root first. */
+	groups: SummaryGroup[],
+	/**  `tags.json` changed ("Update tags"). */
+	tagDefinitions: boolean,
+	/**  `library.json` changed ("Update library settings"). */
+	library: boolean,
+	/**  `.folio/ignore` changed. */
+	ignoreRules: boolean,
+};
+
 /**  A folder directly in the library: a semester or another group, such as "Personal". */
 export type Semester = {
 	folder: EntryRef,
 	name: string,
 	archived: boolean,
+};
+
+/**
+ *  Stores the key for the current endpoint's origin. For an origin other than DeepSeek's, the
+ *  shell first asks the user in a Windows dialog; `null` answers a declined dialog.
+ */
+export type SetAiKey = {
+	/**
+	 *  Trimmed, then 1 to `LIMITS.aiKeyChars` visible ASCII characters. Otherwise
+	 *  `AiKeyInvalid`. Never sent back, logged or shown.
+	 */
+	key: string,
 };
 
 /**
@@ -911,6 +1615,16 @@ export type SetIgnoreRules = {
 	text: string,
 };
 
+/**
+ *  One setting that changed. Settings never configured read as their defaults: `archived`
+ *  `false`, the others `null`.
+ */
+export type SettingChange = { field: "abbr"; before: string | null; after: string | null } | { field: "code"; before: string | null; after: string | null } | { field: "color"; before: string | null; after: string | null } | { field: "archived"; before: boolean; after: boolean } | { field: "order"; before: number | null; after: number | null } | 
+/**  The library's name. */
+{ field: "name"; before: string; after: string } | 
+/**  Bytes, in decimal. */
+{ field: "textMaxSize"; before: string; after: string } | { field: "textExtensions"; added: string[]; removed: string[] } | { field: "wordExtensions"; added: string[]; removed: string[] };
+
 /**  Ties go to the path, so pages never overlap. Missing modification times sort last. */
 export type SortKey = 
 /**  Without case, digits by value (`hw2` before `hw10`), as File Explorer sorts. */
@@ -925,6 +1639,12 @@ export type Span = {
 	matched: boolean,
 };
 
+/**  Starts the history with the first commit, as a job of kind `firstCommit` (spec §7.1). */
+export type StartHistory = {
+	/**  "Start history", from the UI's strings. */
+	summary: string,
+};
+
 /**  Why tags or settings could not follow a move. */
 export type StrandedCause = 
 /**  A newer Folio wrote the metadata. */
@@ -936,6 +1656,30 @@ export type StrandedCause =
 /**  Their new path would be longer than Windows allows. */
 "tooLong";
 
+/**  Summarizes a selection for the commit box, the template and grouped mode. */
+export type SummarizeSelection = {
+	selection: Selection,
+	/**  `WorkspaceSummary.fingerprint`; a different one is `WorkspaceChanged`. */
+	fingerprint: string,
+};
+
+/**  The changes of one course, semester or the library root. */
+export type SummaryGroup = {
+	place: Place,
+	/**  Included file items, by change. */
+	files: ChangeCounts,
+	/**  Included folder items, by change. */
+	folders: ChangeCounts,
+	/**  Entries in it whose tags changed (always included). */
+	tags: number,
+	/**  Its own settings changed: a semester's or a course's. */
+	settings: boolean,
+	/**  Its includable items, included or not. */
+	available: number,
+	/**  Its included items. */
+	selected: number,
+};
+
 export type SyncProvider = "iCloud" | "oneDrive" | "dropbox" | "other";
 
 export type Tag = {
@@ -945,6 +1689,29 @@ export type Tag = {
 	color: string,
 	/**  Entries that carry the tag themselves. */
 	usage: number,
+};
+
+/**  An entry's own tags. */
+export type TagChange = {
+	added: TagLabel[],
+	removed: TagLabel[],
+	/**  The after side's tags. */
+	now: TagLabel[],
+};
+
+export type TagDefinition = {
+	name: string,
+	/**  A palette key. */
+	color: string,
+	order: number,
+};
+
+export type TagDefinitionChange = {
+	id: string,
+	/**  `null`: added. */
+	before: TagDefinition | null,
+	/**  `null`: deleted. */
+	after: TagDefinition | null,
 };
 
 export type TagDeleted = {
@@ -958,6 +1725,46 @@ export type TagFilter =
 { kind: "withAll"; tags: string[] } | 
 /**  Files without tags. */
 { kind: "untagged" };
+
+/**  A tag as that side's `tags.json` defines it, so a deleted tag is still named. */
+export type TagLabel = {
+	id: string,
+	/**  `null`: no definition on that side. */
+	name: string | null,
+	color: string | null,
+};
+
+/**
+ *  A line diff (paragraphs for Word), folded: each change with up to three rows of context, and
+ *  a `fold` row for every run of hidden unchanged lines.
+ */
+export type TextDiff = {
+	added: number,
+	removed: number,
+	/**  Runs of consecutive added and removed rows: "Change 2 of 5". */
+	changes: number,
+	/**  Rows of the folded diff, for paging. */
+	rows: number,
+	/**  Past the one-second deadline: whole lines only, without marks. */
+	approximate: boolean,
+	/**  The line endings changed; with `changes: 0`, only they did. */
+	lineEndings: LineEndingChange | null,
+	/**  The encoding changed; the text may be the same. */
+	encoding: EncodingChange | null,
+	/**  The rows the window asked for. */
+	window: DiffRow[],
+};
+
+/**  How a text file was decoded (versioning.md §10.2). */
+export type TextEncoding = "utf8" | "utf8Bom" | "utf16Le" | "utf16Be" | 
+/**  GB18030, which contains GBK. */
+"gb18030";
+
+/**  A range of a row's text in UTF-16 code units, `end` exclusive. */
+export type TextRange = {
+	start: number,
+	end: number,
+};
 
 /**
  *  The colour mode: `light` and `dark` set `data-theme` on the root, `system` follows Windows'
@@ -1007,6 +1814,41 @@ export type Unavailable =
  */
 "unfinishedMove";
 
+export type Uncommit = {
+	/**  Must be `HEAD`: otherwise `NotHead`. */
+	commit: string,
+};
+
+/**  An undone commit (versioning.md §8.4). */
+export type UncommitEntry = {
+	id: string,
+	timeMs: string,
+	effectiveMs: string,
+	/**  The commit taken back. */
+	commit: string,
+	/**  Its summary. */
+	summary: string,
+};
+
+/**
+ *  Changes the AI settings: each field that is not `null` replaces the stored value. An
+ *  endpoint on another origin deletes the key in the same update.
+ */
+export type UpdateAiSettings = {
+	enabled: boolean | null,
+	/**
+	 *  Trimmed, then at most `LIMITS.endpointChars` characters: `https`, a host, an optional
+	 *  port and path, no user name, query or fragment. Otherwise `AiEndpointInvalid`.
+	 */
+	endpoint: string | null,
+	/**
+	 *  Trimmed, then 1 to `LIMITS.modelChars` visible ASCII characters. Otherwise
+	 *  `AiModelInvalid`.
+	 */
+	model: string | null,
+	sendContent: boolean | null,
+};
+
 /**
  *  Changes App settings: each field that is not `null` replaces the stored value, so the
  *  device name's Save and the appearance controls each send only their own field.
@@ -1039,6 +1881,103 @@ export type UpdateTag = {
 	id: string,
 	name: string,
 	color: string,
+};
+
+/**  A version: the file at `path` in `commit`. */
+export type VersionRef = {
+	commit: string,
+	path: string,
+};
+
+/**
+ *  One version of a file in history. It can be shown, compared and restored when it is
+ *  `stored` and not `pruned`.
+ */
+export type VersionSide = {
+	/**
+	 *  The content hash: `b3:` and 64 lowercase hexadecimal digits. The `folio-file` version
+	 *  route serves it.
+	 */
+	hash: string,
+	/**  Bytes, in decimal. */
+	size: string,
+	/**  The commit stored this version (versioning.md §5.1). */
+	stored: boolean,
+	/**  Stored, then thinned out: no diff, no restore. */
+	pruned: boolean,
+};
+
+/**
+ *  The workspace's items, metadata changes, `head` or `historyState` changed; at most four a
+ *  second (docs/specs/ipc-m2.md §14). Refetch `get_workspace` and the visible pages: the
+ *  fingerprint comes with the summary only.
+ */
+export type WorkspaceChanged = {
+	/**  The catalog revision after the change. */
+	revision: number,
+	/**  `HEAD`'s commit id; `null` before the first commit. */
+	head: string | null,
+	historyState: HistoryState,
+	/**  Items plus metadata changes, for the badge. */
+	total: number,
+};
+
+/**  One change the user can include or leave out (versioning.md §6.3). Sorted by path. */
+export type WorkspaceItem = {
+	/**  Names the item while it exists: send it back as given, at most `LIMITS.keyChars`. */
+	key: string,
+	/**  The main change; a bound item's other changes are in `parts`. */
+	change: ChangeKind,
+	kind: EntryKind,
+	/**  The new path; the old one for a deletion. */
+	path: string,
+	/**  A move: where it was. */
+	fromPath: string | null,
+	/**  The catalog entry, for opening, revealing and its history; `null` for a deletion. */
+	entry: EntryRef | null,
+	/**  `other` for folders. */
+	class: FileClass,
+	/**  The content changed: always for `modified`, and for a moved file that was also edited. */
+	contentChanged: boolean,
+	/**  As `HEAD` has it; `null` when added, and for folders. */
+	before: ItemSide | null,
+	/**  As the disk has it; `null` when deleted, and for folders. */
+	after: ItemSide | null,
+	readiness: Readiness,
+	/**  Folder items: the files they cover; 0 for an empty folder and for files. */
+	files: number,
+	/**
+	 *  A bound item's other changes, committed with it; empty otherwise. "2 changes" is
+	 *  `1 + parts.length`.
+	 */
+	parts: ItemPart[],
+	/**  Bound to a metadata change, which every commit records: every selection includes it. */
+	required: boolean,
+	/**  The entry's tags changed too; its diff shows them under the content. */
+	tagsChanged: boolean,
+};
+
+/**  The Changes view's totals. Refetch it on `WorkspaceChanged`. */
+export type WorkspaceSummary = {
+	/**  The catalog revision it was read at. */
+	revision: number,
+	historyState: HistoryState,
+	/**  `HEAD`'s commit id; `null` before the first commit. Send it back as a commit's `base`. */
+	head: string | null,
+	/**
+	 *  32 lowercase hexadecimal digits over the keys of every item, whether it is includable,
+	 *  and every metadata change (32 zeros when there is none). Send it back with selections.
+	 */
+	fingerprint: string,
+	/**  Rows of `list_workspace_items`; a bound item counts once. */
+	items: number,
+	/**  Rows of `list_metadata_changes`. The badge and the header count `items + metadata`. */
+	metadata: number,
+	/**  Items that are ready or hashing. */
+	includable: number,
+	hashing: number,
+	notLocal: number,
+	unreadable: number,
 };
 
 /* Tauri Specta runtime */

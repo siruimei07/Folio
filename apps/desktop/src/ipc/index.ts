@@ -3,10 +3,10 @@
 // `cargo test -p folio-app export_bindings`; never edit it by hand. Its commands never reject:
 // a command error and a failed call both resolve to `{ status: 'error', error }`.
 //
-// The contract is docs/specs/ipc-m1.md. Commands it plans but the shell does not implement yet
-// are typed here, and calling one resolves to a `Transport` error (spec §3).
+// The contract is docs/specs/ipc-m1.md and ipc-m2.md. Commands they plan but the shell does not
+// implement yet are typed here, and calling one resolves to a `Transport` error (ipc-m1 §3).
 export type * from './bindings';
-export { DEFAULT_IGNORE_RULES, commands as ipc, LIMITS } from './bindings';
+export { DEFAULT_AI_ENDPOINT, DEFAULT_IGNORE_RULES, commands as ipc, LIMITS } from './bindings';
 export { formatIpcError, type IpcError, isIpcError } from './errors';
 export { shellEvents } from './events';
 export {
@@ -16,7 +16,9 @@ export {
   THUMBNAIL_SIZES,
   type ThumbnailSize,
   thumbnailUrl,
+  versionUrl,
 } from './files';
+export { shortId } from './ids';
 export {
   setWindowFailureHandler,
   type WindowCommand,

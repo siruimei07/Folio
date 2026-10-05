@@ -4,11 +4,13 @@
 use serde::Serialize;
 use specta::Type;
 
+use super::ai::AiSettings;
 use super::import::ImportSource;
 use super::jobs::Job;
 use super::library::LibraryStatus;
 use super::settings::{AppSettings, IgnoreRules};
 use super::types::{EntryRef, Point};
+use super::workspace::HistoryState;
 use crate::error::AppError;
 
 /// The library opened, was created, or became unavailable or read-only. Drop every cached page
@@ -104,4 +106,35 @@ pub struct AppSettingsChanged {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type, tauri_specta::Event)]
 pub struct IgnoreRulesChanged {
     pub rules: IgnoreRules,
+}
+
+/// The workspace's items, metadata changes, `head` or `historyState` changed; at most four a
+/// second (docs/specs/ipc-m2.md §14). Refetch `get_workspace` and the visible pages: the
+/// fingerprint comes with the summary only.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type, tauri_specta::Event)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkspaceChanged {
+    /// The catalog revision after the change.
+    pub revision: u32,
+    /// `HEAD`'s commit id; `null` before the first commit.
+    pub head: Option<String>,
+    pub history_state: HistoryState,
+    /// Items plus metadata changes, for the badge.
+    pub total: u32,
+}
+
+/// A commit, first commit, reword, uncommit or restore was recorded: refetch the timeline, the
+/// "Not synced" card and open file histories.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type, tauri_specta::Event)]
+pub struct HistoryChanged {
+    /// `HEAD`'s commit id; `null` before the first commit.
+    pub head: Option<String>,
+    /// The catalog revision after the change.
+    pub revision: u32,
+}
+
+/// The AI settings, or whether a key is stored, changed (docs/specs/ipc-m2.md §12).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type, tauri_specta::Event)]
+pub struct AiSettingsChanged {
+    pub settings: AiSettings,
 }

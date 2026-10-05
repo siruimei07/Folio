@@ -862,7 +862,8 @@ long the highlight stays.
 
 ## 15. IPC data each state needs
 
-From versioning §17 (the contract lane writes ipc-m2.md):
+From versioning §17; the contract is [ipc-m2.md](../../specs/ipc-m2.md) (2026-10-04), whose names
+win where this table differs:
 
 | Screen part | Data |
 |---|---|
@@ -946,19 +947,27 @@ render of its previews in light and dark, axe-core, a contrast pass on every tex
    into `feat/ui-history-view`, which already adds "View history" to the Library.
 2. **Not synced in M2 (decision 31A) vs versioning §9.1.** versioning.md says the not-synced list is
    empty until M3; Sirui chose to show the newest three commits. The card can read them from
-   `list_history`; the spec lane or the contract lane should update §9.1.
+   `list_history`; the spec lane or the contract lane should update §9.1. Settled 2026-10-04:
+   versioning §9.1 says so; `list_history { types: ["commit"] }` with a page of three
+   (ipc-m2 §8.1).
 3. **Planning a restore.** The dialog must know before the call whether the version replaces the
    file, recreates it, goes beside another file, changes nothing, and whether the current file goes to
    the Recycle Bin (versioning §11.2–§11.3). Suggested: a read-only `plan_restore { commit, path }` →
-   `{ outcome, target, recycle }`, with `restore_version` taking the same arguments.
+   `{ outcome, target, recycle }`, with `restore_version` taking the same arguments. Settled
+   2026-10-04: `plan_restore` (ipc-m2 §10), which also names the current file.
 4. **History items need a little more:** an `uncommit` entry needs the undone commit's summary, a
    `restore` entry the version's commit time and the file name, a `reword` entry the new short id,
    every entry its effective time for the day headers (7.2), and `FileVersion` whether it equals the
-   current file ("Current version", disabled Restore).
+   current file ("Current version", disabled Restore). Settled 2026-10-04: `UncommitEntry.summary`,
+   `RestoreEntry.versionMs` and `target`, `RewordEntry.commit` (the new id), `effectiveMs` on every
+   entry, `FileVersion.current` (ipc-m2 §8).
 5. **Cancelling Generate.** `generate_commit_message` should be cancellable (Stop, Esc, "Use
-   template"), for example with a request id and `cancel_ai_request`, or as a short job.
+   template"), for example with a request id and `cancel_ai_request`, or as a short job. Settled
+   2026-10-04: a request id the UI chooses and `cancel_ai_request`; a stopped request answers
+   `null` (ipc-m2 §12.4).
 6. **Commit progress text.** Bytes are assumed ("12.4 of 48.0 MB"); the first commit of a large
-   library may want files as well.
+   library may want files as well. Settled 2026-10-04: `Progress.bytes` and the files read, and a
+   job kind of its own for the first commit, `firstCommit` (ipc-m2 §13).
 7. **Design System artifact.** Done (2026-10-04): "Folio Design System" (version 7) has token
    rounds 5–10 and the previews DiffPane, CommitBox, NotSyncedCard and RestoreDialog; HistoryEntry,
    ChangeRow, Button (pending state) and CourseBadge (code letters, 9 px) are updated. The token

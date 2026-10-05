@@ -1,7 +1,8 @@
-// URLs of the shell's read-only `folio-file` scheme (docs/specs/ipc-m1.md §11.2), which serves
-// file bytes and thumbnails for previews: they never travel in IPC messages. The preview lane
-// implements the scheme; until then these URLs load nothing.
+// URLs of the shell's read-only `folio-file` scheme (docs/specs/ipc-m1.md §11.2, ipc-m2.md §11),
+// which serves file bytes, thumbnails and stored versions for previews: they never travel in IPC
+// messages.
 import { type EntryRef, FILE_ERROR_CODES, FILE_ERROR_HEADER } from './bindings';
+import { hexOf } from './ids';
 
 const ORIGIN = 'http://folio-file.localhost';
 
@@ -25,6 +26,14 @@ export function contentUrl(entry: EntryRef): string {
 /** A PNG thumbnail of the file. */
 export function thumbnailUrl(entry: EntryRef, size: ThumbnailSize): string {
   return `${ORIGIN}/thumbnail/${encodeURIComponent(entry.id)}/${String(size)}/${encodePath(entry.path)}`;
+}
+
+/**
+ * The bytes of a stored version in history (`VersionSide.hash` of a version that is stored and
+ * not pruned). `name` is the file's name, which gives the content type.
+ */
+export function versionUrl(version: { hash: string }, name: string): string {
+  return `${ORIGIN}/version/${hexOf(version.hash)}/${encodeURIComponent(name)}`;
 }
 
 /**

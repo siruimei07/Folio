@@ -38,6 +38,24 @@ pub struct Limits {
     /// The text of the ignore rules in `set_ignore_rules`, in characters, trailing line breaks
     /// not counted.
     pub ignore_rules_chars: u32,
+    /// A commit summary, in characters (ipc-m2.md §7.2).
+    pub summary_chars: u32,
+    /// A commit body, in characters.
+    pub body_chars: u32,
+    /// The description `generate_commit_message` sends, in characters.
+    pub description_chars: u32,
+    /// An AI key, in characters.
+    pub ai_key_chars: u32,
+    /// An AI endpoint, in characters.
+    pub endpoint_chars: u32,
+    /// An AI model name, in characters.
+    pub model_chars: u32,
+    /// An AI request id, in characters.
+    pub request_id_chars: u32,
+    /// A workspace or change key, in characters.
+    pub key_chars: u32,
+    /// Rows in one diff window.
+    pub diff_rows: u32,
 }
 
 pub const LIMITS: Limits = Limits {
@@ -55,6 +73,15 @@ pub const LIMITS: Limits = Limits {
     relative_path_chars: 1_024,
     log_chars: 8_192,
     ignore_rules_chars: 65_536,
+    summary_chars: 256,
+    body_chars: 16_384,
+    description_chars: 2_000,
+    ai_key_chars: 512,
+    endpoint_chars: 2_048,
+    model_chars: 128,
+    request_id_chars: 64,
+    key_chars: 32_800,
+    diff_rows: 500,
 };
 
 /// A core limit as a `u32`; a limit that does not fit fails the build.

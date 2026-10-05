@@ -10,11 +10,29 @@
 //! `runtime_commands_are_declared_and_granted` keeps the lists in step.
 //!
 //! All M1 commands are implemented. The contract stays crate-local, so unused contract types
-//! trigger dead-code warnings as the shell changes.
+//! trigger dead-code warnings as the shell changes. The M2 modules (docs/specs/ipc-m2.md) expect
+//! dead code until their commands are implemented: until then only the test-only stubs name
+//! their types, and nothing constructs them. Clippy fails once a module has none left, so the
+//! lane that implements its last command removes the expectation.
 
+#[expect(
+    dead_code,
+    reason = "M2 contract types, constructed once their lanes land"
+)]
+pub(crate) mod ai;
+#[expect(
+    dead_code,
+    reason = "M2 contract types, constructed once their lanes land"
+)]
+pub(crate) mod diff;
 pub(crate) mod entries;
 pub(crate) mod events;
 pub(crate) mod groups;
+#[expect(
+    dead_code,
+    reason = "M2 contract types, constructed once their lanes land"
+)]
+pub(crate) mod history;
 pub(crate) mod import;
 pub(crate) mod jobs;
 pub(crate) mod library;
@@ -23,6 +41,11 @@ pub(crate) mod problems;
 pub(crate) mod search;
 pub(crate) mod tags;
 pub(crate) mod types;
+#[expect(
+    dead_code,
+    reason = "M2 contract types, constructed once their lanes land"
+)]
+pub(crate) mod workspace;
 
 use tauri_specta::{Builder, collect_commands, collect_events};
 
@@ -60,11 +83,12 @@ macro_rules! implemented_commands {
 /// What the app runs: the implemented commands.
 pub fn builder() -> Builder<tauri::Wry> {
     contract(Builder::<tauri::Wry>::new().commands(implemented_commands!(
-        []; shell, library, browse, operations, file, import, jobs, log, settings
+        []; shell, library, browse, operations, file, import, jobs, log, settings, workspace,
+        history, ai
     )))
 }
 
-/// The fixed M1 contract order keeps bindings stable when a group implements its commands.
+/// The fixed M1 and M2 contract order keeps bindings stable when a group implements its commands.
 /// Group re-exports resolve to the handler or its test-only stub; later M1 lanes edit no index.
 #[cfg(test)]
 fn export_builder() -> Builder<tauri::Wry> {
@@ -113,6 +137,32 @@ fn export_builder() -> Builder<tauri::Wry> {
         commands::settings::update_app_settings,
         commands::settings::get_ignore_rules,
         commands::settings::set_ignore_rules,
+        // M2 (docs/specs/ipc-m2.md §3)
+        commands::workspace::get_workspace,
+        commands::workspace::list_workspace_items,
+        commands::workspace::list_metadata_changes,
+        commands::workspace::summarize_selection,
+        commands::workspace::commit,
+        commands::workspace::start_history,
+        commands::workspace::get_workspace_diff,
+        commands::history::list_history,
+        commands::history::get_commit,
+        commands::history::list_commit_changes,
+        commands::history::list_commit_metadata,
+        commands::history::list_file_history,
+        commands::history::locate_version,
+        commands::history::reword_commit,
+        commands::history::uncommit,
+        commands::history::get_version_diff,
+        commands::history::plan_restore,
+        commands::history::restore_version,
+        commands::ai::get_ai_settings,
+        commands::ai::update_ai_settings,
+        commands::ai::set_ai_key,
+        commands::ai::clear_ai_key,
+        commands::ai::test_ai,
+        commands::ai::generate_commit_message,
+        commands::ai::cancel_ai_request,
     ]))
 }
 
@@ -131,6 +181,9 @@ fn contract(builder: Builder<tauri::Wry>) -> Builder<tauri::Wry> {
             events::DropFailed,
             events::AppSettingsChanged,
             events::IgnoreRulesChanged,
+            events::WorkspaceChanged,
+            events::HistoryChanged,
+            events::AiSettingsChanged,
         ])
         .constant("LIMITS", types::LIMITS)
         .constant("FILE_ERROR_HEADER", entries::FILE_ERROR_HEADER)
@@ -139,6 +192,7 @@ fn contract(builder: Builder<tauri::Wry>) -> Builder<tauri::Wry> {
             "DEFAULT_IGNORE_RULES",
             folio_core::library::DEFAULT_IGNORE_RULES,
         )
+        .constant("DEFAULT_AI_ENDPOINT", ai::DEFAULT_AI_ENDPOINT)
         .typed_error_impl(TYPED_ERROR_IMPL)
 }
 

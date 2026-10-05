@@ -217,6 +217,13 @@ pages of one revision consistent.
      and crash/retry/concurrency tests pass. Codex code/security/simplify reviews,
      `pnpm check` and app-locked `pnpm e2e` (44/44) passed. Separate Claude Code audit is
      pending; neither this lane nor its final UI action has landed.
+   - 2026-10-04, `feat/ipc-m2-contract`: the M2 contract
+     ([`ipc-m2.md`](../specs/ipc-m2.md)) under this ADR's decisions: 25 commands in three new
+     groups (`workspace`, `history`, `ai`) declared as test-only stubs, with empty manifests and no
+     grants (decision 8), the events `WorkspaceChanged`, `HistoryChanged` and `AiSettingsChanged`,
+     29 new error codes (decision 7), the `folio-file` version route (decision 6), and the fake
+     shell's M2 scenarios. No command gained power. Sirui's decision of 2026-10-04: storing an AI
+     key for a service other than DeepSeek asks the user in a Windows dialog (ipc-m2.md §12.3).
 4. [x] Operations lane: amend ADR-0002 and library core §4.2 for the course code, optional badge
    text and colour, 1–3 character badges, and palette keys for preset tags (spec §20).
 5. [ ] Preview lane: the `folio-file` scheme, the main window's CSP sources, and an e2e test that

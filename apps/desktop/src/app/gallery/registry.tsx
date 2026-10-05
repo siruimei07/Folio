@@ -30,7 +30,7 @@ function jobsFor(state: string | null): { jobs: ActivityJob[]; problems: number 
               id: 'rebuild',
               kind: 'rebuild',
               cancellable: true,
-              status: { state: 'running', progress: { done: 8400, total: null, permille: null, current: null } },
+              status: { state: 'running', progress: { done: 8400, total: null, permille: null, bytes: null, current: null } },
             },
           },
           ...finished,

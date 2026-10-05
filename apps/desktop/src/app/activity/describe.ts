@@ -89,6 +89,11 @@ function doneTexts(t: ShellT, result: JobResult, target: string | undefined): { 
         title: t('activity.doneTitle.rebuild'),
         meta: t('activity.doneMeta.rebuild', { count: result.entries }),
       };
+    // The commit jobs (ipc-m2 §13; workspace-history handoff §4.4, §10).
+    case 'commit':
+      return { title: t('activity.doneTitle.commit', { count: result.changes }), meta: result.summary };
+    case 'firstCommit':
+      return { title: t('activity.doneTitle.firstCommit'), meta: t('activity.doneMeta.firstCommit', { count: result.files }) };
   }
 }
 

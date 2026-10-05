@@ -2,6 +2,7 @@
 // pane (docs/specs/ui-architecture.md §11.2):
 //
 //   ?scenario=small|large|first-run|read-only|unavailable|errors
+//            |history-none|history-long|diffs|history-read-only|history-damaged|ai-off   (ipc-m2 §17)
 //   ?latency=<ms>                     every answer waits this long (loading states)
 //   ?fail=<command>[:<code>],…        these commands fail, with `Internal` unless a code is given
 //   ?choice=empty|folders|library|insideLibrary|incomplete   first run: what the chosen folder holds
@@ -9,6 +10,11 @@
 //   ?reason=missing|notALibrary|newerFormat|accessDenied|catalogFailed|unfinishedMove   unavailable: why
 //   ?retry=open                        unavailable: "Try again" opens the library
 //   ?theme=light|dark&motion=on|off    App settings → Appearance as stored (ipc-m1 §22)
+//   ?ai=ok|network|timeout|rejected|rateLimited|unavailable|badResponse|credential|slow
+//                                      how the fake AI service answers (ipc-m2 §17)
+//   ?commit=fail:<code>[:<file>]       the next commit job fails with that code, naming that file
+//   ?restore=<code>|unchanged          restore_version fails with that code
+//   ?confirm=allow|cancel              the answer of the confirmation for another AI service
 import type { AppError, SyncProvider, Unavailable } from '../bindings';
 import type { CommandName } from './contract';
 import { type FolderKind, folderScript } from './fixtures/first-run';
@@ -16,8 +22,23 @@ import { largeLibrary } from './fixtures/large';
 import { sampleImport, smallLibrary } from './fixtures/small';
 import type { Fixture } from './fixtures/types';
 import { DEFAULT_APP_SETTINGS, type Failure, type FakeShellOptions } from './shell';
+import { AI_MODES } from './versioning/ai';
+import { MIDTERM_REVIEW, type VersioningScenario, versioningFixture } from './versioning/fixtures';
 
-export const SCENARIOS = ['small', 'large', 'first-run', 'read-only', 'unavailable', 'errors'] as const;
+export const SCENARIOS = [
+  'small',
+  'large',
+  'first-run',
+  'read-only',
+  'unavailable',
+  'errors',
+  'history-none',
+  'history-long',
+  'diffs',
+  'history-read-only',
+  'history-damaged',
+  'ai-off',
+] as const;
 export type Scenario = (typeof SCENARIOS)[number];
 
 export interface ScenarioOptions {
@@ -40,7 +61,28 @@ const READS: CommandName[] = [
   'search',
   'list_jobs',
   'list_problems',
+  'get_workspace',
+  'list_workspace_items',
+  'list_metadata_changes',
+  'get_workspace_diff',
+  'list_history',
+  'list_commit_changes',
+  'get_version_diff',
 ];
+
+/** The history each scenario starts with (ipc-m2 §17). */
+const VERSIONING: Partial<Record<Scenario, VersioningScenario>> = {
+  small: 'small',
+  errors: 'small',
+  'read-only': 'small',
+  unavailable: 'small',
+  'history-none': 'none',
+  'history-long': 'long',
+  diffs: 'diffs',
+  'history-read-only': 'readOnly',
+  'history-damaged': 'damaged',
+  'ai-off': 'aiOff',
+};
 
 export function scenarioFixture(
   scenario: Scenario,
@@ -49,7 +91,14 @@ export function scenarioFixture(
 ): { fixture: Fixture; failures: Failure[] } {
   const failures: Failure[] =
     scenario === 'errors' ? READS.map((command) => ({ command, code: 'Internal' })) : [];
-  return { fixture: fixtureOf(scenario, now, options), failures };
+  const fixture = fixtureOf(scenario, now, options);
+  const versioning = VERSIONING[scenario];
+  if (versioning !== undefined) {
+    const { history, ai } = versioningFixture(versioning);
+    if (fixture.library !== null) fixture.library.history = history;
+    fixture.ai = ai;
+  }
+  return { fixture, failures };
 }
 
 function fixtureOf(scenario: Scenario, now: number, options: ScenarioOptions): Fixture {
@@ -62,6 +111,12 @@ function fixtureOf(scenario: Scenario, now: number, options: ScenarioOptions): F
   switch (scenario) {
     case 'small':
     case 'errors':
+    case 'history-none':
+    case 'history-long':
+    case 'diffs':
+    case 'history-read-only':
+    case 'history-damaged':
+    case 'ai-off':
       return opened(smallLibrary(now));
     case 'large':
       return opened(largeLibrary(now));
@@ -115,10 +170,25 @@ export function optionsFromUrl(search: string, now: number = Date.now()): FakeSh
     reduceMotion: oneOf(params.get('motion'), MOTIONS) ?? 'system',
   };
   const latency = Number(params.get('latency'));
+  const [failCommit = '', commitCode = '', commitFile] = (params.get('commit') ?? '').split(':');
+  const restore = params.get('restore');
+  if (restore !== null) {
+    failures.push({ command: 'restore_version', code: (restore === 'unchanged' ? 'Unchanged' : restore) as AppError['code'] });
+  }
   return {
     fixture,
     failures,
     latencyMs: Number.isFinite(latency) && latency > 0 ? latency : 0,
     retry: params.get('retry') === 'open' ? 'open' : 'unavailable',
+    aiMode: oneOf(params.get('ai'), AI_MODES) ?? 'ok',
+    confirm: params.get('confirm') === 'cancel' ? 'cancel' : 'allow',
+    ...(failCommit === 'fail' && commitCode !== ''
+      ? {
+          commitFailure: {
+            code: commitCode as AppError['code'],
+            file: commitFile ?? MIDTERM_REVIEW,
+          },
+        }
+      : {}),
   };
 }

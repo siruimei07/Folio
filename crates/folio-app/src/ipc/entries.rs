@@ -119,7 +119,8 @@ pub struct RevealEntry {
 pub const FILE_ERROR_HEADER: &str = "X-Folio-Error";
 
 /// The codes a failed `folio-file` response carries; exported to the UI as `FILE_ERROR_CODES`.
-pub const FILE_ERROR_CODES: [&str; 9] = [
+/// `Pruned` and `HistoryDamaged` come from the version route (ipc-m2.md §11).
+pub const FILE_ERROR_CODES: [&str; 11] = [
     "InvalidArgument",
     "NoLibrary",
     "NotFound",
@@ -129,4 +130,6 @@ pub const FILE_ERROR_CODES: [&str; 9] = [
     "NoThumbnail",
     "FileSystem",
     "Internal",
+    "Pruned",
+    "HistoryDamaged",
 ];

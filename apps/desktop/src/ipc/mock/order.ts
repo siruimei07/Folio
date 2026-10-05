@@ -19,7 +19,7 @@ export interface Sortable {
  * Paths compared name by name, so a folder's contents follow it without anything in between.
  * The comparator splits each path once: a sort compares every path many times.
  */
-function pathOrder(): (a: string, b: string) => number {
+export function pathOrder(): (a: string, b: string) => number {
   const names = new Map<string, string[]>();
   const split = (path: string): string[] => {
     let parts = names.get(path);

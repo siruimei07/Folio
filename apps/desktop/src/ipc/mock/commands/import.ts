@@ -6,7 +6,7 @@ import type { EntryChange, ImportFailure, ImportResult, JobResult } from '../../
 import type { GroupHandlers } from '../contract';
 import { fail } from '../failure';
 import type { ImportScript } from '../fixtures/types';
-import { type FakeLibrary, type FakeNode, freshFields, joinPath } from '../library';
+import { type FakeLibrary, type FakeNode, freeName, freshFields, joinPath } from '../library';
 import { importSource, type FakeShell } from '../shell';
 
 /** What the library's ignore rules leave out (library scan §5), and special files. */
@@ -21,16 +21,6 @@ function find(library: FakeLibrary, folder: FakeNode, path: string): FakeNode | 
   let node: FakeNode | undefined = folder;
   for (const name of path.split('/')) node = node && library.clash(node, name);
   return node;
-}
-
-/** `name (2).ext`, `name (3).ext`, …: the first name free in `folder`. */
-function freeName(library: FakeLibrary, folder: FakeNode, name: string): string {
-  const dot = name.lastIndexOf('.');
-  const [stem, extension] = dot > 0 ? [name.slice(0, dot), name.slice(dot)] : [name, ''];
-  for (let copy = 2; ; copy++) {
-    const candidate = `${stem} (${String(copy)})${extension}`;
-    if (!library.clash(folder, candidate)) return candidate;
-  }
 }
 
 export function importCommands(

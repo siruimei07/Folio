@@ -1,8 +1,10 @@
 // FakeShell: the shell's state and machinery for the fake (docs/specs/ui-architecture.md §11.1).
 // It answers commands through the handlers in `commands/`, emits the shell's events through the
 // generated `events.*.emit`, runs jobs on timers and issues choice tokens. It reproduces the
-// contract of docs/specs/ipc-m1.md, not the file system: nothing here touches the disk.
+// contracts of docs/specs/ipc-m1.md and ipc-m2.md, not the file system: nothing here touches the
+// disk. The history, the workspace and AI live in `versioning/`.
 import {
+  type AiSettings,
   type AppError,
   type AppSettings,
   type EntryChange,
@@ -12,6 +14,7 @@ import {
   type Job,
   type JobKind,
   type JobResult,
+  type Progress,
   LIMITS,
   type LibraryStatus,
   type Point,
@@ -30,6 +33,8 @@ import type {
 } from './fixtures/types';
 import { FakeLibrary } from './library';
 import { randomHex } from './random';
+import { type AiMode, FakeAi } from './versioning/ai';
+import { FakeVersioning, noHistory } from './versioning/model';
 
 export interface Failure {
   command: CommandName;
@@ -50,6 +55,14 @@ export interface FakeShellOptions {
   eventDelayMs?: number;
   /** What "Try again" (`library_status` while unavailable) does. */
   retry?: 'open' | 'unavailable';
+  /** How long the fake AI service takes to answer. */
+  aiDelayMs?: number;
+  /** How the fake AI service answers (`?ai=`). */
+  aiMode?: AiMode;
+  /** The answer of the confirmation for another AI service (`?confirm=`). */
+  confirm?: 'allow' | 'cancel';
+  /** The next commit job fails with this code, naming this file (`?commit=fail:…`). */
+  commitFailure?: { code: ErrorCode; file: string | null };
 }
 
 /** How long a choice token lives (ipc-m1 §4.2). */
@@ -65,7 +78,7 @@ const FINISHED_KEPT = 20;
 
 type ShellState =
   | { kind: 'none' }
-  | { kind: 'open'; library: FakeLibrary }
+  | { kind: 'open'; library: FakeLibrary; versioning: FakeVersioning }
   | { kind: 'unavailable'; reason: Unavailable; seed: LibrarySeed };
 
 /** What a token stands for: a folder for a library, or files to import (ipc-m1 §4.2). */
@@ -86,6 +99,17 @@ interface JobSpec {
   stopped?: () => JobResult;
   /** The item in progress once `done` items are done, for display (imports). */
   current?: (done: number) => string | null;
+  /** Bytes in all, for jobs that measure bytes (commits, ipc-m2 §13). */
+  bytes?: number;
+  /** Runs once when the job ends, however it ends. */
+  onEnd?: (status: Job['status']) => void;
+  /** Stays queued while a job of these kinds is queued or running (the first commit, ipc-m2 §7.1). */
+  waitFor?: JobKind[];
+  /**
+   * After the work, one more step that cannot be cancelled: a commit's switch (ipc-m2 §7.1). The
+   * job must start cancellable; it stops being so when the step begins.
+   */
+  finalStep?: boolean;
 }
 
 interface JobRun extends JobSpec {
@@ -119,7 +143,9 @@ function windowPlugin(command: string): unknown {
 
 export class FakeShell {
   private state: ShellState;
-  private readonly options: Required<Omit<FakeShellOptions, 'fixture' | 'failures'>>;
+  private readonly options: Required<
+    Omit<FakeShellOptions, 'fixture' | 'failures' | 'aiMode' | 'confirm' | 'commitFailure'>
+  >;
   private readonly handlers: Handlers;
   private readonly failures = new Map<string, ErrorCode>();
   private readonly tokens = new Map<string, Choice>();
@@ -136,6 +162,10 @@ export class FakeShell {
   readonly log: { kind: string; source: string; message: string; stack: string | null }[] = [];
   /** App settings on this computer (ipc-m1 §22); they outlive library changes. */
   private settings: AppSettings;
+  /** AI on this computer (ipc-m2 §12); it outlives library changes. */
+  readonly ai: FakeAi;
+  /** The next commit job's failure (`?commit=fail:…`), taken by the job that meets it. */
+  private commitFailure: { code: ErrorCode; file: string | null } | null;
 
   constructor(options: FakeShellOptions) {
     this.options = {
@@ -144,6 +174,7 @@ export class FakeShell {
       jobStepMs: options.jobStepMs ?? 250,
       eventDelayMs: options.eventDelayMs ?? 0,
       retry: options.retry ?? 'unavailable',
+      aiDelayMs: options.aiDelayMs ?? 600,
     };
     for (const failure of options.failures ?? []) this.failures.set(failure.command, failure.code);
     const { fixture } = options;
@@ -154,8 +185,14 @@ export class FakeShell {
       fixture.status.state === 'none' || fixture.library === null
         ? { kind: 'none' }
         : fixture.status.state === 'open'
-          ? { kind: 'open', library: new FakeLibrary(randomHex(8), fixture.library) }
+          ? this.opened(fixture.library)
           : { kind: 'unavailable', reason: fixture.status.reason, seed: fixture.library };
+    this.ai = new FakeAi(fixture.ai ?? { enabled: true, hasKey: false }, this.options.aiDelayMs, (settings) => {
+      this.aiSettingsChanged(settings);
+    });
+    this.ai.mode = options.aiMode ?? 'ok';
+    this.ai.confirm = options.confirm ?? 'allow';
+    this.commitFailure = options.commitFailure ?? null;
     this.handlers = createHandlers(this);
   }
 
@@ -210,6 +247,7 @@ export class FakeShell {
   /** Stops every timer; nothing is emitted afterwards. */
   dispose(): void {
     this.disposed = true;
+    this.ai.dispose();
     for (const timer of this.timers) clearTimeout(timer);
     this.timers.clear();
   }
@@ -263,11 +301,43 @@ export class FakeShell {
     return library;
   }
 
+  /** The open library's history and workspace (ipc-m2); `NoLibrary` otherwise. */
+  get versioning(): FakeVersioning {
+    if (this.state.kind !== 'open') fail('NoLibrary', 'no library is open');
+    return this.state.versioning;
+  }
+
+  /** A library opened from `seed`, with the history the seed carries (none by default). */
+  private opened(seed: LibrarySeed): Extract<ShellState, { kind: 'open' }> {
+    const library = new FakeLibrary(randomHex(8), seed);
+    const versioning = new FakeVersioning((seed.history ?? noHistory)(library, this.now()), library, {
+      now: () => this.now(),
+      deviceName: () => this.settings.deviceName ?? 'This PC',
+      workspaceChanged: () => {
+        this.workspaceChanged();
+      },
+      historyChanged: () => {
+        this.historyChanged();
+      },
+      catalogChanged: (changes) => {
+        if (changes.length > 0) this.changed(changes);
+      },
+    });
+    return { kind: 'open', library, versioning };
+  }
+
   /** Opens `seed` as this machine's library, and says so (LibraryStateChanged). */
   openLibrary(seed: LibrarySeed): FakeLibrary {
-    const library = new FakeLibrary(randomHex(8), seed);
-    this.changeState({ kind: 'open', library });
-    return library;
+    const state = this.opened(seed);
+    this.changeState(state);
+    return state.library;
+  }
+
+  /** The failure `?commit=fail:…` asked for, once: the next commit job ends with it. */
+  takeCommitFailure(): { code: ErrorCode; file: string | null } | null {
+    const failure = this.commitFailure;
+    this.commitFailure = null;
+    return failure;
   }
 
   /** "Try again" on the unavailable screen (ipc-m1 §6). */
@@ -290,8 +360,8 @@ export class FakeShell {
   /** The library becomes unavailable while Folio runs (its folder went away). */
   makeUnavailable(reason: Unavailable): void {
     if (this.state.kind !== 'open') return;
-    const { library } = this.state;
-    this.changeState({ kind: 'unavailable', reason, seed: seedOf(library) });
+    const { library, versioning } = this.state;
+    this.changeState({ kind: 'unavailable', reason, seed: seedOf(library, versioning) });
   }
 
   /** From now on, "Try again" opens the library. */
@@ -385,6 +455,51 @@ export class FakeShell {
     for (const problem of problems) library.addProblem(problem);
     const total = library.problems.length;
     this.emit(() => events.problemsChanged.emit({ total }));
+  }
+
+  // ---- workspace, history and AI (ipc-m2 §14)
+
+  /** WorkspaceChanged, after the CatalogChanged of the same change. */
+  workspaceChanged(): void {
+    if (this.state.kind !== 'open') return;
+    const versioning = this.versioning;
+    const payload = {
+      revision: this.state.library.revision,
+      head: versioning.head?.id ?? null,
+      historyState: versioning.state,
+      total: versioning.total(),
+    };
+    this.later(this.options.eventDelayMs, () => {
+      this.emit(() => events.workspaceChanged.emit(payload));
+    });
+  }
+
+  historyChanged(): void {
+    if (this.state.kind !== 'open') return;
+    const payload = { head: this.versioning.head?.id ?? null, revision: this.state.library.revision };
+    this.emit(() => events.historyChanged.emit(payload));
+  }
+
+  aiSettingsChanged(settings: AiSettings): void {
+    const copy = overIpc(settings);
+    this.emit(() => events.aiSettingsChanged.emit({ settings: copy }));
+  }
+
+  /** Console helpers (ipc-m2 §17): changes made in other programs. */
+  editFile(path: string): void {
+    this.versioning.editFile(path);
+  }
+
+  addFile(path: string, text?: string): void {
+    this.versioning.addNewFile(path, text);
+  }
+
+  deleteFile(path: string): void {
+    this.versioning.deleteFile(path);
+  }
+
+  downloadFile(path: string): void {
+    this.versioning.downloadFile(path);
   }
 
   // ---- settings
@@ -552,11 +667,10 @@ export class FakeShell {
     for (const run of [...this.active]) {
       if (run.job.status.state === 'queued') {
         if (runningKinds.has(run.job.kind)) continue;
+        const waitFor = run.waitFor ?? [];
+        if (this.active.some((other) => other !== run && waitFor.includes(other.job.kind))) continue;
         runningKinds.add(run.job.kind);
-        this.setJob(run, {
-          state: 'running',
-          progress: { done: 0, total: run.total, permille: null, current: null },
-        });
+        this.setJob(run, { state: 'running', progress: progressOf(run, 0, null) });
         continue;
       }
       runningKinds.add(run.job.kind);
@@ -565,26 +679,24 @@ export class FakeShell {
         continue;
       }
       const total = run.total ?? 1;
+      if (run.finalStep === true && run.done >= total && run.job.cancellable) {
+        run.job = { ...run.job, cancellable: false };
+        this.jobChanged(run.job);
+        continue;
+      }
       const to = Math.min(total, run.done + (run.step ?? total));
       run.onStep?.(run.done, to);
       run.done = to;
-      if (to >= total) {
+      if (to >= total && (run.finalStep !== true || !run.job.cancellable)) {
         try {
           this.finishJob(run, { state: 'done', result: run.finish() });
         } catch (error) {
           const failure = error instanceof ShellFailure ? error.appError : internal(error);
-          this.finishJob(run, { state: 'failed', error: failure });
+          const file = error instanceof ShellFailure ? error.file : null;
+          this.finishJob(run, { state: 'failed', error: failure, file });
         }
       } else {
-        this.setJob(run, {
-          state: 'running',
-          progress: {
-            done: to,
-            total: run.total,
-            permille: run.total === null ? null : Math.round((to / total) * 1000),
-            current: run.current?.(to) ?? null,
-          },
-        });
+        this.setJob(run, { state: 'running', progress: progressOf(run, to, run.current?.(to) ?? null) });
       }
     }
   }
@@ -594,10 +706,12 @@ export class FakeShell {
     this.jobChanged(run.job);
   }
 
+  /** Every way a job ends comes through here. */
   private finishJob(run: JobRun, status: Job['status']): void {
     this.active = this.active.filter((candidate) => candidate !== run);
     run.job = { ...run.job, status };
     this.finished = [run.job, ...this.finished].slice(0, FINISHED_KEPT);
+    run.onEnd?.(status);
     this.jobChanged(run.job);
   }
 
@@ -609,6 +723,21 @@ export class FakeShell {
 
 function internal(error: unknown): AppError {
   return appError('Internal', String(error));
+}
+
+/** A running job's progress once `done` items are done: items, and bytes when it measures them. */
+function progressOf(run: JobRun, done: number, current: string | null): Progress {
+  const share = run.total === null ? null : done / Math.max(1, run.total);
+  return {
+    done,
+    total: run.total,
+    permille: share === null ? null : Math.round(share * 1000),
+    bytes:
+      run.bytes === undefined || share === null
+        ? null
+        : { done: String(Math.round(run.bytes * share)), total: String(run.bytes) },
+    current,
+  };
 }
 
 /** The next scripted answer; the last one repeats. */
@@ -627,9 +756,11 @@ export function importSource(token: string, script: ImportScript) {
   };
 }
 
-/** A library's current content as a seed, to open it again later. */
-function seedOf(library: FakeLibrary): LibrarySeed {
+/** A library's current content and history as a seed, to open it again later. */
+function seedOf(library: FakeLibrary, versioning: FakeVersioning): LibrarySeed {
+  const history = versioning.snapshot();
   return {
+    history: () => history,
     name: library.info.name,
     root: library.info.root,
     readOnly: library.info.readOnly,

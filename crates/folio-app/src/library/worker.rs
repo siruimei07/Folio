@@ -711,6 +711,7 @@ impl Session {
                         done: progress.done,
                         total: Some(progress.total),
                         permille,
+                        bytes: None,
                         current: Some(progress.current),
                     },
                 ) {
@@ -1134,7 +1135,8 @@ mod tests {
             && matches!(
                 &job.status,
                 crate::ipc::jobs::JobStatus::Failed {
-                    error: AppError::Busy(_)
+                    error: AppError::Busy(_),
+                    ..
                 }
             )));
         assert!(matches!(lock(&session.pending).rescan, Some(Rescan::Full)));

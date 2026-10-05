@@ -2299,8 +2299,16 @@
         "design/design-m2-details"
       ],
       "summary": "workspace.*、history.*、ai.* 和 AI 设置的合约",
-      "status": "planned",
-      "updated": "2026-10-01",
+      "status": "done",
+      "updated": "2026-10-04",
+      "landed": "2026-10-04",
+      "gates": {
+        "check": "pass",
+        "e2e": "pass",
+        "codeReview": "pass",
+        "securityReview": "pass",
+        "simplify": "pass"
+      },
       "links": [
         "docs/specs/versioning.md",
         "docs/specs/remote-format.md",

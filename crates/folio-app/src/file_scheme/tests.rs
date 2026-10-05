@@ -187,6 +187,8 @@ fn every_landed_contract_failure_has_its_status_and_no_private_detail() {
         (AppError::NoThumbnail("secret".into()), 404),
         (AppError::FileSystem("secret".into()), 500),
         (AppError::Internal("secret".into()), 500),
+        (AppError::Pruned("secret".into()), 404),
+        (AppError::HistoryDamaged("secret".into()), 500),
     ];
     let codes = cases
         .iter()
