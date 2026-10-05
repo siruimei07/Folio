@@ -2794,8 +2794,18 @@
         "fix/ui-problems-paging-flake"
       ],
       "summary": "problems.test.tsx 的「短列表的结尾在视野里时自己要下一页」在 main 的 CI 上失败过（期望 250 实际 200，run 37237819510）；查清是测试还是组件的问题，并把两处测试共用的假 IntersectionObserver 合成一个 helper",
-      "status": "planned",
-      "updated": "2026-10-04",
+      "status": "done",
+      "updated": "2026-10-05",
+      "landed": "2026-10-05",
+      "gates": {
+        "check": "pass",
+        "e2e": "pass",
+        "codeReview": "pass",
+        "simplify": "pass",
+        "designCritique": "na",
+        "a11y": "na",
+        "securityReview": "na"
+      },
       "owns": [
         "apps/desktop/src/problems/**",
         "apps/desktop/src/test/**"

@@ -13,52 +13,19 @@ import { keys } from '../data/keys';
 import type { Job, Problem } from '../ipc';
 import { NOW } from '../test/data';
 import { libraryFixture } from '../test/fixtures';
+import { fakeListEnd } from '../test/listEnd';
 import { renderApp, toastTexts } from '../test/render';
 import { ProblemsDialog } from './ProblemsDialog';
 
-// The end-of-list watcher uses an IntersectionObserver (a no-op in jsdom's setup): this one
-// remembers its callbacks, and `reachEnd` tells every watcher the end came into view, as scrolling
-// to the end of the list would. The end then stays in view until rows are added above it, and a
-// new watcher reports at once whether it is in view, as the real one does: reaching the end just
-// before the list watches it anew still counts.
-const watchers = new Set<IntersectionObserverCallback>();
-/** The whole list fits: its end is in view whatever it holds. */
-let endInView = false;
-/** How many rows the list held when it was last scrolled to its end. */
-let reachedAt: number | null = null;
-
+/**
+ * The rows shown. Waits for a page count with it: a role query over hundreds of rows, run on every
+ * change, would slow the very renders the wait is for.
+ */
 function rowCount(): number {
   return document.querySelectorAll('.problems__row').length;
 }
 
-function inView(callback: IntersectionObserverCallback): void {
-  callback([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
-}
-
-vi.stubGlobal(
-  'IntersectionObserver',
-  class {
-    constructor(private readonly callback: IntersectionObserverCallback) {}
-    observe() {
-      watchers.add(this.callback);
-      if (endInView || reachedAt === rowCount()) inView(this.callback);
-    }
-    unobserve = vi.fn();
-    disconnect() {
-      watchers.delete(this.callback);
-    }
-  },
-);
-
-/** Scrolls to the end outside act, so React's pending work stays pending. */
-function notifyEnd(): void {
-  reachedAt = rowCount();
-  for (const callback of [...watchers]) inView(callback);
-}
-
-function reachEnd(): void {
-  act(notifyEnd);
-}
+const listEnd = fakeListEnd(rowCount);
 
 const SAMPLE: Problem[] = [
   { kind: 'notRelocated', from: 'Personal/a.pdf', to: 'MAT232/a.pdf', cause: 'folderTags' },
@@ -71,8 +38,6 @@ const SAMPLE: Problem[] = [
 function renderProblems(problems: Problem[], options: Parameters<typeof renderApp>[1] = {}) {
   closeDialog();
   resetJobNotes();
-  endInView = false;
-  reachedAt = null;
   const onClose = vi.fn();
   const rendered = renderApp(<ProblemsDialog isOpen params={undefined} onClose={onClose} />, {
     fixture: libraryFixture(() => undefined, { problems }),
@@ -255,13 +220,13 @@ describe('ProblemsDialog', () => {
     expect(screen.getByRole('img', { name: '450 problems' })).toBeInTheDocument();
     expect(screen.getAllByRole('listitem')).toHaveLength(200);
     expect(screen.getByText('Loading more problems…')).toBeInTheDocument();
-    reachEnd();
+    listEnd.reach();
     await waitFor(() => {
-      expect(screen.getAllByRole('listitem')).toHaveLength(400);
+      expect(rowCount()).toBe(400);
     });
-    reachEnd();
+    listEnd.reach();
     await waitFor(() => {
-      expect(screen.getAllByRole('listitem')).toHaveLength(450);
+      expect(rowCount()).toBe(450);
     });
     expect(screen.queryByText('Loading more problems…')).toBeNull();
     expect(screen.getByRole('region', { name: "Shortcuts Folio doesn't follow, 450 items" })).toBeInTheDocument();
@@ -277,29 +242,31 @@ describe('ProblemsDialog', () => {
       if (rowCount() !== 400) return;
       scroll.disconnect();
       reached = true;
-      notifyEnd();
+      listEnd.reachNow();
     });
     scroll.observe(document.body, { childList: true, subtree: true });
     onTestFinished(() => {
       scroll.disconnect();
     });
-    reachEnd();
+    listEnd.reach();
     await waitFor(() => {
       expect(reached).toBe(true);
     });
     await waitFor(() => {
-      expect(screen.getAllByRole('listitem')).toHaveLength(450);
+      expect(rowCount()).toBe(450);
     });
   });
 
   it('asks for the next page by itself while the end of a short list is in view', async () => {
-    endInView = true;
+    listEnd.fit();
     renderProblems(manyLinks(250));
-    // renderProblems resets the flag: set it again before the first watcher starts.
-    endInView = true;
+    // A wait for the first page, then one for the next, which the list asks for without any
+    // scrolling: one wait for both would have to cover every render of the list in one timeout.
+    await rowTitle('Links/link 0');
     await waitFor(() => {
-      expect(screen.getAllByRole('listitem')).toHaveLength(250);
+      expect(rowCount()).toBe(250);
     });
+    expect(screen.queryByText('Loading more problems…')).toBeNull();
   });
 
   it('says when the scan was: today by time, an earlier day by date, else only that it updates', async () => {

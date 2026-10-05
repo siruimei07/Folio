@@ -10,36 +10,16 @@ import { openDialog, useNavigation } from '../app/navigation';
 import { LIMITS, type SearchHit } from '../ipc';
 import { NOW, smallRef } from '../test/data';
 import { libraryFixture } from '../test/fixtures';
+import { fakeListEnd } from '../test/listEnd';
 import { renderApp } from '../test/render';
 import { Highlighted } from './Highlighted';
 import { groupHits } from './hits';
 import { SearchDialog } from './SearchDialog';
 
-// The list's "load more" sentinel watches with an IntersectionObserver (a no-op in jsdom's setup):
-// this one remembers its callbacks, and `reachEnd` tells every sentinel it came into view, as
-// scrolling to the end of the list would.
-const sentinels = new Set<IntersectionObserverCallback>();
-vi.stubGlobal(
-  'IntersectionObserver',
-  class {
-    constructor(private readonly callback: IntersectionObserverCallback) {}
-    observe() {
-      sentinels.add(this.callback);
-    }
-    unobserve = vi.fn();
-    disconnect() {
-      sentinels.delete(this.callback);
-    }
-  },
+// The list's "load more" sentinel; its rows are the hits, not the "Loading more" option.
+const listEnd = fakeListEnd(
+  () => document.querySelectorAll('[role="option"]:not(.search-results__more)').length,
 );
-
-function reachEnd(): void {
-  act(() => {
-    for (const callback of [...sentinels]) {
-      callback([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
-    }
-  });
-}
 
 function renderSearch(options: Parameters<typeof renderApp>[1] = {}) {
   // The dialog as the shell hosts it, with the live regions it announces in.
@@ -289,7 +269,7 @@ describe('SearchDialog', () => {
     expect(screen.getAllByRole('option')).toHaveLength(50);
     expect(footer()).toHaveTextContent('50+ results');
 
-    reachEnd();
+    listEnd.reach();
     await waitFor(() => {
       expect(screen.getAllByRole('option')).toHaveLength(70);
     });

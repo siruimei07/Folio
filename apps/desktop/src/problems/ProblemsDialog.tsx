@@ -59,6 +59,13 @@ function loadedRows(rowAt: (index: number) => ProblemItem | undefined, count: nu
   return rows;
 }
 
+/** How many of the first `count` rows are loaded, from the first. */
+function loadedCount(rowAt: (index: number) => ProblemItem | undefined, count: number): number {
+  let loaded = 0;
+  while (loaded < count && rowAt(loaded) !== undefined) loaded++;
+  return loaded;
+}
+
 /**
  * The problems list (library-actions handoff §11), opened by the Activity popover's "View
  * problems": what the last scans left out or couldn't finish, grouped by kind, each row with why
@@ -72,7 +79,9 @@ export function ProblemsDialog({ isOpen, onClose }: DialogComponentProps<'proble
   const list = useProblems(isOpen ? { start: 0, end: wanted - 1 } : null, { enabled: isOpen });
   const total = list.total;
   const shown = total === undefined ? 0 : Math.min(wanted, total);
-  const rows = useMemo(() => loadedRows(list.rowAt, shown), [list.rowAt, shown]);
+  // Keyed on the rows loaded, not on `shown`: asking for a page re-renders no row until it arrives.
+  const loaded = loadedCount(list.rowAt, shown);
+  const rows = useMemo(() => loadedRows(list.rowAt, loaded), [list.rowAt, loaded]);
   const groups = useMemo(() => groupProblems(t, rows, i18n.language), [t, rows, i18n.language]);
 
   const loadMore = () => {
