@@ -5,7 +5,7 @@
     "owner": "Sirui",
     "repo": "https://github.com/siruimei07/Folio",
     "explorer": "https://claude.ai/artifact/Mv1f9eXfrkYTbAs7fqQVDC",
-    "updated": "2026-10-06T17:40-04:00",
+    "updated": "2026-10-06T18:05-04:00",
     "updatedBy": "Claude Code",
     "models": {
       "fable": "Fable 5.1",
@@ -1974,6 +1974,34 @@
       ]
     },
     {
+      "id": "docs/docs-roadmap-race-flake",
+      "title": "main 的 CI 又被问题列表测试弄红：加修复 lane",
+      "milestone": "M2",
+      "phase": "m2-impl",
+      "track": "flow",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "feat/core-object-store"
+      ],
+      "summary": "对象库合并后 main 的 CI 因 problems.test.tsx 的竞态分页测试失败（与对象库无关）；加修复 lane fix/ui-problems-race-flake",
+      "status": "done",
+      "updated": "2026-10-06",
+      "landed": "2026-10-06",
+      "gates": {
+        "check": "pass",
+        "e2e": "na",
+        "codeReview": "na",
+        "securityReview": "na",
+        "simplify": "na",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "docs/roadmap/roadmap.json"
+      ]
+    },
+    {
       "id": "refactor/core-sta-helper",
       "title": "合并 STA 辅助函数",
       "milestone": "M1",
@@ -3052,6 +3080,37 @@
           "apps/desktop/src/problems/problems.test.tsx, \"asks for the next page by itself while the end of a short list is in view\", failed on main's CI (run 37237819510: 200 rows, expected 250). It is the sibling of the test fix/ui-problems-paging-flake fixed (3f08d18), which changed the fake IntersectionObserver; read that lane's finding first.",
           "Reproduce it under load (many repeats while other tests load the machine, as that lane did), then decide: does the test set the end in view too late for the first watcher, or does ProblemList miss a page when the end is already in view while a page loads? If the component misses it, a user's short list would stop at 200 too: fix the component, not only the test. No longer timeouts or retries.",
           "Also move the remembering fake IntersectionObserver into one helper in apps/desktop/src/test/ and use it from problems.test.tsx and search/SearchDialog.test.tsx (loose end). Show every paging test in both files stable over many repeated runs and alongside a full `pnpm check`."
+        ]
+      }
+    },
+    {
+      "id": "fix/ui-problems-race-flake",
+      "title": "问题列表「页面一出现就到底」测试偶尔失败",
+      "milestone": "M2",
+      "phase": "m2-impl",
+      "track": "ui",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "fix/ui-problems-short-list-flake"
+      ],
+      "summary": "problems.test.tsx 的「页面一出现就到底时加载下一页」在 main 的 CI 上失败（期望 450 实际 400，run 37519512994，对象库合并后，只改了 Rust）；查清是测试的等待还是组件在这个竞态里漏掉一页，修好，并在负载下证明问题列表的分页测试都稳定",
+      "status": "planned",
+      "updated": "2026-10-06",
+      "owns": [
+        "apps/desktop/src/problems/**"
+      ],
+      "shared": [
+        "apps/desktop/src/test/**"
+      ],
+      "links": [
+        "docs/design/handoff/library-actions.md"
+      ],
+      "prompt": {
+        "extra": [
+          "apps/desktop/src/problems/problems.test.tsx, \"loads the next page when the end is reached the moment a page shows\", failed on main's CI (run 37519512994 after feat/core-object-store landed, which changed no web code): 400 rows, expected 450, the waitFor timed out (the test took 2389 ms). It is the third paging test of this file to flake: read fix/ui-problems-paging-flake (3f08d18) and fix/ui-problems-short-list-flake (58d4e09, its lane noted that at double load this 450-row test sometimes hit vitest's 5 s per-test limit).",
+          "This test reaches the end in the microtask after the commit that shows 400 rows, before React runs that commit's effects. Reproduce under load (many repeats while other tests load the machine) and decide: does the test wait too little (one waitFor covering several renders, or a fake-shell latency longer than the timeout), or does ProblemList miss the page when the end is reached in that window? If the component misses it, a user's list would stop at 400: fix the component, not only the test. No longer timeouts or retries without a reason.",
+          "Show every paging test in problems.test.tsx and search/SearchDialog.test.tsx stable over many repeated runs under load and alongside a full `pnpm check`."
         ]
       }
     },
@@ -4718,6 +4777,11 @@
       "at": "2026-10-06",
       "by": "Claude Code",
       "text": "合并：feat/core-object-store（d5f9e628，自审 3 轮 + 独立审计 3 轮 + 专项复查收敛）、fix/core-recycle-icloud-startup（28de0ac1）。对象库的交接写进 docs/specs-sync、feat/core-commit-history、feat/core-workspace；决策 m2-too-large-folder"
+    },
+    {
+      "at": "2026-10-06",
+      "by": "Claude Code",
+      "text": "对象库合并后 main CI 37519512994 红：problems.test.tsx 竞态分页测试偶发失败（只改了 Rust）；重跑失败的 job，新增 fix/ui-problems-race-flake"
     }
   ]
 }
