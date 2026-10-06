@@ -8,8 +8,11 @@ import type { ReactNode } from 'react';
 import { SIZE } from '../../tokens/tokens';
 
 export interface StateBlockProps {
-  /** neutral for empty states; the feedback tones for errors, problems and results. */
-  tone?: 'neutral' | 'danger' | 'warning' | 'success';
+  /**
+   * neutral for empty states; the feedback tones for errors, problems and results; info for
+   * notes on what is shown, like the diff's "No text changed" (workspace-history §6.8).
+   */
+  tone?: 'neutral' | 'danger' | 'warning' | 'success' | 'info';
   icon: LucideIcon;
   /** Turns the icon, for waiting states such as "Reading your library…"; still under reduced motion. */
   spinning?: boolean;

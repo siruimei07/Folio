@@ -1,6 +1,7 @@
 /* The preview of a file (app-shell handoff §5): header, tag row, and the body by type. Images and
    video sit on the dark backdrop, cards and errors on the sunken surface, notes and code on the
-   panel, PDF pages on the sunken surface with the page and zoom pill. */
+   panel, PDF pages on the sunken surface with the page and zoom pill. The body (`.preview-body`
+   and below) is PreviewFile's, which the diff pane also shows for "This version". */
 
 .preview {
   display: flex;
@@ -22,34 +23,13 @@
   background: var(--color-surface-panel);
 }
 
-.preview-header__title {
-  flex: 1;
-  min-width: 0;
-  margin: 0;
-  overflow: hidden;
-  font-size: var(--font-size-body);
-  font-weight: var(--font-weight-regular);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.preview-header__title:focus-visible {
-  outline-offset: calc(-1 * var(--focus-ring-width));
-}
-
-.preview-header__path {
-  color: var(--color-text-tertiary);
-}
-
-.preview-header__name {
-  font-weight: var(--font-weight-strong);
-}
-
+/* The heading is the shared PathHeading (components/PathHeading); the actions sit on the right. */
 .preview-header__actions {
   display: flex;
   flex: none;
   align-items: center;
   gap: var(--space-2);
+  margin-inline-start: auto;
 }
 
 .preview-tags {

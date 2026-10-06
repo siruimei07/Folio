@@ -2,7 +2,7 @@
 // the semester and course folders, so "Fall 2026/MAT232 Calculus…/Problem sets" reads
 // "MAT232 / Problem sets" in messages and "MAT232/Problem sets/" before a name in lists.
 import type { Course } from '../ipc';
-import { courseLabel } from './courses';
+import { courseCode, courseLabel } from './courses';
 import { isInside } from './paths';
 
 /** The course `path` is in, or is. */
@@ -28,4 +28,17 @@ export function placeOf(path: string, courses: readonly Course[]): string {
 export function prefixOf(parentPath: string, courses: readonly Course[]): string {
   const parts = placeParts(parentPath, courses);
   return parts.length === 0 ? '' : `${parts.join('/')}/`;
+}
+
+/**
+ * `prefixOf` in two parts for a heading that truncates (app-shell 27B): the course code, which
+ * stays whole, and the folders after it, which shrink first. A course without a code goes by its
+ * name, which shrinks with the folders, so it is one of them: `{ label: '', folders }`.
+ */
+export function headingPrefix(parentPath: string, courses: readonly Course[]): { label: string; folders: string } {
+  const course = parentPath === '' ? undefined : courseIn(parentPath, courses);
+  const code = course === undefined ? null : courseCode(course);
+  if (course === undefined || code === null) return { label: '', folders: prefixOf(parentPath, courses) };
+  const below = parentPath.slice(course.folder.path.length + 1);
+  return { label: `${code}/`, folders: below === '' ? '' : `${below}/` };
 }

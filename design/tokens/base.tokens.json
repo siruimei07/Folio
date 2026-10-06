@@ -1181,6 +1181,38 @@
       },
       "$description": "Height of the strip under a diff header: what is compared, the counts and the change navigation."
     },
+    "diff-change-bar": {
+      "$type": "dimension",
+      "$value": {
+        "value": 3,
+        "unit": "px"
+      },
+      "$description": "Width of the accent bar at the left edge of the current change's lines (workspace-history handoff §6.3)."
+    },
+    "diff-mark-offset": {
+      "$type": "dimension",
+      "$value": {
+        "value": 3,
+        "unit": "px"
+      },
+      "$description": "How far below the baseline the underline of a changed word sits (workspace-history handoff §6.4)."
+    },
+    "diff-tags-label": {
+      "$type": "dimension",
+      "$value": {
+        "value": 76,
+        "unit": "px"
+      },
+      "$description": "Label column of a diff's tags block: \"Added\", \"Removed\", \"Now\" (workspace-history handoff §6.8)."
+    },
+    "diff-compact-pane": {
+      "$type": "dimension",
+      "$value": {
+        "value": 600,
+        "unit": "px"
+      },
+      "$description": "Below this pane width the diff header moves \"Changes | This version\" and Restore into More (workspace-history handoff §2.2)."
+    },
     "composer-summary": {
       "$type": "dimension",
       "$value": {
@@ -1326,6 +1358,14 @@
         "unit": "px"
       },
       "$description": "What sits 1 px inside a row: the inline name field, a drop target's outline, a tile's thumbnail area (library-actions §3, §7.1)."
+    },
+    "diff-emphasis": {
+      "$type": "dimension",
+      "$value": {
+        "value": 2,
+        "unit": "px"
+      },
+      "$description": "Corners of the emphasis behind a changed word in a diff line (workspace-history handoff §6.4)."
     }
   },
   "border": {

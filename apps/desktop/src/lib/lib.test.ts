@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { courseBadgeText, courseColor, courseLabel } from './courses';
 import { extensionOf, FILE_TYPE_COLOR, fileTypeOf } from './file-types';
-import { formatMoment, formatNumber, percentOf, sizeParts } from './format';
+import { formatDateTime, formatMoment, formatNumber, percentOf, sizeParts } from './format';
 import { isPaletteColor, PALETTE } from './palette';
 import { isActiveJob } from './jobs';
 import { isBelow, isInside, movePath, nameOf, parentOf, windowsPath } from './paths';
@@ -96,6 +96,14 @@ describe('format', () => {
     const now = new Date(2026, 8, 30, 17, 30).getTime();
     expect(formatMoment(new Date(2026, 8, 30, 17, 12).getTime(), now, 'en')).toBe('5:12 PM');
     expect(formatMoment(new Date(2026, 8, 27, 9, 0).getTime(), now, 'en')).toBe('Sep 27');
+  });
+
+  it('gives a date and time, and the year only when it is not this year', () => {
+    const now = new Date(2026, 9, 14, 8, 0).getTime();
+    expect(formatDateTime(new Date(2026, 9, 13, 21, 30).getTime(), 'en', now)).toBe('Oct 13, 9:30 PM');
+    expect(formatDateTime(new Date(2026, 0, 1, 0, 5).getTime(), 'en', now)).toBe('Jan 1, 12:05 AM');
+    expect(formatDateTime(new Date(2025, 11, 31, 23, 59).getTime(), 'en', now)).toBe('Dec 31, 2025, 11:59 PM');
+    expect(formatDateTime(new Date(2027, 0, 2, 9, 0).getTime(), 'en', now)).toBe('Jan 2, 2027, 9:00 AM');
   });
 
   it('never reaches 100 percent before the work is done', () => {

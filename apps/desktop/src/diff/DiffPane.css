@@ -1,0 +1,347 @@
+/* The diff pane (workspace-history handoff §6): header, summary strip, then one scrolling body with
+   the event banners first. The host puts it in a panel and gives it the room. */
+
+.diff {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  background: var(--color-surface-panel);
+}
+
+/* ---- header (§6.1) */
+
+.diff-header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-8);
+  box-sizing: border-box;
+  height: var(--size-panel-header);
+  padding: 0 var(--space-8) 0 var(--space-12);
+  border-bottom: var(--border-width) solid var(--color-border-default);
+  background: var(--color-surface-panel);
+}
+
+.diff-header__back {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-4);
+  box-sizing: border-box;
+  height: var(--size-control-compact);
+  padding: 0 var(--space-6);
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--font-size-small);
+  cursor: default;
+  transition: background-color var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.diff-header__back[data-hovered],
+.diff-header__back[data-pressed] {
+  background: var(--color-surface-hover);
+}
+
+/* "Changes | This version", Restore and More, the header's own gap apart. */
+.diff-header__actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-8);
+  margin-inline-start: auto;
+}
+
+/* ---- strip (§6.2) */
+
+.diff-content {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.diff-strip {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-8);
+  box-sizing: border-box;
+  height: var(--size-diff-summary);
+  padding: 0 var(--space-6) 0 var(--space-12);
+  border-bottom: var(--border-width) solid var(--color-border-default);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-caption);
+  font-variant-numeric: tabular-nums;
+}
+
+.diff-strip__text {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* "Change 2 of 5" and the previous and next buttons, kept whole while the text before them shrinks. */
+.diff-strip__navigation {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.diff-strip__position {
+  margin-inline-end: var(--space-4);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+/* The small icon button rests in the tertiary colour, its disabled one: the strip's enabled buttons
+   take the position's secondary colour, so the button that does nothing at an end looks it. */
+.diff-strip__navigation .icon-button:not([data-disabled]) {
+  color: var(--color-text-secondary);
+}
+
+/* The shared skeleton's bar (`.skeleton__bar`), on the panel surface: the strip itself is sunken. */
+.diff-strip__skeleton.skeleton__bar {
+  width: 40%;
+  background: var(--color-surface-panel);
+}
+
+/* ---- body */
+
+/* A refresh that failed (the last diff still shows below): a banner above the body. */
+.diff-refresh-failed {
+  flex: none;
+  padding: var(--space-8) var(--space-8) 0;
+}
+
+.diff-scroll {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  overflow: auto;
+}
+
+/* The event banner (§6.8). */
+.diff-note {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  gap: var(--space-8);
+  margin: 0;
+  padding: var(--space-8) var(--space-12);
+  border-bottom: var(--border-width) solid var(--color-border-default);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-small);
+}
+
+.diff-note__icon {
+  display: flex;
+  flex: none;
+}
+
+/* A note on how the diff is shown (§6.5): the banner's look, the icon in the info tone. */
+.diff-note[data-tone='info'] .diff-note__icon {
+  color: var(--color-feedback-info);
+}
+
+.diff-note__text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Loading (§6.8): diff-line-high rows with two line-number stubs and a text bar. */
+.diff-skeleton {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4) 0 var(--space-8);
+}
+
+.diff-skeleton__line {
+  display: flex;
+  align-items: center;
+  height: calc(var(--font-size-diff) * var(--font-line-height-diff));
+}
+
+.diff-skeleton__number {
+  display: flex;
+  flex: none;
+  justify-content: flex-end;
+  box-sizing: border-box;
+  width: var(--size-diff-line-number);
+  padding-right: var(--space-8);
+}
+
+/* The stubs and the bar are the shared skeleton's bars (`.skeleton__bar`). */
+.diff-skeleton__stub {
+  width: var(--space-20);
+}
+
+.diff-skeleton__bar {
+  margin-inline-start: var(--size-diff-sign);
+}
+
+/* The file's preview (§6.7, §6.8): what is left below the banners, or the whole body for "This
+   version". PreviewFile's body fills it. */
+.diff-preview {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+/* State blocks, centred in what is left below the banners; failures on the sunken surface. */
+.diff-state {
+  display: flex;
+  flex: 1 0 auto;
+}
+
+.diff-state[data-surface='sunken'] {
+  background: var(--color-surface-sunken);
+}
+
+/* ---- tags block (§6.8) */
+
+.diff-tags {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  padding: var(--space-20) var(--space-24);
+  font-size: var(--font-size-label);
+}
+
+.diff-tags__intro {
+  margin: 0;
+  color: var(--color-text-primary);
+}
+
+.diff-tags__rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-10);
+  margin: 0;
+}
+
+.diff-tags__row {
+  display: flex;
+  align-items: flex-start;
+}
+
+.diff-tags__label {
+  display: flex;
+  flex: none;
+  align-items: center;
+  width: var(--size-diff-tags-label);
+  min-height: var(--size-chip);
+  color: var(--color-text-secondary);
+}
+
+.diff-tags__value {
+  display: flex;
+  min-width: 0;
+  min-height: var(--size-chip);
+  align-items: center;
+  margin: 0;
+}
+
+.diff-tags__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.diff-tags__none {
+  color: var(--color-text-tertiary);
+}
+
+/* The shared tag chip (13A, `.tag-chip`) that only shows: kept within the list's width, on the line
+   colours when added or removed. */
+.diff-chip {
+  max-width: 100%;
+}
+
+.diff-chip[data-change='added'] {
+  background: var(--color-diff-added-background);
+  color: var(--color-text-primary);
+}
+
+.diff-chip[data-change='removed'] {
+  background: var(--color-diff-removed-background);
+  color: var(--color-text-primary);
+}
+
+.diff-chip__sign {
+  font-family: var(--font-family-mono);
+  font-weight: var(--font-weight-strong);
+}
+
+.diff-chip[data-change='added'] .diff-chip__sign {
+  color: var(--color-diff-added-text);
+}
+
+.diff-chip[data-change='removed'] .diff-chip__sign {
+  color: var(--color-diff-removed-text);
+}
+
+.diff-chip[data-change='removed'] .tag-chip__name {
+  text-decoration: line-through;
+}
+
+/* ---- settings and tag definitions (§6.8) */
+
+.diff-settings {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-10) var(--space-16);
+  margin: 0;
+  padding: var(--space-20) var(--space-24);
+  font-size: var(--font-size-label);
+}
+
+.diff-settings__row {
+  display: contents;
+}
+
+.diff-settings__label {
+  color: var(--color-text-secondary);
+}
+
+.diff-settings__value {
+  min-width: 0;
+  margin: 0;
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.diff-settings__old {
+  color: var(--color-text-tertiary);
+}
+
+.diff-settings__new {
+  color: var(--color-text-primary);
+}
+
+.diff-settings__lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.diff-settings__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+}

@@ -631,6 +631,55 @@ it, and a narrow window, where the filter bar is hidden, shows the whole tree. �
 stays at 5,000 (`FILTER_CAP`); beyond it an information banner offers the List mode, which pages
 through every match. It was not timed on the 50,000-entry fixture.
 
+### 8.3 The diff pane (M2)
+
+As built (`feat/ui-diff-viewer`, 2026-10-06): the diff of workspace-history handoff §6 is the
+`diff` feature (`src/diff/`, API and host examples in its `README.md`), which Changes and History
+reach through `DIFF_PANE` in `app/panes.ts` like the preview pane. It differs from §8.1 in these ways:
+
+- **Measured rows.** Diff lines wrap, so every item (the banners and notes before the lines, the
+  lines, fold bars, the tags block after them) is measured with TanStack Virtual's
+  `measureElement`, falling back to the estimate when the box is 0 (jsdom). The virtualiser's own
+  scroll correction is off: the region keeps the item at the top of the view in place itself
+  whenever something above it changes size (a window answering, a fold opening, a row measured),
+  and leaves the view alone once the person scrolls. It takes that item from the virtualiser's
+  items only where they reach the top of the view: until a jump's scroll event (Home from the end,
+  a page up) they are those of the offset the virtualiser saw last.
+- **Windows, not pages.** `data/diff.ts` keeps one query per window of 500 rows of the folded diff
+  (`['lib', id, 'diff', source, window]`), the first always; the region asks for the windows on
+  screen plus one each way, settled like §5.3. An opened fold of any size becomes its lines at once,
+  read in `unchanged` windows as they scroll in. A window whose header disagrees with the first one
+  reads the whole diff again (at most once a second). CatalogChanged touches no diff;
+  WorkspaceChanged refreshes workspace diffs; HistoryChanged refreshes `located`. The settled range
+  is kept as the key of its first row, so a window that fails (one row for its 500) does not turn
+  the same display indices into other windows, and the margin counts a failed window as all its
+  rows; a window past the first that failed is asked again only by "Try again" (`retryOnMount:
+  false`). A refresh that fails keeps the last answer under a banner, silently for `NotFound`.
+- **Focus in a virtualised region.** The item that has the focus stays in the virtualiser's range
+  (a `rangeExtractor` that adds it, found by key) and its window stays asked, so a focused fold or
+  failed row that scrolls away keeps its control. A control that goes leaves the focus in the diff:
+  the region for a row's control (a fold, a failed row's "Try again", its window answering for
+  other content), the lines, else the heading, for a block or banner that goes and for the lines
+  when a refresh turns them into a state block; focus the person puts elsewhere stays there. It is
+  kept as `useVirtualRows` keeps it, but from the DOM (a `MutationObserver`), since the component
+  that removes the control need not be the one that keeps the focus, and the focused item is let go
+  only once the focus has left the region. Each "Try again" keeps the focus while its read runs; a
+  read that settles with the failure still showing reads its title again (WCAG 4.1.3). The region's
+  focus ring is drawn on a layer of its frame above the positioned rows, and the current change's
+  bar moves in past it while it shows.
+- **F7** is registered by the mounted pane while lines show (`useShortcut` with `inInputs`), so the
+  `<Activity>` of §6.2 keeps a hidden view's pane from answering; a move scrolls with a custom
+  frame-by-frame scroll over the motion tokens, since native smooth scrolling takes neither.
+- **Previews in the diff.** `PREVIEW_FILE` (`app/previewFile.ts`) is the preview's body without its
+  header, for a file in the library or a version stored in history (the `folio-file` version route).
+  The diff pane shows it for "This version" and under the banners of event-only files; it lives in
+  its own module because the diff pane imports it and `panes.ts` imports the diff pane.
+  `previewShowsVersion` tells the pane which types the preview really shows, so Word files get
+  "This version" when their previews come, without a change in `diff/`.
+- **The pane's own width** decides its compact header (below `size.diff-compact-pane`, a
+  `ResizeObserver` on the pane), not the window's layout of §6.3; a width of 0 (hidden) keeps the
+  last answer.
+
 ## 9. Search palette
 
 - `search/` renders the dialog of handoff §8 with RAC (§7.1); results are an infinite query

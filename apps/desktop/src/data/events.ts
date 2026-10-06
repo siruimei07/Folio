@@ -89,6 +89,23 @@ export function connectShellEvents(client: QueryClient): () => void {
     shellEvents.onCatalogChanged((event) => {
       onCatalogChanged(client, event);
     }),
+    // Workspace diffs wait for this event, which follows the CatalogChanged of the same change and
+    // reports hashing and HEAD changes too (ipc-m2 §14). Not by revision: the history's state is
+    // not in the catalog.
+    shellEvents.onWorkspaceChanged(() => {
+      const libraryId = useSession.getState().libraryId;
+      if (libraryId === null) return;
+      refresh(client, libraryId, (query) => {
+        const read = readKey(query.queryKey);
+        return read.kind === 'diff' && read.of.source === 'workspace';
+      });
+    }),
+    // HEAD moved: a version's file is found along it. A commit's diff stays what it was.
+    shellEvents.onHistoryChanged(() => {
+      const libraryId = useSession.getState().libraryId;
+      if (libraryId === null) return;
+      refresh(client, libraryId, (query) => readKey(query.queryKey).kind === 'located');
+    }),
     shellEvents.onJobChanged(({ job }) => {
       const libraryId = useSession.getState().libraryId;
       if (libraryId !== null) receiveJob(client, libraryId, job);

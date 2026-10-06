@@ -1,0 +1,60 @@
+/* The diff pane's dev harness: the list of rows and the pane, as the Changes view lays them out. */
+.diff-gallery {
+  display: flex;
+  box-sizing: border-box;
+  height: 100%;
+  gap: var(--space-panel-gap);
+  padding: var(--space-panel-gap);
+}
+
+.diff-gallery__list {
+  flex: none;
+  width: var(--size-history-panel-min);
+}
+
+[data-layout='narrow'] .diff-gallery__list,
+.diff-gallery__pane {
+  flex: 1;
+  width: auto;
+}
+
+.diff-gallery__rows {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--space-4);
+}
+
+.diff-gallery__section + .diff-gallery__section {
+  margin-top: var(--space-8);
+}
+
+.diff-gallery__header {
+  padding: var(--space-4) var(--space-8);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-strong);
+}
+
+.diff-gallery__row {
+  overflow: hidden;
+  padding: var(--space-4) var(--space-8);
+  border-radius: var(--radius-row);
+  font-size: var(--font-size-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.diff-gallery__row[data-hovered] {
+  background: var(--color-surface-hover);
+}
+
+.diff-gallery__row[data-selected] {
+  background: var(--color-surface-selected);
+}
+
+.diff-gallery__empty {
+  margin: auto;
+  color: var(--color-text-tertiary);
+}

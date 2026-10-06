@@ -1,0 +1,65 @@
+/* A pane's path heading (workspace-history handoff §3.2, §6.1): the course code stays whole; the
+   folders shrink first, cut from the left; the name keeps its width up to all the heading leaves
+   after the code and is cut at its end only past that. */
+.path-heading {
+  display: flex;
+  flex: 0 1 auto;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.path-heading__icon {
+  display: flex;
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+.path-heading__title {
+  display: flex;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-regular);
+  white-space: nowrap;
+}
+
+.path-heading__title:focus-visible {
+  outline-offset: calc(-1 * var(--focus-ring-width));
+}
+
+.path-heading__label {
+  flex: none;
+  color: var(--color-text-tertiary);
+}
+
+/* The folders and the name, in what the code leaves: the name's 100% is that room. */
+.path-heading__rest {
+  display: flex;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.path-heading__path {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-tertiary);
+  text-overflow: ellipsis;
+  direction: rtl;
+}
+
+.path-heading__name {
+  flex: none;
+  max-width: 100%;
+  overflow: hidden;
+  font-weight: var(--font-weight-strong);
+  text-overflow: ellipsis;
+}
+
+.path-heading__suffix {
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-regular);
+}

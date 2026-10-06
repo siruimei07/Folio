@@ -74,6 +74,20 @@ export function formatMoment(ms: number, now: number, language: string): string 
   return isSameDay(ms, now) ? formatTime(ms, language) : formatShortDate(ms, language);
 }
 
+const DATE_TIME: Intl.DateTimeFormatOptions = {
+  month: 'short',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+};
+const DATE_TIME_YEAR: Intl.DateTimeFormatOptions = { ...DATE_TIME, year: 'numeric' };
+
+/** A date and time, the year only when it is not this year: "Oct 13, 9:30 PM", "Oct 13, 2025, 9:30 PM". */
+export function formatDateTime(ms: number, language: string, now = Date.now()): string {
+  const sameYear = new Date(ms).getFullYear() === new Date(now).getFullYear();
+  return dateFormat(language, sameYear ? DATE_TIME : DATE_TIME_YEAR).format(ms);
+}
+
 /** Whether two moments fall on the same calendar day here. */
 export function isSameDay(a: number, b: number): boolean {
   if (Math.abs(a - b) >= DAY_MS) return false;

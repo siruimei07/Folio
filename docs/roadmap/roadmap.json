@@ -2714,8 +2714,24 @@
         "design/design-m2-details"
       ],
       "summary": "工作区和历史共用的差异组件（在假 shell 上开发，不等核心）",
-      "status": "planned",
-      "updated": "2026-10-01",
+      "status": "done",
+      "updated": "2026-10-06",
+      "landed": "2026-10-06",
+      "gates": {
+        "check": "pass",
+        "e2e": "pass",
+        "codeReview": "pass",
+        "simplify": "pass",
+        "designCritique": "pass",
+        "a11y": "pass",
+        "securityReview": "na"
+      },
+      "notes": [
+        "FIX 第 1 轮：刷新失败显示横幅（NotFound 除外）；失败窗口不再循环请求；焦点在滚出虚拟范围时保留、焦点环画在行上方；路径标题保留课程代码；窄窗格“恢复…”显示原因；Word 文件的“此版本”待 Sirui 决定",
+        "FIX 第 2 轮：远处的折叠行或失败行获得焦点时，其窗口保持请求，跳到末尾后焦点不再掉到页面；失败块、刷新横幅和版本查找的“重试”先把焦点移入差异；滚动锚点只取到达视图的行（Home 不再偏移 850 px）；指向程序错误的错误可“复制详情”；骨架复用共享样式；当前更改条避开焦点环；两个测试不再依赖慢机器计时。窄窗格中禁用的“恢复…”键盘不可达属共享菜单问题，未修；Word 的“此版本”按 Sirui 的决定记入交接文档",
+        "FIX 第 3 轮：“重试”在读取期间保留焦点，读取结束后失败仍在（刷新横幅、仍被占用的文件、再次失败的版本查找或窗口）时再次朗读失败标题，失败块重新出现时只读一次；刷新把差异行变成状态块（无法读取、二进制、未下载、过大）或失败块、横幅消失时，焦点移到差异行或标题，不再掉到页面；在折叠行或“重试”上点别处后焦点不再被拉回；历史中仅记录事件的文件，其当前文件查找失败时标题改为 Can't show this file（与预览自身的失败一致）；测试共用 diffQueries 和 stubRows 的延迟回答",
+        "收尾：/simplify 合并了窗口去重、行号查找和预览重试（yst）；pnpm check 仅在 feat/core-object-store 未提交的 Rust 格式上失败，隔离副本全部通过；pnpm e2e 53 通过；axe 在 36 个状态（浅色/深色、宽/窄）下 0 违规"
+      ],
       "links": [
         "docs/design/handoff/workspace-history.md",
         "docs/specs/ipc-m2.md"

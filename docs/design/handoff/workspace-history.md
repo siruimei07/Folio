@@ -483,6 +483,11 @@ Changes, the version's bytes through the `folio-file` version route in History (
 It is offered for every file the preview can show at that version; for event-only files in History
 it is not offered (only the current file exists).
 
+As built (`feat/ui-diff-viewer`, decided by Sirui 2026-10-06): Word and the other office files get
+no toggle, and their "Too big to diff" and "Only formatting" blocks (6.8) no "Show this version",
+while the preview shows them only as a card whose "Open" opens today's file, not this version. They
+get both, with no change in the diff, once their previews come (`previewShowsVersion`).
+
 ### 6.8 States
 
 | Case | Header | Strip | Body |

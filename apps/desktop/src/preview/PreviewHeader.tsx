@@ -7,9 +7,10 @@ import type { PreviewActions } from '../app/panes';
 import { FileTypeIcon } from '../components/FileTypeIcon/FileTypeIcon';
 import { IconButton } from '../components/IconButton/IconButton';
 import { MenuButton } from '../components/Menu/Menu';
+import { PathHeading } from '../components/PathHeading/PathHeading';
 import { useCourses } from '../data/groups';
 import type { EntryRef } from '../ipc';
-import { prefixOf } from '../lib/places';
+import { headingPrefix } from '../lib/places';
 import { nameOf, parentOf } from '../lib/paths';
 
 export interface PreviewHeaderProps {
@@ -23,9 +24,10 @@ export interface PreviewHeaderProps {
 }
 
 /**
- * The file header (app-shell §5): type icon, the course and folders above the file, its name,
- * then "Open with default app", "Show in File Explorer" and "More". "View history of this file"
- * comes with the History view in M2.
+ * The file header (app-shell §5): type icon, the course and folders above the file, its name (the
+ * shared `PathHeading`, which keeps the course code and cuts the folders from the left so the
+ * name stays whole), then "Open with default app", "Show in File Explorer" and "More". "View
+ * history of this file" comes with the History view in M2.
  */
 export function PreviewHeader({ entry, actions, onBack, moreMenu, headingRef }: PreviewHeaderProps) {
   const { t } = useTranslation('preview');
@@ -33,15 +35,11 @@ export function PreviewHeader({ entry, actions, onBack, moreMenu, headingRef }: 
   const narrow = useLayout() === 'narrow';
   const courses = useCourses().data ?? [];
   const name = nameOf(entry.path);
-  const prefix = prefixOf(parentOf(entry.path), courses);
+  const { label, folders } = headingPrefix(parentOf(entry.path), courses);
   return (
     <header className="preview-header">
       {onBack !== undefined && <IconButton icon={ArrowLeft} label={t('header.back')} onPress={onBack} />}
-      <FileTypeIcon name={name} />
-      <h2 className="preview-header__title" ref={headingRef} tabIndex={-1} title={`${prefix}${name}`}>
-        <span className="preview-header__path">{prefix}</span>
-        <span className="preview-header__name">{name}</span>
-      </h2>
+      <PathHeading icon={<FileTypeIcon name={name} />} label={label} prefix={folders} name={name} ref={headingRef} />
       <div className="preview-header__actions">
         <IconButton
           icon={ExternalLink}

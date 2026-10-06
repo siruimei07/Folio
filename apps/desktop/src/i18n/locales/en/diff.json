@@ -1,1 +1,326 @@
-{}
+{
+  "heading": {
+    "tags": "Tags",
+    "courseSettings": "{{name}} course settings",
+    "semesterSettings": "{{name}} semester settings",
+    "tagDefinitions": "Tag definitions",
+    "librarySettings": "Library settings",
+    "ignoreRules": "Ignore rules"
+  },
+  "strip": {
+    "separator": " · ",
+    "compared": "Compared with the last commit ({{when}})",
+    "comparedNoTime": "Compared with the last commit",
+    "new": "New since the last commit",
+    "thisVersion": "This version: {{when}}",
+    "comparedWith": "compared with {{when}}",
+    "firstVersion": "First version: {{when}}",
+    "deletedVersion": "Deleted in this version: {{when}}",
+    "lines": {
+      "added_one": "{{count, number}} line added",
+      "added_other": "{{count, number}} lines added",
+      "removed_one": "{{count, number}} line removed",
+      "removed_other": "{{count, number}} lines removed",
+      "both_one": "{{count, number}} line added, {{removed, number}} removed",
+      "both_other": "{{count, number}} lines added, {{removed, number}} removed",
+      "total_one": "{{count, number}} line",
+      "total_other": "{{count, number}} lines",
+      "tooLarge_one": "{{count, number}} line changed",
+      "tooLarge_other": "{{count, number}} lines changed"
+    },
+    "paragraphs": {
+      "added_one": "{{count, number}} paragraph added",
+      "added_other": "{{count, number}} paragraphs added",
+      "removed_one": "{{count, number}} paragraph removed",
+      "removed_other": "{{count, number}} paragraphs removed",
+      "both_one": "{{count, number}} paragraph added, {{removed, number}} removed",
+      "both_other": "{{count, number}} paragraphs added, {{removed, number}} removed",
+      "total_one": "{{count, number}} paragraph",
+      "total_other": "{{count, number}} paragraphs",
+      "tooLarge_one": "{{count, number}} paragraph changed",
+      "tooLarge_other": "{{count, number}} paragraphs changed"
+    },
+    "noTextChange": "No text changed",
+    "lineEndingsOnly": "Only the line endings changed",
+    "encodingOnly": "Only the encoding changed"
+  },
+  "banner": {
+    "renamed": "Renamed from {{name}}.",
+    "moved": "Moved from {{folder}}.",
+    "movedFromTop": "Moved from the top of the library.",
+    "movedAndRenamed": "Moved and renamed from {{path}}.",
+    "part": {
+      "replacesFile": "Replaces a file that was deleted.",
+      "replacesFolder": "Replaces a folder that was deleted.",
+      "swapped": "Swapped names with {{name}}.",
+      "movedOut": "{{name}} was moved out of this folder first.",
+      "deletedFromFolder": "{{name}} was deleted from this folder first.",
+      "movedWhereItWas": "{{name}} was moved to where it was.",
+      "addedFileWhereItWas": "A new file was added where it was.",
+      "addedFolderWhereItWas": "A new folder was added where it was.",
+      "movedInItsPlace": "{{name}} was moved here in its place.",
+      "addedFileInItsPlace": "A new file was added in its place.",
+      "addedFolderInItsPlace": "A new folder was added in its place.",
+      "versioningRules": "Library settings now keep this file's versions, so it goes into the same commit.",
+      "other": {
+        "added": "Goes into the same commit as {{path}}, which was added.",
+        "deleted": "Goes into the same commit as {{path}}, which was deleted.",
+        "modified": "Goes into the same commit as {{path}}, which was changed.",
+        "moved": "Goes into the same commit as {{path}}, which was moved from {{from}}."
+      }
+    },
+    "eventOnly": {
+      "added": {
+        "pdf": "Added. Folio records changes to PDFs but keeps only the latest copy.",
+        "powerpoint": "Added. Folio records changes to slides but keeps only the latest copy.",
+        "excel": "Added. Folio records changes to spreadsheets but keeps only the latest copy.",
+        "image": "Added. Folio records changes to images but keeps only the latest copy.",
+        "audio": "Added. Folio records changes to audio files but keeps only the latest copy.",
+        "video": "Added. Folio records changes to videos but keeps only the latest copy.",
+        "archive": "Added. Folio records changes to archives but keeps only the latest copy.",
+        "other": "Added. Folio records changes to files like this but keeps only the latest copy."
+      },
+      "modified": {
+        "pdf": "Modified: {{before}} → {{after}}. Folio keeps only the latest copy of PDFs, so there's no older version to compare.",
+        "powerpoint": "Modified: {{before}} → {{after}}. Folio keeps only the latest copy of slides, so there's no older version to compare.",
+        "excel": "Modified: {{before}} → {{after}}. Folio keeps only the latest copy of spreadsheets, so there's no older version to compare.",
+        "image": "Modified: {{before}} → {{after}}. Folio keeps only the latest copy of images, so there's no older version to compare.",
+        "audio": "Modified: {{before}} → {{after}}. Folio keeps only the latest copy of audio files, so there's no older version to compare.",
+        "video": "Modified: {{before}} → {{after}}. Folio keeps only the latest copy of videos, so there's no older version to compare.",
+        "archive": "Modified: {{before}} → {{after}}. Folio keeps only the latest copy of archives, so there's no older version to compare.",
+        "other": "Modified: {{before}} → {{after}}. Folio keeps only the latest copy of files like this, so there's no older version to compare."
+      }
+    },
+    "overLimit": {
+      "added": "Added. Folio keeps only the latest copy of text files over 10 MB.",
+      "modified": "Modified: {{before}} → {{after}}. Text files over 10 MB keep only the latest copy, so there's no older version to compare."
+    },
+    "deleted": "Deleted: committing removes it from the library. The file is in the Recycle Bin.",
+    "deletedFolder_one": "Deleted: committing removes it from the library. The folder and the file in it are in the Recycle Bin.",
+    "deletedFolder_other": "Deleted: committing removes it from the library. The folder and its {{count, number}} files are in the Recycle Bin.",
+    "deletedEmptyFolder": "Deleted: committing removes it from the library. The folder is in the Recycle Bin.",
+    "addedEmptyFolder": "Added an empty folder.",
+    "history": {
+      "eventOnly": {
+        "added": {
+          "pdf": "This version added the file. Folio keeps only the latest copy of PDFs, so the preview shows the file as it is now.",
+          "powerpoint": "This version added the file. Folio keeps only the latest copy of slides, so the preview shows the file as it is now.",
+          "excel": "This version added the file. Folio keeps only the latest copy of spreadsheets, so the preview shows the file as it is now.",
+          "image": "This version added the file. Folio keeps only the latest copy of images, so the preview shows the file as it is now.",
+          "audio": "This version added the file. Folio keeps only the latest copy of audio files, so the preview shows the file as it is now.",
+          "video": "This version added the file. Folio keeps only the latest copy of videos, so the preview shows the file as it is now.",
+          "archive": "This version added the file. Folio keeps only the latest copy of archives, so the preview shows the file as it is now.",
+          "other": "This version added the file. Folio keeps only the latest copy of files like this, so the preview shows the file as it is now."
+        },
+        "modified": {
+          "pdf": "This version changed the file ({{before}} → {{after}}). Folio keeps only the latest copy of PDFs, so the preview shows the file as it is now.",
+          "powerpoint": "This version changed the file ({{before}} → {{after}}). Folio keeps only the latest copy of slides, so the preview shows the file as it is now.",
+          "excel": "This version changed the file ({{before}} → {{after}}). Folio keeps only the latest copy of spreadsheets, so the preview shows the file as it is now.",
+          "image": "This version changed the file ({{before}} → {{after}}). Folio keeps only the latest copy of images, so the preview shows the file as it is now.",
+          "audio": "This version changed the file ({{before}} → {{after}}). Folio keeps only the latest copy of audio files, so the preview shows the file as it is now.",
+          "video": "This version changed the file ({{before}} → {{after}}). Folio keeps only the latest copy of videos, so the preview shows the file as it is now.",
+          "archive": "This version changed the file ({{before}} → {{after}}). Folio keeps only the latest copy of archives, so the preview shows the file as it is now.",
+          "other": "This version changed the file ({{before}} → {{after}}). Folio keeps only the latest copy of files like this, so the preview shows the file as it is now."
+        }
+      },
+      "overLimit": {
+        "added": "This version added the file. Folio keeps only the latest copy of text files over 10 MB.",
+        "modified": "This version changed the file ({{before}} → {{after}}). Text files over 10 MB keep only the latest copy, so there's no older version to compare."
+      },
+      "deleted": "This version deleted the file.",
+      "deletedFolder": "This version deleted the folder.",
+      "addedEmptyFolder": "This version added an empty folder."
+    }
+  },
+  "header": {
+    "back": "Back",
+    "more": "More",
+    "show": "Show",
+    "changes": "Changes",
+    "thisVersion": "This version",
+    "showVersion": "Show this version",
+    "showChanges": "Show the changes",
+    "restore": "Restore",
+    "restoreMenu": "Restore…"
+  },
+  "sign": {
+    "added": "+",
+    "removed": "−"
+  },
+  "lines": {
+    "region": "Changes in {{name}}",
+    "regionIgnoreRules": "Changes in the ignore rules",
+    "added": "Added line",
+    "removed": "Removed line",
+    "addedParagraph": "Added paragraph",
+    "removedParagraph": "Removed paragraph",
+    "unfold": {
+      "lines_one": "Show {{count, number}} unchanged line",
+      "lines_other": "Show {{count, number}} unchanged lines",
+      "paragraphs_one": "Show {{count, number}} unchanged paragraph",
+      "paragraphs_other": "Show {{count, number}} unchanged paragraphs"
+    },
+    "failed": {
+      "lines": "Couldn't load these lines.",
+      "paragraphs": "Couldn't load these paragraphs."
+    },
+    "approximate": {
+      "lines": "This file is too big to compare word by word, so only whole lines are marked.",
+      "paragraphs": "This file is too big to compare word by word, so only whole paragraphs are marked."
+    },
+    "wordNote": "Folio compares the text of Word files. Changes to formatting, images or comments don't show here."
+  },
+  "navigation": {
+    "position": "Change {{current, number}} of {{total, number}}",
+    "previous": "Previous change",
+    "next": "Next change",
+    "line": "Change {{current, number}} of {{total, number}}, line {{from, number}}",
+    "lines": "Change {{current, number}} of {{total, number}}, lines {{from, number}} to {{to, number}}",
+    "removedLine": "Change {{current, number}} of {{total, number}}, removed line {{from, number}}",
+    "removedLines": "Change {{current, number}} of {{total, number}}, removed lines {{from, number}} to {{to, number}}",
+    "paragraph": "Change {{current, number}} of {{total, number}}, paragraph {{from, number}}",
+    "paragraphs": "Change {{current, number}} of {{total, number}}, paragraphs {{from, number}} to {{to, number}}",
+    "removedParagraph": "Change {{current, number}} of {{total, number}}, removed paragraph {{from, number}}",
+    "removedParagraphs": "Change {{current, number}} of {{total, number}}, removed paragraphs {{from, number}} to {{to, number}}",
+    "failed": "Couldn't load change {{current, number}} of {{total, number}}."
+  },
+  "actions": {
+    "open": "Open with default app",
+    "tryAgain": "Try again",
+    "showVersion": "Show this version"
+  },
+  "failed": {
+    "title": "Couldn't show what changed",
+    "refreshTitle": "Couldn't update what changed.",
+    "previewTitle": "Can't show this file"
+  },
+  "state": {
+    "deleted": {
+      "file": "{{name}} is in the Recycle Bin",
+      "folder_one": "{{name}} and the file in it are in the Recycle Bin",
+      "folder_other": "{{name}} and its {{count, number}} files are in the Recycle Bin",
+      "text": "Restore it from the Recycle Bin before you commit if you still need it. After the commit, History keeps the record that it was deleted."
+    },
+    "notLocal": {
+      "title": "Not downloaded yet",
+      "text": "This file is only in your cloud folder so far. Folio compares it once it's on this computer. Opening it downloads it."
+    },
+    "binary": {
+      "title": "This file isn't text",
+      "text": "Folio found binary data in it, so it can't compare it line by line."
+    },
+    "tooLarge": {
+      "title": "This change is too big to show here",
+      "lines_one": "It changes {{count, number}} line. Open the file in its own app to read it, or look at this version.",
+      "lines_other": "It changes {{count, number}} lines. Open the file in its own app to read it, or look at this version.",
+      "linesNoVersion_one": "It changes {{count, number}} line. Open the file in its own app to read it.",
+      "linesNoVersion_other": "It changes {{count, number}} lines. Open the file in its own app to read it.",
+      "paragraphs_one": "It changes {{count, number}} paragraph. Open the file in its own app to read it, or look at this version.",
+      "paragraphs_other": "It changes {{count, number}} paragraphs. Open the file in its own app to read it, or look at this version.",
+      "paragraphsNoVersion_one": "It changes {{count, number}} paragraph. Open the file in its own app to read it.",
+      "paragraphsNoVersion_other": "It changes {{count, number}} paragraphs. Open the file in its own app to read it.",
+      "unknown": "Open the file in its own app to read it, or look at this version.",
+      "unknownNoVersion": "Open the file in its own app to read it."
+    },
+    "pruned": {
+      "title": "Folio no longer keeps this version",
+      "text": "Old Word versions are thinned out over time. The record of the change stays."
+    },
+    "overLimit": {
+      "title": "No preview for files this large",
+      "text": "Open it in its own app to read it."
+    },
+    "formatting": {
+      "title": "No text changed",
+      "text": "Folio compares the text of Word files, so changes to formatting, images or comments don't show here."
+    },
+    "lineEndings": {
+      "title": "Only the line endings changed",
+      "text": "The text is the same. The file now ends its lines with {{after}} instead of {{before}}, which some editors do when they save.",
+      "toMixed": "The text is the same. The file now mixes line endings instead of using {{before}} throughout, which some editors do when they save.",
+      "fromMixed": "The text is the same. The file now ends every line with {{after}} instead of mixing line endings, which some editors do when they save."
+    },
+    "encoding": {
+      "title": "Only the encoding changed",
+      "text": "The text is the same. The file is now saved as {{after}} instead of {{before}}, which some editors do when they save."
+    },
+    "folder": {
+      "moved_one": "{{count, number}} file moved with it",
+      "moved_other": "{{count, number}} files moved with it",
+      "movedText_one": "Its content didn't change, so there's nothing to compare.",
+      "movedText_other": "Their content didn't change, so there's nothing to compare.",
+      "movedFiles": "Its files moved with it",
+      "empty": "Empty folder",
+      "other": "Nothing to compare",
+      "otherText": "Folders have no content of their own."
+    },
+    "gone": {
+      "title": "Nothing to show",
+      "text": "Folio kept only the latest copy of this file, so there's no copy left to show."
+    },
+    "deletedSince": {
+      "title": "Nothing to show",
+      "text": "It has been deleted since, so there's no copy left to show."
+    }
+  },
+  "lineEnding": {
+    "lf": "LF",
+    "crlf": "CRLF",
+    "cr": "CR",
+    "mixed": "mixed line endings"
+  },
+  "encodingName": {
+    "utf8": "UTF-8",
+    "utf8Bom": "UTF-8 with BOM",
+    "utf16Le": "UTF-16 LE",
+    "utf16Be": "UTF-16 BE",
+    "gb18030": "GB18030"
+  },
+  "tags": {
+    "intro": {
+      "file": "Only the tags changed. The file itself is the same as in the last commit.",
+      "folder": "Only the tags changed. The folder itself is the same as in the last commit.",
+      "historyFile": "This version changed only the tags. The file itself stayed the same.",
+      "historyFolder": "This version changed only the tags. The folder itself stayed the same.",
+      "withContent": "The tags changed too."
+    },
+    "added": "Added",
+    "removed": "Removed",
+    "now": "Now",
+    "none": "No tags",
+    "unknown": "Unknown tag"
+  },
+  "settings": {
+    "field": {
+      "abbr": "Badge",
+      "code": "Code",
+      "color": "Colour",
+      "archived": "Archived",
+      "order": "Order",
+      "name": "Library name",
+      "textMaxSize": "Size limit for text versions",
+      "textExtensions": "Text file types",
+      "wordExtensions": "Word file types"
+    },
+    "none": "None",
+    "yes": "Yes",
+    "no": "No",
+    "moved": "Moved in the list",
+    "change": "<old>{{before}}</old> → <new>{{after}}</new>",
+    "changeSpoken": "Changed from {{before}} to {{after}}",
+    "added": "Added {{list}}",
+    "removed": "Removed {{list}}"
+  },
+  "tagDefinitions": {
+    "added": "New tag",
+    "deleted": "Deleted tag",
+    "tag": "Tag “{{name}}”",
+    "field": {
+      "name": "name",
+      "color": "colour"
+    },
+    "change": "{{field}} <old>{{before}}</old> → <new>{{after}}</new>",
+    "changeSpoken": "{{field}} changed from {{before}} to {{after}}",
+    "moved": "Moved in the list"
+  }
+}

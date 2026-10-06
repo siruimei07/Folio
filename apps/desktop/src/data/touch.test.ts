@@ -173,6 +173,31 @@ describe('touches: groups, tags, jobs, problems', () => {
   });
 });
 
+describe('touches: diffs and located versions', () => {
+  const workspaceDiff: LibraryQuery = { kind: 'diff', of: { source: 'workspace', key: 'k1' } };
+  const versionDiff: LibraryQuery = { kind: 'diff', of: { source: 'version', commit: 'b3:01', key: 'k1' } };
+  const everyChange = [
+    added(lecture),
+    modified(lecture),
+    removed(lecture),
+    tagged(course),
+    moved(ref('12', 'Fall 2026/CSC148/Lecture 01.pdf'), lecture.path),
+  ];
+
+  it('no change touches a diff: WorkspaceChanged refreshes a workspace diff, a commit’s stays', () => {
+    for (const change of everyChange) {
+      expect(touches(workspaceDiff, change)).toBe(false);
+      expect(touches(versionDiff, change)).toBe(false);
+    }
+    expect(touchesGone(workspaceDiff, lecture)).toBe(false);
+  });
+
+  it('every change touches a located version: its file may have moved, gone or come back', () => {
+    for (const change of everyChange) expect(touches({ kind: 'located' }, change)).toBe(true);
+    expect(touchesGone({ kind: 'located' }, lecture)).toBe(true);
+  });
+});
+
 describe('touchesGone', () => {
   it('picks what shows an entry the shell no longer has where the UI saw it', () => {
     expect(touchesGone(children(lectures), lecture)).toBe(true);
@@ -227,5 +252,15 @@ describe('isTouched', () => {
   it('otherwise any listed change decides', () => {
     expect(isTouched(children(lectures), event({ entries: [added(ref('1', 'x')), added(lecture)] }))).toBe(true);
     expect(isTouched(children(lectures), event({ entries: [added(ref('1', 'x'))] }))).toBe(false);
+  });
+
+  it('never touches a diff, not even after a rebuild, and touches located versions with any change', () => {
+    const diff: LibraryQuery = { kind: 'diff', of: { source: 'workspace', key: 'k1' } };
+    for (const flags of [{ complete: false }, { tags: true, groups: true }, { entries: [modified(lecture)] }]) {
+      expect(isTouched(diff, event(flags))).toBe(false);
+    }
+    expect(isTouched({ kind: 'located' }, event({ complete: false }))).toBe(true);
+    expect(isTouched({ kind: 'located' }, event({ entries: [modified(other)] }))).toBe(true);
+    expect(isTouched({ kind: 'located' }, event({ tags: true }))).toBe(false);
   });
 });

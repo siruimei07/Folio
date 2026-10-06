@@ -1,9 +1,11 @@
 // Panes a view hosts that another lane builds (UI architecture §6.2): the preview pane of
 // `feat/ui-preview`, which the Library shows in its third column (Changes and History do the same
-// in M2). Views import the slot from here, never the feature, so features still never import each
-// other.
+// in M2), and the diff pane of `feat/ui-diff-viewer`, which Changes and History share. Views import
+// the slot from here, never the feature, so features still never import each other.
 import type { ComponentType, ReactElement } from 'react';
 
+import { DiffPane } from '../diff/DiffPane';
+import type { DiffPaneProps } from '../diff/types';
 import type { EntryRef } from '../ipc';
 import { PreviewPane } from '../preview/PreviewPane';
 
@@ -34,3 +36,28 @@ export interface PreviewPaneProps {
 
 /** The preview pane; `null` would make the views show their empty preview instead. */
 export const PREVIEW_PANE: ComponentType<PreviewPaneProps> | null = PreviewPane;
+
+export type {
+  CommitRef,
+  DiffActions,
+  DiffBack,
+  DiffPaneHandle,
+  DiffPaneProps,
+  DiffRestore,
+  DiffTarget,
+} from '../diff/types';
+
+/**
+ * The diff pane (handoff workspace-history §6): a row of Changes or of a commit in History. Its API
+ * and examples for both views: `src/diff/README.md`.
+ */
+export const DIFF_PANE: ComponentType<DiffPaneProps> = DiffPane;
+
+// A file's preview without its header: in its own module, which the diff pane reads too.
+export {
+  PREVIEW_FILE,
+  type PreviewFileActions,
+  type PreviewFileProps,
+  type PreviewFileSource,
+  previewShowsVersion,
+} from './previewFile';

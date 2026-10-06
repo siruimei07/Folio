@@ -112,6 +112,12 @@ Round 10 (2026-10-03, lane `design/design-m2-details`) added what the M2 screens
 `size.grid-group-label` for their icon and the grid's "Folders" and "Files" label rows (added by
 `feat/ui-library-m1-notes`).
 
+Round 11 (2026-10-05, lane `feat/ui-diff-viewer`) added the diff pane's component sizes
+(workspace-history handoff §2.2, §6.3, §6.4, §6.8): `size.diff-change-bar` (the current change's
+bar), `diff-mark-offset` (the changed words' underline below the baseline), `diff-tags-label` (the
+tags block's label column) and `diff-compact-pane` (the pane width below which the toggle and
+Restore move into More); and `radius.diff-emphasis` for the changed words' emphasis.
+
 ## Modes
 
 App settings → Appearance → Theme offers Light, Dark and System (default System). The app sets

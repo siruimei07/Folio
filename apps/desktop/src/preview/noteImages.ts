@@ -33,15 +33,20 @@ type Post = (message: ImageMessage, transfer?: Transferable[]) => void;
 /**
  * Answers the frame's `images` message for `note`: returns the handler for it. `post` sends to
  * the frame; every path gets exactly one `image` message. A catalog change asks the shell again,
- * and fetches already running carry on.
+ * and fetches already running carry on. `note` is the library file the paths are relative to (for
+ * a stored version, the file it belongs to now); without one, every image is missing.
  */
-export function useNoteImages(note: EntryRef, post: Post): (paths: readonly string[]) => void {
+export function useNoteImages(note: EntryRef | null, post: Post): (paths: readonly string[]) => void {
   const [asked, setAsked] = useState<readonly string[]>([]);
   const decoded = useMemo(() => asked.map(notePath), [asked]);
   const askable = useMemo(() => [...new Set(decoded.filter((path) => path !== null))], [decoded]);
   // Only the reference: a row's tags or dates changing must not ask again.
-  const { id, path: notePathText } = note;
-  const base = useMemo(() => ({ id, path: notePathText }), [id, notePathText]);
+  const id = note?.id;
+  const notePathText = note?.path;
+  const base = useMemo(
+    () => (id === undefined || notePathText === undefined ? null : { id, path: notePathText }),
+    [id, notePathText],
+  );
   const resolved = useResolvedPaths(asked.length === 0 ? null : base, askable);
   /** Paths answered or being fetched; the bytes the note may still have. */
   const handled = useRef(new Set<string>());
@@ -57,7 +62,8 @@ export function useNoteImages(note: EntryRef, post: Post): (paths: readonly stri
   }, []);
 
   const rows = resolved.data;
-  const failed = resolved.isError;
+  // No file to resolve against answers like a failed lookup: every image is missing.
+  const failed = resolved.isError || base === null;
   useEffect(() => {
     const answer = (path: string, image: ImageMessage['image']) => {
       post({ kind: 'image', path, image }, image === null ? [] : [image.bytes]);

@@ -147,19 +147,26 @@ export function combinePages<T extends { id: string }>(
  * for the pages where the list rests, not for every page it passes (§8.1).
  */
 export function useSettledRange(range: RowRange | null): RowRange | null {
-  const [settled, setSettled] = useState(range);
+  return useSettled(range, range === null ? '' : `${String(range.start)}:${String(range.end)}`);
+}
+
+/**
+ * `useSettledRange` for any value: the latest `value`, at most one change every
+ * `RANGE_SETTLE_MS`, and the last one always lands. Values with equal `key`s are the same.
+ */
+export function useSettled<T>(value: T, key: string): T {
+  const [settled, setSettled] = useState(value);
   const changedAt = useRef(0);
   const settle = useEffectEvent(() => {
     changedAt.current = Date.now();
-    setSettled(range);
+    setSettled(value);
   });
-  const rangeKey = range === null ? '' : `${String(range.start)}:${String(range.end)}`;
   useEffect(() => {
     const timer = setTimeout(settle, Math.max(0, changedAt.current + RANGE_SETTLE_MS - Date.now()));
     return () => {
       clearTimeout(timer);
     };
-  }, [rangeKey]);
+  }, [key]);
   return settled;
 }
 

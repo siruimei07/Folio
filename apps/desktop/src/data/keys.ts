@@ -7,7 +7,7 @@
 // `readKey`, and its rule to `touch.ts`. Until then an unknown kind is touched by every change.
 import { type QueryKey, queryOptions, skipToken } from '@tanstack/react-query';
 
-import type { EntryFilter, EntryRef, EntrySort } from '../ipc';
+import type { DiffWindow, EntryFilter, EntryRef, EntrySort, VersionRef } from '../ipc';
 
 /** One folder's children: `list_children` (`null`: the library root). */
 export interface ChildrenList {
@@ -46,6 +46,14 @@ interface ImportCheckRequest {
   target: EntryRef;
 }
 
+/**
+ * Whose diff (ipc-m2 §9.1): a workspace item's or metadata change's (`get_workspace_diff`), or a
+ * commit's change row (`get_version_diff`). `key` is the change's key, sent back as given.
+ */
+export type DiffSource =
+  | { source: 'workspace'; key: string }
+  | { source: 'version'; commit: string; key: string };
+
 export const keys = {
   /** `library_status`; outside a library, like the App settings. */
   libraryStatus: () => ['app', 'libraryStatus'] as const,
@@ -69,6 +77,11 @@ export const keys = {
    * under the same key after a move (the reference followers give the holder the new path).
    */
   entry: (libraryId: string, entry: EntryRef) => ['lib', libraryId, 'entry', entry] as const,
+  /** One window of a diff; each answers with the whole header (ipc-m2 §9.1). */
+  diff: (libraryId: string, source: DiffSource, window: DiffWindow) =>
+    ['lib', libraryId, 'diff', source, window] as const,
+  /** The file a version belongs to now: `locate_version` (ipc-m2 §8.3). */
+  located: (libraryId: string, version: VersionRef) => ['lib', libraryId, 'located', version] as const,
   semesters: (libraryId: string) => ['lib', libraryId, 'semesters'] as const,
   /** The courses of every semester; one semester's are a selection of them (`groups.ts`). */
   courses: (libraryId: string) => ['lib', libraryId, 'courses'] as const,
@@ -120,6 +133,8 @@ export type LibraryQuery =
   | { kind: 'jobs' }
   | { kind: 'problems' }
   | { kind: 'ignoreRules' }
+  | { kind: 'diff'; of: DiffSource }
+  | { kind: 'located' }
   | { kind: 'unknown' };
 
 /** The query a library key names. Keys come only from `keys`, so their shapes are known. */
@@ -141,12 +156,15 @@ export function readKey(queryKey: QueryKey): LibraryQuery {
       return { kind, base: (detail as ResolveRequest).base };
     case 'importCheck':
       return { kind, target: (detail as ImportCheckRequest).target };
+    case 'diff':
+      return { kind, of: detail as DiffSource };
     case 'semesters':
     case 'courses':
     case 'tags':
     case 'jobs':
     case 'problems':
     case 'ignoreRules':
+    case 'located':
       return { kind };
     default:
       return { kind: 'unknown' };

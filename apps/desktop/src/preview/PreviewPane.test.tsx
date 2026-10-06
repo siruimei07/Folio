@@ -3,12 +3,12 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { PreviewActions, PreviewPaneProps } from '../app/panes';
 import { Menu, MenuItem } from '../components/Menu/Menu';
-import { contentUrl, type EntryRef } from '../ipc';
+import { contentUrl } from '../ipc';
+import { frameMessages, refOf, serveFiles } from '../test/files';
 import { smallLibraryWith } from '../test/fixtures';
 import { renderApp } from '../test/render';
 import { SIZE } from '../tokens/tokens';
 import { PreviewPane } from './PreviewPane';
-import type { FrameMessage } from './protocol';
 
 const MAT = 'Fall 2026/MAT232 Calculus of Several Variables';
 const NOTE = `${MAT}/week 2 notes.md`;
@@ -30,37 +30,12 @@ interface ShowOptions {
 function showPreview(path: string, { scenario, added = [], files, props = {} }: ShowOptions = {}) {
   const fixture = added.length === 0 ? undefined : smallLibraryWith(...added.map((file) => ({ ...file, size: String(file.size) })));
   const app = renderApp(<div />, fixture === undefined ? { scenario } : { fixture });
-  const refOf = (at: string): EntryRef => {
-    const node = app.shell.library.at(at);
-    if (node === undefined) throw new Error(`no ${at} in the fixture`);
-    return app.shell.library.ref(node);
-  };
   const served = new Map(Object.entries(files ?? {}).map(([at, body]) => [contentUrl(refOf(at)), body]));
-  const fetch = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
-    await Promise.resolve();
-    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-    const body = served.get(url);
-    if (body === undefined) return new Response(null, { status: 404, headers: { 'X-Folio-Error': 'NotFound' } });
-    return new Response(init?.method === 'HEAD' ? null : body, { status: 200 });
-  });
+  const { fetch } = serveFiles((url) => served.get(url));
   const entry = refOf(path);
   const preview = actions();
   app.rerender(<PreviewPane entry={entry} actions={preview} {...props} />);
   return { ...app, entry, preview, fetch };
-}
-
-/** Messages from the preview's frame, as its document would send them. */
-function frameMessages() {
-  const frame = document.querySelector('iframe');
-  if (frame?.contentWindow == null) throw new Error('no frame');
-  const target = frame.contentWindow;
-  const posted = vi.spyOn(target, 'postMessage').mockImplementation(() => undefined);
-  const send = (data: FrameMessage) => {
-    act(() => {
-      window.dispatchEvent(new MessageEvent('message', { data, origin: 'null', source: target }));
-    });
-  };
-  return { posted, send };
 }
 
 describe('the header and tag row', () => {

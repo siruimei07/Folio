@@ -26,7 +26,9 @@
   "failed": {
     "title": "Can’t show this file",
     "text": "Folio couldn’t read it. It may be open in another app, or not downloaded from the cloud yet. Try again, or open it in its own app.",
-    "tryAgain": "Try again"
+    "tryAgain": "Try again",
+    "versionTitle": "Can’t show this version",
+    "versionText": "Folio couldn’t read this version from the library’s history. Try again."
   },
   "card": {
     "other": "Folio can’t show this type of file. Open it in its own app.",
@@ -36,6 +38,14 @@
     "media": "Folio can’t play this file’s format. Open it in its own app.",
     "thumbnail": "Reduced preview from Windows. Open the image to see it in full.",
     "noThumbnail": "Folio can’t show this image format. Open it in its own app."
+  },
+  "versionCard": {
+    "other": "Folio can’t show this type of file.",
+    "office": "Previews of Word, Excel and PowerPoint files come in a later version.",
+    "tooLarge": "This version is too large to preview.",
+    "unsupported": "Folio can’t show this version. It may be damaged or password-protected.",
+    "media": "Folio can’t play this file’s format.",
+    "noThumbnail": "Folio can’t show this image format."
   },
   "pdf": {
     "controls": "Page and zoom",

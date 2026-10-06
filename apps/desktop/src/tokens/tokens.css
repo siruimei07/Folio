@@ -156,6 +156,10 @@
   --size-diff-sign: 16px;
   --size-diff-fold: 28px;
   --size-diff-summary: 32px;
+  --size-diff-change-bar: 3px;
+  --size-diff-mark-offset: 3px;
+  --size-diff-tags-label: 76px;
+  --size-diff-compact-pane: 600px;
   --size-composer-summary: 36px;
   --size-commit-bar-field: 32px;
   --size-folder-card: 48px;
@@ -174,6 +178,7 @@
   --radius-key-cap: 4px;
   --radius-indicator: 3px;
   --radius-row-inset: 5px;
+  --radius-diff-emphasis: 2px;
   --border-width: 1px;
   --border-badge: 1.5px;
   --icon-stroke-width: 1.75;

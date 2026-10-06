@@ -98,6 +98,14 @@ export function touches(query: LibraryQuery, change: EntryChange): boolean {
     case 'ignoreRules':
       // Entries never change the rules; IgnoreRulesChanged keeps them current (ipc-m1 §22.2).
       return false;
+    case 'diff':
+      // A workspace diff waits for the WorkspaceChanged that follows (ipc-m2 §14, `events.ts`);
+      // a commit's diff does not change while its id names it.
+      return false;
+    case 'located':
+      // Any change can move or remove the file a version belongs to, or put one at its last
+      // committed path, which pairs with it (versioning §6.1).
+      return true;
     case 'unknown':
       return true;
   }
@@ -139,10 +147,12 @@ export function touchesGone(query: LibraryQuery, entry: EntryRef): boolean {
 }
 
 /**
- * Whether an event touches a query. `complete: false` touches everything (the event lists only
- * part of what changed, or the catalog was rebuilt).
+ * Whether an event touches a query. `complete: false` touches everything but diffs (the event
+ * lists only part of what changed, or the catalog was rebuilt).
  */
 export function isTouched(query: LibraryQuery, event: CatalogChanged): boolean {
+  // Not even after a rebuild: WorkspaceChanged follows that too.
+  if (query.kind === 'diff') return false;
   if (!event.complete) return true;
   // Search ranks by tag names too (library core §5.2), so a renamed tag changes its results.
   if (event.tags && (query.kind === 'tags' || query.kind === 'search')) return true;

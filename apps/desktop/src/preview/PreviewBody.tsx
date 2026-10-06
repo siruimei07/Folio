@@ -2,12 +2,12 @@ import { ExternalLink, FileX, RefreshCw } from 'lucide-react';
 import { type ReactNode, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import type { PreviewActions } from '../app/panes';
+import type { PreviewFileActions } from '../app/panes';
 import { Button } from '../components/Button/Button';
 import { FileTypeIcon } from '../components/FileTypeIcon/FileTypeIcon';
 import { Skeleton } from '../components/Skeleton/Skeleton';
 import { StateBlock } from '../components/StateBlock/StateBlock';
-import { contentUrl, type EntryRow, thumbnailUrl } from '../ipc';
+import type { EntryRef } from '../ipc';
 import { mediaFailure, type ReadFailure, useContent } from './content';
 import { previewKindOf } from './kinds';
 import { LinkPopover } from './LinkPopover';
@@ -16,21 +16,49 @@ import { PdfPill } from './PdfPill';
 import { type FrameHandle, type FrameLink, type PdfState, PreviewFrame } from './PreviewFrame';
 import { type FailureReason, type Renderer, SIZE_LIMITS, type WindowMessage } from './protocol';
 
+/**
+ * The file a preview body shows: a file in the library, or a version stored in history, whose
+ * bytes come from the `folio-file` version route (ipc-m2 §11).
+ */
+export interface FileSource {
+  kind: 'entry' | 'version';
+  /** The file's name: its extension picks how it shows. */
+  name: string;
+  /** Bytes, in decimal, for the size limits. */
+  size: string;
+  /** Its bytes on the `folio-file` scheme: `contentUrl` of a file, `versionUrl` of a version. */
+  url: string;
+  /**
+   * The library's file: what "Open with default app" opens, and where a note's images are looked
+   * up. A version's is the file it belongs to now (`locate_version`); `null` when there is none,
+   * so nothing offers Open and a note's images show as missing.
+   */
+  entry: EntryRef | null;
+  /** Windows' thumbnail of a HEIC or TIFF image (`thumbnailUrl`): only a file in the library has one. */
+  thumbnail: string | null;
+}
+
 /** Codes whose own message says better than the generic one why a file could not be read (§9.2). */
 const OWN_MESSAGE: ReadonlySet<ReadFailure> = new Set(['InUse', 'NotLocal', 'AccessDenied', 'NoThumbnail']);
 
+/** The version route's own codes (ipc-m2 §11), which say why a version could not be read. */
+const VERSION_MESSAGE: ReadonlySet<ReadFailure> = new Set(['NotFound', 'Pruned', 'HistoryDamaged']);
+
 interface FileProps {
-  row: EntryRow;
-  actions: PreviewActions;
+  file: FileSource;
+  actions: PreviewFileActions;
 }
 
-function OpenButton({ row, actions }: FileProps) {
+/** "Open with default app": nothing when there is no library file to open. */
+function OpenButton({ file, actions }: FileProps) {
   const { t } = useTranslation('preview');
+  const { entry } = file;
+  if (entry === null) return null;
   return (
     <Button
       icon={ExternalLink}
       onPress={() => {
-        actions.open(row);
+        actions.open(entry);
       }}
     >
       {t('header.open')}
@@ -38,23 +66,31 @@ function OpenButton({ row, actions }: FileProps) {
   );
 }
 
-/** "Can't show this file" (library-actions §9.2): why, "Try again" and "Open with default app". */
-function ReadFailureState({ row, actions, code, retry }: FileProps & { code: ReadFailure | null; retry: () => void }) {
+/**
+ * "Can't show this file" (library-actions §9.2): why, "Try again" and "Open with default app".
+ * A version says why with the version route's codes, else in its own words: the reasons a file on
+ * the disk fails do not apply to it.
+ */
+function ReadFailureState({ file, actions, code, retry }: FileProps & { code: ReadFailure | null; retry: () => void }) {
   const { t } = useTranslation(['preview', 'errors']);
+  const version = file.kind === 'version';
+  let text: string;
+  if (code !== null && (OWN_MESSAGE.has(code) || (version && VERSION_MESSAGE.has(code)))) text = t(`errors:${code}`);
+  else text = version ? t('failed.versionText') : t('failed.text');
   return (
     <div className="preview-state">
       <StateBlock
         tone="danger"
         icon={FileX}
         placement="preview"
-        title={t('failed.title')}
-        text={code !== null && OWN_MESSAGE.has(code) ? t(`errors:${code}`) : t('failed.text')}
+        title={version ? t('failed.versionTitle') : t('failed.title')}
+        text={text}
         actions={
           <>
             <Button icon={RefreshCw} onPress={retry}>
               {t('failed.tryAgain')}
             </Button>
-            <OpenButton row={row} actions={actions} />
+            <OpenButton file={file} actions={actions} />
           </>
         }
       />
@@ -73,16 +109,22 @@ interface CardProps extends FileProps {
   children?: ReactNode;
 }
 
-/** A file on the sunken surface (app-shell §5): its icon, name, why, and "Open with default app". */
-function Card({ row, actions, note, picture, children }: CardProps) {
+/**
+ * A file on the sunken surface (app-shell §5): its icon, name, why, and "Open with default app".
+ * A version's note does not ask to open it, since Open opens the file as it is now; a version has
+ * no thumbnail, so it never shows that note.
+ */
+function Card({ file, actions, note, picture, children }: CardProps) {
   const { t } = useTranslation('preview');
+  let noteText: string | null = null;
+  if (note !== undefined) noteText = file.kind === 'version' && note !== 'thumbnail' ? t(`versionCard.${note}`) : t(`card.${note}`);
   return (
     <div className="preview-state">
       <div className="preview-card">
-        {picture ?? <FileTypeIcon name={row.name} size="card" />}
-        {picture === undefined && <p className="preview-card__name">{row.name}</p>}
-        {note !== undefined && <p className="preview-card__note">{t(`card.${note}`)}</p>}
-        {children ?? <OpenButton row={row} actions={actions} />}
+        {picture ?? <FileTypeIcon name={file.name} size="card" />}
+        {picture === undefined && <p className="preview-card__name">{file.name}</p>}
+        {noteText !== null && <p className="preview-card__note">{noteText}</p>}
+        {children ?? <OpenButton file={file} actions={actions} />}
       </div>
     </div>
   );
@@ -107,35 +149,34 @@ interface MediaProps extends FileProps {
 }
 
 /** An image in the window, by URL: an SVG in `<img>` runs no script (§10.1). */
-function ImagePreview({ row, actions, retry }: MediaProps) {
-  const url = contentUrl(row);
-  const { failure, onError } = useMediaFailure(url);
-  if (failure === 'decode') return <Card row={row} actions={actions} note="unsupported" />;
-  if (failure !== null) return <ReadFailureState row={row} actions={actions} code={failure} retry={retry} />;
+function ImagePreview({ file, actions, retry }: MediaProps) {
+  const { failure, onError } = useMediaFailure(file.url);
+  if (failure === 'decode') return <Card file={file} actions={actions} note="unsupported" />;
+  if (failure !== null) return <ReadFailureState file={file} actions={actions} code={failure} retry={retry} />;
   return (
     <div className="preview-backdrop">
-      <img className="preview-image" src={url} alt={row.name} onError={onError} />
+      <img className="preview-image" src={file.url} alt={file.name} onError={onError} />
     </div>
   );
 }
 
 /**
  * HEIC and TIFF: Chromium cannot decode them, so the preview is the thumbnail Windows makes (WIC)
- * when it can, else the card.
+ * when it can, else the card. A version has no thumbnail.
  */
-function ThumbnailPreview({ row, actions }: FileProps) {
+function ThumbnailPreview({ file, actions }: FileProps) {
   const [failed, setFailed] = useState(false);
-  if (failed) return <Card row={row} actions={actions} note="noThumbnail" />;
+  if (failed || file.thumbnail === null) return <Card file={file} actions={actions} note="noThumbnail" />;
   return (
     <Card
-      row={row}
+      file={file}
       actions={actions}
       note="thumbnail"
       picture={
         <img
           className="preview-card__thumbnail"
-          src={thumbnailUrl(row, 256)}
-          alt={row.name}
+          src={file.thumbnail}
+          alt={file.name}
           onError={() => {
             setFailed(true);
           }}
@@ -146,21 +187,20 @@ function ThumbnailPreview({ row, actions }: FileProps) {
 }
 
 /** Audio and video play in the window; the scheme answers `Range`, so long files seek (§10.1). */
-function MediaPreview({ row, actions, retry, video }: MediaProps & { video: boolean }) {
-  const url = contentUrl(row);
-  const { failure, onError } = useMediaFailure(url);
-  if (failure === 'decode') return <Card row={row} actions={actions} note="media" />;
-  if (failure !== null) return <ReadFailureState row={row} actions={actions} code={failure} retry={retry} />;
+function MediaPreview({ file, actions, retry, video }: MediaProps & { video: boolean }) {
+  const { failure, onError } = useMediaFailure(file.url);
+  if (failure === 'decode') return <Card file={file} actions={actions} note="media" />;
+  if (failure !== null) return <ReadFailureState file={file} actions={actions} code={failure} retry={retry} />;
   if (video) {
     return (
       <div className="preview-backdrop">
-        <video className="preview-video" src={url} controls preload="metadata" aria-label={row.name} onError={onError} />
+        <video className="preview-video" src={file.url} controls preload="metadata" aria-label={file.name} onError={onError} />
       </div>
     );
   }
   return (
-    <Card row={row} actions={actions}>
-      <audio className="preview-audio" src={url} controls preload="metadata" aria-label={row.name} onError={onError} />
+    <Card file={file} actions={actions}>
+      <audio className="preview-audio" src={file.url} controls preload="metadata" aria-label={file.name} onError={onError} />
     </Card>
   );
 }
@@ -169,7 +209,7 @@ interface FramePreviewProps extends FileProps {
   renderer: Renderer;
   language: string | null;
   retry: () => void;
-  /** Esc in the frame, or the link popover closing: focus goes to the preview header. */
+  /** Esc in the frame, or the link popover closing: focus goes to the host's heading. */
   onEscape: () => void;
 }
 
@@ -181,9 +221,9 @@ interface FrameHostProps extends FramePreviewProps {
  * The frame and what the window draws over it. The frame starts while the bytes load, and both
  * meet in `PreviewFrame`. It unmounts when the frame fails, which lets go of the bytes.
  */
-function FrameHost({ row, actions, renderer, language, retry, onEscape, onFailed }: FrameHostProps) {
+function FrameHost({ file, actions, renderer, language, retry, onEscape, onFailed }: FrameHostProps) {
   const { t } = useTranslation('preview');
-  const content = useContent(contentUrl(row));
+  const content = useContent(file.url);
   const [rendered, setRendered] = useState(false);
   const [pdf, setPdf] = useState<PdfState | null>(null);
   const [link, setLink] = useState<FrameLink | null>(null);
@@ -191,19 +231,19 @@ function FrameHost({ row, actions, renderer, language, retry, onEscape, onFailed
   const post = useCallback((message: WindowMessage, transfer?: Transferable[]) => {
     frame.current?.post(message, transfer);
   }, []);
-  const onImages = useNoteImages(row, post);
+  const onImages = useNoteImages(file.entry, post);
   const strings = useMemo(
     () => ({
-      title: t('label', { name: row.name }),
+      title: t('label', { name: file.name }),
       imageLoading: t('frame.imageLoading'),
       imageMissing: t('frame.imageMissing'),
       imageRemote: t('frame.imageRemote'),
-      code: t('frame.code', { name: row.name }),
+      code: t('frame.code', { name: file.name }),
     }),
-    [t, row.name],
+    [t, file.name],
   );
 
-  if (content.state === 'failed') return <ReadFailureState row={row} actions={actions} code={content.code} retry={retry} />;
+  if (content.state === 'failed') return <ReadFailureState file={file} actions={actions} code={content.code} retry={retry} />;
   return (
     <div className="preview-frame-host" data-renderer={renderer} aria-busy={!rendered}>
       <PreviewFrame
@@ -251,36 +291,36 @@ function FrameHost({ row, actions, renderer, language, retry, onEscape, onFailed
 
 /** Everything parsed from file content: fetched here, rendered in the sandboxed frame (§10.1). */
 function FramePreview(props: FramePreviewProps) {
-  const { row, actions, retry } = props;
+  const { file, actions, retry } = props;
   const [failure, setFailure] = useState<FailureReason | 'timeout' | null>(null);
-  if (failure === 'tooLarge') return <Card row={row} actions={actions} note="tooLarge" />;
-  if (failure === 'unsupported' || failure === 'corrupt') return <Card row={row} actions={actions} note="unsupported" />;
-  if (failure !== null) return <ReadFailureState row={row} actions={actions} code={null} retry={retry} />;
+  if (failure === 'tooLarge') return <Card file={file} actions={actions} note="tooLarge" />;
+  if (failure === 'unsupported' || failure === 'corrupt') return <Card file={file} actions={actions} note="unsupported" />;
+  if (failure !== null) return <ReadFailureState file={file} actions={actions} code={null} retry={retry} />;
   return <FrameHost {...props} onFailed={setFailure} />;
 }
 
 export interface PreviewBodyProps extends FileProps {
-  /** Shows the file again from the start: the pane remounts the body. */
+  /** Shows the file again from the start: the host remounts the body. */
   retry: () => void;
   onEscape: () => void;
 }
 
 /** The preview's body by the file's type (UI architecture §10.1). */
-export function PreviewBody({ row, actions, retry, onEscape }: PreviewBodyProps) {
-  const kind = previewKindOf(row.name);
+export function PreviewBody({ file, actions, retry, onEscape }: PreviewBodyProps) {
+  const kind = previewKindOf(file.name);
   switch (kind.kind) {
     case 'image':
-      return <ImagePreview row={row} actions={actions} retry={retry} />;
+      return <ImagePreview file={file} actions={actions} retry={retry} />;
     case 'thumbnail':
-      return <ThumbnailPreview row={row} actions={actions} />;
+      return <ThumbnailPreview file={file} actions={actions} />;
     case 'audio':
     case 'video':
-      return <MediaPreview row={row} actions={actions} retry={retry} video={kind.kind === 'video'} />;
+      return <MediaPreview file={file} actions={actions} retry={retry} video={kind.kind === 'video'} />;
     case 'frame':
-      if (Number(row.size) > SIZE_LIMITS[kind.renderer]) return <Card row={row} actions={actions} note="tooLarge" />;
+      if (Number(file.size) > SIZE_LIMITS[kind.renderer]) return <Card file={file} actions={actions} note="tooLarge" />;
       return (
         <FramePreview
-          row={row}
+          file={file}
           actions={actions}
           renderer={kind.renderer}
           language={kind.language}
@@ -289,8 +329,8 @@ export function PreviewBody({ row, actions, retry, onEscape }: PreviewBodyProps)
         />
       );
     case 'office':
-      return <Card row={row} actions={actions} note="office" />;
+      return <Card file={file} actions={actions} note="office" />;
     case 'other':
-      return <Card row={row} actions={actions} note="other" />;
+      return <Card file={file} actions={actions} note="other" />;
   }
 }
