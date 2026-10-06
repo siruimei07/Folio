@@ -465,7 +465,10 @@ type TagFilter =
   Tags stay in `.folio/meta/`, so a file restored from the Recycle Bin gets them back. An item the
   Recycle Bin cannot take (its drive has none, its path is too long for it, it is too large) fails
   with `NotRecyclable` and stays where it is: Folio never deletes for good (Windows adapter §4). A
-  later version may offer "Delete permanently" for it, as its own confirmed command.
+  later version may offer "Delete permanently" for it, as its own confirmed command. A file only
+  in the cloud goes to its cloud provider's trash instead, without being downloaded (iCloud
+  Drive: Recently Deleted), and counts as deleted; a folder holding one stays and fails with
+  `NotRecyclable` until a contract lane reports both (Windows adapter §4.2, 2026-10-04).
 
 ## 10. Search
 
@@ -628,7 +631,8 @@ type ImportFiles = {
 - `deleteOriginals`: once every item of a source is copied and its hash checked, the source goes to
   the Recycle Bin (brief §5.1). A source with anything skipped or failed stays, and the result
   lists it. A source, or a file `replace` would put in the Recycle Bin, that the Recycle Bin
-  cannot take is a failure with `NotRecyclable`; for `replace`, the new file then stays out.
+  cannot take is a failure with `NotRecyclable`; for `replace`, the new file then stays out. One
+  only in the cloud goes to its provider's trash instead and counts as recycled (§9.2).
 - `names` lets the dialog show folder icons and "Folder" (library-actions handoff §4); `files`
   and `folders` count the same top-level items.
 - `target` is a folder: the current course, or a folder in it (brief §13).
@@ -792,7 +796,7 @@ for logs and bug reports. Each case the UI words differently has its own code.
 | `InUse` | Another program holds the file |
 | `AccessDenied` | Windows denied access |
 | `DiskFull` | The disk is full |
-| `NotRecyclable` | The Recycle Bin cannot take the item: its drive has none, its path is too long for it, or it is too large. Nothing moved |
+| `NotRecyclable` | The Recycle Bin cannot take the item: its drive has none, its path is too long for it, or it is too large; or, until a contract lane gives it a code of its own, it is a folder that is or holds something only in the cloud (Windows adapter §4.2). Nothing moved |
 | `NotLocal` | The file's content is not on this disk (a cloud placeholder or offline file), and the shell does not download it (§11.2) |
 | `NoThumbnail` | Windows cannot make a thumbnail of the file (§11.2) |
 | `FileSystem` | Another file-system failure |
@@ -817,7 +821,7 @@ not call.
 | `library::LibraryError::NotALibrary` | `NotALibrary` |
 | `io::Error` | Not found: `NotFound`; sharing or lock violation: `InUse`; permission denied: `AccessDenied`; storage full: `DiskFull`; otherwise `FileSystem` |
 | `paths::PathError` from typed names | §16.3 |
-| `recycle::RecycleFailure` (Windows adapter §4) | `NotFound`: `NotFound`; `Unrecyclable`: `NotRecyclable`; `InUse`: `InUse`; `Denied`: `AccessDenied`; `Invalid`: `Internal`; `Other`: `FileSystem` |
+| `recycle::RecycleFailure` (Windows adapter §4) | `NotFound`: `NotFound`; `Unrecyclable` and `CloudOnly`: `NotRecyclable`; `InUse`: `InUse`; `Denied`: `AccessDenied`; `Invalid`: `Internal`; `Other`: `FileSystem` |
 | `fs::Presence` other than `Local`, where the shell would read the file | `NotLocal` |
 
 ### 16.3 Names the user types

@@ -330,10 +330,13 @@ fn native_error(error: windows::core::Error) -> AppError {
 
 #[cfg(test)]
 mod tests {
+    use std::os::windows::fs::OpenOptionsExt;
+
     use windows::Win32::Foundation::E_FAIL;
     use windows::Win32::System::Com::{
         APTTYPE, APTTYPE_MAINSTA, APTTYPE_STA, APTTYPEQUALIFIER, CoGetApartmentType,
     };
+    use windows_sys::Win32::Storage::FileSystem::FILE_SHARE_READ;
 
     use super::*;
 
@@ -492,20 +495,28 @@ mod tests {
     fn sync_root_lookups_hold_com_for_the_process() {
         let dir = tempfile::tempdir().unwrap();
         let root = dir.path().canonicalize().unwrap();
+        // A file held open without FILE_SHARE_DELETE passes recycle's look before the shell and
+        // fails inside its STA, so the STA comes and goes and nothing reaches the Recycle Bin.
+        let held = dir.path().join("held.txt");
+        std::fs::write(&held, "keep me").unwrap();
+        let _open = std::fs::OpenOptions::new()
+            .read(true)
+            .share_mode(FILE_SHARE_READ)
+            .open(&held)
+            .unwrap();
         for _ in 0..3 {
             // The answer depends on this machine's registrations; the process must survive.
             let _ = in_sta(Builder::new(), initialize_sta, || sync_provider(&root)).unwrap();
             assert!(MTA_HELD.load(Ordering::Relaxed));
             // Recycle's COM-only STA teardown must also leave the cached factory valid.
-            let missing = dir.path().join("missing.txt");
             assert_eq!(
                 folio_core::recycle::RecycleBin::recycle(
                     &folio_core::win::WindowsRecycleBin,
-                    &missing
+                    &held
                 )
                 .unwrap_err()
                 .failure,
-                folio_core::recycle::RecycleFailure::NotFound,
+                folio_core::recycle::RecycleFailure::InUse,
             );
             let _ = sync_provider(&root);
         }

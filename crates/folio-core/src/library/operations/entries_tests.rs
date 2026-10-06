@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::Ordering;
 
 use proptest::prelude::*;
 use tempfile::TempDir;
@@ -9,8 +9,8 @@ use crate::fs::{DirEntry, FileSystem, StdFileSystem};
 use crate::hash::ContentHash;
 use crate::library::ScanCoverage;
 use crate::meta::{Assignments, CourseMeta, CourseSettings, DisplayName, LibraryConfig};
-use crate::recycle::{RecycleError, RecycleFailure};
-use crate::test_support::{course_at, path, presets, tags};
+use crate::recycle::{RecycleError, RecycleFailure, Recycled};
+use crate::test_support::{Trash, course_at, path, presets, tags};
 
 struct Fixture {
     _temp: TempDir,
@@ -79,40 +79,6 @@ impl Fixture {
                 },
             )
             .unwrap();
-    }
-}
-
-struct Trash {
-    temp: TempDir,
-    next: AtomicUsize,
-    refuse: Option<&'static str>,
-}
-
-impl Trash {
-    fn new(refuse: Option<&'static str>) -> Self {
-        Self {
-            temp: tempfile::tempdir().unwrap(),
-            next: AtomicUsize::new(0),
-            refuse,
-        }
-    }
-}
-
-impl RecycleBin for Trash {
-    fn recycle(&self, path: &Path) -> Result<(), RecycleError> {
-        if path.file_name().and_then(|name| name.to_str()) == self.refuse {
-            return Err(RecycleError::new(
-                path,
-                RecycleFailure::Unrecyclable,
-                "test refusal",
-            ));
-        }
-        let target = self
-            .temp
-            .path()
-            .join(self.next.fetch_add(1, Ordering::Relaxed).to_string());
-        fs::rename(path, target)
-            .map_err(|error| RecycleError::new(path, RecycleFailure::Other, error.to_string()))
     }
 }
 
@@ -456,6 +422,30 @@ fn delete_uses_only_recycle_adapter_and_retains_restore_metadata() {
 }
 
 #[test]
+fn a_file_that_went_to_the_cloud_trash_is_deleted_like_a_recycled_one() {
+    let f = Fixture::new();
+    f.file("s/c/lecture.mp4");
+    f.file("s/c/notes.md");
+    f.course_meta("s/c", "lecture.mp4");
+    f.scan();
+    let trash = Trash::new(None).in_the_cloud("lecture.mp4");
+    let references = [f.reference("s/c/lecture.mp4"), f.reference("s/c/notes.md")];
+    let deleted = f
+        .library
+        .delete_entries(&f.catalog, &references, &trash)
+        .unwrap();
+    assert_eq!((deleted.value.done, deleted.value.failures.len()), (2, 0));
+    assert_eq!(deleted.committed.entries.len(), 2);
+    assert!(!f.library.root().join("s/c/lecture.mp4").exists());
+    assert!(
+        f.catalog
+            .read(|tx| catalog::entry(tx, &path("s/c/lecture.mp4")))
+            .unwrap()
+            .is_none()
+    );
+}
+
+#[test]
 fn recycle_refusal_keeps_disk_catalog_metadata_and_other_batch_success() {
     let f = Fixture::new();
     f.file("s/c/no.md");
@@ -714,10 +704,10 @@ fn failed_reconciliation_stops_batch_and_reports_all_remaining_references() {
         journal: std::path::PathBuf,
     }
     impl RecycleBin for JournalBlocker {
-        fn recycle(&self, path: &Path) -> Result<(), RecycleError> {
-            self.trash.recycle(path)?;
+        fn recycle(&self, path: &Path) -> Result<Recycled, RecycleError> {
+            let recycled = self.trash.recycle(path)?;
             fs::create_dir_all(&self.journal).unwrap();
-            Ok(())
+            Ok(recycled)
         }
     }
     let f = Fixture::new();

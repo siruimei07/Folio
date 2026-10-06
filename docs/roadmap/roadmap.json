@@ -2996,8 +2996,19 @@
         "test/core-icloud-field-test"
       ],
       "summary": "iCloud 实测发现：WindowsRecycleBin 删除仅云端的占位符时报失败（\"the shell reported nothing in the Recycle Bin\" 或 0x8007017B），但文件其实已被删除、只在 iCloud 的「最近删除」里",
-      "status": "planned",
-      "updated": "2026-10-04",
+      "status": "done",
+      "updated": "2026-10-05",
+      "landed": "2026-10-05",
+      "gates": {
+        "check": "pass",
+        "e2e": "pass",
+        "codeReview": "pass",
+        "securityReview": "pass",
+        "simplify": "pass"
+      },
+      "notes": [
+        "第 3 轮审计（2026-10-05）：真实回收站的 e2e delete.spec.ts（FOLIO_E2E_DESKTOP=1）和忽略测试 files_and_folders_go_to_the_recycle_bin 在当前代码上通过；desktop-import.spec.ts 会移动鼠标，留给 CI"
+      ],
       "links": [
         "docs/research/icloud-field-test.md",
         "docs/specs/windows-adapter.md",

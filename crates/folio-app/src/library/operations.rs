@@ -497,7 +497,10 @@ pub(super) fn operation_error(error: OperationError) -> AppError {
         OperationError::Io { source, .. } => errors::io(source),
         OperationError::Recycle(error) => match error.failure {
             RecycleFailure::NotFound => AppError::NotFound(detail),
-            RecycleFailure::Unrecyclable => AppError::NotRecyclable(detail),
+            // CloudOnly gets its own code with the follow-up contract lane.
+            RecycleFailure::Unrecyclable | RecycleFailure::CloudOnly => {
+                AppError::NotRecyclable(detail)
+            }
             RecycleFailure::InUse => AppError::InUse(detail),
             RecycleFailure::Denied => AppError::AccessDenied(detail),
             RecycleFailure::Invalid => AppError::Internal(detail),

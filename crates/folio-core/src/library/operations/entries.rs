@@ -190,6 +190,8 @@ impl Library {
                     committed.report.changes.push(Change::Removed(path));
                 }
                 // No metadata deletion: a restored file gets its authored tags/settings back.
+                // Either destination counts: the Recycle Bin or, for a file only in the cloud,
+                // its provider's trash.
                 self.entry_disk(&entry)?;
                 bin.recycle(&entry.record.path.to_native(self.root()))?;
                 changed = Some(entry.record.path);

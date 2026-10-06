@@ -222,10 +222,14 @@ mod probe {
 
     fn recycle(path: &Path) -> io::Result<()> {
         emit(json!({ "event": "recycle-start", "path": path.display().to_string() }));
-        WindowsRecycleBin
+        let recycled = WindowsRecycleBin
             .recycle(path)
             .map_err(|error| io::Error::other(format!("{error:?}")))?;
-        emit(json!({ "event": "recycle-done", "path": path.display().to_string() }));
+        emit(json!({
+            "event": "recycle-done",
+            "path": path.display().to_string(),
+            "to": format!("{recycled:?}"),
+        }));
         Ok(())
     }
 }

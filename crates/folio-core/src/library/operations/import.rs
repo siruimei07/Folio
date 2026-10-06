@@ -635,7 +635,8 @@ impl Library {
                         bin.recycle(&source.path).map_err(OperationError::from)
                     });
                 match result {
-                    Ok(()) => report.originals_deleted = increment(report.originals_deleted)?,
+                    // The Recycle Bin or, for a file only in the cloud, its provider's trash.
+                    Ok(_) => report.originals_deleted = increment(report.originals_deleted)?,
                     Err(error) => {
                         // Report even a failure that raced a cancel: the original may be partly
                         // in the Recycle Bin.

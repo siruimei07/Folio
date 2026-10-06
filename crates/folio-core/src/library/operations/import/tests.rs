@@ -10,8 +10,8 @@ use super::*;
 use crate::fs::DirEntry;
 use crate::library::LibraryError;
 use crate::meta::{Assignments, CourseMeta, DisplayName, LibraryConfig, MetaError};
-use crate::recycle::{RecycleError, RecycleFailure};
-use crate::test_support::{course_at, path, presets, tags};
+use crate::recycle::{RecycleError, RecycleFailure, Recycled};
+use crate::test_support::{Trash, course_at, path, presets, tags};
 
 struct Fixture {
     temp: TempDir,
@@ -144,41 +144,6 @@ impl Fixture {
         .unwrap();
         intent.write(&self.library).unwrap();
         stage
-    }
-}
-
-struct Trash {
-    temp: TempDir,
-    next: AtomicUsize,
-    refuse: Option<&'static str>,
-}
-
-impl Trash {
-    fn new(refuse: Option<&'static str>) -> Self {
-        Self {
-            temp: tempfile::tempdir().unwrap(),
-            next: AtomicUsize::new(0),
-            refuse,
-        }
-    }
-}
-
-impl RecycleBin for Trash {
-    fn recycle(&self, native: &Path) -> Result<(), RecycleError> {
-        if native.file_name().and_then(|name| name.to_str()) == self.refuse {
-            return Err(RecycleError::new(
-                native,
-                RecycleFailure::Unrecyclable,
-                "test refusal",
-            ));
-        }
-        fs::rename(
-            native,
-            self.temp
-                .path()
-                .join(self.next.fetch_add(1, Ordering::Relaxed).to_string()),
-        )
-        .map_err(|error| RecycleError::new(native, RecycleFailure::Other, error.to_string()))
     }
 }
 
@@ -422,6 +387,43 @@ fn skip_retains_the_original_and_reports_it_when_deletion_was_requested() {
 }
 
 #[test]
+fn replacing_a_file_only_in_the_cloud_publishes_the_new_one() {
+    let f = Fixture::new();
+    f.existing("a.md", b"old");
+    let source = f.source_file("a.md", b"new");
+    let request = f.request(vec![source], Conflict::Replace);
+    let trash = Trash::new(None).in_the_cloud("a.md");
+    let result = f.run(&request, &trash);
+    assert_eq!((result.imported, result.failure_count), (1, 0));
+    assert_eq!(fs::read(f.library.root().join("s/c/a.md")).unwrap(), b"new");
+    assert!(!journal::path(&f.library).exists());
+}
+
+#[test]
+fn an_original_only_in_the_cloud_counts_as_deleted() {
+    let f = Fixture::new();
+    let source = f.source_file("lecture.mp4", b"x");
+    let mut request = f.request(vec![source.clone()], Conflict::KeepBoth);
+    request.delete_originals = true;
+    let trash = Trash::new(None).in_the_cloud("lecture.mp4");
+    let result = f.run(&request, &trash);
+    assert_eq!(
+        (
+            result.imported,
+            result.originals_deleted,
+            result.failure_count
+        ),
+        (1, 1, 0),
+        "{result:?}"
+    );
+    assert!(!source.path().exists());
+    assert_eq!(
+        fs::read(f.library.root().join("s/c/lecture.mp4")).unwrap(),
+        b"x"
+    );
+}
+
+#[test]
 fn failed_recycle_does_not_publish_the_new_file_or_leave_an_intent() {
     let f = Fixture::new();
     f.existing("a.md", b"old");
@@ -448,7 +450,7 @@ fn failed_intent_abandon_preserves_the_recycle_error_and_recovery_settles_it() {
         held: Mutex<Option<File>>,
     }
     impl RecycleBin for LockedTrash {
-        fn recycle(&self, native: &Path) -> Result<(), RecycleError> {
+        fn recycle(&self, native: &Path) -> Result<Recycled, RecycleError> {
             *self.held.lock().unwrap() = Some(
                 fs::OpenOptions::new()
                     .read(true)
@@ -1785,11 +1787,12 @@ fn failure_details_are_capped_while_the_total_counts_every_file() {
 fn reconciliation_survives_capped_failures_after_a_recycled_replacement_is_abandoned() {
     struct ArrivalTrash(Trash);
     impl RecycleBin for ArrivalTrash {
-        fn recycle(&self, native: &Path) -> Result<(), RecycleError> {
-            self.0.recycle(native)?;
+        fn recycle(&self, native: &Path) -> Result<Recycled, RecycleError> {
+            let recycled = self.0.recycle(native)?;
             fs::write(native, b"external arrival").map_err(|error| {
                 RecycleError::new(native, RecycleFailure::Other, error.to_string())
-            })
+            })?;
+            Ok(recycled)
         }
     }
 

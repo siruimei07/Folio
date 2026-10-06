@@ -4,13 +4,16 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::OsString;
 use std::io::{self, Cursor, Read};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
+
+use tempfile::TempDir;
 
 use crate::catalog::Catalog;
 use crate::fs::{DirEntry, FileKind, FileSystem, Metadata, Presence};
 use crate::meta::{DisplayName, LibraryId, PresetTag, TagDefinitions, TagId};
 use crate::paths::{CoursePath, RelPath, SemesterPath};
-use crate::recycle::{self, RecycleBin, RecycleError, RecycleFailure};
+use crate::recycle::{self, RecycleBin, RecycleError, RecycleFailure, Recycled};
 
 pub fn path(text: &str) -> RelPath {
     RelPath::parse(text).unwrap()
@@ -77,7 +80,8 @@ pub fn presets(slides: &str) -> TagDefinitions {
 /// An in-memory file system below `root` with NTFS-like file ids: a rename keeps them, a new
 /// file gets a new one. Names are compared exactly, as on a case-sensitive disk, and may be
 /// anything but `/`. A clock that advances one second per change provides the times. It is also
-/// a Recycle Bin, which tests can inspect and make fail.
+/// a Recycle Bin, which tests can inspect and make fail, with a cloud provider's trash beside it
+/// for placeholders, as on Windows.
 pub struct MemFs {
     root: PathBuf,
     state: Mutex<MemState>,
@@ -93,8 +97,8 @@ struct MemState {
     unstable: BTreeSet<Vec<OsString>>,
     /// Paths the Recycle Bin refuses, and why.
     unrecyclable: BTreeMap<Vec<OsString>, RecycleFailure>,
-    /// What went to the Recycle Bin, one item per call, in order.
-    bin: Vec<Vec<OsString>>,
+    /// What was recycled, one item per call, in order, with where it went.
+    bin: Vec<(Recycled, Vec<OsString>)>,
 }
 
 #[derive(Clone)]
@@ -273,13 +277,24 @@ impl MemFs {
 
     /// The paths that went to the Recycle Bin, in order.
     pub fn recycled(&self) -> Vec<String> {
-        let join = |key: &Vec<OsString>| {
+        self.recycled_to(Recycled::RecycleBin)
+    }
+
+    /// The placeholders that went to their cloud provider's trash, in order.
+    pub fn cloud_trashed(&self) -> Vec<String> {
+        self.recycled_to(Recycled::CloudTrash)
+    }
+
+    fn recycled_to(&self, destination: Recycled) -> Vec<String> {
+        let state = self.state();
+        let keys = state.bin.iter().filter(|(to, _)| *to == destination);
+        keys.map(|(_, key)| {
             key.iter()
                 .map(|name| name.to_string_lossy())
                 .collect::<Vec<_>>()
                 .join("/")
-        };
-        self.state().bin.iter().map(join).collect()
+        })
+        .collect()
     }
 
     /// Makes the file's modification time move whenever it is read.
@@ -377,15 +392,14 @@ impl FileSystem for MemFs {
 }
 
 impl RecycleBin for MemFs {
-    fn recycle(&self, path: &Path) -> Result<(), RecycleError> {
+    fn recycle(&self, path: &Path) -> Result<Recycled, RecycleError> {
         recycle::check(path)?;
-        let not_found = || RecycleError::new(path, RecycleFailure::NotFound, "no such file");
-        let key = self.key(path).map_err(|_| not_found())?;
+        let destination = recycle::destination(self, path)?;
+        let key = self
+            .key(path)
+            .map_err(|error| RecycleError::of_io(path, &error))?;
         assert!(!key.is_empty(), "the fake cannot recycle its root");
         let mut state = self.state();
-        if !state.nodes.contains_key(&key) {
-            return Err(not_found());
-        }
         let refused = state
             .unrecyclable
             .range(key.clone()..)
@@ -396,8 +410,62 @@ impl RecycleBin for MemFs {
             return Err(RecycleError::new(path, failure, "refused by the fake"));
         }
         state.take_below(&key);
-        state.bin.push(key);
-        Ok(())
+        state.bin.push((destination, key));
+        Ok(destination)
+    }
+}
+
+/// A Recycle Bin on disk for operation tests: each item moves into a temporary folder, named by
+/// its number in order. A test can make it refuse a name, or report a name as a file only in the
+/// cloud, which its provider's trash takes.
+pub struct Trash {
+    pub temp: TempDir,
+    /// How many items went in.
+    pub next: AtomicUsize,
+    refuse: Option<&'static str>,
+    cloud: Option<&'static str>,
+}
+
+impl Trash {
+    pub fn new(refuse: Option<&'static str>) -> Self {
+        Self {
+            temp: tempfile::tempdir().unwrap(),
+            next: AtomicUsize::new(0),
+            refuse,
+            cloud: None,
+        }
+    }
+
+    /// Reports the file named `name` as gone to the cloud trash.
+    pub fn in_the_cloud(self, name: &'static str) -> Self {
+        Self {
+            cloud: Some(name),
+            ..self
+        }
+    }
+}
+
+impl RecycleBin for Trash {
+    fn recycle(&self, path: &Path) -> Result<Recycled, RecycleError> {
+        let name = path.file_name().and_then(|name| name.to_str());
+        if name == self.refuse {
+            return Err(RecycleError::new(
+                path,
+                RecycleFailure::Unrecyclable,
+                "test refusal",
+            ));
+        }
+        let target = self
+            .temp
+            .path()
+            .join(self.next.fetch_add(1, Ordering::Relaxed).to_string());
+        std::fs::rename(path, target)
+            .map_err(|error| RecycleError::new(path, RecycleFailure::Other, error.to_string()))?;
+        Ok(if name.is_some() && name == self.cloud {
+            Recycled::CloudTrash
+        } else {
+            Recycled::RecycleBin
+        })
     }
 }
 

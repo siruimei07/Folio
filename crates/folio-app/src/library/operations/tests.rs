@@ -8,7 +8,7 @@ use std::time::{Duration, Instant};
 
 use folio_core::library::state::{self, Settings};
 use folio_core::meta::{DisplayName, Layout};
-use folio_core::recycle::{RecycleError, RecycleFailure};
+use folio_core::recycle::{RecycleError, RecycleFailure, Recycled};
 use tempfile::TempDir;
 
 use super::*;
@@ -468,7 +468,7 @@ struct TestBin {
 }
 
 impl RecycleBin for TestBin {
-    fn recycle(&self, path: &Path) -> Result<(), RecycleError> {
+    fn recycle(&self, path: &Path) -> Result<Recycled, RecycleError> {
         if self.refuse.as_deref() == path.file_name().and_then(|name| name.to_str()) {
             return Err(RecycleError {
                 path: path.to_owned(),
@@ -478,7 +478,7 @@ impl RecycleBin for TestBin {
         }
         fs::create_dir_all(&self.destination).unwrap();
         fs::rename(path, self.destination.join(path.file_name().unwrap())).unwrap();
-        Ok(())
+        Ok(Recycled::RecycleBin)
     }
 }
 
@@ -972,6 +972,12 @@ fn recycling_adapter_invalid_input_is_internal_and_newer_metadata_is_read_only()
         detail: "guard refused".into(),
     });
     assert_eq!(code(&operation_error(invalid)), "Internal");
+    let cloud_only = OperationError::Recycle(RecycleError {
+        path: PathBuf::from("course"),
+        failure: RecycleFailure::CloudOnly,
+        detail: "course/hw1.pdf is only in the cloud".into(),
+    });
+    assert_eq!(code(&operation_error(cloud_only)), "NotRecyclable");
     let newer = || folio_core::meta::MetaError::NewerFormat {
         path: PathBuf::from("tags.json"),
         found: 999,
