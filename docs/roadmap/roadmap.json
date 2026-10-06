@@ -2732,8 +2732,19 @@
         "feat/ipc-m2-contract"
       ],
       "summary": "SummaryGroup 加 items（这个位置的全部条目，含不能提交的）和 required（其中必须提交的条目）：工作区视图的课程标题显示全部改动，勾选状态不把必须提交的条目算进去（决策 m2-summary-counts）",
-      "status": "planned",
+      "status": "done",
       "updated": "2026-10-06",
+      "landed": "2026-10-06",
+      "gates": {
+        "check": "pass",
+        "e2e": "pass",
+        "codeReview": "pass",
+        "securityReview": "na",
+        "simplify": "pass"
+      },
+      "notes": [
+        "Finish 2026-10-06: pnpm check in the shared tree fails only in other lanes' paths (tsc: feat/ui-changes-view's grouped.test.ts and template.test.ts build SummaryGroup literals without items/required, expected until it resumes; cargo fmt: feat/core-workspace's module line in folio-core/src/lib.rs); clippy and 1175 Rust tests, eslint and 1492 vitest tests pass there. An isolated copy of the branch passes every check:web part, check:roadmap, check:vectors and cargo fmt. pnpm e2e: 56 passed, 4 skipped, 1 failed (first-run.spec.ts:87 axe role-img-alt, the known shared-tree UI failure noted in feat/ui-changes-view's lane file; this lane changes no UI). Audit counts as code and security review; no command, event, error code or grant changed (securityReview na)."
+      ],
       "links": [
         "docs/specs/ipc-m2.md",
         "docs/design/handoff/workspace-history.md",

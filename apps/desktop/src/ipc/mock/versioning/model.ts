@@ -512,16 +512,22 @@ export class FakeVersioning {
       let found = groups.get(id);
       if (found === undefined) {
         const counts = (): ChangeCounts => ({ added: 0, modified: 0, deleted: 0, moved: 0 });
-        found = { place, files: counts(), folders: counts(), tags: 0, settings: false, available: 0, selected: 0 };
+        found = { place, files: counts(), folders: counts(), tags: 0, settings: false, items: 0, available: 0, selected: 0, required: 0 };
         groups.set(id, found);
       }
       return found;
     };
     for (const entry of items) {
       const target = group(entry.path, entry.kind);
-      if (isIncludable(entry)) target.available += 1;
-      if (entry.tags !== null) target.tags += 1;
-      if (!selected.has(entry)) continue;
+      target.items += 1;
+      if (entry.required) target.required += 1;
+      // A required item counts whatever its readiness: every selection includes it (ipc-m2 §6.4).
+      if (entry.required || isIncludable(entry)) target.available += 1;
+      const included = selected.has(entry);
+      // Left out, a modified or moved entry keeps its new tags; an added one's wait (ipc-m2 §6.4).
+      const keepsEntry = entry.change === 'modified' || entry.change === 'moved';
+      if (entry.tags !== null && (included || keepsEntry)) target.tags += 1;
+      if (!included) continue;
       target.selected += 1;
       (entry.kind === 'file' ? target.files : target.folders)[entry.change] += 1;
     }

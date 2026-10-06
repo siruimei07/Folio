@@ -1548,15 +1548,19 @@ export type SearchPage = {
 
 /**
  *  Which items a commit, a summary or an AI message covers. Metadata changes are never listed:
- *  every commit records them.
+ *  every commit records them. Every selection includes the required items, listed or not.
  */
 export type Selection = 
 /**
- *  Every includable item (ready or hashing) but these keys: select-all and Ctrl+A, without
- *  loading every page. Never includes an item that is not local or unreadable.
+ *  Every includable item (ready or hashing) but these keys, and every required item:
+ *  select-all and Ctrl+A, without loading every page. Includes an item that is not local or
+ *  unreadable only when it is required, and then the commit fails with its error.
  */
 { kind: "allExcept"; keys: string[] } | 
-/**  These items only. One that is not local or unreadable fails the commit with its error. */
+/**
+ *  These items, and every required item. One that is not local or unreadable fails the commit
+ *  with its error.
+ */
 { kind: "only"; keys: string[] };
 
 export type SelectionSummary = {
@@ -1670,14 +1674,32 @@ export type SummaryGroup = {
 	files: ChangeCounts,
 	/**  Included folder items, by change. */
 	folders: ChangeCounts,
-	/**  Entries in it whose tags changed (always included). */
+	/**
+	 *  Entries in it whose tag change the commit records: every tags row, and an item's when the
+	 *  selection includes it, or leaves it out but keeps its entry with the new tags (a modified
+	 *  entry at its path, a moved one at its old path). A held-back addition's tags wait.
+	 */
 	tags: number,
 	/**  Its own settings changed: a semester's or a course's. */
 	settings: boolean,
-	/**  Its includable items, included or not. */
+	/**
+	 *  Every item whose main path is in it, includable or not (blocked and required ones too);
+	 *  the places' `items` add up to `WorkspaceSummary.items`.
+	 */
+	items: number,
+	/**
+	 *  Its includable items and its required items, included or not: what a selection can
+	 *  include.
+	 */
 	available: number,
 	/**  Its included items. */
 	selected: number,
+	/**
+	 *  Its required items (bound to a metadata change), whatever their readiness; `available`
+	 *  and `selected` count them too. The course header's box: `selected - required` of
+	 *  `available - required`.
+	 */
+	required: number,
 };
 
 export type SyncProvider = "iCloud" | "oneDrive" | "dropbox" | "other";

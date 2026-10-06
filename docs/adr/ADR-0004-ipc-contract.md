@@ -230,6 +230,12 @@ pages of one revision consistent.
      existing `InUse` (ipc-m1.md §9.2, §16.1, §16.2) until `feat/ipc-recycle-cloud-trash` gives it
      a code of its own. No command, grant or binding changed. Independent audit (code and security)
      and `/simplify` passed.
+   - 2026-10-06, `feat/ipc-workspace-summary-counts` (decision `m2-summary-counts`): `SummaryGroup`
+     gains `items` and `required`, `available` counts the required items too, and `tags` only the
+     tag changes a commit records (ipc-m2.md §6.4); the `Selection` docs say that every selection
+     includes the required items (§5.1, §6.2). Bindings regenerated, the fake shell's summarize
+     and `REVIEWED_BINDINGS` updated. No command, event, error code or grant changed. Independent
+     audit (code and security) and `/simplify` passed.
 4. [x] Operations lane: amend ADR-0002 and library core §4.2 for the course code, optional badge
    text and colour, 1–3 character badges, and palette keys for preset tags (spec §20).
 5. [ ] Preview lane: the `folio-file` scheme, the main window's CSP sources, and an e2e test that

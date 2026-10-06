@@ -8,14 +8,16 @@ use super::history::ChangeKind;
 use super::types::{EntryKind, EntryRef, FileClass, PageRequest};
 
 /// Which items a commit, a summary or an AI message covers. Metadata changes are never listed:
-/// every commit records them.
+/// every commit records them. Every selection includes the required items, listed or not.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum Selection {
-    /// Every includable item (ready or hashing) but these keys: select-all and Ctrl+A, without
-    /// loading every page. Never includes an item that is not local or unreadable.
+    /// Every includable item (ready or hashing) but these keys, and every required item:
+    /// select-all and Ctrl+A, without loading every page. Includes an item that is not local or
+    /// unreadable only when it is required, and then the commit fails with its error.
     AllExcept { keys: Vec<String> },
-    /// These items only. One that is not local or unreadable fails the commit with its error.
+    /// These items, and every required item. One that is not local or unreadable fails the commit
+    /// with its error.
     Only { keys: Vec<String> },
 }
 
@@ -218,14 +220,24 @@ pub struct SummaryGroup {
     pub files: ChangeCounts,
     /// Included folder items, by change.
     pub folders: ChangeCounts,
-    /// Entries in it whose tags changed (always included).
+    /// Entries in it whose tag change the commit records: every tags row, and an item's when the
+    /// selection includes it, or leaves it out but keeps its entry with the new tags (a modified
+    /// entry at its path, a moved one at its old path). A held-back addition's tags wait.
     pub tags: u32,
     /// Its own settings changed: a semester's or a course's.
     pub settings: bool,
-    /// Its includable items, included or not.
+    /// Every item whose main path is in it, includable or not (blocked and required ones too);
+    /// the places' `items` add up to `WorkspaceSummary.items`.
+    pub items: u32,
+    /// Its includable items and its required items, included or not: what a selection can
+    /// include.
     pub available: u32,
     /// Its included items.
     pub selected: u32,
+    /// Its required items (bound to a metadata change), whatever their readiness; `available`
+    /// and `selected` count them too. The course header's box: `selected - required` of
+    /// `available - required`.
+    pub required: u32,
 }
 
 /// Where an item belongs: its course, else its semester, else the library root. A deleted

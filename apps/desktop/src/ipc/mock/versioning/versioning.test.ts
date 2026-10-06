@@ -15,7 +15,9 @@ import {
   type JobChanged,
   LIMITS,
   type Selection,
+  type SelectionSummary,
   shellEvents,
+  type SummaryGroup,
   shortId,
   versionUrl,
   type WorkspaceChanged,
@@ -23,6 +25,7 @@ import {
 } from '../..';
 import { installFakeShell, scenarioFixture } from '..';
 import type { FakeShell, FakeShellOptions } from '../shell';
+import { blobVersion, item } from './model';
 
 const NOW = Date.UTC(2026, 9, 4, 12);
 const ALL: Selection = { kind: 'allExcept', keys: [] };
@@ -172,6 +175,170 @@ describe('workspace', () => {
     expect(after.fingerprint).not.toBe(before);
     expect(after.notLocal).toBe(0);
   });
+
+  const NONE: Selection = { kind: 'only', keys: [] };
+
+  const summarize = async (selection: Selection, fingerprint: string) =>
+    unwrap(ipc.summarizeSelection({ selection, fingerprint }));
+
+  /** The group of the semester or course at `path`. */
+  function groupAt(summary: SelectionSummary, path: string): SummaryGroup {
+    const found = summary.groups.find((group) => group.place.kind !== 'library' && group.place.path === path);
+    if (found === undefined) throw new Error(`no group at ${path}`);
+    return found;
+  }
+
+  const sumOf = (groups: readonly SummaryGroup[], count: (group: SummaryGroup) => number) =>
+    groups.reduce((total, group) => total + count(group), 0);
+
+  it('counts every item of each place, blocked ones too, whatever the selection', async () => {
+    install();
+    const summary = await unwrap(ipc.getWorkspace());
+    const all = await summarize(ALL, summary.fingerprint);
+    expect(sumOf(all.groups, (group) => group.items)).toBe(summary.items);
+    // A ready png and an unreadable recording.
+    expect(groupAt(all, 'Fall 2026/ECO101 微观经济学')).toMatchObject({ items: 2, available: 1, selected: 1 });
+    // Only a photo that is not on this disk.
+    expect(groupAt(all, 'Personal/Photos')).toMatchObject({ items: 1, available: 0, selected: 0 });
+    const none = await summarize(NONE, summary.fingerprint);
+    expect(none.groups.map((group) => group.items)).toEqual(all.groups.map((group) => group.items));
+    expect(none.groups.every((group) => group.selected === 0)).toBe(true);
+  });
+
+  /** Two lectures the versioning rules now store (ipc-m2 §6.2): one ready, one unreadable. */
+  function addRequired(fake: FakeShell) {
+    fake.versioning.items = [
+      ...fake.versioning.items,
+      item({
+        change: 'modified',
+        kind: 'file',
+        path: `${MAT}/Lectures/Lecture 01.pdf`,
+        before: blobVersion(1_291_337, 'lecture 1'),
+        after: blobVersion(1_302_115, 'lecture 1'),
+        required: true,
+        parts: [{ kind: 'versioningRules' }],
+      }),
+      item({
+        change: 'modified',
+        kind: 'file',
+        path: `${MAT}/Lectures/Lecture 02.pdf`,
+        before: blobVersion(1_382_674, 'lecture 2'),
+        after: blobVersion(1_390_002, 'lecture 2'),
+        readiness: 'unreadable',
+        required: true,
+        parts: [{ kind: 'versioningRules' }],
+      }),
+    ];
+  }
+
+  it('counts the required items of each place, blocked ones too, as available and selected', async () => {
+    addRequired(install());
+    const { fingerprint } = await unwrap(ipc.getWorkspace());
+    const all = groupAt(await summarize(ALL, fingerprint), MAT);
+    const none = groupAt(await summarize(NONE, fingerprint), MAT);
+    // Three ready changes, and the two required lectures, which every selection includes.
+    expect(all).toMatchObject({ items: 5, available: 5, selected: 5, required: 2 });
+    expect(none).toMatchObject({ items: 5, available: 5, selected: 2, required: 2 });
+    // The course header's box counts what the person can change (ipc-m2 §6.4): on, then off.
+    expect(all.selected - all.required).toBe(all.available - all.required);
+    expect(none.selected - none.required).toBe(0);
+    expect(none.available - none.required).toBe(3);
+  });
+
+  it('keeps a required item in an allExcept that lists it, blocked or not (ipc-m2 §5.1, §6.2)', async () => {
+    addRequired(install());
+    const { fingerprint } = await unwrap(ipc.getWorkspace());
+    const required = (await items()).filter((entry) => entry.required);
+    expect(required.map((entry) => entry.readiness)).toEqual(['ready', 'unreadable']);
+    const all = await summarize(ALL, fingerprint);
+    const none = await summarize(NONE, fingerprint);
+    for (const entry of required) {
+      expect(await summarize({ kind: 'allExcept', keys: [entry.key] }, fingerprint), entry.path).toEqual(all);
+      expect(await summarize({ kind: 'only', keys: [entry.key] }, fingerprint), entry.path).toEqual(none);
+    }
+  });
+
+  it('counts the tag change of an item only when the commit records it (versioning §6.4)', async () => {
+    const fake = install();
+    const tags = fake.versioning.items.find((entry) => entry.tags !== null)?.tags ?? null;
+    expect(tags).not.toBeNull();
+    const lecture = blobVersion(1_400_000, 'lecture 3');
+    const added = item({ change: 'added', kind: 'file', path: `${MAT}/Lectures/Lecture 03.pdf`, after: lecture, tags });
+    const moved = item({
+      change: 'moved',
+      kind: 'file',
+      path: `${MAT}/Lectures/Lecture 04.pdf`,
+      fromPath: `${MAT}/Lecture 04.pdf`,
+      before: lecture,
+      after: lecture,
+      tags,
+    });
+    fake.versioning.items = [...fake.versioning.items, added, moved];
+    const { fingerprint } = await unwrap(ipc.getWorkspace());
+    const tagsOfMat = async (selection: Selection) => groupAt(await summarize(selection, fingerprint), MAT).tags;
+    // The review (modified), a tags row of its own, the addition and the move.
+    expect(await tagsOfMat(ALL)).toBe(4);
+    // Left out, the addition keeps its tags for the commit that adds it; the move writes its new
+    // tags at its old path, and the review at its path.
+    expect(await tagsOfMat({ kind: 'allExcept', keys: [added.key] })).toBe(3);
+    expect(await tagsOfMat({ kind: 'allExcept', keys: [moved.key] })).toBe(4);
+    expect(await tagsOfMat(NONE)).toBe(3);
+    expect(await tagsOfMat({ kind: 'only', keys: [added.key] })).toBe(4);
+  });
+
+  it('gives the select-all what the person can change, summed over the groups (ipc-m2 §6.4)', async () => {
+    addRequired(install());
+    const workspace = await unwrap(ipc.getWorkspace());
+    const ready = (await items()).find((entry) => !entry.required && entry.readiness === 'ready');
+    if (ready === undefined) throw new Error('no ready item');
+    const summary = await summarize({ kind: 'allExcept', keys: [ready.key] }, workspace.fingerprint);
+    // In the totals the unreadable required lecture makes up for the item left out…
+    expect(summary.items).toBe(workspace.includable);
+    // …in the groups it does not: one item the person can include is left out, so the box is mixed.
+    const changeable = sumOf(summary.groups, (group) => group.available - group.required);
+    const included = sumOf(summary.groups, (group) => group.selected - group.required);
+    expect(changeable).toBe(workspace.includable - 1);
+    expect(included).toBe(changeable - 1);
+  });
+
+  it.each([
+    { scenario: 'small', required: false },
+    { scenario: 'diffs', required: false },
+    { scenario: 'small', required: true },
+  ] as const)(
+    'keeps required ≤ selected ≤ available ≤ items in every place of $scenario (required items: $required)',
+    async ({ scenario, required }) => {
+      const fake = install(scenario);
+      if (required) addRequired(fake);
+      const summary = await unwrap(ipc.getWorkspace());
+      const listed = await items();
+      // An `only` that names a blocked item that is not required is the one exception (ipc-m2 §6.4).
+      const includable = listed.filter(
+        (entry) => entry.required || entry.readiness === 'ready' || entry.readiness === 'hashing',
+      );
+      const selections: Selection[] = [
+        ALL,
+        NONE,
+        ...listed.map((entry): Selection => ({ kind: 'allExcept', keys: [entry.key] })),
+        ...includable.map((entry): Selection => ({ kind: 'only', keys: [entry.key] })),
+      ];
+      const total = (counts: Record<string, number>) => Object.values(counts).reduce((sum, count) => sum + count, 0);
+      for (const selection of selections) {
+        const result = await summarize(selection, summary.fingerprint);
+        const label = `${selection.kind} [${selection.keys.join(', ')}]`;
+        expect(sumOf(result.groups, (group) => group.items), label).toBe(summary.items);
+        expect(sumOf(result.groups, (group) => group.selected), label).toBe(result.items);
+        for (const group of result.groups) {
+          const where = `${label} in ${group.place.kind === 'library' ? 'the library' : group.place.path}`;
+          expect(group.required, where).toBeLessThanOrEqual(group.selected);
+          expect(group.selected, where).toBeLessThanOrEqual(group.available);
+          expect(group.available, where).toBeLessThanOrEqual(group.items);
+          expect(total(group.files) + total(group.folders), where).toBe(group.selected);
+          if (!required) expect(group.required, where).toBe(0);
+        }
+      }
+    },
+  );
 });
 
 describe('commit', () => {

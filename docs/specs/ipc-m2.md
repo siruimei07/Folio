@@ -139,13 +139,14 @@ A selection names at most `batch` (10,000) keys.
 
 ```ts
 type Selection =
-  | { kind: "allExcept"; keys: string[] }   // every includable item but these (select-all, Ctrl+A)
-  | { kind: "only"; keys: string[] };       // these items only
+  | { kind: "allExcept"; keys: string[] }   // every includable item but these, and the required ones (select-all, Ctrl+A)
+  | { kind: "only"; keys: string[] };       // these items, and the required ones (§6.2)
 ```
 
 - **Includable** items are those whose readiness is `ready` or `hashing` (versioning §6.2). An
-  `allExcept` selection never includes an item that is `notLocal` or `unreadable`; an `only`
-  selection that names one fails the commit with that item's error (versioning §7.3).
+  `allExcept` selection never includes an item that is `notLocal` or `unreadable` unless it is
+  required (§6.2); an `only` selection that names one fails the commit with that item's error
+  (versioning §7.3).
 - Metadata changes are never in a selection: every commit records them (versioning §6.4).
 - Commands that take a selection also take the `fingerprint` the UI read with it. A different
   fingerprint is `WorkspaceChanged`, checked first; with an equal one, a key the workspace does
@@ -154,7 +155,8 @@ type Selection =
 - **The fingerprint also covers readiness**: each item counts with its key and whether it is
   includable (a refinement of versioning §6.5). A file that finishes downloading, or one that
   another program locks, changes the fingerprint, so an `allExcept` selection never includes an
-  item the user saw as blocked, and never leaves out silently one the user saw as included.
+  item the user saw as blocked, other than a required one (§6.2), and never leaves out silently
+  one the user saw as included.
   `hashing` and `ready` count the same, so hashing does not change it.
 
 ### 5.2 Changes and sides
@@ -248,6 +250,10 @@ type ItemPart =
   rules changed so that this file is stored now, while its own change was held back: such an item
   is `required`, so every selection includes it, an `allExcept` that lists it included (handoff
   open question for `feat/ui-changes-view`: a check box that stays on).
+- **`required`** holds whatever the item's readiness: every selection includes a required item,
+  one that is `notLocal` or `unreadable` too, which then fails every commit with its error until
+  it is on this disk and can be read (versioning §5.2; §7.1, §13). `summarize_selection` counts
+  the required items of each place (`SummaryGroup.required`, §6.4).
 - `tagsChanged`: the entry also has a tag change, which the item's diff shows under its content
   (§9.3, `Diff.tags`) and which is not a row of `list_metadata_changes`.
 
@@ -293,10 +299,12 @@ type SummaryGroup = {
   place: Place;
   files: ChangeCounts;           // included file items, by change
   folders: ChangeCounts;         // included folder items, by change
-  tags: number;                  // entries in it whose tags changed (always included)
+  tags: number;                  // entries in it whose tag change the commit records (below)
   settings: boolean;             // its own settings changed (a semester's or a course's)
-  available: number;             // its includable items, included or not
-  selected: number;              // its included items
+  items: number;                 // every item in it, includable or not
+  available: number;             // its includable and required items, included or not
+  selected: number;              // its included items (every required one among them)
+  required: number;              // its required items (§6.2), whatever their readiness
 };
 type Place =
   | { kind: "library" }                                              // files at the library root
@@ -308,10 +316,50 @@ type ChangeCounts = { added: number; modified: number; deleted: number; moved: n
 - An item belongs to the place of its main path: its course, else its semester (files directly
   in it or in folders that are not courses), else the library root (versioning §6.6). A course or
   semester that was deleted keeps its committed name, with `folder: null`.
-- The UI writes the template from it (versioning §8.1, handoff §4.6); grouped mode's course
-  header shows on, mixed or off from `selected` and `available` (handoff §3.5).
+- **Counting.** A fake or a real summarize counts in one pass over the listed items, each adding
+  to the group of its place: every item adds 1 to `items`; a required one adds 1 to `required`;
+  a required or includable one adds 1 to `available`; one the selection includes (§5.1, every
+  required item among them) adds 1 to `selected` and to `files` or `folders` under its `change`;
+  one whose tags changed too (`tagsChanged`) adds 1 to `tags` when the commit records that tag
+  change: always when the selection includes it, and when it leaves it out only if an entry of
+  the item with a tag change stays in the commit with its new tags, a modified entry at its path
+  or a moved one at its old path (versioning §6.4: an entry whose addition is held back keeps its
+  tags for the commit that adds it, a deleted one its committed tags). Then each `tags`,
+  `semester` or `course` row of `list_metadata_changes` (§6.3) adds 1 to `tags` or sets
+  `settings` of its place. Those rows are not items: a place whose only changes are tag or
+  settings changes has a group with `items: 0`.
+- **Invariants.** In every group the counts of `files` and `folders` add up to `selected`, and
+  `required ≤ selected ≤ available ≤ items`. The groups' `items` add up to
+  `WorkspaceSummary.items` read under the same fingerprint (every item has one place), and their
+  `selected` to `SelectionSummary.items`. The one exception to `selected ≤ available` is an `only`
+  selection that names a `notLocal` or `unreadable` item that is not required: that item counts
+  in `selected` but not in `available`, and the commit fails on it (§5.1). The UI never names one.
+- The UI writes the template from it (versioning §8.1, handoff §4.6).
+- **Group headers.** Grouped mode's course header (handoff §3.5; a semester's and the library
+  root's alike) shows `items` as its count, so the headers add up to `WorkspaceSummary.items`.
+  Its check box counts only what the person can include or leave out (handoff §3.4): required
+  items are always in and other blocked ones never, so neither counts. With
+  `changeable = available - required` and `included = selected - required`, in this order: when
+  `changeable` is 0, nothing in the place is the person's to change, and the box is disabled, on
+  when `required` is above 0 (those items are in every commit) and off otherwise; else it is on
+  when `included` equals `changeable`, off when `included` is 0, and mixed between.
+- **Select-all.** The select-all (handoff §3.1) counts the same way over the whole list, with
+  `included` and `changeable` summed over the groups, and is disabled while that `changeable` is
+  0. `SelectionSummary.items` and `WorkspaceSummary.includable` cannot give it: both count the
+  required items, and `items` the blocked ones too, so a left-out item and a blocked required one
+  cancel out (one ready item left out and one unreadable required item: `items` equals
+  `includable`, and the box would show on).
 - It is computed in the core, so the UI never loads every item; the UI asks again when the
   selection changes, after a short pause.
+- **Amended 2026-10-06** (lane `feat/ipc-workspace-summary-counts`, decision
+  `m2-summary-counts`): `items` and `required` were added, and `available`, which counted the
+  includable items only, now counts the required ones too, whatever their readiness. A required
+  item can be blocked (versioning §5.2: a change of the versioning rules binds a held-back file,
+  which may not be on this disk or may be locked by another program), and every selection
+  includes it; only so is the header's `selected - required` of `available - required` exact.
+  `tags` counts an item's tag change only when the commit records it (versioning §6.4), not for
+  every item whose tags changed, so the template never names a tag change that waits for a file
+  left out (handoff §3.3).
 
 ## 7. Commits
 
@@ -990,7 +1038,7 @@ The console drives it through `window.__FOLIO_FAKE_SHELL__` as before, plus `edi
 | Where | Tests |
 |---|---|
 | This lane (Rust) | Bindings drift (`export_bindings`, over every declared command); `runtime_commands_are_declared_and_granted` with the new groups declared and nothing registered; every `AppError` serializes as `{ code, detail }` with a unique code; `LIMITS` keys; `FILE_ERROR_CODES` are codes |
-| This lane (TypeScript) | The fake answers every command and knows every event (`contract.test.ts`); `REVIEWED_BINDINGS`; the fake follows §5–§13 (`mock/versioning/*.test.ts`): selections and fingerprints, keys checked, paging and unfolding diffs, reword and uncommit rules, restore outcomes, the AI key never in a response, one generation at a time and stopping it; `versionUrl` and `shortId` |
+| This lane (TypeScript) | The fake answers every command and knows every event (`contract.test.ts`); `REVIEWED_BINDINGS`; the fake follows §5–§13 (`mock/versioning/*.test.ts`): selections and fingerprints, keys checked, summary counts per place (§6.4), paging and unfolding diffs, reword and uncommit rules, restore outcomes, the AI key never in a response, one generation at a time and stopping it; `versionUrl` and `shortId` |
 | Each implementation lane | For every command: each validation rule returns its code; a stale key or id is `NotFound` or `WorkspaceChanged` and changes nothing; limits are `InvalidArgument`; events carry the right revision; plus versioning §16 for its area |
 | AI lane | The key absent from every IPC response, event and log; the confirmation for other origins (test double); an endpoint change to another origin deletes the key; `cancel_ai_request` crossing an answer; versioning §16's AI row |
 | End to end | One flow per feature (versioning §16 "E2E"); until a command is implemented, calling it is rejected (`not allowed`) |
