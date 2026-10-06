@@ -5,7 +5,7 @@
     "owner": "Sirui",
     "repo": "https://github.com/siruimei07/Folio",
     "explorer": "https://claude.ai/artifact/Mv1f9eXfrkYTbAs7fqQVDC",
-    "updated": "2026-10-06T02:50-04:00",
+    "updated": "2026-10-06T11:10-04:00",
     "updatedBy": "Claude Code",
     "models": {
       "fable": "Fable 5.1",
@@ -1918,6 +1918,34 @@
       ]
     },
     {
+      "id": "docs/docs-roadmap-icloud-busy",
+      "title": "iCloud 启动后拒绝回收：加修复 lane",
+      "milestone": "M2",
+      "phase": "m2-impl",
+      "track": "flow",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "fix/core-recycle-cloud-placeholder"
+      ],
+      "summary": "真实 iCloud 测试发现 iCloud 启动后约 20 分钟拒绝回收：加修复 lane fix/core-recycle-icloud-startup，合约 lane 和同步规格补上相关说明，记下 iCloud 回收站里删不掉的 NFD 文件",
+      "status": "done",
+      "updated": "2026-10-06",
+      "landed": "2026-10-06",
+      "gates": {
+        "check": "pass",
+        "e2e": "na",
+        "codeReview": "na",
+        "securityReview": "na",
+        "simplify": "na",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "docs/roadmap/roadmap.json"
+      ]
+    },
+    {
       "id": "refactor/core-sta-helper",
       "title": "合并 STA 辅助函数",
       "milestone": "M1",
@@ -3134,6 +3162,33 @@
       }
     },
     {
+      "id": "fix/core-recycle-icloud-startup",
+      "title": "iCloud 启动后约 20 分钟拒绝回收",
+      "milestone": "M2",
+      "phase": "m2-impl",
+      "track": "core",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "fix/core-recycle-cloud-placeholder"
+      ],
+      "summary": "iCloud for Windows（15.10.39）启动后约 17–19 分钟内，已下载的文件和所有文件夹送回收站都被拒（0x8007017B），重试无效，之后恢复；Folio 现在报「文件操作出错」。改报 RecycleFailure::CloudBusy（稍后再试，合约 lane 之前映射成 InUse），补测试和规格",
+      "status": "planned",
+      "updated": "2026-10-06",
+      "links": [
+        "docs/specs/windows-adapter.md",
+        "docs/specs/ipc-m1.md"
+      ],
+      "prompt": {
+        "extra": [
+          "Found 2026-10-06 by the ignored real-iCloud test (win::recycle::tests::in_icloud_drive_files_only_in_the_cloud_go_to_recently_deleted), right after a reboot: for about 17–19 minutes after iCloud for Windows 15.10.39 starts, IFileOperation recycle of a downloaded (local) file or of any folder under iCloud Drive fails with 0x8007017B (ERROR_CLOUD_FILE_NOT_SUPPORTED) after about 2.6 s, PreDeleteItem flags 0x282, no fallback, the item unchanged; retries (10 over 55 s) fail the same way; afterwards the same items go to the Recycle Bin in about 2.7 s. A file not yet turned into a placeholder recycles normally; cloud-only files still give CloudTrash. Attributes, in-sync state and reparse tag are the same during and after the refusal, so the look before the shell cannot predict it. The roadmap session's investigation notes and probe: C:\\Users\\Desktop\\AppData\\Local\\Temp\\claude\\D--CS-~1\\2B496F~1\\SCRATC~1\\agents\\icloud-recycle-bc70812c\\.",
+          "Code: in win/recycle.rs error_of, map ERROR_CLOUD_FILE_NOT_SUPPORTED for an item that is still at its path to a new RecycleFailure::CloudBusy (\"the cloud provider refused the move; try again later\"), keeping the detail text; the existing rule stays (0x8007017B plus the item having left its path is CloudTrash). folio-app maps CloudBusy to the existing InUse code until feat/ipc-recycle-cloud-trash gives it its own. Never Unrecyclable (a later \"delete permanently\" offer would push users to delete for good files the Recycle Bin takes 20 minutes later), and no retry loop in the adapter (each try costs about 2.6 s and the refusal lasts minutes).",
+          "Tests: the_shell_report_and_the_path_say_where_the_item_went's \"local + not_supported\" case expects CloudBusy; a recycle_with case where the replayed shell reports 0x8007017B for a local file gives CloudBusy with the file still there; the ignored iCloud test, while local.txt is refused with CloudBusy, asserts it still exists, retries every 30 s for up to about 25 minutes and prints why, then asserts RecycleBin; consider a longer dehydration wait than 300 s; make the test send what it leaves behind to the Recycle Bin instead of TempDir's permanent delete.",
+          "Spec: windows-adapter.md §4.1 errors and the RecycleFailure list gain CloudBusy; §4.2 a row measured on iCloud 15.10.39 (2026-10-06) with the notes above, plus: a plain rename out of iCloud Drive gets error 379 during the refusal and a 60 s timeout (426) after it; probably the field test's one-off 0x8007017B; the iCloud version changed from 15.8.118 to 15.10.39 on 2026-10-05; §4.4 the iCloud row (failed twice within about 10 minutes of iCloud starting, passed twice from 14:26 UTC on the same build); ipc-m1.md §16.2 the CloudBusy → InUse row. Rerun the real iCloud test once iCloud has been running for more than 20 minutes."
+        ]
+      }
+    },
+    {
       "id": "feat/ipc-recycle-cloud-trash",
       "title": "回收结果：已进 iCloud 最近删除",
       "milestone": "M2",
@@ -3142,7 +3197,8 @@
       "agent": "claude-code",
       "size": "S",
       "deps": [
-        "fix/core-recycle-cloud-placeholder"
+        "fix/core-recycle-cloud-placeholder",
+        "fix/core-recycle-icloud-startup"
       ],
       "summary": "删除和导入的结果报告「已进 iCloud 最近删除」（Recycled::CloudTrash）；装着只在云端的文件的文件夹给出自己的错误码和文案（RecycleFailure::CloudOnly，现在映射成 NotRecyclable）；顺带定 shell 按名字找不到的条目（名字末尾是点或空格）报哪种失败",
       "status": "planned",
@@ -3158,7 +3214,8 @@
           "Contract: report CloudTrash in the delete_entries and import (replace, deleteOriginals) results and give CloudOnly its own error code; update ipc-m1.md, regenerate the bindings, and update the fake shell and its REVIEWED_BINDINGS in the same commit.",
           "UI: the delete and import results say where the files went (for example \"Moved to iCloud's Recently Deleted\") and explain a refused folder; copy through design:ux-copy. The library-actions handoff has no row for these: bring me the copy and any new state as a short choice before building.",
           "Also settle with me which failure an item the shell cannot reach by name reports (a name ending in a dot, or a last name ending in a space; only possible above the library or in an import source). Today it is Other (FileSystem); the alternative is NotRecyclable, which would make it eligible for a later \"delete permanently\" offer. The recycle audit recommends keeping Other.",
-          "Add the FOLIO_TEST_ICLOUD_DIR line to docs/specs/testing-strategy.md once test/core-sync-simulation has landed (its hunk is next to that line)."
+          "Add the FOLIO_TEST_ICLOUD_DIR line to docs/specs/testing-strategy.md once test/core-sync-simulation has landed (its hunk is next to that line).",
+          "Also give RecycleFailure::CloudBusy (fix/core-recycle-icloud-startup: iCloud refuses moves out of iCloud Drive for about 20 minutes after it starts) its own IPC code and wording, e.g. \"iCloud is busy. Try again in a few minutes.\"; it maps to InUse until then."
         ]
       }
     },
@@ -3221,7 +3278,8 @@
           "Field test (docs/research/icloud-field-test.md §2 and §5, iCloud for Windows 15.8 with the iPad): NFD names never upload from Windows; an NFC/NFD twin pair stalls every upload until one is removed (about 6 min to recover); an iPad case-only rename deletes the file; a name invalid on Windows becomes its \"_\" form on iCloud when Windows writes it; conflict copies are named per device (\"p3 2.png\", \"p3(1).png\" on Windows, \"p3 3.png\" on the iPad), the writer's own file can be renamed and the original path can vanish; renaming over a mirror file is reliable, also over cloud-only files; every delete or replace also lands in Recently Deleted; a head record arrived about 2.5 min before a 200 MB pack; pins are inherited.",
           "Sync simulation (crates/folio-core/tests/sync_sim/README.md, \"Rules the reference model adds\"): 18 rules ADR-0003 leaves open, each from a failing seed. Settle each one in sync.md with its invariant. In particular remote-format.md §10.1 pack deletion has a real race (two devices can each delete the other's copy; the model keeps only a smaller-named pack as \"the other copy\"); an abandoned intent must expire; a head is published only after every mirror write; a file without stored versions never gets a new path whose content the device cannot obtain; timers run on a monotonic clock. The §10.1 fix changes an approved format document: bring it to me as a decision with options (decision pack-deletion-race).",
           "The simulation's iCloud assumptions (identical concurrent uploads do not conflict; an iCloud-updated file gets a new file id or size) were made before the field test ran: confirm or correct them against the results and tell the simulation which to change.",
-          "From fix/core-recycle-cloud-placeholder: ADR-0003 §7 \"mirror deletions go through the shell\" now gives CloudTrash for a cloud-only mirror file and CloudOnly for a folder that holds one, so the mirror must delete files before folders. Seen once: DeleteFileW on a placeholder plus removing its folder left neither in Windows' .Trash after 3 minutes, and iCloud put the emptied parent back (not checked on the iPad). Measure direct deletion before the mirror relies on Recently Deleted."
+          "From fix/core-recycle-cloud-placeholder: ADR-0003 §7 \"mirror deletions go through the shell\" now gives CloudTrash for a cloud-only mirror file and CloudOnly for a folder that holds one, so the mirror must delete files before folders. Seen once: DeleteFileW on a placeholder plus removing its folder left neither in Windows' .Trash after 3 minutes, and iCloud put the emptied parent back (not checked on the iPad). Measure direct deletion before the mirror relies on Recently Deleted.",
+          "From the 2026-10-06 recycle investigation: iCloud for Windows auto-updated from 15.8.118 (the field test's version) to 15.10.39 on 2026-10-05; for about 17–19 minutes after it starts it refuses moves out of iCloud Drive (recycle 0x8007017B, rename 379), which the mirror must survive; and since 2026-10-06 it retries every 30 s, without success, to delete .Trash\\FolioFieldTest\\t04-names, which holds the field test's NFD-named t04-twin-é.txt: an NFD name can block iCloud for Windows' own trash."
         ]
       }
     },
@@ -4157,6 +4215,11 @@
       "state": "open",
       "item": "文件还在算哈希时，第一次读取失败的差异会随每个 WorkspaceChanged 闪一下并再念一次（差异组件第 3 轮审计记下）",
       "lane": "feat/ui-changes-view"
+    },
+    {
+      "state": "open",
+      "item": "iCloud for Windows 从 10-06 起每 30 秒重试删除 iCloud Drive 回收站里的 .Trash\\FolioFieldTest\\t04-names（里面是实测留下的 NFD 名字文件 t04-twin-é.txt），一直删不掉：Sirui 可以在 iPad 或 iCloud.com 的「最近删除」里把它彻底删掉（Folio 不做永久删除）",
+      "lane": "docs/specs-sync"
     }
   ],
   "risks": [
@@ -4564,6 +4627,11 @@
       "at": "2026-10-06",
       "by": "Claude Code",
       "text": "合并：feat/ui-diff-viewer（79f5a07，CI 37453770679 绿，独立审计 4 轮）。开工：feat/ui-history-view、feat/ui-changes-view。决策 diff-word-version"
+    },
+    {
+      "at": "2026-10-06",
+      "by": "Claude Code",
+      "text": "真实 iCloud 回收测试：重启后第一次失败（iCloud 15.10.39 启动后约 17–19 分钟拒绝回收已下载的文件和文件夹，0x8007017B），之后两次通过；新增 fix/core-recycle-icloud-startup"
     }
   ]
 }
