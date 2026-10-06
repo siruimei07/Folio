@@ -1,7 +1,7 @@
 // The problems list (library-actions handoff §11) against the fake shell: the header with its
 // count, the groups in order, focus on the title, Copy path and Edit ignore rules, paging as the
-// list scrolls, the refetch on ProblemsChanged, the empty, loading and error states, and the
-// footer's scan time.
+// list scrolls (a page renders only the rows it adds), the refetch on ProblemsChanged, the empty,
+// loading and error states, and the footer's scan time.
 import { act, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, onTestFinished, vi } from 'vitest';
 
@@ -9,6 +9,7 @@ import { ActivityControl } from '../app/activity/ActivityControl';
 import { noteFinished, resetJobNotes } from '../app/activity/notes';
 import { DialogHost } from '../app/DialogHost';
 import { closeDialog, HostedDialogs, useNavigation } from '../app/navigation';
+import { MiddleTruncate } from '../components/MiddleTruncate/MiddleTruncate';
 import { keys } from '../data/keys';
 import type { Job, Problem } from '../ipc';
 import { NOW } from '../test/data';
@@ -26,6 +27,26 @@ function rowCount(): number {
 }
 
 const listEnd = fakeListEnd(rowCount);
+
+/**
+ * How long one page of the list may take to show: twice the slowest page measured, rounded up to
+ * 500 ms. Measured with 30 parallel processes running this file and SearchDialog.test.tsx beside a
+ * full vitest run or a full `pnpm check`, 270 runs of each paging test: a page wait took a median of
+ * 239–535 ms, 10 of 2,970 took over waitFor's default 1 s, the slowest 2,948 ms (a first page, in a
+ * stall that also failed unrelated tests), and one 450-row test ran past vitest's 5 s limit. Main's
+ * CI failed on a page that took over 1 s (run 37519512994).
+ */
+const PAGE_WAIT = { timeout: 6000 };
+/** A paging test's own limit: its page waits (three at most), and as long again for the rest. */
+const PAGING_TEST = { timeout: 4 * PAGE_WAIT.timeout };
+
+// The real MiddleTruncate, watched: each row renders its title through it once per render.
+vi.mock('../components/MiddleTruncate/MiddleTruncate', { spy: true });
+
+/** How many times the row titled `text` has rendered in this test. */
+function titleRenders(text: string): number {
+  return vi.mocked(MiddleTruncate).mock.calls.filter(([props]) => props.text === text).length;
+}
 
 const SAMPLE: Problem[] = [
   { kind: 'notRelocated', from: 'Personal/a.pdf', to: 'MAT232/a.pdf', cause: 'folderTags' },
@@ -53,8 +74,8 @@ function titled(text: string) {
     element?.classList.contains('problems__row-title') === true && element.textContent === text;
 }
 
-function rowTitle(text: string) {
-  return screen.findByText(titled(text));
+function rowTitle(text: string, wait?: typeof PAGE_WAIT) {
+  return screen.findByText(titled(text), undefined, wait);
 }
 
 function queryRowTitle(text: string) {
@@ -214,34 +235,43 @@ describe('ProblemsDialog', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
-  it('loads a page more each time the end of the list comes into view', async () => {
+  it('loads a page more each time the end of the list comes into view', PAGING_TEST, async () => {
     renderProblems(manyLinks(450));
-    await rowTitle('Links/link 0');
+    await rowTitle('Links/link 0', PAGE_WAIT);
     expect(screen.getByRole('img', { name: '450 problems' })).toBeInTheDocument();
     expect(screen.getAllByRole('listitem')).toHaveLength(200);
     expect(screen.getByText('Loading more problems…')).toBeInTheDocument();
     listEnd.reach();
     await waitFor(() => {
       expect(rowCount()).toBe(400);
-    });
+    }, PAGE_WAIT);
     listEnd.reach();
     await waitFor(() => {
       expect(rowCount()).toBe(450);
-    });
+    }, PAGE_WAIT);
     expect(screen.queryByText('Loading more problems…')).toBeNull();
     expect(screen.getByRole('region', { name: "Shortcuts Folio doesn't follow, 450 items" })).toBeInTheDocument();
   });
 
-  it('loads the next page when the end is reached the moment a page shows', async () => {
+  it('loads the next page when the end is reached the moment a page shows', PAGING_TEST, async () => {
     renderProblems(manyLinks(450));
-    await rowTitle('Links/link 0');
+    await rowTitle('Links/link 0', PAGE_WAIT);
     // Reaches the end in the microtask after the commit that shows 400 rows, before React has
-    // run that commit's effects: the earliest a user could scroll there.
+    // run that commit's effects: the earliest a user could scroll there. The page arrives outside
+    // `act`, a default-lane update, so React runs those effects in a later task. The watcher of
+    // the first page reports first and the list skips it (its onEnd has not seen page 2 yet); the
+    // effects then watch the end anew, and that watcher, which reports at once, has to load page 3.
+    // The reach landed in this window in all 292 runs of a probe under 30 parallel processes, and
+    // the last check makes sure it did here: page 3 ends the paging, so no watcher starts for it,
+    // and a watcher started after the reach is the one those effects started. A reach after the
+    // effects reaches that watcher itself, and the check fails.
     let reached = false;
+    let watchesAtReach = 0;
     const scroll = new MutationObserver(() => {
       if (rowCount() !== 400) return;
       scroll.disconnect();
       reached = true;
+      watchesAtReach = listEnd.watches();
       listEnd.reachNow();
     });
     scroll.observe(document.body, { childList: true, subtree: true });
@@ -251,21 +281,52 @@ describe('ProblemsDialog', () => {
     listEnd.reach();
     await waitFor(() => {
       expect(reached).toBe(true);
-    });
+    }, PAGE_WAIT);
     await waitFor(() => {
       expect(rowCount()).toBe(450);
-    });
+    }, PAGE_WAIT);
+    expect(listEnd.watches()).toBeGreaterThan(watchesAtReach);
   });
 
-  it('asks for the next page by itself while the end of a short list is in view', async () => {
+  it('renders only the rows a page adds, and a row again when the shell changes its problem', PAGING_TEST, async () => {
+    const { shell } = renderProblems(manyLinks(250));
+    await rowTitle('Links/link 0', PAGE_WAIT);
+    const first = document.querySelector('.problems__row');
+    const copy = first?.querySelector('button');
+    expect(copy).toHaveAccessibleName('Copy path of Links/link 0');
+    const renders = titleRenders('Links/link 0');
+    listEnd.reach();
+    await waitFor(() => {
+      expect(rowCount()).toBe(250);
+    }, PAGE_WAIT);
+    // The first page's rows stayed as they were: the same nodes, not rendered again.
+    expect(document.querySelector('.problems__row')).toBe(first);
+    expect(first?.querySelector('button')).toBe(copy);
+    expect(titleRenders('Links/link 0')).toBe(renders);
+    expect(titleRenders('Links/link 249')).toBeGreaterThan(0);
+
+    // The first problem changes and keeps its id; ProblemsChanged refetches the pages.
+    const unchanged = titleRenders('Links/link 1');
+    act(() => {
+      const [item] = shell.library.problems;
+      if (item === undefined) throw new Error('the list has problems');
+      shell.library.problems[0] = { ...item, problem: { kind: 'link', folder: 'Links', name: 'renamed' } };
+      shell.addProblems([]);
+    });
+    expect(await rowTitle('Links/renamed', PAGE_WAIT)).toBeInTheDocument();
+    expect(queryRowTitle('Links/link 0')).toBeNull();
+    expect(titleRenders('Links/link 1')).toBe(unchanged);
+  });
+
+  it('asks for the next page by itself while the end of a short list is in view', PAGING_TEST, async () => {
     listEnd.fit();
     renderProblems(manyLinks(250));
     // A wait for the first page, then one for the next, which the list asks for without any
     // scrolling: one wait for both would have to cover every render of the list in one timeout.
-    await rowTitle('Links/link 0');
+    await rowTitle('Links/link 0', PAGE_WAIT);
     await waitFor(() => {
       expect(rowCount()).toBe(250);
-    });
+    }, PAGE_WAIT);
     expect(screen.queryByText('Loading more problems…')).toBeNull();
   });
 

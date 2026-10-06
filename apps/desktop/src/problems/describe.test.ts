@@ -1,10 +1,19 @@
 // The words of every problem kind and cause (library-actions handoff §11 table), the §11 group
-// order, and the characters an `invalidCharacter` row names.
+// order, the characters an `invalidCharacter` row names, and the describer that keeps a row's
+// object while its problem is unchanged.
 import i18n from 'i18next';
 import { describe, expect, it } from 'vitest';
 
 import type { Problem, ProblemItem } from '../ipc';
-import { describeProblem, GROUPS, groupProblems, invalidCharacters, joinPath, type ProblemsT } from './describe';
+import {
+  describeProblem,
+  describer,
+  GROUPS,
+  groupProblems,
+  invalidCharacters,
+  joinPath,
+  type ProblemsT,
+} from './describe';
 
 const t = i18n.getFixedT(null, ['problems', 'shell', 'errors']) as unknown as ProblemsT;
 
@@ -26,19 +35,56 @@ describe('joinPath', () => {
   });
 });
 
+describe('describer', () => {
+  it('describes an item once: the same item gets the same row, a changed one with its id a new row', () => {
+    const describe = describer(t, 'en');
+    const first = item('1', { kind: 'link', folder: 'Links', name: 'x' });
+    const row = describe(first);
+    expect(row).toEqual({ id: '1', ...describeProblem(t, first.problem, 'en') });
+    expect(describe(first)).toBe(row);
+    // A refetch that changed the problem brings a new item with the same id.
+    const changed = describe(item('1', { kind: 'link', folder: 'Links', name: 'y' }));
+    expect(changed).not.toBe(row);
+    expect(changed).toMatchObject({ id: '1', title: 'Links/y' });
+  });
+
+  it('describes anew with a new describer, as after a language change', () => {
+    const first = item('1', { kind: 'invalidName', folder: null, name: 'a:b?.md', rule: 'invalidCharacter' });
+    const english = describer(t, 'en')(first);
+    const again = describer(t, 'en')(first);
+    expect(again).not.toBe(english);
+    expect(again).toEqual(english);
+    // `language` formats the list of characters.
+    expect(describer(t, 'de')(first).explanation).toContain('( : und ? )');
+  });
+});
+
 describe('groupProblems', () => {
   it('lists the groups in the §11 order, leaving out empty ones, rows in the order they came', () => {
-    const groups = groupProblems(t, [
+    const groups = groupProblems([
       item('1', { kind: 'notRelocated', from: 'a', to: 'b', cause: 'tooLong' }),
       item('2', { kind: 'link', folder: null, name: 'x' }),
       item('3', { kind: 'notUnicode', folder: null, name: '�' }),
       item('4', { kind: 'link', folder: null, name: 'y' }),
-    ], 'en');
+    ], describer(t, 'en'));
     expect(groups.map((group) => group.kind)).toEqual(['notUnicode', 'link', 'notRelocated']);
     expect(groups[1]?.rows.map((row) => [row.id, row.title])).toEqual([
       ['2', 'x'],
       ['4', 'y'],
     ]);
+  });
+
+  it('keeps the rows it has described when more items arrive', () => {
+    const describe = describer(t, 'en');
+    const page = [
+      item('1', { kind: 'link', folder: null, name: 'x' }),
+      item('2', { kind: 'special', folder: null, name: 'p' }),
+    ];
+    const before = groupProblems(page, describe);
+    const after = groupProblems([...page, item('3', { kind: 'link', folder: null, name: 'y' })], describe);
+    expect(after[0]?.rows[0]).toBe(before[0]?.rows[0]);
+    expect(after[1]?.rows[0]).toBe(before[1]?.rows[0]);
+    expect(after[0]?.rows[1]).toMatchObject({ id: '3', title: 'y' });
   });
 
   it('has a group for every kind, each once', () => {

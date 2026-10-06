@@ -3095,13 +3095,27 @@
         "fix/ui-problems-short-list-flake"
       ],
       "summary": "problems.test.tsx 的「页面一出现就到底时加载下一页」在 main 的 CI 上失败（期望 450 实际 400，run 37519512994，对象库合并后，只改了 Rust）；查清是测试的等待还是组件在这个竞态里漏掉一页，修好，并在负载下证明问题列表的分页测试都稳定",
-      "status": "planned",
+      "status": "done",
       "updated": "2026-10-06",
+      "landed": "2026-10-06",
+      "gates": {
+        "check": "pass",
+        "e2e": "pass",
+        "codeReview": "pass",
+        "simplify": "pass",
+        "designCritique": "na",
+        "a11y": "na",
+        "securityReview": "na"
+      },
       "owns": [
         "apps/desktop/src/problems/**"
       ],
       "shared": [
         "apps/desktop/src/test/**"
+      ],
+      "notes": [
+        "负载测试（30 进程 + 全量 vitest 或 pnpm check）：origin/main 570 次里分页测试失败 3 次、翻页超 1 s 23 次；只渲染新行后 270 次失败 1 次（机器停顿，超 5 s）、超 1 s 10 次；加 PAGE_WAIT 6 s 后 300 次全过，最慢一页 1050 ms",
+        "10-06 合并前：组件不丢页（292 次竞态运行都到 450 行）；慢在每页重渲染所有行，改成只渲染新行，等待按实测最坏两倍；独立审计 4 个角度无发现；隔离副本 vitest 1063 通过、e2e 53 通过（共享工作区的工作区核心 Rust 未写完）"
       ],
       "links": [
         "docs/design/handoff/library-actions.md"

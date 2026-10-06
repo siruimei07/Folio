@@ -17,7 +17,7 @@ import { useLibrary } from '../data/library';
 import type { IpcError } from '../ipc';
 import { windowsPath } from '../lib/paths';
 import { SIZE } from '../tokens/tokens';
-import type { ProblemAction, ProblemGroup, ProblemsT } from './describe';
+import type { DescribedProblem, ProblemAction, ProblemGroup, ProblemsT } from './describe';
 
 export interface ProblemListProps {
   groups: readonly ProblemGroup[];
@@ -84,7 +84,28 @@ function RowAction({ action, onCopy }: RowActionProps) {
   );
 }
 
-/** One group: its header, then its rows. Memoised: a new page or job progress leaves it alone. */
+/**
+ * One problem: its title, why, and its button. Memoised: a row keeps its described object while its
+ * problem is unchanged (describe.ts `describer`), so a new page renders only the rows it adds.
+ */
+const Row = memo(function Row({ row, onCopy }: { row: DescribedProblem; onCopy: RowActionProps['onCopy'] }) {
+  return (
+    <li className="problems__row">
+      <div className="problems__row-text">
+        <span className="problems__row-title">
+          <MiddleTruncate text={row.title} />
+        </span>
+        <span className="problems__row-explanation">{row.explanation}</span>
+      </div>
+      <RowAction action={row.action} onCopy={onCopy} />
+    </li>
+  );
+});
+
+/**
+ * One group: its header, then its rows. Memoised: it renders again only when the groups are built
+ * anew, and then only its new rows render (`Row`).
+ */
 const Group = memo(function Group({ group, onCopy }: { group: ProblemGroup; onCopy: RowActionProps['onCopy'] }) {
   const { t } = useTranslation(['problems', 'shell', 'errors']);
   const headingId = useId();
@@ -101,15 +122,7 @@ const Group = memo(function Group({ group, onCopy }: { group: ProblemGroup; onCo
       </h3>
       <ul className="problems__rows">
         {group.rows.map((row) => (
-          <li key={row.id} className="problems__row">
-            <div className="problems__row-text">
-              <span className="problems__row-title">
-                <MiddleTruncate text={row.title} />
-              </span>
-              <span className="problems__row-explanation">{row.explanation}</span>
-            </div>
-            <RowAction action={row.action} onCopy={onCopy} />
-          </li>
+          <Row key={row.id} row={row} onCopy={onCopy} />
         ))}
       </ul>
     </section>

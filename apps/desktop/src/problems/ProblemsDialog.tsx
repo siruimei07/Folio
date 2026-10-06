@@ -16,7 +16,7 @@ import { LIST_PAGE } from '../data/paged';
 import { useProblems } from '../data/problems';
 import type { Job, ProblemItem } from '../ipc';
 import { formatShortDate, formatTime, isSameDay } from '../lib/format';
-import { groupProblems, type ProblemsT } from './describe';
+import { describer, groupProblems, type ProblemsT } from './describe';
 import { ProblemList } from './ProblemList';
 
 /** When the newest scan that finished was seen to end, if the UI saw it (job notes). */
@@ -82,7 +82,10 @@ export function ProblemsDialog({ isOpen, onClose }: DialogComponentProps<'proble
   // Keyed on the rows loaded, not on `shown`: asking for a page re-renders no row until it arrives.
   const loaded = loadedCount(list.rowAt, shown);
   const rows = useMemo(() => loadedRows(list.rowAt, loaded), [list.rowAt, loaded]);
-  const groups = useMemo(() => groupProblems(t, rows, i18n.language), [t, rows, i18n.language]);
+  // One describer per language (`t` changes with it): rows already shown keep their described
+  // objects, so a page renders only the rows it adds.
+  const describe = useMemo(() => describer(t, i18n.language), [t, i18n.language]);
+  const groups = useMemo(() => groupProblems(rows, describe), [rows, describe]);
 
   const loadMore = () => {
     if (total !== undefined && rows.length === shown && wanted < total) setWanted(wanted + LIST_PAGE);

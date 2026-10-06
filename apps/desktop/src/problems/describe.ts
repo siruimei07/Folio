@@ -50,16 +50,37 @@ export interface ProblemGroup {
   rows: DescribedProblem[];
 }
 
+/** A problem item in words. */
+export type Describer = (item: ProblemItem) => DescribedProblem;
+
+/**
+ * Describes problem items in `language`, each item once: the same item gets the same row back, so
+ * a memoised row leaves it alone when a page arrives. Keyed by the item, not its id: the query
+ * cache keeps an unchanged problem's item across refetches, and a changed one comes back as a new
+ * item with the same id, which is described anew. Rows of items nobody holds any more are freed.
+ */
+export function describer(t: ProblemsT, language: string): Describer {
+  const described = new WeakMap<ProblemItem, DescribedProblem>();
+  return (item) => {
+    let row = described.get(item);
+    if (row === undefined) {
+      row = { id: item.id, ...describeProblem(t, item.problem, language) };
+      described.set(item, row);
+    }
+    return row;
+  };
+}
+
 /**
  * The loaded problems in words, by group, in the §11 order; groups without problems are left out.
  * Rows keep the order they came in.
  */
-export function groupProblems(t: ProblemsT, items: readonly ProblemItem[], language: string): ProblemGroup[] {
+export function groupProblems(items: readonly ProblemItem[], describe: Describer): ProblemGroup[] {
   const byKind = new Map<ProblemKind, DescribedProblem[]>();
-  for (const { id, problem } of items) {
-    const row = { id, ...describeProblem(t, problem, language) };
-    const list = byKind.get(problem.kind);
-    if (list === undefined) byKind.set(problem.kind, [row]);
+  for (const item of items) {
+    const row = describe(item);
+    const list = byKind.get(item.problem.kind);
+    if (list === undefined) byKind.set(item.problem.kind, [row]);
     else list.push(row);
   }
   return GROUPS.flatMap(({ kind, icon }) => {
