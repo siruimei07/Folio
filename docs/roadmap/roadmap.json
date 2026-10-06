@@ -5,7 +5,7 @@
     "owner": "Sirui",
     "repo": "https://github.com/siruimei07/Folio",
     "explorer": "https://claude.ai/artifact/Mv1f9eXfrkYTbAs7fqQVDC",
-    "updated": "2026-10-05T21:20-04:00",
+    "updated": "2026-10-06T00:58-04:00",
     "updatedBy": "Claude Code",
     "models": {
       "fable": "Fable 5.1",
@@ -17,12 +17,12 @@
     ]
   },
   "now": {
-    "stage": "M2 实现：子代理在做对象库、差异组件和 AI 设置页",
+    "stage": "M2 实现：AI 设置页已合并，子代理在做对象库和差异组件",
     "focus": "M2",
     "summary": [
-      "10-05 已合并：M2 合约（cd4344b）；问题列表短列表测试的修复（58d4e09）；标签丢失的修复（f828cfe，CI 37389281469 绿）；回收站修复 `fix/core-recycle-cloud-placeholder`（d98e709：只在云端的文件进提供方的回收站，装着这类文件的文件夹留下；独立审计 3 轮，修了复核确认的 4 个问题和十几处小问题）。更早：M2 依赖、M1 资料库细节、M2 设计、iCloud 实测、历史格式规格。",
-      "子代理进行中：`feat/core-object-store`（关键路径，Opus 5.5 · max）、`feat/ui-diff-viewer`、`feat/ui-settings-ai`（你 10-05 定了 AI 设置页和差异区文件夹的设计，决策 m2-ai-page、m2-diff-folders）。接着开 `feat/core-text-extract`。新增 `feat/ipc-recycle-cloud-trash`：回收结果报告「已进 iCloud 最近删除」，文案要你定。",
-      "要你做的：打开 iCloud for Windows（10-05 重启后没在运行），之后重跑回收站的真实 iCloud 测试。Codex：`test/core-sync-simulation` 第二次审计退回后还在改，合并后 `docs/specs-sync` 才能开。M2 的 lane 由路线图会话按你的一次授权合并（决策 m2-subagents）。",
+      "10-06 已合并：AI 设置页 `feat/ui-settings-ai`（052c6ca，CI 37415119695 绿：App settings → AI，开关、服务、地址、模型，只能写入的 API key，独立审计 4 轮）。10-05：M2 合约、问题列表短列表测试修复、标签丢失修复、回收站修复（d98e709）。",
+      "子代理进行中：`feat/core-object-store`（关键路径，Opus 5.5 · max，8 步做到第 5 步）、`feat/ui-diff-viewer`（7 步做到最后一步）。`feat/core-text-extract` 做完前 3 步，等对象库合并后用第 4 号迁移接着做（决策 text-extract-migration）。之后：工作区（等对象库）、工作区视图和历史视图（等差异组件）、`feat/ipc-recycle-cloud-trash`。",
+      "你 10-06 授权：之后的判断由路线图会话自己定、自己合并，事后汇报（决策 m2-subagents）。和模型训练会话共用内存：它跑大任务时路线图会话暂停或只跑轻量任务。要你做的：打开 iCloud for Windows，之后重跑回收站的真实 iCloud 测试。Codex：`test/core-sync-simulation` 还在改。",
       "按你批准的 versioning.md §19：差异和恢复也等正文抽取；AI 提交说明等差异做完再开；M3 新增 `feat/core-retention`（Word 旧版本稀疏保留）；M1 的三处资料库细节由新的 `feat/ui-library-m1-notes` 做。关键路径：对象库 → 工作区 → 提交和历史 → 差异和恢复 → AI 提交说明 → M2 验收。",
       "模型：Fable 5.1 暂停（你 10-03 的决定）：推荐给它的 lane（关卡、规格、IPC 合约、推理强度 max）都由 Opus 5.5 用同样的推理强度代替；界面、核心、测试、设计用 Opus 5.5，只改文档和只合并的用 Sonnet 5.5。恢复时删掉 meta.pausedModels 里的 fable 即可。",
       "Codex 的项目级 skills（`AGENTS.md`、`.agents/skills/`、`.codex/`、`.claude/skills/`）和 CLAUDE.md 里的两处改动不进仓库，由 Codex 管理：任何 lane 都不提交、不丢弃。"
@@ -1862,6 +1862,34 @@
       ]
     },
     {
+      "id": "docs/docs-roadmap-ai-landed",
+      "title": "AI 设置页合并后的路线图刷新",
+      "milestone": "M2",
+      "phase": "m2-impl",
+      "track": "flow",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "feat/ui-settings-ai"
+      ],
+      "summary": "AI 设置页合并后更新 now；记下 Sirui 10-06 的进一步授权、AI 页卡片顺序和正文抽取迁移顺序两个决定，补 AI 页留下的待办",
+      "status": "done",
+      "updated": "2026-10-06",
+      "landed": "2026-10-06",
+      "gates": {
+        "check": "pass",
+        "e2e": "na",
+        "codeReview": "na",
+        "securityReview": "na",
+        "simplify": "na",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "docs/roadmap/roadmap.json"
+      ]
+    },
+    {
       "id": "refactor/core-sta-helper",
       "title": "合并 STA 辅助函数",
       "milestone": "M1",
@@ -2668,7 +2696,8 @@
         "extra": [
           "The AI commit message: DeepSeek through its OpenAI-compatible API, called only from the privileged layer. The key lives in Windows Credential Manager, never in settings files or logs, and is never returned to the UI. Send only what docs/specs/versioning.md allows (paths and diff excerpts under a size cap), with a timeout; any failure falls back to the template message.",
           "The audit runs /security-review (network egress, secrets). What leaves the machine is my decision: stop and ask if the spec leaves a case open.",
-          "Sirui chose (versioning.md §19 item 2) that this lane waits for the diff: it builds the request from the selected items and their changed lines (§12.3) and owns everything that decides what leaves the machine, under one /security-review in the audit."
+          "Sirui chose (versioning.md §19 item 2) that this lane waits for the diff: it builds the request from the selected items and their changed lines (§12.3) and owns everything that decides what leaves the machine, under one /security-review in the audit.",
+          "feat/ui-settings-ai landed the AI page on the fake shell (data/ai.ts is the one client for get_ai_settings, set/clear/test key and serviceName; read it, do not duplicate it). Once this lane registers the AI commands, rewrite e2e/tests/settings-ai.spec.ts: it asserts the load-failure state the real shell shows while the commands are stubs; make it the real set/test flow with FOLIO_TEST_AI_CONFIRM and an obviously fake key."
         ]
       }
     },
@@ -3871,7 +3900,7 @@
       "item": "M2 剩下的 lane 谁做、合并怎么批准",
       "type": "decide",
       "state": "done",
-      "result": "M2 剩下的 10 个 lane（6 个核心、4 个界面）和 M2 验收的准备都由路线图会话的子代理做（Opus 5.5，L 规模的核心 lane 用 max），Codex 不再接 M2 的后端。合并：你在路线图会话里一次授权，lane 的检查和独立审计都过、上一次合并的 main CI 绿了就由路线图会话合并，事后汇报；产品决定、审计反复不过、要你动手的事（AI 的 API key、M2 验收）仍先问你。同一天批准合并两个修复 lane，恢复回收站修复 lane 的会话收尾"
+      "result": "M2 剩下的 10 个 lane（6 个核心、4 个界面）和 M2 验收的准备都由路线图会话的子代理做（Opus 5.5，L 规模的核心 lane 用 max），Codex 不再接 M2 的后端。合并：你在路线图会话里一次授权，lane 的检查和独立审计都过、上一次合并的 main CI 绿了就由路线图会话合并，事后汇报；产品决定、审计反复不过、要你动手的事（AI 的 API key、M2 验收）仍先问你。同一天批准合并两个修复 lane，恢复回收站修复 lane 的会话收尾。10-06 你进一步授权：之后的判断（含设计和产品问题）由路线图会话自己定，不再问你，合并也不再问；每个决定和合并事后汇报"
     },
     {
       "id": "m2-ai-page",
@@ -3888,6 +3917,22 @@
       "type": "decide",
       "state": "done",
       "result": "提示条 + 说明块：改名或移动写从哪里来、一起移动了几个文件、内容没变所以没有可比较的；删除写文件夹名和文件数；新加的空文件夹写「空文件夹」"
+    },
+    {
+      "id": "m2-ai-card-order",
+      "when": "2026-10-05",
+      "item": "AI 设置页的卡片顺序和画布不同（画布没画地址栏和模型栏）",
+      "type": "decide",
+      "state": "done",
+      "result": "保持做出来的顺序：AI 开关 → 服务、地址、模型一张卡片 → API key 紧跟在服务下面 → 「发送改动的文字」单独一张"
+    },
+    {
+      "id": "text-extract-migration",
+      "when": "2026-10-06",
+      "item": "正文抽取和对象库都要加 catalog 第 3 号迁移（同一处代码）",
+      "type": "decide",
+      "state": "done",
+      "result": "路线图会话的工程决定：对象库（关键路径）保留第 3 号；正文抽取等对象库合并后用第 4 号，不 stack"
     }
   ],
   "looseEnds": [
@@ -4028,8 +4073,18 @@
     },
     {
       "state": "open",
-      "item": "Cowork 画布要补两处：AI 设置页的各个状态（按 10-05 批准的工程方案，已存 key 不显示任何字符），差异区的文件夹改动（提示条 + 说明块）",
+      "item": "Cowork 画布要补三处：AI 设置页的各个状态（按 10-05 批准的工程方案，已存 key 不显示任何字符）和做出来的卡片顺序（决策 m2-ai-card-order），差异区的文件夹改动（提示条 + 说明块）",
       "lane": "design/design-sync"
+    },
+    {
+      "state": "open",
+      "item": "AI 设置页审计剩下的两条小问题：data/ai.ts 的 useUpdateAiSettings 收 Partial<UpdateAiSettings>，传 { endpoint: undefined } 时假 shell 会抛 TypeError（现在没有调用方这样传）；KeyCard 非 IpcFailure 的路径没有单测（ipcErrorOf 按设计重新抛出）",
+      "lane": "feat/ui-changes-view"
+    },
+    {
+      "state": "open",
+      "item": "AI 设置页的设计评审小问题：没有 key 时禁用的「Test key」在深色模式下看起来接近可用的次要按钮（共用 Button 的禁用样式）；和历史视图要把 isPending 的禁用样式收进共用 Button 一起改",
+      "lane": "feat/ui-history-view"
     }
   ],
   "risks": [
@@ -4427,6 +4482,11 @@
       "at": "2026-10-05",
       "by": "Claude Code",
       "text": "合并：fix/ui-problems-short-list-flake（58d4e09）、fix/core-catalog-tags-property（f828cfe）、fix/core-recycle-cloud-placeholder（d98e709，路线图会话独立审计 3 轮后合并）。M2 子代理开工：对象库、差异组件、AI 设置页；新增 feat/ipc-recycle-cloud-trash；决策 m2-ai-page、m2-diff-folders"
+    },
+    {
+      "at": "2026-10-06",
+      "by": "Claude Code",
+      "text": "合并：feat/ui-settings-ai（052c6ca，CI 37415119695 绿）。Sirui 10-06 授权路线图会话自己判断和合并；决策 m2-ai-card-order、text-extract-migration；为模型训练让内存时暂停过子代理"
     }
   ]
 }
