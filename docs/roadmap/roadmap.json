@@ -5,7 +5,7 @@
     "owner": "Sirui",
     "repo": "https://github.com/siruimei07/Folio",
     "explorer": "https://claude.ai/artifact/Mv1f9eXfrkYTbAs7fqQVDC",
-    "updated": "2026-10-06T18:05-04:00",
+    "updated": "2026-10-06T19:00-04:00",
     "updatedBy": "Claude Code",
     "models": {
       "fable": "Fable 5.1",
@@ -2002,6 +2002,34 @@
       ]
     },
     {
+      "id": "docs/docs-roadmap-summary-counts",
+      "title": "加选择汇总计数的合约 lane",
+      "milestone": "M2",
+      "phase": "m2-impl",
+      "track": "flow",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "feat/ipc-m2-contract"
+      ],
+      "summary": "工作区视图审计提出课程标题计数和必须提交条目的问题：记下决策 m2-summary-counts，加合约 lane feat/ipc-workspace-summary-counts",
+      "status": "done",
+      "updated": "2026-10-06",
+      "landed": "2026-10-06",
+      "gates": {
+        "check": "pass",
+        "e2e": "na",
+        "codeReview": "na",
+        "securityReview": "na",
+        "simplify": "na",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "docs/roadmap/roadmap.json"
+      ]
+    },
+    {
       "id": "refactor/core-sta-helper",
       "title": "合并 STA 辅助函数",
       "milestone": "M1",
@@ -2689,6 +2717,32 @@
           "The golden vectors in remote-format.md pass byte for byte. Add property-based tests (round trip, corruption detected, truncated packs rejected) and a crash-injection test for every write step. Large files stream and memory stays bounded. folio-core only, in a new module; no IPC in this lane.",
           "versioning.md §19 item 8: pass every file of the golden vectors (remote-format.md §12, docs/specs/remote-format-vectors/) in this lane's own tests; `pnpm check` keeps the vectors equal to their generator (`check:vectors`).",
           "The independent audit of this lane runs at max effort (critical path; history format 1 bytes)."
+        ]
+      }
+    },
+    {
+      "id": "feat/ipc-workspace-summary-counts",
+      "title": "选择汇总加两个计数",
+      "milestone": "M2",
+      "phase": "m2-impl",
+      "track": "core",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "feat/ipc-m2-contract"
+      ],
+      "summary": "SummaryGroup 加 items（这个位置的全部条目，含不能提交的）和 required（其中必须提交的条目）：工作区视图的课程标题显示全部改动，勾选状态不把必须提交的条目算进去（决策 m2-summary-counts）",
+      "status": "planned",
+      "updated": "2026-10-06",
+      "links": [
+        "docs/specs/ipc-m2.md",
+        "docs/design/handoff/workspace-history.md",
+        "docs/adr/ADR-0004-ipc-contract.md"
+      ],
+      "prompt": {
+        "extra": [
+          "Contract amendment from feat/ui-changes-view's audit (decision m2-summary-counts): add two fields to SummaryGroup (crates/folio-app/src/ipc/workspace.rs, ipc-m2.md §6.4): `items: u32`, every item whose main path belongs to the place, includable or not (not downloaded and unreadable items too, required items too); and `required: u32`, its required items (§6.2 `required`: bound to a metadata change, always included), which `selected` and `available` keep counting as included. Say in §6.4 that the grouped course header shows `items` as its count and its on/mixed/off state from (selected - required) of (available - required), like select-all (handoff §3.5, step 7 decision 5 of feat/ui-changes-view); and in §6.2 / §6.4 how a fake or real summarize computes them.",
+          "Regenerate the bindings with `cargo test -p folio-app export_bindings`, update the fake shell (apps/desktop/src/ipc/mock/, its summarize for every scenario incl. workspace-large) and REVIEWED_BINDINGS in the same commit; no other UI change (feat/ui-changes-view switches its header to the new fields after this lands). feat/core-workspace is implementing summarize in folio-core/folio-app right now: do not touch its paths (crates/folio-core/src/workspace/**, crates/folio-app/src/commands/workspace*); its lane file already says it must fill both fields. Keep this lane small and land it fast: two lanes wait for it."
         ]
       }
     },
@@ -4187,6 +4241,14 @@
       "type": "decide",
       "state": "done",
       "result": "路线图会话按授权决定：给一个不算「历史损坏」的单独状态（「这个资料库的历史已关闭：文件夹 X 里的文件太多」），资料库照常能用，等资料库有变化再重试第一次提交；StoreError::TooLarge 一律不映射成 HistoryDamaged。由 feat/core-commit-history 和 docs/specs-sync 落实，对象库不用改"
+    },
+    {
+      "id": "m2-summary-counts",
+      "when": "2026-10-06",
+      "item": "工作区视图的课程标题数字算什么；必须提交的条目算不算已勾选",
+      "type": "decide",
+      "state": "done",
+      "result": "路线图会话按授权决定：标题显示这个位置的全部改动（SummaryGroup.items），说明里写能提交几个；勾选状态不算必须提交的条目（(selected - required) of (available - required)，和全选一致），避免先显示未选、汇总回来又变成部分选中。由新合约 lane feat/ipc-workspace-summary-counts 加这两个字段"
     }
   ],
   "looseEnds": [
@@ -4796,6 +4858,11 @@
       "at": "2026-10-06",
       "by": "Claude Code",
       "text": "对象库合并后 main CI 37519512994 红：problems.test.tsx 竞态分页测试偶发失败（只改了 Rust）；重跑失败的 job，新增 fix/ui-problems-race-flake"
+    },
+    {
+      "at": "2026-10-06",
+      "by": "Claude Code",
+      "text": "合并：fix/ui-problems-race-flake（eb5032a6：问题列表每页只渲染新行，竞态测试有实测等待）。决策 m2-summary-counts，新增 feat/ipc-workspace-summary-counts"
     }
   ]
 }
