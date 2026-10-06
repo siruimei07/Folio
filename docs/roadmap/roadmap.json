@@ -5,7 +5,7 @@
     "owner": "Sirui",
     "repo": "https://github.com/siruimei07/Folio",
     "explorer": "https://claude.ai/artifact/Mv1f9eXfrkYTbAs7fqQVDC",
-    "updated": "2026-10-06T00:58-04:00",
+    "updated": "2026-10-06T02:50-04:00",
     "updatedBy": "Claude Code",
     "models": {
       "fable": "Fable 5.1",
@@ -17,11 +17,11 @@
     ]
   },
   "now": {
-    "stage": "M2 实现：AI 设置页已合并，子代理在做对象库和差异组件",
+    "stage": "M2 实现：差异组件和 AI 设置页已合并，子代理在做对象库、工作区视图和历史视图",
     "focus": "M2",
     "summary": [
-      "10-06 已合并：AI 设置页 `feat/ui-settings-ai`（052c6ca，CI 37415119695 绿：App settings → AI，开关、服务、地址、模型，只能写入的 API key，独立审计 4 轮）。10-05：M2 合约、问题列表短列表测试修复、标签丢失修复、回收站修复（d98e709）。",
-      "子代理进行中：`feat/core-object-store`（关键路径，Opus 5.5 · max，8 步做到第 5 步）、`feat/ui-diff-viewer`（7 步做到最后一步）。`feat/core-text-extract` 做完前 3 步，等对象库合并后用第 4 号迁移接着做（决策 text-extract-migration）。之后：工作区（等对象库）、工作区视图和历史视图（等差异组件）、`feat/ipc-recycle-cloud-trash`。",
+      "10-06 已合并：差异组件 `feat/ui-diff-viewer`（79f5a07，CI 37453770679 绿：工作区和历史共用的差异区，文本和 Word 逐行差异、折叠、F7 跳改动、各种状态；独立审计 4 轮）；AI 设置页 `feat/ui-settings-ai`（052c6ca）。10-05：M2 合约、三个修复（短列表测试、标签丢失、回收站）。",
+      "子代理进行中：`feat/core-object-store`（关键路径，Opus 5.5 · max，8 步做到第 5 步）；`feat/ui-history-view`、`feat/ui-changes-view`（都是 L，Opus 5.5 · xhigh，在假 shell 上做）。`feat/core-text-extract` 前 3 步已做完，等对象库合并后用第 4 号迁移接着做（决策 text-extract-migration）。之后：工作区核心（等对象库）、`feat/ipc-recycle-cloud-trash`。",
       "你 10-06 授权：之后的判断由路线图会话自己定、自己合并，事后汇报（决策 m2-subagents）。和模型训练会话共用内存：它跑大任务时路线图会话暂停或只跑轻量任务。要你做的：打开 iCloud for Windows，之后重跑回收站的真实 iCloud 测试。Codex：`test/core-sync-simulation` 还在改。",
       "按你批准的 versioning.md §19：差异和恢复也等正文抽取；AI 提交说明等差异做完再开；M3 新增 `feat/core-retention`（Word 旧版本稀疏保留）；M1 的三处资料库细节由新的 `feat/ui-library-m1-notes` 做。关键路径：对象库 → 工作区 → 提交和历史 → 差异和恢复 → AI 提交说明 → M2 验收。",
       "模型：Fable 5.1 暂停（你 10-03 的决定）：推荐给它的 lane（关卡、规格、IPC 合约、推理强度 max）都由 Opus 5.5 用同样的推理强度代替；界面、核心、测试、设计用 Opus 5.5，只改文档和只合并的用 Sonnet 5.5。恢复时删掉 meta.pausedModels 里的 fable 即可。",
@@ -1873,6 +1873,34 @@
         "feat/ui-settings-ai"
       ],
       "summary": "AI 设置页合并后更新 now；记下 Sirui 10-06 的进一步授权、AI 页卡片顺序和正文抽取迁移顺序两个决定，补 AI 页留下的待办",
+      "status": "done",
+      "updated": "2026-10-06",
+      "landed": "2026-10-06",
+      "gates": {
+        "check": "pass",
+        "e2e": "na",
+        "codeReview": "na",
+        "securityReview": "na",
+        "simplify": "na",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "docs/roadmap/roadmap.json"
+      ]
+    },
+    {
+      "id": "docs/docs-roadmap-diff-landed",
+      "title": "差异组件合并后的路线图刷新",
+      "milestone": "M2",
+      "phase": "m2-impl",
+      "track": "flow",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "feat/ui-diff-viewer"
+      ],
+      "summary": "差异组件合并后更新 now；记下 Word 行不提供「这个版本」的决定（diff-word-version），补审计留下的四条待办",
       "status": "done",
       "updated": "2026-10-06",
       "landed": "2026-10-06",
@@ -3949,6 +3977,14 @@
       "type": "decide",
       "state": "done",
       "result": "路线图会话的工程决定：对象库（关键路径）保留第 3 号；正文抽取等对象库合并后用第 4 号，不 stack"
+    },
+    {
+      "id": "diff-word-version",
+      "when": "2026-10-06",
+      "item": "差异区的 Word 行在 M2 要不要提供「这个版本」切换和「查看这个版本」按钮（预览到 M4 才能显示 Word）",
+      "type": "decide",
+      "state": "done",
+      "result": "路线图会话按授权决定：M2 不提供。否则只会打开「以后才支持预览」的卡片，「打开」打开的还是当前文件，会误导要不要恢复的判断；Word 有了预览后切换会自动出现（previewKindOf）"
     }
   ],
   "looseEnds": [
@@ -4101,6 +4137,26 @@
       "state": "open",
       "item": "AI 设置页的设计评审小问题：没有 key 时禁用的「Test key」在深色模式下看起来接近可用的次要按钮（共用 Button 的禁用样式）；和历史视图要把 isPending 的禁用样式收进共用 Button 一起改",
       "lane": "feat/ui-history-view"
+    },
+    {
+      "state": "open",
+      "item": "差异组件刚修好的焦点竞态（blur 时外层先放手，diff/useFocusKeeper.ts 用捕获阶段的 focusout）在 components/collections/useVirtualRows.ts:155-185 里还有一份：合成一个共用的焦点保持写法",
+      "lane": "feat/ui-changes-view"
+    },
+    {
+      "state": "open",
+      "item": "窄窗格里差异区「更多」菜单中禁用的「Restore…」键盘到不了（共用 Menu 的问题）：历史视图做恢复时一起修",
+      "lane": "feat/ui-history-view"
+    },
+    {
+      "state": "open",
+      "item": "差异区还没有 Playwright 流程：没有视图承载它，真实 shell 的差异命令要到 feat/core-diff-restore 才实现；工作区视图和历史视图先加真实 shell 现在能做的部分，差异和恢复做完后补全",
+      "lane": "feat/core-diff-restore"
+    },
+    {
+      "state": "open",
+      "item": "文件还在算哈希时，第一次读取失败的差异会随每个 WorkspaceChanged 闪一下并再念一次（差异组件第 3 轮审计记下）",
+      "lane": "feat/ui-changes-view"
     }
   ],
   "risks": [
@@ -4503,6 +4559,11 @@
       "at": "2026-10-06",
       "by": "Claude Code",
       "text": "合并：feat/ui-settings-ai（052c6ca，CI 37415119695 绿）。Sirui 10-06 授权路线图会话自己判断和合并；决策 m2-ai-card-order、text-extract-migration；为模型训练让内存时暂停过子代理"
+    },
+    {
+      "at": "2026-10-06",
+      "by": "Claude Code",
+      "text": "合并：feat/ui-diff-viewer（79f5a07，CI 37453770679 绿，独立审计 4 轮）。开工：feat/ui-history-view、feat/ui-changes-view。决策 diff-word-version"
     }
   ]
 }
