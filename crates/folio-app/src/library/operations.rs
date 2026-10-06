@@ -501,7 +501,8 @@ pub(super) fn operation_error(error: OperationError) -> AppError {
             RecycleFailure::Unrecyclable | RecycleFailure::CloudOnly => {
                 AppError::NotRecyclable(detail)
             }
-            RecycleFailure::InUse => AppError::InUse(detail),
+            // CloudBusy ("try again later") gets its own code with feat/ipc-recycle-cloud-trash.
+            RecycleFailure::InUse | RecycleFailure::CloudBusy => AppError::InUse(detail),
             RecycleFailure::Denied => AppError::AccessDenied(detail),
             RecycleFailure::Invalid => AppError::Internal(detail),
             RecycleFailure::Other => AppError::FileSystem(detail),

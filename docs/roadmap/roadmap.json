@@ -3173,8 +3173,20 @@
         "fix/core-recycle-cloud-placeholder"
       ],
       "summary": "iCloud for Windows（15.10.39）启动后约 17–19 分钟内，已下载的文件和所有文件夹送回收站都被拒（0x8007017B），重试无效，之后恢复；Folio 现在报「文件操作出错」。改报 RecycleFailure::CloudBusy（稍后再试，合约 lane 之前映射成 InUse），补测试和规格",
-      "status": "planned",
+      "status": "done",
       "updated": "2026-10-06",
+      "landed": "2026-10-06",
+      "gates": {
+        "check": "pass",
+        "e2e": "pass",
+        "codeReview": "pass",
+        "securityReview": "pass",
+        "simplify": "pass"
+      },
+      "notes": [
+        "FIX round 1 (2026-10-06): CloudBusy's contract now says trying again may work, not that it will (the code means only that the provider does not support the move; iCloud's start-up refusal is the one measured temporary case); versioning §11.3 and ipc-m2 restore_version now stop a restore on CloudBusy with InUse, never NotRecyclable; the iCloud test fails on a leftover its guard cannot recycle and is run with --nocapture: FOLIO_TEST_ICLOUD_DIR=<folder> cargo test -p folio-core --lib -- --ignored --nocapture win::recycle::tests::in_icloud_drive",
+        "FINISH (2026-10-06): /simplify (single pass) named the 0x8007017B HRESULT once and merged three test loops. On the lane alone (git-archive copy): typecheck, lint, vitest 1059, roadmap, vectors, cargo fmt, clippy and tests all pass; e2e 53 passed, 4 skipped. In the shared workspace check:rust passes; tsc fails only in feat/ui-history-view's uncommitted src/history/restore/restore.test.tsx, and pnpm e2e has 52 passed, 1 failed (first-run.spec.ts:108, axe role-img-alt on a div[role=img], UI-lane work in progress). The real-iCloud CloudBusy branch still needs a run within about 20 minutes of an iCloud start."
+      ],
       "links": [
         "docs/specs/windows-adapter.md",
         "docs/specs/ipc-m1.md"

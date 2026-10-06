@@ -995,3 +995,19 @@ fn recycling_adapter_invalid_input_is_internal_and_newer_metadata_is_read_only()
     assert_eq!(code(&file_name(".").unwrap_err()), "NameReserved");
     assert_eq!(code(&file_name("..").unwrap_err()), "NameReserved");
 }
+
+#[test]
+fn a_cloud_provider_refusing_to_recycle_for_now_reads_as_in_use_with_its_detail() {
+    let refusal = "操作不受云同步提供程序支持。 (0x8007017B)";
+    let busy = OperationError::Recycle(RecycleError {
+        path: PathBuf::from("local.txt"),
+        failure: RecycleFailure::CloudBusy,
+        detail: refusal.into(),
+    });
+    let error = operation_error(busy);
+    assert_eq!(code(&error), "InUse");
+    assert!(
+        matches!(&error, AppError::InUse(detail) if detail.contains(refusal)),
+        "{error:?}"
+    );
+}

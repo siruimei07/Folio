@@ -1,7 +1,8 @@
 //! `WindowsRecycleBin`: the shell's `IFileOperation`, with a guard that refuses every item the
 //! Recycle Bin cannot take, so nothing is ever deleted for good, and a look at the item first, so
 //! that a cloud provider's trash takes only files whose content is in the cloud alone
-//! (docs/specs/windows-adapter.md §4.1).
+//! (docs/specs/windows-adapter.md §4.1). An item whose cloud provider refuses to move it stays,
+//! `CloudBusy` (§4.2).
 
 #![allow(
     unsafe_code,
@@ -231,19 +232,15 @@ struct Report {
     performed: Result<()>,
 }
 
-/// Where the item went, from what the shell reported and, for a file only in the cloud that is
-/// not in the Recycle Bin, from whether it left its path (`gone`, asked only then).
+/// Where the item went, from what the shell reported and, where that leaves it open, from
+/// whether the item left its path (`gone`, asked only then): for a file only in the cloud that
+/// is not in the Recycle Bin, and for an item whose cloud provider refused to move it.
 fn outcome(
     path: &Path,
     destination: Recycled,
     report: Report,
     gone: impl FnOnce() -> std::result::Result<bool, RecycleError>,
 ) -> std::result::Result<Recycled, RecycleError> {
-    const CLOUD_FILE_NOT_SUPPORTED: HRESULT = HRESULT::from_win32(ERROR_CLOUD_FILE_NOT_SUPPORTED.0);
-    // The shell deletes a file only in the cloud instead of recycling it, and its provider keeps it
-    // in its trash. Measured: the item done and nothing in the Recycle Bin. The field test also saw
-    // ERROR_CLOUD_FILE_NOT_SUPPORTED once, maybe for such a file.
-    let to_cloud = destination == Recycled::CloudTrash;
     if report.refused {
         return Err(RecycleError::new(
             path,
@@ -251,19 +248,12 @@ fn outcome(
             "the shell would have deleted it for good",
         ));
     }
-    if let Some(code) = report
-        .failed
-        .filter(|&code| !(to_cloud && code == CLOUD_FILE_NOT_SUPPORTED))
-    {
-        return Err(error_of(path, &code.into()));
-    }
-    // The item's own result says where it is, whatever else the operation reports. A file only
-    // in the cloud gets here when something downloaded it in the meantime.
-    if report.recycled {
-        return Ok(Recycled::RecycleBin);
-    }
     let error = match (report.failed, report.performed) {
         (Some(code), _) => error_of(path, &code.into()),
+        // The item's own result says where it is, whatever the whole operation returns. A file
+        // only in the cloud gets here when something downloaded it in the meantime. A failure
+        // reported for an item comes first: a folder's items may be reported one by one.
+        (None, _) if report.recycled => return Ok(Recycled::RecycleBin),
         (None, Err(error)) => error_of(path, &error),
         (None, Ok(())) => RecycleError::new(
             path,
@@ -271,11 +261,25 @@ fn outcome(
             "the shell reported nothing in the Recycle Bin",
         ),
     };
-    if !(to_cloud && report.posted) {
+    // The shell deletes a file only in the cloud instead of recycling it, and its provider keeps
+    // it in its trash. Measured: the item done and nothing in the Recycle Bin. A file that left
+    // its path although the item failed with ERROR_CLOUD_FILE_NOT_SUPPORTED counts too: the field
+    // test saw that code once, for an item it did not record.
+    let to_trash = destination == Recycled::CloudTrash && report.posted;
+    // The cloud provider refused to move the item, which then stays where it was; only its path
+    // tells whether it left anyway. Any other failure reported for the item stands.
+    let busy = error.failure == RecycleFailure::CloudBusy;
+    if !(busy || (to_trash && report.failed.is_none())) {
         return Err(error);
     }
     match gone() {
-        Ok(true) => Ok(Recycled::CloudTrash),
+        Ok(true) if to_trash => Ok(Recycled::CloudTrash),
+        // Neither the Recycle Bin nor trying again later: where it went is unknown.
+        Ok(true) => Err(RecycleError {
+            failure: RecycleFailure::Other,
+            detail: format!("{}; yet it left its path", error.detail),
+            ..error
+        }),
         Ok(false) => Err(error),
         // The shell's report stays the error; a failed look at the path only adds to it.
         Err(check) => Err(RecycleError {
@@ -498,8 +502,16 @@ impl IFileOperationProgressSink_Impl for Guard_Impl {
     }
 }
 
+/// A cloud provider's refusal to move an item (`0x8007017B`, Win32 379).
+const CLOUD_FILE_NOT_SUPPORTED: HRESULT = HRESULT::from_win32(ERROR_CLOUD_FILE_NOT_SUPPORTED.0);
+
 /// The error for a deletion the shell reported as failed. Moving a folder that holds a file
-/// another program has open fails at the destination (measured: `0x80270028`).
+/// another program has open fails at the destination (measured: `0x80270028`). A cloud provider
+/// that refuses to move an item fails it with `ERROR_CLOUD_FILE_NOT_SUPPORTED` (`0x8007017B`):
+/// iCloud for Windows 15.10.39 does for every folder and downloaded file for about 20 minutes
+/// after it starts, and the item stays (measured 2026-10-06, windows-adapter.md §4.2). The code
+/// says only that the provider does not support the operation, so it is `CloudBusy` from any
+/// provider, for any cause, and trying again may not help.
 fn error_of(path: &Path, error: &Error) -> RecycleError {
     const SHARING: HRESULT = HRESULT::from_win32(ERROR_SHARING_VIOLATION.0);
     const LOCK: HRESULT = HRESULT::from_win32(ERROR_LOCK_VIOLATION.0);
@@ -522,6 +534,7 @@ fn error_of(path: &Path, error: &Error) -> RecycleError {
         | COPYENGINE_E_RECYCLE_SIZE_TOO_BIG
         | COPYENGINE_E_RECYCLE_PATH_TOO_LONG
         | COPYENGINE_E_RECYCLE_BIN_NOT_FOUND => RecycleFailure::Unrecyclable,
+        CLOUD_FILE_NOT_SUPPORTED => RecycleFailure::CloudBusy,
         _ => RecycleFailure::Other,
     };
     RecycleError::new(path, failure, error.to_string())
@@ -858,13 +871,53 @@ mod tests {
         let recycled = recycle_with(&cloud, &file, shell(true, || {}));
         assert_eq!(recycled, Ok(Recycled::RecycleBin));
         // A failure the shell reports for the item stands, even though the file left its path;
-        // only ERROR_CLOUD_FILE_NOT_SUPPORTED, seen once in the field test, means its trash.
+        // only the cloud provider's refusal, ERROR_CLOUD_FILE_NOT_SUPPORTED, still means its trash
+        // once the file left.
         let denied = recycle_with(&cloud, &file, played(E_ACCESSDENIED, false, remove));
         assert_eq!(failure_of(denied), RecycleFailure::Denied);
         fs::write(&file, "x").unwrap();
-        let not_supported = HRESULT::from_win32(ERROR_CLOUD_FILE_NOT_SUPPORTED.0);
-        let recycled = recycle_with(&cloud, &file, played(not_supported, false, remove));
+        let refused = played(CLOUD_FILE_NOT_SUPPORTED, false, remove);
+        let recycled = recycle_with(&cloud, &file, refused);
         assert_eq!(recycled, Ok(Recycled::CloudTrash));
+    }
+
+    /// From the look before the shell, through the guard, to `outcome` and `gone`, with the
+    /// shell's operation played as measured while iCloud for Windows refuses to move a downloaded
+    /// file or a folder, for about 20 minutes after it starts (§4.2): the item fails with
+    /// ERROR_CLOUD_FILE_NOT_SUPPORTED and stays. Nothing reaches the Recycle Bin.
+    #[test]
+    fn what_the_cloud_provider_refuses_to_move_for_now_stays_and_is_cloud_busy() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("local.txt");
+        fs::write(&file, "keep me").unwrap();
+        let folder = dir.path().join("作业");
+        fs::create_dir(&folder).unwrap();
+        fs::write(folder.join("hw1.txt"), "keep me too").unwrap();
+        let busy = Error::from(CLOUD_FILE_NOT_SUPPORTED).to_string();
+
+        for path in [&file, &folder] {
+            let refused = played(CLOUD_FILE_NOT_SUPPORTED, false, || {});
+            let error = recycle_with(&StdFileSystem, path, refused).unwrap_err();
+            assert_eq!(
+                (&error.path, error.failure, error.detail.as_str()),
+                (path, RecycleFailure::CloudBusy, busy.as_str())
+            );
+        }
+        assert_eq!(fs::read_to_string(&file).unwrap(), "keep me");
+        let inside = fs::read_to_string(folder.join("hw1.txt")).unwrap();
+        assert_eq!(inside, "keep me too");
+        // Refused, and yet it left its path: neither the Recycle Bin nor trying again later.
+        let remove = || fs::remove_file(&file).unwrap();
+        let refused = played(CLOUD_FILE_NOT_SUPPORTED, false, remove);
+        let error = recycle_with(&StdFileSystem, &file, refused).unwrap_err();
+        assert_eq!(
+            (error.failure, error.detail),
+            (
+                RecycleFailure::Other,
+                format!("{busy}; yet it left its path")
+            )
+        );
+        assert!(!file.exists());
     }
 
     /// The look lists exact names: a plain path would read `作业.` as its sibling `作业`, and
@@ -989,7 +1042,9 @@ mod tests {
             || -> std::result::Result<bool, RecycleError> { panic!("asked about the path") };
         let gone = || Ok(true);
         let there = || Ok(false);
-        let not_supported = Some(HRESULT::from_win32(ERROR_CLOUD_FILE_NOT_SUPPORTED.0));
+        let unknown = || Err(RecycleError::new(path, RecycleFailure::Denied, "test"));
+        let not_supported = Some(CLOUD_FILE_NOT_SUPPORTED);
+        let busy = Error::from(CLOUD_FILE_NOT_SUPPORTED).to_string();
 
         // In the Recycle Bin whatever was expected: a file only in the cloud that something
         // downloaded in the meantime gets there too.
@@ -1002,7 +1057,8 @@ mod tests {
             let recycled = outcome(path, CloudTrash, report(failed, false), gone);
             assert_eq!(recycled, Ok(CloudTrash), "{failed:?}");
         }
-        // Still there, or expected in the Recycle Bin: a failure, as before.
+        // Still there: a failure, as before, which says to try again later when the cloud
+        // provider refused to move it.
         let error = outcome(path, CloudTrash, report(None, false), there).unwrap_err();
         assert_eq!(
             (error.failure, error.detail.as_str()),
@@ -1011,19 +1067,61 @@ mod tests {
                 "the shell reported nothing in the Recycle Bin"
             )
         );
-        let still = outcome(path, CloudTrash, report(not_supported, false), there);
-        assert_eq!(failure(still), RecycleFailure::Other);
+        let still = outcome(path, CloudTrash, report(not_supported, false), there).unwrap_err();
+        assert_eq!(
+            (still.failure, still.detail.as_str()),
+            (RecycleFailure::CloudBusy, busy.as_str())
+        );
+        let unchecked = outcome(path, CloudTrash, report(not_supported, false), unknown);
+        let unchecked = unchecked.unwrap_err();
+        assert_eq!(
+            (unchecked.failure, unchecked.detail),
+            (RecycleFailure::CloudBusy, format!("{busy}; then test"))
+        );
         // Nothing reported for the item: the operation's own failure, wherever the file is.
-        let unreported = Report {
+        let unreported = |result: HRESULT| Report {
             posted: false,
-            performed: Err(E_FAIL.into()),
+            performed: Err(result.into()),
             ..report(None, false)
         };
-        let unreported = outcome(path, CloudTrash, unreported, never);
-        assert_eq!(failure(unreported), RecycleFailure::Other);
-        for failed in [None, not_supported] {
-            let local = outcome(path, RecycleBin, report(failed, false), never);
-            assert_eq!(failure(local), RecycleFailure::Other, "{failed:?}");
+        let unposted = outcome(path, CloudTrash, unreported(E_FAIL), never);
+        assert_eq!(failure(unposted), RecycleFailure::Other);
+        // Expected in the Recycle Bin and not there: a failure, without a look at the path.
+        let local = outcome(path, RecycleBin, report(None, false), never);
+        assert_eq!(failure(local), RecycleFailure::Other);
+        // The cloud provider refused to move it, as the item's report or only as the whole
+        // operation's result says, and wherever it was expected: the path tells whether it stayed.
+        let refusals = [(RecycleBin, true), (RecycleBin, false), (CloudTrash, false)];
+        for (destination, by_item) in refusals {
+            let case = format!("{destination:?}, reported by the item: {by_item}");
+            let refusal = || {
+                if by_item {
+                    report(not_supported, false)
+                } else {
+                    unreported(CLOUD_FILE_NOT_SUPPORTED)
+                }
+            };
+            let still = outcome(path, destination, refusal(), there).unwrap_err();
+            assert_eq!(
+                (still.failure, still.detail.as_str()),
+                (RecycleFailure::CloudBusy, busy.as_str()),
+                "{case}"
+            );
+            let left = outcome(path, destination, refusal(), gone).unwrap_err();
+            assert_eq!(
+                (left.failure, left.detail),
+                (
+                    RecycleFailure::Other,
+                    format!("{busy}; yet it left its path")
+                ),
+                "{case}"
+            );
+            let unchecked = outcome(path, destination, refusal(), unknown).unwrap_err();
+            assert_eq!(
+                (unchecked.failure, unchecked.detail),
+                (RecycleFailure::CloudBusy, format!("{busy}; then test")),
+                "{case}"
+            );
         }
         // The guard's refusal and the item's other failures stand, wherever the item is.
         let in_use = report(Some(COPYENGINE_E_SHARING_VIOLATION_SRC), false);
@@ -1037,6 +1135,14 @@ mod tests {
         };
         let refused = outcome(path, CloudTrash, refused, never);
         assert_eq!(failure(refused), RecycleFailure::Unrecyclable);
+        // A failure reported for an item comes before a Recycle Bin item reported beside it.
+        let in_use = report(Some(COPYENGINE_E_SHARING_VIOLATION_SRC), true);
+        assert_eq!(
+            failure(outcome(path, RecycleBin, in_use, never)),
+            RecycleFailure::InUse
+        );
+        let both = outcome(path, RecycleBin, report(not_supported, true), there);
+        assert_eq!(failure(both), RecycleFailure::CloudBusy);
         // The operation's own failure when the item reported nothing.
         let denied = Report {
             performed: Err(E_ACCESSDENIED.into()),
@@ -1047,7 +1153,6 @@ mod tests {
             RecycleFailure::Denied
         );
         // A path that cannot be checked: the shell's report, with the check's failure added.
-        let unknown = || Err(RecycleError::new(path, RecycleFailure::Denied, "test"));
         let error = outcome(path, CloudTrash, report(None, false), unknown).unwrap_err();
         assert_eq!(
             (error.failure, error.detail.as_str()),
@@ -1087,51 +1192,170 @@ mod tests {
         recycles_a_file_and_a_folder_in(&super::super::non_ntfs_dir());
     }
 
+    /// What the iCloud test leaves in iCloud Drive, recycled when the test ends, however it ends,
+    /// where TempDir would delete it for good: the files meant to be only in the cloud first, to
+    /// Recently Deleted, so that their folder no longer holds one, then the test folder. What it
+    /// cannot recycle fails the test, naming the path to recycle by hand: libtest shows a passing
+    /// test's output only with `--nocapture`. While the test already fails it is only printed,
+    /// which libtest then shows, since a second panic would abort the run.
+    struct Leftovers {
+        /// Recycled first, each where it is.
+        placeholders: Vec<PathBuf>,
+        /// The test folder, recycled last with whatever is still in it.
+        folder: PathBuf,
+    }
+
+    impl Drop for Leftovers {
+        fn drop(&mut self) {
+            let mut left = Vec::new();
+            for path in self.placeholders.iter().chain([&self.folder]) {
+                match WindowsRecycleBin.recycle(path) {
+                    Ok(recycled) => println!("left by the test, recycled: {path:?} ({recycled:?})"),
+                    Err(error) if error.failure == RecycleFailure::NotFound => {}
+                    Err(error) => {
+                        let line = format!(
+                            "left in iCloud Drive, recycle it by hand: {path:?} ({:?}: {})",
+                            error.failure, error.detail
+                        );
+                        eprintln!("{line}");
+                        left.push(line);
+                    }
+                }
+            }
+            if !left.is_empty() && !std::thread::panicking() {
+                panic!("{}", left.join("\n"));
+            }
+        }
+    }
+
+    /// A leftover the guard cannot recycle (a file held open, so the shell moves nothing) fails
+    /// a test that passed so far, naming it, and only prints while the test already fails.
+    #[test]
+    fn what_the_icloud_test_cannot_recycle_fails_it_unless_it_already_failed() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("held.txt");
+        fs::write(&file, "keep me").unwrap();
+        let _held = held(&file);
+        let leftovers = || Leftovers {
+            placeholders: vec![dir.path().join("gone.txt")],
+            folder: file.clone(),
+        };
+        let passed = std::panic::catch_unwind(|| drop(leftovers())).unwrap_err();
+        let message = passed.downcast_ref::<String>().unwrap();
+        assert!(message.starts_with("left in iCloud Drive, recycle it by hand: "));
+        assert!(
+            message.contains("held.txt") && message.contains("InUse"),
+            "{message}"
+        );
+        assert!(!message.contains("gone.txt"), "{message}");
+        let failed = std::panic::catch_unwind(|| {
+            let _leftovers = leftovers();
+            panic!("the test failed");
+        })
+        .unwrap_err();
+        assert_eq!(failed.downcast_ref::<&str>(), Some(&"the test failed"));
+        assert_eq!(fs::read_to_string(&file).unwrap(), "keep me");
+    }
+
+    /// Recycles `path`, which should go to the Recycle Bin, trying again every 30 s while its
+    /// cloud provider refuses to move it (`CloudBusy`), as iCloud for Windows does for about 20
+    /// minutes after it starts (windows-adapter.md §4.2). The item must stay where it was each
+    /// time, and the Recycle Bin must take it within 25 minutes.
+    fn recycle_once_icloud_lets_go(path: &Path) {
+        let started = Instant::now();
+        loop {
+            let recycled = WindowsRecycleBin.recycle(path);
+            let elapsed = started.elapsed();
+            match recycled {
+                Err(error) if error.failure == RecycleFailure::CloudBusy => {
+                    assert!(path.exists(), "{path:?} left its path although refused");
+                    println!(
+                        "{} s: {path:?} refused, trying again in 30 s: {}",
+                        elapsed.as_secs(),
+                        error.detail
+                    );
+                    assert!(
+                        elapsed < Duration::from_secs(25 * 60),
+                        "iCloud still refused {path:?} after 25 minutes"
+                    );
+                    std::thread::sleep(Duration::from_secs(30));
+                }
+                other => {
+                    assert_eq!(other, Ok(Recycled::RecycleBin), "{path:?}");
+                    println!("{} s: {path:?} is in the Recycle Bin", elapsed.as_secs());
+                    break;
+                }
+            }
+        }
+        assert!(!path.exists());
+    }
+
     /// Recycles in `FOLIO_TEST_ICLOUD_DIR`, a folder in iCloud Drive: a file only in the cloud
     /// goes to iCloud's Recently Deleted without being downloaded, a folder holding one stays,
-    /// and a downloaded file goes to the Recycle Bin. Space is freed up with `attrib`, as File
-    /// Explorer does, and the test waits for iCloud to upload and dehydrate the files.
+    /// and a downloaded file and folder go to the Recycle Bin. Space is freed up with `attrib`,
+    /// as File Explorer does, and the test waits for iCloud to upload and dehydrate the files.
+    /// For about 20 minutes after it starts, iCloud for Windows refuses to move a downloaded file
+    /// or any folder (`CloudBusy`, windows-adapter.md §4.2), so the test tries those again until
+    /// it lets go: right after iCloud starts the test may take about 35 minutes. What the test
+    /// leaves goes to the Recycle Bin or to Recently Deleted (`Leftovers`), never away for good.
+    /// Run it with `--nocapture` to see its progress:
+    /// `FOLIO_TEST_ICLOUD_DIR=<folder> cargo test -p folio-core --lib -- --ignored --nocapture
+    /// win::recycle::tests::in_icloud_drive`.
     #[test]
-    #[ignore = "needs FOLIO_TEST_ICLOUD_DIR (a folder in iCloud Drive); adds to the Recycle Bin and to iCloud's Recently Deleted"]
+    #[ignore = "needs FOLIO_TEST_ICLOUD_DIR (a folder in iCloud Drive); adds to the Recycle Bin and to iCloud's Recently Deleted; run it with --ignored --nocapture"]
     fn in_icloud_drive_files_only_in_the_cloud_go_to_recently_deleted() {
         let base = std::env::var_os("FOLIO_TEST_ICLOUD_DIR").expect("FOLIO_TEST_ICLOUD_DIR");
-        let dir = tempfile::Builder::new()
+        let root = tempfile::Builder::new()
             .prefix("folio-recycle-test-")
             .tempdir_in(base)
-            .unwrap();
-        let folder = dir.path().join("线代");
-        fs::create_dir(&folder).unwrap();
-        let (cloud, inside, local) = (
-            dir.path().join("lecture.txt"),
-            folder.join("notes.txt"),
-            dir.path().join("local.txt"),
-        );
-        for file in [&cloud, &inside, &local] {
+            .unwrap()
+            .keep();
+        let folder = root.join("线代");
+        let (cloud, inside) = (root.join("lecture.txt"), folder.join("notes.txt"));
+        let (local, downloaded) = (root.join("local.txt"), root.join("作业"));
+        let homework = downloaded.join("hw1.txt");
+        // Declared before anything else that holds the test folder, so dropped after it.
+        let _leftovers = Leftovers {
+            placeholders: vec![cloud.clone(), inside.clone()],
+            folder: root.clone(),
+        };
+        for created in [&folder, &downloaded] {
+            fs::create_dir(created).unwrap();
+        }
+        for file in [&cloud, &inside, &local, &homework] {
             fs::write(file, "test file of Folio").unwrap();
         }
         for file in [&cloud, &inside] {
             let freed = Command::new("attrib").args(["+U", "-P"]).arg(file).status();
             assert!(freed.unwrap().success(), "{file:?}");
         }
-        let files = WindowsFileSystem::open(dir.path()).unwrap();
+        let files = WindowsFileSystem::open(&root).unwrap();
         let presence = |path: &Path| files.metadata(path).unwrap().presence;
         let started = Instant::now();
+        let mut minutes = 0;
         while [&cloud, &inside]
             .iter()
             .any(|file| presence(file) != Presence::Placeholder)
         {
-            assert!(
-                started.elapsed() < Duration::from_secs(300),
-                "iCloud kept the content"
-            );
+            let waited = started.elapsed().as_secs();
+            assert!(waited < 600, "iCloud kept the content for 10 minutes");
+            if waited / 60 > minutes {
+                minutes = waited / 60;
+                println!("{minutes} min: waiting for iCloud to upload and dehydrate the files");
+            }
             std::thread::sleep(Duration::from_secs(2));
         }
+        println!(
+            "{} s: iCloud dehydrated the files",
+            started.elapsed().as_secs()
+        );
 
         assert_eq!(failure(&folder), RecycleFailure::CloudOnly);
         assert_eq!(presence(&inside), Presence::Placeholder);
         assert_eq!(WindowsRecycleBin.recycle(&cloud), Ok(Recycled::CloudTrash));
         assert!(!cloud.exists());
-        assert_eq!(WindowsRecycleBin.recycle(&local), Ok(Recycled::RecycleBin));
-        assert!(!local.exists());
+        for item in [&local, &downloaded] {
+            recycle_once_icloud_lets_go(item);
+        }
     }
 }

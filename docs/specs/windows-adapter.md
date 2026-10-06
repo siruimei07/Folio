@@ -204,13 +204,18 @@ cloud provider's trash instead of the Recycle Bin (§4.2). Callers count both as
 `RecycleFailure`: `NotFound`; `Unrecyclable` (the drive has no Recycle Bin, the path is too long
 for it, or the item is larger than its limit); `InUse` (another program holds it or something
 below it); `CloudOnly` (a folder that is, or holds, something only in the cloud, §4.2);
-`Denied`; `Invalid`; `Other`. `detail` is for logs, as `Problem::Unreadable`'s is.
-`Invalid` means a path no caller should pass (relative, a whole drive or share, `..`, NUL) or one
-the shell resolves to another file: a bug or a trap, never the user's doing, so the shell maps it
-to an internal error. The shell maps `Unrecyclable` to the IPC code `NotRecyclable` (ipc-m1
-§16.2), and `CloudOnly` too until a contract lane gives it a code of its own (§4.2). The UI later
-offers "delete permanently" for `Unrecyclable` as its own confirmed action; this adapter never
-does it.
+`CloudBusy` (its cloud provider refused to move it, and it stayed: iCloud's refusal after it
+starts ends, so trying again later may work, §4.2, but the refusal does not say why, and another
+provider or cause may refuse every time); `Denied`; `Invalid`; `Other`. `detail` is for logs, as
+`Problem::Unreadable`'s is. `Invalid` means a path no caller should pass (relative, a whole drive
+or share, `..`, NUL) or one the shell resolves to another file: a bug or a trap, never the user's
+doing, so the shell maps it to an internal error. The shell maps `Unrecyclable` to the IPC code
+`NotRecyclable` (ipc-m1 §16.2), and `CloudOnly` too until a contract lane gives it a code of its
+own (§4.2). It maps `CloudBusy` to `InUse` until `feat/ipc-recycle-cloud-trash` gives it a code
+and copy of its own; that copy may suggest trying again later, but must not promise that it
+works. `CloudBusy` is never `Unrecyclable`: the Recycle Bin may take the item once its provider
+lets go, so nothing may offer to delete it for good. The UI later offers "delete permanently" for
+`Unrecyclable` as its own confirmed action; this adapter never does it.
 
 The Recycle Bin takes native paths like `FileSystem`. Which paths may be deleted at all (never
 the library root or `.folio`) is the delete operation's rule, in the library layer.
@@ -243,7 +248,13 @@ the library root or `.folio`) is the delete operation's rule, in the library lay
   the destination → `Denied`; `COPYENGINE_E_RECYCLE_*` → `Unrecyclable`; file or path not found
   → `NotFound`. The parser's not found is `NotFound` only while the verbatim path finds nothing
   either; otherwise the item is still there by a name the parser does not reach (below, Paths):
-  `Other`.
+  `Other`. `ERROR_CLOUD_FILE_NOT_SUPPORTED` (`0x8007017B`, Win32 379), the cloud provider's
+  refusal (the code says only that the provider does not support the operation, so any provider
+  and cause gives it), from the item or only from the whole operation → `CloudBusy` while the
+  item is still at its path (the same volume serial number and file index), or when that look
+  fails (its failure added to `detail`); an item that left its path anyway is `CloudTrash` under
+  the rule of §4.2, otherwise `Other`. The adapter does not try again: each try costs about 2.6 s
+  and iCloud's refusal lasts minutes (§4.2), so the caller decides when.
 - **Paths.** The shell's parser rejects `\\?\` (`E_INVALIDARG`), so the path is rebuilt name by
   name after its drive or share, refusing empty names, `.`, `..`, `/` and NUL: outside a verbatim
   path Win32 would give them a meaning (`\\?\C:\\srv\share` would become a share). It is rebuilt
@@ -290,11 +301,32 @@ recycling each item with the flags and guard above:
 
 The guard sees nothing to refuse: `PreDeleteItem` gets `0x282` in all three cases. iCloud's sync
 root registers no `RecycleBinUri`. The field test also saw `ERROR_CLOUD_FILE_NOT_SUPPORTED`
-(`0x8007017B`) once, for an item it did not record; it did not come back here.
+(`0x8007017B`) once, for an item it did not record; it did not come back here, but it does right
+after iCloud starts (below).
 
-So the Recycle Bin takes such a file only by downloading it, which Folio never does (§3.4), and
-the shell leaves it to the cloud provider instead, as File Explorer does. Rules (Sirui,
-2026-10-04):
+**Right after iCloud starts.** Measured on iCloud for Windows 15.10.39 (build 26200, 2026-10-06,
+lane `fix/core-recycle-icloud-startup`; the app went from 15.8.118 to 15.10.39 on 2026-10-05),
+with the flags and guard above, in the first 17–19 minutes after iCloud starts:
+
+| Item | During the refusal | Afterwards |
+|---|---|---|
+| A downloaded file, or any folder the look lets through | Fails after about 2.6 s with `ERROR_CLOUD_FILE_NOT_SUPPORTED`; `PreDeleteItem` gets `0x282`, so the guard lets it through, and the shell falls back to nothing: the item is unchanged. 10 tries over 55 s fail the same way | The Recycle Bin, in about 2.7 s |
+| A file iCloud has not yet made a placeholder | The Recycle Bin, as usual | The same |
+| A file only in the cloud | Recently Deleted, as in the table above | The same |
+
+- Attributes, the in-sync state and the reparse tag are the same during the refusal and after
+  it, so the look before the shell cannot predict it; only trying tells when it has ended.
+- A plain rename out of iCloud Drive, without the shell, gets error 379 during the refusal, and
+  after it waits 60 s and fails with 426 (`ERROR_CLOUD_FILE_REQUEST_TIMEOUT`).
+- It is probably the field test's one-off `0x8007017B` (on 15.8.118; the field test also saw a
+  move of an NFD file out of the sync root refused once with that code, a file iCloud never
+  uploads, and did not check whether trying again worked).
+- The ignored iCloud test found it (§4.4). Such an item stays, `CloudBusy` (§4.1 Errors, rules
+  below).
+
+The Recycle Bin takes a file only in the cloud only by downloading it, which Folio never does
+(§3.4), so the shell leaves it to the cloud provider instead, as File Explorer does. Rules
+(Sirui, 2026-10-04):
 
 - **Before the shell**, `recycle::destination` decides from attributes and listings alone: no
   file is read or downloaded, no link followed, and a folder that is a placeholder is not listed,
@@ -309,11 +341,18 @@ the shell leaves it to the cloud provider instead, as File Explorer does. Rules 
     item is still there and `NotFound` once the item is gone too.
   - Anything else should go to the Recycle Bin.
 - **After the shell**:
-  - The item in the Recycle Bin is `Recycled::RecycleBin`, whatever was expected: something may
-    have downloaded the file in the meantime.
-  - A file expected in the cloud trash is `Recycled::CloudTrash` when the shell put nothing in
-    the Recycle Bin, reported the item done or `ERROR_CLOUD_FILE_NOT_SUPPORTED`, and the file
+  - A failure the shell reports for an item comes first (2026-10-06). For one file the shell
+    reports either a failure or a Recycle Bin item; when it reports a folder's items one by one,
+    a folder that may still be at its path must not count as recycled.
+  - Otherwise the item in the Recycle Bin is `Recycled::RecycleBin`, whatever was expected:
+    something may have downloaded the file in the meantime.
+  - A file expected in the cloud trash is `Recycled::CloudTrash` when the shell reported the item
+    done without a Recycle Bin item, or failed with `ERROR_CLOUD_FILE_NOT_SUPPORTED`, and the file
     left its path: nothing is there, or another file (volume serial number and file index).
+  - Any other `ERROR_CLOUD_FILE_NOT_SUPPORTED`, reported for the item or only as the operation's
+    result, wherever the item was expected: `CloudBusy` while the item is still at its path, or
+    when that look fails (its failure added to `detail`). An item that left its path anyway is
+    `Other` ("; yet it left its path"): neither the Recycle Bin nor trying again later.
   - Anything else is an error, as before.
 - Folio still deletes nothing itself: it hands the item to the shell as before, knowing
   beforehand where it goes. The provider keeps it: iCloud Drive's Recently Deleted keeps every
@@ -323,6 +362,10 @@ the shell leaves it to the cloud provider instead, as File Explorer does. Rules 
   `replace` publishes the new file, and deleting originals counts the original. Until a contract
   lane reports `CloudTrash` and gives `CloudOnly` a code (Sirui, 2026-10-04: after this lane), the
   toast says "Moved to the Recycle Bin" for these files too, and `CloudOnly` reads as
+  `NotRecyclable`. `CloudBusy` is a failure like any other: `delete_entries` keeps the entry,
+  `replace` keeps the new file out, and deleting originals keeps the original. It reads as
+  `InUse` ("Another program holds the file") until `feat/ipc-recycle-cloud-trash` gives it a code
+  and copy of its own. The planned restore (versioning §11.3) stops on it with `InUse` too, never
   `NotRecyclable`.
 - **Known gaps.** A file that becomes cloud-only between the look and the shell is reported as
   `Other` ("nothing in the Recycle Bin") although the shell removed it; the next scan sees it
@@ -334,6 +377,13 @@ the shell leaves it to the cloud provider instead, as File Explorer does. Rules 
   the test below: deleting a placeholder with `DeleteFileW` and then its folder left neither in
   `.Trash` on Windows three minutes later, and iCloud put the emptied parent folder back. Not
   checked on the iPad; `docs/specs-sync` should measure direct deletion before relying on it.
+  Seen again through the shell on 2026-10-06 (§4.4, iCloud row): a folder recycled seconds after
+  the file only in the cloud in its sub-folder went to Recently Deleted came back at once, the
+  folder and the sub-folder as empty in-sync placeholder folders, and was still there seven
+  minutes later, while the Recycle Bin holds the folder. So deleting files before their folders
+  can leave the folders behind, empty. A mirror deletion refused with `CloudBusy` (above) stays
+  for a later sync to try again, and a rename out of iCloud Drive can fail with 379 during that
+  refusal or time out with 426 after it.
 
 ### 4.3 Fake
 
@@ -368,10 +418,10 @@ Files only in the cloud (§4.2):
 | Area | Tests |
 |---|---|
 | Fake | A placeholder file goes to the cloud trash; a folder holding a placeholder at any depth, a placeholder folder and a folder that cannot be listed stay; a folder below that vanishes before it is listed is `Other`, or `NotFound` when the item went with it, and the item itself vanishing is `NotFound`; links are recycled as themselves, never listed; offline files are not the cloud |
-| Outcome | `outcome` with fake shell reports: the Recycle Bin wins; done or `ERROR_CLOUD_FILE_NOT_SUPPORTED` with the file gone is `CloudTrash`; still there, or expected in the Recycle Bin, is an error; the guard, other failures and a failed path check stand |
-| Adapter | On temporary files, without the Recycle Bin. `gone` for a file still there, removed, and replaced by another file at its path; the guard records the real shell's report (posted, failed, not recycled) for a file held open, which stays. The whole adapter (`recycle_with`) with a look through `StdFileSystem` that reports chosen names as placeholders, and the shell's operation played by the test through the real guard, reporting the item done with or without a Recycle Bin item, or failed: a placeholder file the operation removed is `CloudTrash`; one still there, or a local file it removed, is `Other`; a Recycle Bin item wins; a failure reported for the item (access denied) stands although the file left, and `ERROR_CLOUD_FILE_NOT_SUPPORTED` with the file gone is `CloudTrash`. A folder holding a placeholder in `作业.` beside a local `作业` is `CloudOnly` and the operation never runs; without the placeholder it goes to the operation, with `讲义.` (no sibling) listed too. A folder holding a junction (`mklink /J`) to a folder with a placeholder goes to the operation: `StdFileSystem` lists the junction as a link, which is not followed |
+| Outcome | `outcome` with fake shell reports: the Recycle Bin wins over the expected destination, but a failure reported for the item comes before a Recycle Bin item beside it (a sharing violation is `InUse` without a look at the path; `ERROR_CLOUD_FILE_NOT_SUPPORTED`, still there, is `CloudBusy`); done or `ERROR_CLOUD_FILE_NOT_SUPPORTED` with the file gone is `CloudTrash`; done and still there, or expected in the Recycle Bin without one, is an error. `ERROR_CLOUD_FILE_NOT_SUPPORTED` from the item's report or only from the operation's result, expected in either place, is `CloudBusy` while the item is there, `CloudBusy` with the look's failure added when the look fails, and `Other` with "; yet it left its path" once it left, unless the `CloudTrash` rule holds. The guard, other failures and a failed path check stand |
+| Adapter | On temporary files, without the Recycle Bin. `gone` for a file still there, removed, and replaced by another file at its path; the guard records the real shell's report (posted, failed, not recycled) for a file held open, which stays. The whole adapter (`recycle_with`) with a look through `StdFileSystem` that reports chosen names as placeholders, and the shell's operation played by the test through the real guard, reporting the item done with or without a Recycle Bin item, or failed: a placeholder file the operation removed is `CloudTrash`; one still there, or a local file it removed, is `Other`; a Recycle Bin item wins; a failure reported for the item (access denied) stands although the file left, and `ERROR_CLOUD_FILE_NOT_SUPPORTED` with the file gone is `CloudTrash`. A local file and a local folder holding a file that the operation fails with `ERROR_CLOUD_FILE_NOT_SUPPORTED` are `CloudBusy` with the HRESULT's text as `detail`, and stay with their content; a local file the operation removes while reporting that code is `Other` ("; yet it left its path"). A folder holding a placeholder in `作业.` beside a local `作业` is `CloudOnly` and the operation never runs; without the placeholder it goes to the operation, with `讲义.` (no sibling) listed too. A folder holding a junction (`mklink /J`) to a folder with a placeholder goes to the operation: `StdFileSystem` lists the junction as a link, which is not followed |
 | Callers | `delete_entries`, an import's `replace` and deleting originals with a bin that reports `CloudTrash`: done, no failure |
-| iCloud Drive | Ignored, `FOLIO_TEST_ICLOUD_DIR` (a folder in iCloud Drive): files freed up with `attrib +U -P`, then a placeholder file is `CloudTrash` and gone, a folder holding one is `CloudOnly` with its file still a placeholder, a downloaded file is `RecycleBin`. Adds to the Recycle Bin and to Recently Deleted, and iCloud may put the emptied temporary folder back. Passed twice on Sirui's machine on 2026-10-04, before the review changes of 2026-10-05 (the look through `StdFileSystem`, checked by hand on a placeholder that day, the verbatim look and identity, and the review fixes); to be run again on the current code once iCloud for Windows runs. It is the only test of the real shell and the real attributes on a placeholder; the adapter row covers the code between them |
+| iCloud Drive | Ignored, `FOLIO_TEST_ICLOUD_DIR` (a folder in iCloud Drive): files freed up with `attrib +U -P` and up to 600 s for iCloud to dehydrate them (a line each minute), then a placeholder file is `CloudTrash` and gone, a folder holding one is `CloudOnly` with its file still a placeholder, and a downloaded file and a downloaded folder (`作业/hw1.txt`) are `RecycleBin`. While either is `CloudBusy` (§4.2), the test checks that it is still there, prints why, and tries again every 30 s for up to 25 minutes, so right after iCloud starts it may take about 35 minutes: run it in the background. It keeps its temporary folder (`TempDir::keep`) instead of TempDir's permanent delete: a drop guard recycles what is left however the test ends, the placeholder files first (Recently Deleted), then the folder (the Recycle Bin), each once; what it could not recycle fails the test, named for a by-hand recycle (while the test already fails, the guard only prints it, which libtest then shows), checked by a unit test on a file held open. Run it with `--ignored --nocapture` to see its progress: libtest shows a passing test's output only then. Adds to the Recycle Bin and to Recently Deleted. Runs on Sirui's machine: passed twice on 2026-10-04, before the review changes of 2026-10-05 (the look through `StdFileSystem`, checked by hand on a placeholder that day, the verbatim look and identity, and the review fixes). On 2026-10-06, on iCloud 15.10.39 after a reboot and on the code of 2026-10-05, it failed twice within about 10 minutes of iCloud starting at 14:05 UTC (`local.txt`: `Other`, `0x8007017B`; this found the refusal of §4.2) and passed twice from 14:26 UTC. On the code with `CloudBusy` it passed at 14:59–15:00 UTC in 19 s, everything at the first try: the `CloudBusy` branch has not yet run against the real shell, which needs a run within about 20 minutes of an iCloud start. Seconds after that run's guard recycled the test folder, iCloud put it back as two empty in-sync placeholder folders (`folio-recycle-test-5TsXWB\线代`), still there seven minutes later while the Recycle Bin holds the folder (§4.2, For the mirror): the test can leave an empty folder to recycle by hand. It is the only test of the real shell and the real attributes on a placeholder; the adapter row covers the code between them |
 
 ## 5. Watcher
 
@@ -543,7 +593,8 @@ and its state is recorded next to the results in library scan §10.
 4. **Testing strategy**: adapter tests on the real OS, the ignored Recycle Bin tests and
    `FOLIO_TEST_NON_NTFS_DIR`; `FOLIO_TEST_ICLOUD_DIR` (§4.4) joins them once
    `test/core-sync-simulation`, whose lines it would touch, has landed.
-5. **IPC m1 §16.2**: `RecycleFailure::CloudOnly` maps to `NotRecyclable` (§4.2).
+5. **IPC m1 §16.2**: `RecycleFailure::CloudOnly` maps to `NotRecyclable` (§4.2), and
+   `CloudBusy` to `InUse` (2026-10-06), which **§9.2** and **§16.1** also say.
 
 ## 11. Revisit
 
@@ -558,6 +609,14 @@ and its state is recorded next to the results in library scan §10.
 - Recycling many items in one `IFileOperation` if deleting many files is slow.
 - The look for placeholders lists a whole folder before the shell moves it (§4.2); presence in
   the catalog would answer it by query.
+- A per-sync-root back-off for batches during iCloud's refusal after it starts (§4.2): each item
+  costs about 2.6 s before it fails with `CloudBusy`, so a batch could fail the rest of that sync
+  root's items at once after the first refusal, and try again later. It matters most for the M3
+  mirror.
+- A folder recycled moments after a file in it went to the cloud trash can come back empty
+  (§4.2, For the mirror), so the iCloud test may leave its empty folder. Its drop guard could wait
+  until iCloud has taken the deletions before recycling the folder, or look again a little later
+  and say that iCloud put it back; either needs a real run.
 - Off NTFS, a folder's `MODIFIED` record still scopes the whole folder; a scan of one level
   would be cheaper.
 - One scan of several scopes. Each scope is a scan of its own today, and each reads

@@ -224,6 +224,12 @@ pages of one revision consistent.
      29 new error codes (decision 7), the `folio-file` version route (decision 6), and the fake
      shell's M2 scenarios. No command gained power. Sirui's decision of 2026-10-04: storing an AI
      key for a service other than DeepSeek asks the user in a Windows dialog (ipc-m2.md §12.3).
+   - 2026-10-06, `fix/core-recycle-icloud-startup`: a cloud provider that refuses to move an item
+     for now (iCloud for Windows for about 20 minutes after it starts) is the core's new
+     `RecycleFailure::CloudBusy`, which `delete_entries` and an import's replace report as the
+     existing `InUse` (ipc-m1.md §9.2, §16.1, §16.2) until `feat/ipc-recycle-cloud-trash` gives it
+     a code of its own. No command, grant or binding changed. Independent audit (code and security)
+     and `/simplify` passed.
 4. [x] Operations lane: amend ADR-0002 and library core §4.2 for the course code, optional badge
    text and colour, 1–3 character badges, and palette keys for preset tags (spec §20).
 5. [ ] Preview lane: the `folio-file` scheme, the main window's CSP sources, and an e2e test that

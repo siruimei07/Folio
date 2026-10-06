@@ -468,7 +468,10 @@ type TagFilter =
   later version may offer "Delete permanently" for it, as its own confirmed command. A file only
   in the cloud goes to its cloud provider's trash instead, without being downloaded (iCloud
   Drive: Recently Deleted), and counts as deleted; a folder holding one stays and fails with
-  `NotRecyclable` until a contract lane reports both (Windows adapter §4.2, 2026-10-04).
+  `NotRecyclable` until a contract lane reports both (Windows adapter §4.2, 2026-10-04). An item
+  whose cloud provider refuses to move it (iCloud for Windows does for about 20 minutes after it
+  starts; trying again later may work) stays and fails with `InUse` until
+  `feat/ipc-recycle-cloud-trash` gives it a code of its own (Windows adapter §4.2, 2026-10-06).
 
 ## 10. Search
 
@@ -793,7 +796,7 @@ for logs and bug reports. Each case the UI words differently has its own code.
 | `AlreadyExists` | The name is taken in that folder (ignoring case), or by another tag |
 | `InvalidMove` | A folder into itself or below itself, or a semester folder |
 | `NameEmpty`, `NameTooLong`, `NameInvalidCharacter`, `NameTrailingDotOrSpace`, `NameReserved`, `PathTooLong` | A typed name breaks a rule (§16.3) |
-| `InUse` | Another program holds the file |
+| `InUse` | Another program holds the file; or, until a contract lane gives it a code of its own, its cloud provider refuses to move it to the Recycle Bin (Windows adapter §4.2): it stays, and trying again later may work |
 | `AccessDenied` | Windows denied access |
 | `DiskFull` | The disk is full |
 | `NotRecyclable` | The Recycle Bin cannot take the item: its drive has none, its path is too long for it, or it is too large; or, until a contract lane gives it a code of its own, it is a folder that is or holds something only in the cloud (Windows adapter §4.2). Nothing moved |
@@ -821,7 +824,7 @@ not call.
 | `library::LibraryError::NotALibrary` | `NotALibrary` |
 | `io::Error` | Not found: `NotFound`; sharing or lock violation: `InUse`; permission denied: `AccessDenied`; storage full: `DiskFull`; otherwise `FileSystem` |
 | `paths::PathError` from typed names | §16.3 |
-| `recycle::RecycleFailure` (Windows adapter §4) | `NotFound`: `NotFound`; `Unrecyclable` and `CloudOnly`: `NotRecyclable`; `InUse`: `InUse`; `Denied`: `AccessDenied`; `Invalid`: `Internal`; `Other`: `FileSystem` |
+| `recycle::RecycleFailure` (Windows adapter §4) | `NotFound`: `NotFound`; `Unrecyclable` and `CloudOnly`: `NotRecyclable`; `InUse` and `CloudBusy`: `InUse`; `Denied`: `AccessDenied`; `Invalid`: `Internal`; `Other`: `FileSystem` |
 | `fs::Presence` other than `Local`, where the shell would read the file | `NotLocal` |
 
 ### 16.3 Names the user types

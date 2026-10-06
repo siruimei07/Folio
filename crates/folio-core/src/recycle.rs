@@ -30,9 +30,10 @@ pub enum Recycled {
     CloudTrash,
 }
 
-/// Something that did not go to the Recycle Bin. It stayed where it was, except a file that became
-/// cloud-only while it was recycled: the shell then left it to its provider's trash after all
-/// (`Other`; docs/specs/windows-adapter.md §4.2).
+/// Something that did not go to the Recycle Bin. It stayed where it was, unless the shell failed
+/// and the item left its path anyway (`Other`), as a file that became cloud-only while it was
+/// recycled does: the shell then left it to its provider's trash after all
+/// (docs/specs/windows-adapter.md §4.2).
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 #[error("{} did not go to the Recycle Bin: {detail}", path.display())]
 pub struct RecycleError {
@@ -54,6 +55,12 @@ pub enum RecycleFailure {
     /// A folder that is, or holds, something whose content is only in the cloud: the shell would
     /// put the folder in the Recycle Bin without it, and leave it to the cloud provider's trash.
     CloudOnly,
+    /// The cloud provider refused to move it, and it stayed where it was. iCloud for Windows
+    /// refuses every folder and downloaded file for about 20 minutes after it starts, and then
+    /// takes them (docs/specs/windows-adapter.md §4.2), so trying again later may work. The
+    /// refusal does not say why: another provider, or another cause, may refuse every time. Never
+    /// `Unrecyclable`: the Recycle Bin may take it once the provider lets go.
+    CloudBusy,
     Denied,
     /// A path no caller should pass (relative, a whole drive, `..`), or one that the shell
     /// resolves to another file than the one on disk: a bug or a trap, never the user's doing.

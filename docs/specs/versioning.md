@@ -606,10 +606,12 @@ The file being replaced is never lost: when its content is a version that histor
 commit of `HEAD`'s chain and not pruned, §13), it is in history; otherwise it goes to the Recycle
 Bin first. Being in the store is not enough: the store also holds objects no commit reaches (§4.3).
 If the Recycle Bin cannot take it, the restore stops (`NotRecyclable`). A file not on this disk is
-not replaced (`NotLocal`); a file another program holds fails with `InUse`. Like an import that
-replaces a file (library-import.md), restore records the identity of what it replaces (file id,
-size, modification time and content hash) and checks it again right before replacing: a file saved
-in between is never overwritten (`FileChanged`, nothing replaced).
+not replaced (`NotLocal`); a file another program holds fails with `InUse`, and so does one whose
+cloud provider refuses to move it to the Recycle Bin (`RecycleFailure::CloudBusy`, which is never
+`NotRecyclable`: nothing may offer to delete such a file for good; windows-adapter §4, §4.2).
+Like an import that replaces a file (library-import.md), restore records the identity of what it
+replaces (file id, size, modification time and content hash) and checks it again right before
+replacing: a file saved in between is never overwritten (`FileChanged`, nothing replaced).
 
 ### 11.4 Steps and recovery
 

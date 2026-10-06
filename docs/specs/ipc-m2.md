@@ -676,7 +676,8 @@ type Restored = { target: string; recycled: boolean };
   (versioning §11.4), recycling the current file first when it must, and answers where it went.
   `Unchanged` when there was nothing to do; `FileChanged` when the target changed between its
   check and the rename (nothing replaced); `NotRecyclable` when the Recycle Bin could not take the
-  current file (nothing replaced). Then `HistoryChanged` (the `restore` operation) and
+  current file (nothing replaced), but `InUse` when another program holds it or its cloud provider
+  refuses to move it (versioning §11.3). Then `HistoryChanged` (the `restore` operation) and
   `WorkspaceChanged` (the new change).
 - A version that is not `stored` is `NotStored`, a thinned one `Pruned`; a current file that is
   not on this disk is `NotLocal`, never downloaded. `InvalidArgument`: a folder, or a path under
