@@ -93,12 +93,35 @@ DROP TABLE courses;
 ALTER TABLE courses_v2 RENAME TO courses;
 ";
 
-const STEPS: &[M<'static>] = &[M::up(V1), M::up(V2)];
+/// The local history's packs and where each object is (versioning.md §4.3, §13.1), from the packs'
+/// indexes. The smallest pack has 150 bytes and one object, and records start after the pack's
+/// 12-byte header (remote-format.md §9).
+const V3: &str = "
+-- name: the pack's 64 lower-case hexadecimal digits, its file name without `.pack`.
+CREATE TABLE packs (
+    name TEXT PRIMARY KEY,
+    size INTEGER NOT NULL CHECK (size >= 150),
+    objects INTEGER NOT NULL CHECK (objects >= 1)
+) STRICT, WITHOUT ROWID;
+
+-- id: `b3:` and 64 lower-case hexadecimal digits, like `entries.hash`. One location per object:
+-- an object two packs hold is found in the pack indexed first.
+CREATE TABLE objects (
+    id TEXT PRIMARY KEY,
+    pack TEXT NOT NULL REFERENCES packs (name) ON DELETE CASCADE,
+    offset INTEGER NOT NULL CHECK (offset >= 12)
+) STRICT, WITHOUT ROWID;
+CREATE INDEX objects_by_pack ON objects (pack);
+";
+
+const STEPS: &[M<'static>] = &[M::up(V1), M::up(V2), M::up(V3)];
 
 pub(super) const MIGRATIONS: Migrations<'static> = Migrations::from_slice(STEPS);
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
     use rusqlite::{Connection, params, types::Value};
 
     use super::*;
@@ -108,6 +131,9 @@ mod tests {
     use crate::paths::PATHS_VERSION;
     use crate::search::TOKENIZER_VERSION;
     use crate::test_support::{course_at, library_id};
+
+    /// The schema version the migrations end at.
+    const LATEST: u32 = 3;
 
     fn rows(conn: &Connection, table: &str) -> Vec<Vec<Value>> {
         let mut statement = conn
@@ -123,11 +149,14 @@ mod tests {
             .unwrap()
     }
 
-    #[test]
-    fn opening_and_reopening_a_populated_v1_catalog_preserves_its_data() {
-        let dir = tempfile::tempdir().unwrap();
-        let file = dir.path().join("catalog.sqlite");
-        let conn = Connection::open(&file).unwrap();
+    fn user_version(conn: &Connection) -> rusqlite::Result<u32> {
+        conn.query_row("PRAGMA user_version", [], |row| row.get(0))
+    }
+
+    /// A catalog of schema version 1 at `file` with rows in every table, as the first builds left
+    /// one.
+    fn populated_v1(file: &Path) -> Connection {
+        let conn = Connection::open(file).unwrap();
         super::super::configure(&conn).unwrap();
         conn.execute_batch(V1).unwrap();
         conn.pragma_update(None, "user_version", 1).unwrap();
@@ -165,6 +194,14 @@ mod tests {
             [ContentHash::of(b"old file content")],
         )
         .unwrap();
+        conn
+    }
+
+    #[test]
+    fn opening_and_reopening_a_populated_v1_catalog_preserves_its_data() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("catalog.sqlite");
+        let conn = populated_v1(&file);
         let tables = [
             "info",
             "semesters",
@@ -194,8 +231,7 @@ mod tests {
             opened
                 .catalog
                 .read(|tx| {
-                    let version: u32 = tx.query_row("PRAGMA user_version", [], |row| row.get(0))?;
-                    assert_eq!(version, 2);
+                    assert_eq!(user_version(tx)?, LATEST);
                     assert_eq!(tables.map(|table| rows(tx, table)), before);
                     assert_eq!(
                         tx.query_row(
@@ -211,6 +247,85 @@ mod tests {
         }
     }
 
+    /// Migration 3 (versioning.md §13.1) keeps every row of a version-2 catalog, as v0.1 left them,
+    /// and adds the history tables empty, for the history to fill.
+    #[test]
+    fn opening_a_populated_v2_catalog_keeps_its_rows_and_adds_empty_history_tables() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("catalog.sqlite");
+        let mut conn = populated_v1(&file);
+        MIGRATIONS.to_version(&mut conn, 2).unwrap();
+        // What only version 2 holds: a course code, and a course without abbreviation or colour.
+        conn.execute_batch(
+            "UPDATE courses SET code = 'MAT 223' WHERE path = 's/c';
+             INSERT INTO courses (path, abbr, code, color, sort_order, archived)
+                 VALUES ('s/d', NULL, NULL, NULL, 8, 0);",
+        )
+        .unwrap();
+        assert_eq!(user_version(&conn).unwrap(), 2);
+        let tables = [
+            "info",
+            "semesters",
+            "courses",
+            "entries",
+            "tags",
+            "entry_tags",
+            "search",
+        ];
+        let before = tables.map(|table| rows(&conn, table));
+        drop(conn);
+
+        for _ in 0..2 {
+            let opened = Catalog::open(&file, &library_id()).unwrap();
+            assert_eq!(opened.recovered, None);
+            opened
+                .catalog
+                .read(|tx| {
+                    assert_eq!(user_version(tx)?, LATEST);
+                    assert_eq!(tables.map(|table| rows(tx, table)), before);
+                    for table in ["packs", "objects"] {
+                        assert!(rows(tx, table).is_empty(), "{table}");
+                    }
+                    Ok(())
+                })
+                .unwrap();
+        }
+
+        // Strict tables without rowids, and an object's pack a cascading reference with an index.
+        let conn = Connection::open(&file).unwrap();
+        super::super::configure(&conn).unwrap();
+        for table in ["packs", "objects"] {
+            let (strict, without_rowid): (bool, bool) = conn
+                .query_row(
+                    "SELECT strict, wr FROM pragma_table_list WHERE name = ?1",
+                    [table],
+                    |row| Ok((row.get(0)?, row.get(1)?)),
+                )
+                .unwrap();
+            assert!(strict && without_rowid, "{table}");
+        }
+        let reference: [String; 4] = conn
+            .query_row(
+                "SELECT \"table\", \"from\", \"to\", on_delete FROM pragma_foreign_key_list('objects')",
+                [],
+                |row| Ok([row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?]),
+            )
+            .unwrap();
+        assert_eq!(reference, ["packs", "pack", "name", "CASCADE"]);
+        let indexed: Vec<String> = conn
+            .prepare(
+                "SELECT info.name FROM pragma_index_list('objects') AS list,
+                     pragma_index_info(list.name) AS info
+                 WHERE list.origin = 'c'",
+            )
+            .unwrap()
+            .query_map([], |row| row.get(0))
+            .unwrap()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        assert_eq!(indexed, ["pack"]);
+    }
+
     /// `Migrations::validate()` on a connection that has the tokenizer: `validate()` itself opens
     /// one without it, where `CREATE VIRTUAL TABLE search` fails.
     #[test]
@@ -218,9 +333,6 @@ mod tests {
         let mut conn = rusqlite::Connection::open_in_memory().unwrap();
         crate::search::register_tokenizer(&conn).unwrap();
         MIGRATIONS.to_latest(&mut conn).unwrap();
-        let version: u32 = conn
-            .query_row("PRAGMA user_version", [], |row| row.get(0))
-            .unwrap();
-        assert_eq!(version, 2);
+        assert_eq!(user_version(&conn).unwrap(), LATEST);
     }
 }

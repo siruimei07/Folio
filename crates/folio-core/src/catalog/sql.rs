@@ -6,6 +6,7 @@ use rusqlite::types::{FromSql, FromSqlError, FromSqlResult, ToSql, ToSqlOutput, 
 use crate::hash::ContentHash;
 use crate::meta::{Abbr, Color, DisplayName, EntryKind, FileClass, TagId};
 use crate::paths::{CoursePath, RelPath, SemesterPath};
+use crate::store::{ObjectId, PackName};
 
 fn parse_text<T, E>(
     value: ValueRef<'_>,
@@ -91,3 +92,24 @@ word_sql!(FileClass {
     "word" => FileClass::Word,
     "other" => FileClass::Other,
 });
+
+/// Text columns holding a value in the text form its `Display` writes and its `parse` reads: the
+/// ids of history format 1 (versioning.md §13.1), `b3:` and 64 hexadecimal digits for an object
+/// (like `entries.hash`), 64 for a pack.
+macro_rules! display_sql {
+    ($($type:ty),*) => {$(
+        impl FromSql for $type {
+            fn column_result(value: ValueRef<'_>) -> FromSqlResult<Self> {
+                parse_text(value, <$type>::parse)
+            }
+        }
+
+        impl ToSql for $type {
+            fn to_sql(&self) -> rusqlite::Result<ToSqlOutput<'_>> {
+                Ok(self.to_string().into())
+            }
+        }
+    )*};
+}
+
+display_sql!(ObjectId, PackName);

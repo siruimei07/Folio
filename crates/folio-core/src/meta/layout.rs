@@ -67,6 +67,16 @@ impl Layout {
         self.folio_dir().join(LOCAL_DIR).join("staging")
     }
 
+    /// The packs of the local history (versioning.md §4.1); never synced.
+    pub fn packs_dir(&self) -> PathBuf {
+        self.folio_dir().join(LOCAL_DIR).join("packs")
+    }
+
+    /// The newest commit of the local history (versioning.md §4.2); never synced.
+    pub fn head_file(&self) -> PathBuf {
+        self.folio_dir().join(LOCAL_DIR).join("HEAD")
+    }
+
     /// The journal of a scan's metadata writes (docs/specs/library-scan.md §7.1); never synced
     /// (ADR-0003 §4).
     pub fn scan_journal_file(&self) -> PathBuf {

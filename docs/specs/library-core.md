@@ -215,7 +215,7 @@ Value rules:
 - A panic inside a transaction rolls it back; a poisoned mutex is recovered, because the
   connection is consistent after the rollback.
 
-### 5.2 Schema v2 (migration 1 preserved)
+### 5.2 Schema v3 (migrations 1 and 2 preserved)
 
 `rusqlite_migration` tracks the version in `PRAGMA user_version`. Its `validate()` opens a
 connection without `folio_cjk`, so the test applies the migrations to a connection that has it.
@@ -231,6 +231,8 @@ This lane preserves migration 1 and adds migration 2 with a populated v1 fixture
 | `tags` | `id`, `name`, `color`, `sort_order` |
 | `entry_tags` | `entry_id` (cascading), `tag_id`. No foreign key to `tags`: an assignment may name a tag that `tags.json` has not synced yet, or no longer defines |
 | `search` | FTS5 over `name`, `path` (the parent folder), `tags` (tag names), `body`; `rowid` = entry id; `folio_cjk`, `detail=full`, `prefix='3'` |
+| `packs` | The local history's packs ([versioning.md](versioning.md) §4.3, §13.1): `name` (64 hex, the file name without `.pack`), `size` (at least 150 bytes), `objects` (at least 1) |
+| `objects` | Where each history object is: `id` (`b3:` + 64 hex, like `entries.hash`), `pack` (cascading from `packs`, indexed), `offset` of its record (at least 12); one location per object, from the pack indexed first |
 
 All ordinary tables are `STRICT`. Entries hold no semester or course ids: a semester or course
 view is a range scan on `path` (`path > 'P/' AND path < 'P0'`), so a rename touches only paths.
@@ -239,10 +241,19 @@ Extraction status, thumbnails and recents get their tables with their features.
 Migration 2 replaces only the courses mirror in the migration transaction, retaining STRICT,
 WITHOUT ROWID and the archive check. It copies each path, explicit abbreviation/colour, order
 and archive value, with code initialized to NULL. All other data, entry ids, tags/assignments,
-search text, indexes and info remain intact. Fresh databases run both migrations. Regression tests
-open a populated v1 fixture through `Catalog::open`, verify preservation and `user_version`
-2, exercise nullable/three-grapheme/code settings, and reopen without recovery or data loss.
+search text, indexes and info remain intact. Fresh databases run every migration. Regression tests
+open a populated v1 fixture through `Catalog::open`, verify preservation and the latest
+`user_version` (3 since migration 3), exercise nullable/three-grapheme/code settings, and reopen
+without recovery or data loss.
 Catalog schema version is separate from metadata `format_version`; SQLite stays rebuildable.
+
+Migration 3 (feat/core-object-store) adds `packs` and `objects`, empty, and leaves every other
+table as it is; fresh databases run all three. Their rows derive from the packs' indexes like the
+rest of the catalog, so a rebuild reads the packs again ([versioning.md](versioning.md) §13.2);
+`catalog/objects.rs` holds their repository. Its regression test takes the populated v1 fixture to
+version 2, opens it through `Catalog::open` twice, and checks that every row stays without
+recovery and that the two tables arrive empty, `STRICT` and without rowids, with the cascading
+reference and the index on `objects (pack)`.
 
 The entry repositories keep the `search` row in step: an entry's `name` and `path` columns are
 written with the entry, `tags` whenever its tags or a tag's name change, and `body` by extraction.

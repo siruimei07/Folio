@@ -130,15 +130,48 @@ impl FileSystem for WindowsFileSystem {
 /// Renames `from` to `to` on one volume, a folder with everything in it, and never replaces
 /// what is at `to`. Both paths are absolute.
 pub fn rename_no_replace(from: &Path, to: &Path) -> io::Result<()> {
+    // Flags 0: no replacing and no copying to another volume.
+    move_file(from, to, 0)
+}
+
+/// Renames the file `from` to `to` on one volume and returns once the rename is on the disk
+/// (`MOVEFILE_WRITE_THROUGH`; versioning.md §4.2–§4.3), replacing a file at `to` only when
+/// `replace` is set. Both paths are absolute.
+pub fn rename_durably(from: &Path, to: &Path, replace: bool) -> io::Result<()> {
+    use windows_sys::Win32::Storage::FileSystem::{
+        MOVEFILE_REPLACE_EXISTING, MOVEFILE_WRITE_THROUGH,
+    };
+    let replace = if replace {
+        MOVEFILE_REPLACE_EXISTING
+    } else {
+        0
+    };
+    // Never MOVEFILE_COPY_ALLOWED: a copy to another volume is not one rename.
+    move_file(from, to, MOVEFILE_WRITE_THROUGH | replace)
+}
+
+/// One `MoveFileExW` call with `flags`, on the verbatim forms of both paths. Noted in tests
+/// (`crash::note`), which check that the renames they depend on are written through to the disk.
+fn move_file(from: &Path, to: &Path, flags: u32) -> io::Result<()> {
+    use windows_sys::Win32::Storage::FileSystem::{
+        MOVEFILE_REPLACE_EXISTING, MOVEFILE_WRITE_THROUGH,
+    };
     let from = verbatim(from)?;
     let to = verbatim(to)?;
     // SAFETY: both buffers are NUL-terminated UTF-16 and live through this synchronous call.
-    // Flags 0: no replacing and no copying to another volume.
-    if unsafe { MoveFileExW(from.as_ptr(), to.as_ptr(), 0) } == 0 {
-        Err(io::Error::last_os_error())
-    } else {
-        Ok(())
+    if unsafe { MoveFileExW(from.as_ptr(), to.as_ptr(), flags) } == 0 {
+        return Err(io::Error::last_os_error());
     }
+    let has = |flag| flags & flag != 0;
+    crate::crash::note(
+        match (has(MOVEFILE_WRITE_THROUGH), has(MOVEFILE_REPLACE_EXISTING)) {
+            (true, true) => "rename.durable.replace",
+            (true, false) => "rename.durable",
+            (false, true) => "rename.replace",
+            (false, false) => "rename",
+        },
+    );
+    Ok(())
 }
 
 /// `path` as NUL-terminated UTF-16 in verbatim form (`\\?\C:\…`, `\\?\UNC\server\share\…`), so
@@ -459,6 +492,69 @@ mod tests {
         rename_no_replace(&from, &moved).unwrap();
         assert_eq!(fs::read(&moved).unwrap(), b"source");
         assert!(!from.exists());
+    }
+
+    #[test]
+    fn durable_renames_replace_only_when_asked_and_move_long_paths() {
+        let temp = tempfile::tempdir().unwrap();
+        let from = temp.path().join("pack-0123456789abcdef.part");
+        let to = temp.path().join("HEAD");
+        fs::write(&from, b"new").unwrap();
+        fs::write(&to, b"old").unwrap();
+        let error = rename_durably(&from, &to, false).unwrap_err();
+        assert_eq!(error.kind(), io::ErrorKind::AlreadyExists, "{error}");
+        assert_eq!(fs::read(&from).unwrap(), b"new");
+        assert_eq!(fs::read(&to).unwrap(), b"old");
+        rename_durably(&from, &to, true).unwrap();
+        assert_eq!(fs::read(&to).unwrap(), b"new");
+        assert!(!from.exists());
+        assert_eq!(
+            rename_durably(&from, &to, true).unwrap_err().kind(),
+            io::ErrorKind::NotFound
+        );
+
+        let deep: PathBuf = (0..60).fold(temp.path().to_owned(), |path, _| path.join("课程资料"));
+        fs::create_dir_all(&deep).unwrap();
+        let moved = deep.join("HEAD");
+        assert!(moved.as_os_str().encode_wide().count() > 260);
+        rename_durably(&to, &moved, false).unwrap();
+        assert_eq!(fs::read(&moved).unwrap(), b"new");
+        // A folder is never replaced, and relative paths are refused.
+        fs::write(&from, b"newer").unwrap();
+        assert!(rename_durably(&from, &deep, true).is_err());
+        assert_eq!(fs::read(&from).unwrap(), b"newer");
+        let relative = rename_durably(Path::new("a"), Path::new("b"), true).unwrap_err();
+        assert_eq!(relative.kind(), io::ErrorKind::InvalidInput);
+    }
+
+    /// Durable renames are written through to the disk (`MOVEFILE_WRITE_THROUGH`), which no
+    /// file system test can see, so tests read what `move_file` notes; other renames are not, and
+    /// a rename that fails notes nothing.
+    #[test]
+    fn durable_renames_are_written_through() {
+        let temp = tempfile::tempdir().unwrap();
+        let (a, b, c) = (
+            temp.path().join("a"),
+            temp.path().join("b"),
+            temp.path().join("c"),
+        );
+        fs::write(&a, b"a").unwrap();
+        fs::write(&c, b"c").unwrap();
+        let noted = |rename: &dyn Fn() -> io::Result<()>| {
+            let (renamed, noted) = crate::crash::noting(rename);
+            renamed.unwrap();
+            noted
+        };
+        assert_eq!(noted(&|| rename_durably(&a, &b, false)), ["rename.durable"]);
+        assert_eq!(
+            noted(&|| rename_durably(&b, &c, true)),
+            ["rename.durable.replace"]
+        );
+        assert_eq!(noted(&|| rename_no_replace(&c, &a)), ["rename"]);
+        fs::write(&b, b"b").unwrap();
+        let (refused, noted) = crate::crash::noting(|| rename_durably(&a, &b, false));
+        assert_eq!(refused.unwrap_err().kind(), io::ErrorKind::AlreadyExists);
+        assert!(noted.is_empty());
     }
 
     #[test]

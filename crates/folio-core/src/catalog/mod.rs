@@ -8,6 +8,7 @@
 mod entries;
 mod fulltext;
 mod groups;
+mod objects;
 pub mod queries;
 mod schema;
 mod sql;
@@ -33,6 +34,10 @@ pub use fulltext::{Hit, HitText, MAX_BODY_BYTES, Span, hit_text, search, set_bod
 pub use groups::{
     all_courses, course_files, courses, put_course, put_semester, remove_course, remove_semester,
     semesters,
+};
+pub use objects::{
+    CatalogLocator, IndexedPack, add_pack, clear_object_index, has_object, indexed_packs,
+    object_location, remove_pack,
 };
 pub use tags::{
     all_entry_tags, entry_tags, replace_tag_definitions, set_entry_tags, tag_definitions, tag_usage,

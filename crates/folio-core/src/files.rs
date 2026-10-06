@@ -6,6 +6,8 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
+use crate::crash;
+
 /// How long [`retry_transient`] keeps retrying before it reports the error.
 const RETRY_BUDGET: Duration = Duration::from_secs(2);
 
@@ -14,16 +16,87 @@ const RETRY_BUDGET: Duration = Duration::from_secs(2);
 /// The bytes go to a new file in `staging`, which must be on the same volume as `target`, are
 /// flushed with `sync_all`, and replace `target` with one rename. Missing folders are created.
 pub fn write_atomically(staging: &Path, target: &Path, bytes: &[u8]) -> io::Result<()> {
+    write_via_staging(staging, target, bytes, |temp, target| {
+        retry_transient(|| fs::rename(temp, target))
+    })
+}
+
+/// [`write_atomically`] for a file that is a commit point, such as the local history's `HEAD`
+/// (versioning.md §4.2): the rename is on the disk when this returns ([`rename_durably`]), so a
+/// power loss afterwards cannot bring the old content back. Both paths are absolute.
+pub fn write_atomically_durably(staging: &Path, target: &Path, bytes: &[u8]) -> io::Result<()> {
+    write_via_staging(staging, target, bytes, |temp, target| {
+        rename_durably(temp, target, true)
+    })
+}
+
+/// Renames the file `from` to `to` on one volume and returns once the rename is on the disk: one
+/// `MoveFileExW` with `MOVEFILE_WRITE_THROUGH` on Windows, a rename and a flush of the folder
+/// elsewhere. With `replace` a file at `to` is replaced; otherwise one there makes the rename fail
+/// with [`io::ErrorKind::AlreadyExists`]. Sharing violations are retried ([`retry_transient`]).
+/// Both paths are absolute.
+pub fn rename_durably(from: &Path, to: &Path, replace: bool) -> io::Result<()> {
+    retry_transient(|| rename_durably_once(from, to, replace))
+}
+
+#[cfg(windows)]
+fn rename_durably_once(from: &Path, to: &Path, replace: bool) -> io::Result<()> {
+    crate::win::rename_durably(from, to, replace)
+}
+
+#[cfg(not(windows))]
+fn rename_durably_once(from: &Path, to: &Path, replace: bool) -> io::Result<()> {
+    if replace {
+        fs::rename(from, to)?;
+    } else {
+        // A link fails where a name exists, so nothing is replaced.
+        fs::hard_link(from, to)?;
+        fs::remove_file(from)?;
+    }
+    if let Some(folder) = to.parent() {
+        File::open(folder)?.sync_all()?;
+    }
+    crash::note(if replace {
+        "rename.durable.replace"
+    } else {
+        "rename.durable"
+    });
+    Ok(())
+}
+
+/// Flushes `file`'s data and metadata to the disk (`sync_all`); noted in tests (`crash::note`),
+/// which check that the writes they depend on are durable.
+pub(crate) fn sync_all(file: &File) -> io::Result<()> {
+    file.sync_all()?;
+    crash::note("sync");
+    Ok(())
+}
+
+/// What both atomic writes share: the bytes in a new file in `staging`, flushed, then `rename`d
+/// over `target`.
+///
+/// In tests the write and the flush can fail on purpose, as a full disk would make them fail
+/// (`crate::crash`'s faults `atomic.write` and `atomic.sync`), and the write is noted
+/// (`crash::note`), so that a test sees the flush come after it.
+fn write_via_staging(
+    staging: &Path,
+    target: &Path,
+    bytes: &[u8],
+    rename: impl FnOnce(&Path, &Path) -> io::Result<()>,
+) -> io::Result<()> {
     fs::create_dir_all(staging)?;
     let (temp, mut file) = create_temp(staging)?;
     let result = (|| {
-        file.write_all(bytes)?;
-        file.sync_all()?;
+        crash::point("atomic.write");
+        crash::fault("atomic.write").and_then(|()| file.write_all(bytes))?;
+        crash::note("write");
+        crash::fault("atomic.sync").and_then(|()| sync_all(&file))?;
         drop(file);
         if let Some(parent) = target.parent() {
             fs::create_dir_all(parent)?;
         }
-        retry_transient(|| fs::rename(&temp, target))
+        crash::point("atomic.rename");
+        rename(&temp, target)
     })();
     // The write already failed; a temporary file left behind is harmless and reported with it,
     // because staging holds nothing else.
@@ -134,6 +207,141 @@ mod tests {
 
         assert!(write_atomically(&staging, &target, b"data").is_err());
         assert_eq!(fs::read_dir(&staging).unwrap().count(), 0);
+    }
+
+    #[test]
+    fn a_durable_write_replaces_the_target_and_leaves_no_temporary_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let staging = dir.path().join("local/staging");
+        let target = dir.path().join("local/HEAD");
+
+        write_atomically_durably(&staging, &target, b"first").unwrap();
+        write_atomically_durably(&staging, &target, b"second").unwrap();
+
+        assert_eq!(fs::read(&target).unwrap(), b"second");
+        assert_eq!(fs::read_dir(&staging).unwrap().count(), 0);
+    }
+
+    /// Both atomic writes flush the new content to the disk after writing it and before the
+    /// rename; only the durable one also writes the rename through (what tests can see of it:
+    /// `crash::note`).
+    #[test]
+    fn a_durable_write_flushes_its_content_and_its_rename() {
+        let dir = tempfile::tempdir().unwrap();
+        let staging = dir.path().join("local/staging");
+        let target = dir.path().join("local/HEAD");
+        type Write = fn(&Path, &Path, &[u8]) -> io::Result<()>;
+        let durable: &[&str] = &["write", "sync", "rename.durable.replace"];
+        for (write, effects) in [
+            (write_atomically_durably as Write, durable),
+            (write_atomically as Write, &["write", "sync"][..]),
+        ] {
+            let (written, noted) = crash::noting(|| write(&staging, &target, b"content"));
+            written.unwrap();
+            assert_eq!(noted, effects);
+        }
+        let (renamed, noted) = crash::noting(|| rename_durably(&target, &staging.join("x"), false));
+        renamed.unwrap();
+        assert_eq!(noted, ["rename.durable"]);
+    }
+
+    /// The staged file's write or flush can fail, as on a full disk (injected here): the atomic
+    /// write fails with that error, the target keeps its old content, and no temporary file is
+    /// left; a short file is never renamed over the target, nor one that may not be on the disk.
+    #[test]
+    fn a_failed_write_or_flush_of_the_staged_file_leaves_the_old_content() {
+        type Write = fn(&Path, &Path, &[u8]) -> io::Result<()>;
+        for write in [write_atomically as Write, write_atomically_durably] {
+            for step in ["atomic.write", "atomic.sync"] {
+                let dir = tempfile::tempdir().unwrap();
+                let staging = dir.path().join("staging");
+                let target = dir.path().join("meta/2026 秋/线性代数.json");
+                write(&staging, &target, b"old").unwrap();
+                let (failed, noted) =
+                    crash::noting(|| crash::fail_at(step, || write(&staging, &target, b"new")));
+                let error = failed.unwrap_err();
+                assert_eq!(error.to_string(), format!("a fault injected at {step}"));
+                // Nothing was flushed or renamed.
+                let written: &[&str] = if step == "atomic.write" {
+                    &[]
+                } else {
+                    &["write"]
+                };
+                assert_eq!(noted, written, "{step}");
+                assert_eq!(fs::read(&target).unwrap(), b"old", "{step}");
+                assert_eq!(fs::read_dir(&staging).unwrap().count(), 0, "{step}");
+            }
+        }
+    }
+
+    /// A flush that fails is reported, and not noted as done: a handle opened for reading cannot
+    /// flush on Windows.
+    #[cfg(windows)]
+    #[test]
+    fn a_failed_flush_is_reported_and_not_noted() {
+        const ERROR_ACCESS_DENIED: i32 = 5;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("file");
+        fs::write(&path, b"content").unwrap();
+        let reading = File::open(&path).unwrap();
+        let (flushed, noted) = crash::noting(|| sync_all(&reading));
+        let error = flushed.unwrap_err();
+        assert_eq!(error.raw_os_error(), Some(ERROR_ACCESS_DENIED), "{error}");
+        assert!(noted.is_empty(), "{noted:?}");
+        let writing = fs::OpenOptions::new().write(true).open(&path).unwrap();
+        let (flushed, noted) = crash::noting(|| sync_all(&writing));
+        flushed.unwrap();
+        assert_eq!(noted, ["sync"]);
+    }
+
+    #[test]
+    fn a_crash_in_an_atomic_write_leaves_the_old_content() {
+        type Write = fn(&Path, &Path, &[u8]) -> io::Result<()>;
+        for write in [write_atomically as Write, write_atomically_durably] {
+            let steps = crash::each_point(|arm| {
+                let dir = tempfile::tempdir().unwrap();
+                let staging = dir.path().join("staging");
+                let target = dir.path().join("meta/2026 秋/线性代数.json");
+                write(&staging, &target, b"old").unwrap();
+                match arm.run(|| write(&staging, &target, b"new")) {
+                    Ok(written) => {
+                        written.unwrap();
+                        assert_eq!(fs::read(&target).unwrap(), b"new");
+                        assert_eq!(fs::read_dir(&staging).unwrap().count(), 0);
+                    }
+                    Err(step) => {
+                        assert_eq!(fs::read(&target).unwrap(), b"old", "{step}");
+                        // The crash leaves its temporary file, and writing again works.
+                        assert_eq!(fs::read_dir(&staging).unwrap().count(), 1, "{step}");
+                        write(&staging, &target, b"new").unwrap();
+                        assert_eq!(fs::read(&target).unwrap(), b"new");
+                    }
+                }
+            });
+            assert_eq!(steps, ["atomic.write", "atomic.rename"]);
+        }
+    }
+
+    #[test]
+    fn durable_renames_replace_only_when_asked() {
+        let dir = tempfile::tempdir().unwrap();
+        let (from, to) = (dir.path().join("from.part"), dir.path().join("to"));
+        fs::write(&from, b"new").unwrap();
+        fs::write(&to, b"old").unwrap();
+
+        let refused = rename_durably(&from, &to, false).unwrap_err();
+        assert_eq!(refused.kind(), io::ErrorKind::AlreadyExists, "{refused}");
+        assert_eq!(fs::read(&from).unwrap(), b"new");
+        assert_eq!(fs::read(&to).unwrap(), b"old");
+
+        rename_durably(&from, &to, true).unwrap();
+        assert_eq!(fs::read(&to).unwrap(), b"new");
+        assert!(!from.exists());
+        let moved = dir.path().join("moved");
+        rename_durably(&to, &moved, false).unwrap();
+        assert_eq!(fs::read(&moved).unwrap(), b"new");
+        let missing = rename_durably(&to, &moved, true).unwrap_err();
+        assert_eq!(missing.kind(), io::ErrorKind::NotFound);
     }
 
     #[test]

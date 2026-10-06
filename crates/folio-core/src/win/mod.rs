@@ -10,7 +10,7 @@ mod recycle;
 mod sta;
 mod watcher;
 
-pub use files::{WindowsFileSystem, rename_no_replace};
+pub use files::{WindowsFileSystem, rename_durably, rename_no_replace};
 pub use handle::Volume;
 pub use recycle::WindowsRecycleBin;
 pub use sta::{StaError, in_sta};
