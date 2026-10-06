@@ -5,7 +5,7 @@
     "owner": "Sirui",
     "repo": "https://github.com/siruimei07/Folio",
     "explorer": "https://claude.ai/artifact/Mv1f9eXfrkYTbAs7fqQVDC",
-    "updated": "2026-10-06T11:10-04:00",
+    "updated": "2026-10-06T17:40-04:00",
     "updatedBy": "Claude Code",
     "models": {
       "fable": "Fable 5.1",
@@ -17,13 +17,13 @@
     ]
   },
   "now": {
-    "stage": "M2 实现：差异组件和 AI 设置页已合并，子代理在做对象库、工作区视图和历史视图",
+    "stage": "M2 实现：对象库已合并，下一步工作区核心；工作区视图和历史视图在做",
     "focus": "M2",
     "summary": [
-      "10-06 已合并：差异组件 `feat/ui-diff-viewer`（79f5a07，CI 37453770679 绿：工作区和历史共用的差异区，文本和 Word 逐行差异、折叠、F7 跳改动、各种状态；独立审计 4 轮）；AI 设置页 `feat/ui-settings-ai`（052c6ca）。10-05：M2 合约、三个修复（短列表测试、标签丢失、回收站）。",
-      "子代理进行中：`feat/core-object-store`（关键路径，Opus 5.5 · max，8 步做到第 5 步）；`feat/ui-history-view`、`feat/ui-changes-view`（都是 L，Opus 5.5 · xhigh，在假 shell 上做）。`feat/core-text-extract` 前 3 步已做完，等对象库合并后用第 4 号迁移接着做（决策 text-extract-migration）。之后：工作区核心（等对象库）、`feat/ipc-recycle-cloud-trash`。",
+      "10-06 已合并：对象库 `feat/core-object-store`（d5f9e628：folio-core 的 store 模块，历史格式 1 的对象、pack、本机存储和 catalog 索引，golden vectors 20 个全过；6 轮审计加 1 轮专项复查，M2 规模下 5 万个文件的检查峰值 34 MB 以内）；iCloud 启动后拒绝回收的修复（28de0ac1）；差异组件、AI 设置页。",
+      "接下来：`feat/core-workspace`（关键路径第二步，开工）；`feat/core-text-extract`（用第 4 号迁移接着做）。子代理进行中：`feat/ui-changes-view`（L）、`feat/ui-history-view`（前 7 步做完，等工作区视图合并后做第 8 步，GitButler 已把它叠在工作区视图上）。之后：`feat/ipc-recycle-cloud-trash`（等两个界面 lane 合并）。",
       "你 10-06 授权：之后的判断由路线图会话自己定、自己合并，事后汇报（决策 m2-subagents）。和模型训练会话共用内存：它跑大任务时路线图会话暂停或只跑轻量任务。要你做的：打开 iCloud for Windows，之后重跑回收站的真实 iCloud 测试。Codex：`test/core-sync-simulation` 还在改。",
-      "按你批准的 versioning.md §19：差异和恢复也等正文抽取；AI 提交说明等差异做完再开；M3 新增 `feat/core-retention`（Word 旧版本稀疏保留）；M1 的三处资料库细节由新的 `feat/ui-library-m1-notes` 做。关键路径：对象库 → 工作区 → 提交和历史 → 差异和恢复 → AI 提交说明 → M2 验收。",
+      "按你批准的 versioning.md §19：差异和恢复也等正文抽取；AI 提交说明等差异做完再开；M3 新增 `feat/core-retention`（Word 旧版本稀疏保留）；M1 的三处资料库细节由新的 `feat/ui-library-m1-notes` 做。关键路径：工作区 → 提交和历史 → 差异和恢复 → AI 提交说明 → M2 验收。",
       "模型：Fable 5.1 暂停（你 10-03 的决定）：推荐给它的 lane（关卡、规格、IPC 合约、推理强度 max）都由 Opus 5.5 用同样的推理强度代替；界面、核心、测试、设计用 Opus 5.5，只改文档和只合并的用 Sonnet 5.5。恢复时删掉 meta.pausedModels 里的 fable 即可。",
       "Codex 的项目级 skills（`AGENTS.md`、`.agents/skills/`、`.codex/`、`.claude/skills/`）和 CLAUDE.md 里的两处改动不进仓库，由 Codex 管理：任何 lane 都不提交、不丢弃。"
     ]
@@ -1946,6 +1946,34 @@
       ]
     },
     {
+      "id": "docs/docs-roadmap-objstore-landed",
+      "title": "对象库合并后的路线图刷新",
+      "milestone": "M2",
+      "phase": "m2-impl",
+      "track": "flow",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "feat/core-object-store"
+      ],
+      "summary": "对象库合并后更新 now；把它只记在 lane 文件里的交接（Part B 三处、错误码映射、本机存储不可信、HEAD 上限、删除规则 vector）写进 docs/specs-sync、提交和历史、工作区的说明；记下决策 m2-too-large-folder 和两条待办",
+      "status": "done",
+      "updated": "2026-10-06",
+      "landed": "2026-10-06",
+      "gates": {
+        "check": "pass",
+        "e2e": "na",
+        "codeReview": "na",
+        "securityReview": "na",
+        "simplify": "na",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "docs/roadmap/roadmap.json"
+      ]
+    },
+    {
       "id": "refactor/core-sta-helper",
       "title": "合并 STA 辅助函数",
       "milestone": "M1",
@@ -2658,7 +2686,8 @@
       "prompt": {
         "extra": [
           "The workspace is the disk compared with the last commit (docs/specs/versioning.md, ADR-0003 §10). Reuse the M1 scan and catalog change detection (docs/specs/library-scan.md) instead of a second walker. Text and Word files get full versions; every other file gets change events only.",
-          "Emit WorkspaceChanged as ipc-m2.md defines; its commands stop being stubs here. Handle renames, case-only renames and unreadable files (they go to the problems list, never a crash)."
+          "Emit WorkspaceChanged as ipc-m2.md defines; its commands stop being stubs here. Handle renames, case-only renames and unreadable files (they go to the problems list, never a crash).",
+          "From feat/core-object-store: .folio/local/ is untrusted input (a library folder can come from anywhere). Flatten HEAD's tree with the store's bounded walks (flatten, Differences::of_trees) and DEFAULT_PATH_BUDGET or lower, off the UI thread and cancellable; objects are located through the catalog's packs/objects index (migration 3)."
         ]
       }
     },
@@ -2688,7 +2717,9 @@
           "Also the template commit message, editing the message, undoing the last commit, and the history list and single-file history, paged for 50,000-file libraries.",
           "Add an info level to the diagnostics log for commits, and move the successful discard of an unfinished move there: it is logged under Event::Error today (docs/specs/m1-acceptance.md §4).",
           "versioning.md §19 item 4: this lane also records the first commit automatically (\"Start history\", §7.7, design decision 32A) and adds settings.json's device id (§4.6).",
-          "Catalog migrations are appended in landing order (§19 item 6): renumber yours when you rebase onto a lane that added one."
+          "Catalog migrations are appended in landing order (§19 item 6): renumber yours when you rebase onto a lane that added one.",
+          "From feat/core-object-store and decision m2-too-large-folder: StoreError::TooLarge never means damage. The write case is reachable in M2: one folder of about 450,000 files makes the automatic first commit's Tree::encode return TooLarge { NewObject(Tree), Bytes(64 MiB) }, and versioning.md §7.7 retries the first commit at every opening. Show a distinct non-damage history state that names the folder (\"history is off for this library: folder X holds too many files\"), keep the library usable, and retry only after the library changes; never HistoryDamaged. That needs an IPC state or code ipc-m2 does not have yet: plan it as a small contract change first (roadmap rule 2) and bring it to the roadmap session if it is more than one variant.",
+          "Also from feat/core-object-store: map a StoreError::Io whose source downcasts to catalog::CatalogError as Internal (ipc-m1 §16.2), not FileSystem. Run §13.2's rebuild and the first-read checks through the store's walks with DEFAULT_PATH_BUDGET or lower (never unbounded), off the UI thread and cancellable: .folio/local/ is untrusted input and their time is bounded only by the trees the store holds. Crash injection: reuse crate::crash (crash::point, crash::fault) for the commit journal."
         ]
       }
     },
@@ -3309,7 +3340,9 @@
           "Sync simulation (crates/folio-core/tests/sync_sim/README.md, \"Rules the reference model adds\"): 18 rules ADR-0003 leaves open, each from a failing seed. Settle each one in sync.md with its invariant. In particular remote-format.md §10.1 pack deletion has a real race (two devices can each delete the other's copy; the model keeps only a smaller-named pack as \"the other copy\"); an abandoned intent must expire; a head is published only after every mirror write; a file without stored versions never gets a new path whose content the device cannot obtain; timers run on a monotonic clock. The §10.1 fix changes an approved format document: bring it to me as a decision with options (decision pack-deletion-race).",
           "The simulation's iCloud assumptions (identical concurrent uploads do not conflict; an iCloud-updated file gets a new file id or size) were made before the field test ran: confirm or correct them against the results and tell the simulation which to change.",
           "From fix/core-recycle-cloud-placeholder: ADR-0003 §7 \"mirror deletions go through the shell\" now gives CloudTrash for a cloud-only mirror file and CloudOnly for a folder that holds one, so the mirror must delete files before folders. Seen once: DeleteFileW on a placeholder plus removing its folder left neither in Windows' .Trash after 3 minutes, and iCloud put the emptied parent back (not checked on the iPad). Measure direct deletion before the mirror relies on Recently Deleted.",
-          "From the 2026-10-06 recycle investigation: iCloud for Windows auto-updated from 15.8.118 (the field test's version) to 15.10.39 on 2026-10-05; for about 17–19 minutes after it starts it refuses moves out of iCloud Drive (recycle 0x8007017B, rename 379), which the mirror must survive; and since 2026-10-06 it retries every 30 s, without success, to delete .Trash\\FolioFieldTest\\t04-names, which holds the field test's NFD-named t04-twin-é.txt: an NFD name can block iCloud for Windows' own trash."
+          "From the 2026-10-06 recycle investigation: iCloud for Windows auto-updated from 15.8.118 (the field test's version) to 15.10.39 on 2026-10-05; for about 17–19 minutes after it starts it refuses moves out of iCloud Drive (recycle 0x8007017B, rename 379), which the mirror must survive; and since 2026-10-06 it retries every 30 s, without success, to delete .Trash\\FolioFieldTest\\t04-names, which holds the field test's NFD-named t04-twin-é.txt: an NFD name can block iCloud for Windows' own trash.",
+          "From feat/core-object-store (its findings for other lanes): (1) remote-format.md §10.3 says a head record lists one or more packs, but generate.mjs's headProblem accepts an empty list and no vector covers it (the Rust reader follows the text): make them agree before v0.3 freezes Part B. (2) §10.4 says an intent path is \"a path (§6.5) that a tree may hold (§7.4)\", but generate.mjs's mirrorPathProblem checks only the two named rules, not §7.4 rules 2–3, so it accepts `write dir .folio/x` (the reader follows the generator): drop the phrase or add the rules. (3) §10.1 \"a device's intents and heads share one counter\" reads as one sequence, while records.json numbers a push's intent and head alike: say which numbering a writer uses.",
+          "Also from feat/core-object-store: (4) a local store is untrusted input too (a library folder can come from anywhere; nothing in M2 checks where .folio/local/ came from): say so in versioning.md §4 or §13.2, and give sync.md's M3 decode budget local packs too. (5) Freeze HEAD's cap in versioning.md §4.2 for every version (\"at most 4 KiB, read before its version\"), or a later HEAD over 4 KiB reads as damaged, not newer. (6) Add a commit-rules.json deletion vector where a blob is stored again after a prune commit (c1 stores v1, c2 replaces it, p1 prunes v1, c3 stores v1, c4 replaces it: not deletable; then p2 prunes v1: deletable) before v0.2 freezes v1. (7) ipc-m2 §15.2: StoreError::TooLarge never means damage (it comes from write limits and the walks' path budget; objects read over the limits are Invalid) — give it its own mapping (decision m2-too-large-folder), and map a StoreError::Io whose source is a catalog::CatalogError to Internal, not FileSystem."
         ]
       }
     },
@@ -4073,6 +4106,14 @@
       "type": "decide",
       "state": "done",
       "result": "路线图会话按授权决定：M2 不提供。否则只会打开「以后才支持预览」的卡片，「打开」打开的还是当前文件，会误导要不要恢复的判断；Word 有了预览后切换会自动出现（previewKindOf）"
+    },
+    {
+      "id": "m2-too-large-folder",
+      "when": "2026-10-06",
+      "item": "资料库里一个文件夹大到超出历史格式 1 的上限（约 45 万个文件，树超过 64 MiB）时怎么办",
+      "type": "decide",
+      "state": "done",
+      "result": "路线图会话按授权决定：给一个不算「历史损坏」的单独状态（「这个资料库的历史已关闭：文件夹 X 里的文件太多」），资料库照常能用，等资料库有变化再重试第一次提交；StoreError::TooLarge 一律不映射成 HistoryDamaged。由 feat/core-commit-history 和 docs/specs-sync 落实，对象库不用改"
     }
   ],
   "looseEnds": [
@@ -4249,6 +4290,16 @@
     {
       "state": "open",
       "item": "iCloud for Windows 从 10-06 起每 30 秒重试删除 iCloud Drive 回收站里的 .Trash\\FolioFieldTest\\t04-names（里面是实测留下的 NFD 名字文件 t04-twin-é.txt），一直删不掉：Sirui 可以在 iPad 或 iCloud.com 的「最近删除」里把它彻底删掉（Folio 不做永久删除）",
+      "lane": "docs/specs-sync"
+    },
+    {
+      "state": "open",
+      "item": "对象库第 4 轮复查留下的小问题：§7.4 根目录检查读树时把根树放在预算外（最多多一棵根树）；prune 提交的 find_stored 不计入预算；文档里「两边共 46 万条路径」只适用于有改动记录的检查（没有改动记录的 diff 约 33.8 万）；presence 和检查集合的预留容量没有测试固定",
+      "lane": "feat/core-retention"
+    },
+    {
+      "state": "open",
+      "item": "remote-format.md §9.3 没写 RFC 8878 的块大小上限（Block_Maximum_Size），generate.mjs 接受 folio-core 拒绝的帧；testing-strategy「Gaps today」还写着 folio-core 的 vector 测试随对象库到来（那一行挨着 test/core-sync-simulation 的改动，后合并的一方改）",
       "lane": "docs/specs-sync"
     }
   ],
@@ -4662,6 +4713,11 @@
       "at": "2026-10-06",
       "by": "Claude Code",
       "text": "真实 iCloud 回收测试：重启后第一次失败（iCloud 15.10.39 启动后约 17–19 分钟拒绝回收已下载的文件和文件夹，0x8007017B），之后两次通过；新增 fix/core-recycle-icloud-startup"
+    },
+    {
+      "at": "2026-10-06",
+      "by": "Claude Code",
+      "text": "合并：feat/core-object-store（d5f9e628，自审 3 轮 + 独立审计 3 轮 + 专项复查收敛）、fix/core-recycle-icloud-startup（28de0ac1）。对象库的交接写进 docs/specs-sync、feat/core-commit-history、feat/core-workspace；决策 m2-too-large-folder"
     }
   ]
 }
