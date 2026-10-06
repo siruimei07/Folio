@@ -5,7 +5,7 @@
     "owner": "Sirui",
     "repo": "https://github.com/siruimei07/Folio",
     "explorer": "https://claude.ai/artifact/Mv1f9eXfrkYTbAs7fqQVDC",
-    "updated": "2026-10-05T19:00-04:00",
+    "updated": "2026-10-05T21:20-04:00",
     "updatedBy": "Claude Code",
     "models": {
       "fable": "Fable 5.1",
@@ -17,12 +17,12 @@
     ]
   },
   "now": {
-    "stage": "M2 实现：子代理接手 M2，对象库和差异组件开工",
+    "stage": "M2 实现：子代理在做对象库、差异组件和 AI 设置页",
     "focus": "M2",
     "summary": [
-      "10-05 已合并：M2 合约 `feat/ipc-m2-contract`（cd4344b，CI 37253549014 绿：ipc-m2.md，M2 的工作区、历史和 AI 命令桩）；问题列表短列表测试的修复 `fix/ui-problems-short-list-flake`（问题在测试，组件不丢页；两处测试共用一个假 IntersectionObserver）。接着合并：`fix/core-catalog-tags-property`（文件留在原处、文件夹搬走时标签丢失，main 上的真 bug）。更早：M2 依赖、M1 资料库细节、M2 设计、iCloud 实测、历史格式规格。",
-      "你 10-05 定了：M2 剩下的 lane 全部由路线图会话的子代理做，Codex 不再接 M2 的后端；检查和独立审计都过、上一次 main CI 绿了，就由路线图会话合并并事后汇报（决策 m2-subagents）。第一批：`feat/core-object-store`（关键路径，Opus 5.5 · max）、`feat/ui-diff-viewer`（Opus 5.5 · high）、`feat/ui-settings-ai`（S）；Rust 名额空出来后开 `feat/core-text-extract`。",
-      "进行中：`fix/core-recycle-cloud-placeholder`（会话曾被归档，已恢复收尾，之后独立审计再合并）；`test/core-sync-simulation`（Codex，第二次审计退回，之后第三次审计；合并后 `docs/specs-sync` 才能开）。",
+      "10-05 已合并：M2 合约（cd4344b）；问题列表短列表测试的修复（58d4e09）；标签丢失的修复（f828cfe，CI 37389281469 绿）；回收站修复 `fix/core-recycle-cloud-placeholder`（d98e709：只在云端的文件进提供方的回收站，装着这类文件的文件夹留下；独立审计 3 轮，修了复核确认的 4 个问题和十几处小问题）。更早：M2 依赖、M1 资料库细节、M2 设计、iCloud 实测、历史格式规格。",
+      "子代理进行中：`feat/core-object-store`（关键路径，Opus 5.5 · max）、`feat/ui-diff-viewer`、`feat/ui-settings-ai`（你 10-05 定了 AI 设置页和差异区文件夹的设计，决策 m2-ai-page、m2-diff-folders）。接着开 `feat/core-text-extract`。新增 `feat/ipc-recycle-cloud-trash`：回收结果报告「已进 iCloud 最近删除」，文案要你定。",
+      "要你做的：打开 iCloud for Windows（10-05 重启后没在运行），之后重跑回收站的真实 iCloud 测试。Codex：`test/core-sync-simulation` 第二次审计退回后还在改，合并后 `docs/specs-sync` 才能开。M2 的 lane 由路线图会话按你的一次授权合并（决策 m2-subagents）。",
       "按你批准的 versioning.md §19：差异和恢复也等正文抽取；AI 提交说明等差异做完再开；M3 新增 `feat/core-retention`（Word 旧版本稀疏保留）；M1 的三处资料库细节由新的 `feat/ui-library-m1-notes` 做。关键路径：对象库 → 工作区 → 提交和历史 → 差异和恢复 → AI 提交说明 → M2 验收。",
       "模型：Fable 5.1 暂停（你 10-03 的决定）：推荐给它的 lane（关卡、规格、IPC 合约、推理强度 max）都由 Opus 5.5 用同样的推理强度代替；界面、核心、测试、设计用 Opus 5.5，只改文档和只合并的用 Sonnet 5.5。恢复时删掉 meta.pausedModels 里的 fable 即可。",
       "Codex 的项目级 skills（`AGENTS.md`、`.agents/skills/`、`.codex/`、`.claude/skills/`）和 CLAUDE.md 里的两处改动不进仓库，由 Codex 管理：任何 lane 都不提交、不丢弃。"
@@ -1834,6 +1834,34 @@
       ]
     },
     {
+      "id": "docs/docs-roadmap-recycle-landed",
+      "title": "回收站修复合并后的路线图刷新",
+      "milestone": "M2",
+      "phase": "m2-impl",
+      "track": "flow",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "fix/core-recycle-cloud-placeholder"
+      ],
+      "summary": "回收站修复合并后更新 now；新增合约 lane feat/ipc-recycle-cloud-trash，记下 Sirui 10-05 的两个设计决定（m2-ai-page、m2-diff-folders），同步规格加上镜像删除的发现，补两条待办",
+      "status": "done",
+      "updated": "2026-10-05",
+      "landed": "2026-10-05",
+      "gates": {
+        "check": "pass",
+        "e2e": "na",
+        "codeReview": "na",
+        "securityReview": "na",
+        "simplify": "na",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "docs/roadmap/roadmap.json"
+      ]
+    },
+    {
       "id": "refactor/core-sta-helper",
       "title": "合并 STA 辅助函数",
       "milestone": "M1",
@@ -3023,6 +3051,35 @@
       }
     },
     {
+      "id": "feat/ipc-recycle-cloud-trash",
+      "title": "回收结果：已进 iCloud 最近删除",
+      "milestone": "M2",
+      "phase": "m2-impl",
+      "track": "core",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "fix/core-recycle-cloud-placeholder"
+      ],
+      "summary": "删除和导入的结果报告「已进 iCloud 最近删除」（Recycled::CloudTrash）；装着只在云端的文件的文件夹给出自己的错误码和文案（RecycleFailure::CloudOnly，现在映射成 NotRecyclable）；顺带定 shell 按名字找不到的条目（名字末尾是点或空格）报哪种失败",
+      "status": "planned",
+      "updated": "2026-10-05",
+      "links": [
+        "docs/specs/ipc-m1.md",
+        "docs/specs/windows-adapter.md",
+        "docs/design/handoff/library-actions.md"
+      ],
+      "prompt": {
+        "extra": [
+          "fix/core-recycle-cloud-placeholder (Sirui, 2026-10-04) left the IPC and UI wording to this lane: RecycleBin::recycle returns Recycled::RecycleBin or Recycled::CloudTrash, and a folder that is or holds something only in the cloud fails with RecycleFailure::CloudOnly, which folio-app maps to NotRecyclable for now (windows-adapter.md §4.2–§4.4, ipc-m1.md §9.2, §12, §16).",
+          "Contract: report CloudTrash in the delete_entries and import (replace, deleteOriginals) results and give CloudOnly its own error code; update ipc-m1.md, regenerate the bindings, and update the fake shell and its REVIEWED_BINDINGS in the same commit.",
+          "UI: the delete and import results say where the files went (for example \"Moved to iCloud's Recently Deleted\") and explain a refused folder; copy through design:ux-copy. The library-actions handoff has no row for these: bring me the copy and any new state as a short choice before building.",
+          "Also settle with me which failure an item the shell cannot reach by name reports (a name ending in a dot, or a last name ending in a space; only possible above the library or in an import source). Today it is Other (FileSystem); the alternative is NotRecyclable, which would make it eligible for a later \"delete permanently\" offer. The recycle audit recommends keeping Other.",
+          "Add the FOLIO_TEST_ICLOUD_DIR line to docs/specs/testing-strategy.md once test/core-sync-simulation has landed (its hunk is next to that line)."
+        ]
+      }
+    },
+    {
       "id": "test/core-sync-simulation",
       "title": "同步仿真",
       "milestone": "M3",
@@ -3080,7 +3137,8 @@
           "Specify remote compaction for feat/core-retention (ADR-0006): when packs may be deleted, how other devices learn of it, and which simulation invariant checks it.",
           "Field test (docs/research/icloud-field-test.md §2 and §5, iCloud for Windows 15.8 with the iPad): NFD names never upload from Windows; an NFC/NFD twin pair stalls every upload until one is removed (about 6 min to recover); an iPad case-only rename deletes the file; a name invalid on Windows becomes its \"_\" form on iCloud when Windows writes it; conflict copies are named per device (\"p3 2.png\", \"p3(1).png\" on Windows, \"p3 3.png\" on the iPad), the writer's own file can be renamed and the original path can vanish; renaming over a mirror file is reliable, also over cloud-only files; every delete or replace also lands in Recently Deleted; a head record arrived about 2.5 min before a 200 MB pack; pins are inherited.",
           "Sync simulation (crates/folio-core/tests/sync_sim/README.md, \"Rules the reference model adds\"): 18 rules ADR-0003 leaves open, each from a failing seed. Settle each one in sync.md with its invariant. In particular remote-format.md §10.1 pack deletion has a real race (two devices can each delete the other's copy; the model keeps only a smaller-named pack as \"the other copy\"); an abandoned intent must expire; a head is published only after every mirror write; a file without stored versions never gets a new path whose content the device cannot obtain; timers run on a monotonic clock. The §10.1 fix changes an approved format document: bring it to me as a decision with options (decision pack-deletion-race).",
-          "The simulation's iCloud assumptions (identical concurrent uploads do not conflict; an iCloud-updated file gets a new file id or size) were made before the field test ran: confirm or correct them against the results and tell the simulation which to change."
+          "The simulation's iCloud assumptions (identical concurrent uploads do not conflict; an iCloud-updated file gets a new file id or size) were made before the field test ran: confirm or correct them against the results and tell the simulation which to change.",
+          "From fix/core-recycle-cloud-placeholder: ADR-0003 §7 \"mirror deletions go through the shell\" now gives CloudTrash for a cloud-only mirror file and CloudOnly for a folder that holds one, so the mirror must delete files before folders. Seen once: DeleteFileW on a placeholder plus removing its folder left neither in Windows' .Trash after 3 minutes, and iCloud put the emptied parent back (not checked on the iPad). Measure direct deletion before the mirror relies on Recently Deleted."
         ]
       }
     },
@@ -3804,6 +3862,22 @@
       "type": "decide",
       "state": "done",
       "result": "M2 剩下的 10 个 lane（6 个核心、4 个界面）和 M2 验收的准备都由路线图会话的子代理做（Opus 5.5，L 规模的核心 lane 用 max），Codex 不再接 M2 的后端。合并：你在路线图会话里一次授权，lane 的检查和独立审计都过、上一次合并的 main CI 绿了就由路线图会话合并，事后汇报；产品决定、审计反复不过、要你动手的事（AI 的 API key、M2 验收）仍先问你。同一天批准合并两个修复 lane，恢复回收站修复 lane 的会话收尾"
+    },
+    {
+      "id": "m2-ai-page",
+      "when": "2026-10-05",
+      "item": "AI 设置页的设计稿缺状态，画布上显示 key 末四位违反 M2 合约",
+      "type": "decide",
+      "state": "done",
+      "result": "按工程方案：已存 key 时换服务先确认会删掉 key；模型是输入框加保存，默认 deepseek-chat；只有选兼容 OpenAI 的服务才显示地址栏；已存 key 只显示「已保存 key」（测试、替换、删除），不显示任何字符；AI 关闭时其他设置仍可改；测试结果在行内显示。之后由 Cowork 补画布"
+    },
+    {
+      "id": "m2-diff-folders",
+      "when": "2026-10-05",
+      "item": "差异区怎么显示文件夹改动（改名或移动、删除、新加空文件夹）",
+      "type": "decide",
+      "state": "done",
+      "result": "提示条 + 说明块：改名或移动写从哪里来、一起移动了几个文件、内容没变所以没有可比较的；删除写文件夹名和文件数；新加的空文件夹写「空文件夹」"
     }
   ],
   "looseEnds": [
@@ -3933,9 +4007,19 @@
       "lane": "test/core-sync-simulation"
     },
     {
-      "state": "open",
-      "item": "会记住「已滚到底」的假 IntersectionObserver 在 problems.test.tsx 和 SearchDialog.test.tsx 各写了一份：工作区列表要第三份之前合成 src/test/ 里的共用 helper",
+      "state": "done",
+      "item": "会记住「已滚到底」的假 IntersectionObserver 在 problems.test.tsx 和 SearchDialog.test.tsx 各写了一份：工作区列表要第三份之前合成 src/test/ 里的共用 helper（10-05 合并：src/test/listEnd.ts 的 fakeListEnd，58d4e09）",
       "lane": "fix/ui-problems-short-list-flake"
+    },
+    {
+      "state": "open",
+      "item": "iCloud for Windows 在 10-05 重启后没在运行：打开后重跑回收站的真实 iCloud 测试（FOLIO_TEST_ICLOUD_DIR 指向 iCloud Drive 里任意文件夹；cargo test -p folio-core --lib -- --ignored win::recycle::tests::in_icloud_drive）",
+      "lane": "feat/ipc-recycle-cloud-trash"
+    },
+    {
+      "state": "open",
+      "item": "Cowork 画布要补两处：AI 设置页的各个状态（按 10-05 批准的工程方案，已存 key 不显示任何字符），差异区的文件夹改动（提示条 + 说明块）",
+      "lane": "design/design-sync"
     }
   ],
   "risks": [
@@ -4328,6 +4412,11 @@
       "at": "2026-10-05",
       "by": "Claude Code",
       "text": "合并：feat/ipc-m2-contract（cd4344b，合约会话合并）、fix/ui-problems-short-list-flake。Sirui 决定 M2 剩下的 lane 由路线图会话的子代理做、合并按一次授权（m2-subagents）；6 个 M2 核心 lane 从 Codex 改为 Claude Code"
+    },
+    {
+      "at": "2026-10-05",
+      "by": "Claude Code",
+      "text": "合并：fix/ui-problems-short-list-flake（58d4e09）、fix/core-catalog-tags-property（f828cfe）、fix/core-recycle-cloud-placeholder（d98e709，路线图会话独立审计 3 轮后合并）。M2 子代理开工：对象库、差异组件、AI 设置页；新增 feat/ipc-recycle-cloud-trash；决策 m2-ai-page、m2-diff-folders"
     }
   ]
 }
