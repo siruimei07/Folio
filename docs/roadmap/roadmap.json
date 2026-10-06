@@ -2798,8 +2798,18 @@
         "feat/ui-settings"
       ],
       "summary": "AI 设置页（Key、模型、开关）",
-      "status": "planned",
-      "updated": "2026-10-01",
+      "status": "done",
+      "updated": "2026-10-06",
+      "landed": "2026-10-06",
+      "gates": {
+        "check": "pass",
+        "e2e": "pass",
+        "codeReview": "pass",
+        "simplify": "pass",
+        "designCritique": "pass",
+        "a11y": "pass",
+        "securityReview": "na"
+      },
       "links": [
         "docs/specs/ipc-m2.md",
         "docs/design/handoff/workspace-history.md"

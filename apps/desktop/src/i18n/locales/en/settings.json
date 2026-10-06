@@ -18,6 +18,7 @@
     "pages": {
       "general": "General",
       "appearance": "Appearance",
+      "ai": "AI",
       "keyboard": "Keyboard"
     }
   },
@@ -283,6 +284,105 @@
       "NameEmpty": "Enter a name for this computer.",
       "NameTooLong": "Use 128 characters or fewer.",
       "NameInvalidCharacter": "Remove line breaks and other control characters."
+    }
+  },
+  "ai": {
+    "loadFailed": "Couldn't load the AI settings",
+    "service": {
+      "deepseek": "DeepSeek",
+      "other": "the AI service"
+    },
+    "enabled": {
+      "label": "Write commit messages with AI",
+      "description": "When you leave the commit message empty, {{service}} writes one. You can always commit without AI: with no key or no connection, Folio writes a template message instead.",
+      "failedOn": "Couldn't turn on AI commit messages",
+      "failedOff": "Couldn't turn off AI commit messages"
+    },
+    "sendContent": {
+      "label": "Send changed text",
+      "description": "Sends the changed lines of text and Word files, up to about 8,000 characters each. Without it, AI sees only file names, courses, tags and your description. The contents of PDFs, slides, spreadsheets and images are never sent.",
+      "failedOn": "Couldn't turn on sending changed text",
+      "failedOff": "Couldn't turn off sending changed text"
+    },
+    "choose": {
+      "label": "Service",
+      "help": "DeepSeek, or another service that takes OpenAI-style chat requests.",
+      "options": {
+        "deepseek": "DeepSeek",
+        "other": "OpenAI-compatible service"
+      },
+      "switched": "Switched to DeepSeek",
+      "switchedKeyRemoved": "Switched to DeepSeek. The old API key was removed.",
+      "failed": "Couldn't switch to DeepSeek",
+      "confirm": {
+        "toDeepSeek": {
+          "title": "Switch to DeepSeek?",
+          "next": "Then add your DeepSeek key."
+        },
+        "toOther": {
+          "title": "Switch to another service?",
+          "next": "Then add a key for the new service."
+        },
+        "removes": {
+          "deepseek": "The saved DeepSeek API key works only with DeepSeek, so Folio removes it.",
+          "other": "The saved API key works only with the current service, so Folio removes it."
+        },
+        "confirm": "Switch and remove key"
+      }
+    },
+    "address": {
+      "label": "Address",
+      "help": "Where Folio sends requests, like https://api.example.com/v1. Folio adds /chat/completions.",
+      "helpKey": "Where Folio sends requests, like https://api.example.com/v1. Folio adds /chat/completions. An address on another server removes the saved API key.",
+      "saved": "Address saved",
+      "savedKeyRemoved": "Address saved. The old API key was removed.",
+      "failed": "Couldn't save the address"
+    },
+    "model": {
+      "label": "Model",
+      "help": "The name of the model to use, like deepseek-chat.",
+      "saved": "Model saved",
+      "failed": "Couldn't save the model"
+    },
+    "key": {
+      "title": {
+        "deepseek": "DeepSeek API key",
+        "other": "API key"
+      },
+      "label": "Key",
+      "newLabel": "New key",
+      "help": "Stored in Windows Credential Manager, never in your library folder.",
+      "saved": "A key is saved",
+      "replace": "Replace key",
+      "remove": "Remove key",
+      "removing": "Removing…",
+      "savedAnnouncement": "API key saved",
+      "removed": "API key removed",
+      "declined": "The key wasn't saved: you chose Cancel when Windows asked to allow this service. To use it, paste the key again and choose Allow.",
+      "saveFailed": "Couldn't save the key",
+      "removeFailed": "Couldn't remove the key",
+      "addressFirst": "Save the address first, then add a key for this service."
+    },
+    "test": {
+      "action": "Test key",
+      "testing": "Testing…",
+      "service": {
+        "deepseek": "DeepSeek",
+        "other": "The AI service"
+      },
+      "ok": "{{service}} answered. The key works.",
+      "failed": {
+        "AiNetwork": "{{service}} didn't answer. Check your connection and try again.",
+        "AiTimeout": "{{service}} took too long. Try again in a moment.",
+        "AiRejected": "{{service}} turned down the API key. Check that you pasted the whole key, or replace it with a new one.",
+        "AiRateLimited": "{{service}} is busy right now. Try again in a minute.",
+        "AiUnavailable": "{{service}} isn't working right now. Try again later.",
+        "AiBadResponse": "{{service}}'s answer couldn't be used. Check the model name and try again.",
+        "AiBadResponseOther": "{{service}}'s answer couldn't be used. Check the address and model name, then try again.",
+        "AiCredential": "Folio couldn't read the API key from Windows Credential Manager. Replace the key, then test it again.",
+        "AiNotConfigured": "No API key is saved for this service. Save one, then test it.",
+        "other": "Couldn't test the key. {{message}}"
+      }
     }
   }
 }

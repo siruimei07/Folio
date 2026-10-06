@@ -26,6 +26,8 @@ export interface FieldProps {
   onBlur?: () => void;
   /** Enter, outside an IME composition. */
   onEnter?: () => void;
+  /** password: the characters show as dots, like an API key (ipc-m2 §12.2). */
+  type?: 'text' | 'password';
 }
 
 /**
@@ -46,6 +48,7 @@ export function Field({
   autoFocus = false,
   onBlur,
   onEnter,
+  type = 'text',
 }: FieldProps) {
   const id = useId();
   // After the frame: a dialog opened from a menu first gets focus back to the menu's button, and
@@ -71,6 +74,7 @@ export function Field({
     <input
       ref={inputRef}
       id={id}
+      type={type}
       className="text-input field__input"
       data-mono={mono || undefined}
       value={value}

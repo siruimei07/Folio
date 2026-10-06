@@ -82,6 +82,8 @@ export const keys = {
   problems: (libraryId: string) => ['lib', libraryId, 'problems'] as const,
   /** The library's `.folio/ignore` (ipc-m1 §22.2). */
   ignoreRules: (libraryId: string) => ['lib', libraryId, 'ignoreRules'] as const,
+  /** `get_ai_settings`: this computer's, like the App settings (ipc-m2 §12.1). Never the key. */
+  aiSettings: () => ['app', 'aiSettings'] as const,
 };
 
 /** The reference in the key of a query that asks for nothing (it has no entry yet). */

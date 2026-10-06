@@ -5,6 +5,7 @@ import type { Query, QueryClient } from '@tanstack/react-query';
 
 import { type CatalogChanged, shellEvents } from '../ipc';
 import { isOlderRevision } from '../lib/revision';
+import { receiveAiSettings } from './ai';
 import { receiveJob } from './jobs';
 import { keys, readKey } from './keys';
 import { receiveLibraryState } from './library';
@@ -106,6 +107,9 @@ export function connectShellEvents(client: QueryClient): () => void {
     shellEvents.onIgnoreRulesChanged(({ rules }) => {
       const libraryId = useSession.getState().libraryId;
       if (libraryId !== null) receiveIgnoreRules(client, libraryId, rules);
+    }),
+    shellEvents.onAiSettingsChanged(({ settings }) => {
+      receiveAiSettings(client, settings);
     }),
   ];
   return () => {
