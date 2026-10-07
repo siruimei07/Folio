@@ -34,6 +34,8 @@ const ROWS = { kind: 'rows', offset: 0, limit: 500 } as const;
 const MAT = 'Fall 2026/MAT232 Calculus of Several Variables';
 const REVIEW = `${MAT}/Exams/Midterm/Midterm review.md`;
 const WEEK2 = `${MAT}/week 2 notes.md`;
+/** The small library's file another program holds (`InUse`). */
+const RECORDING = 'Fall 2026/ECO101 微观经济学/Lecture recording week 5.mp4';
 
 let shell: FakeShell | undefined;
 
@@ -497,6 +499,203 @@ describe('the first commit', () => {
     await unwrap(ipc.cancelJob({ job: id }));
     shell?.finishJobs();
     expect((await unwrap(ipc.getWorkspace())).historyState).toBe('none');
+  });
+});
+
+describe('a history too large to keep', () => {
+  const PHOTOS = 'Personal/Photos';
+
+  async function startHistory(): Promise<Job> {
+    return finish(await unwrap(ipc.startHistory({ summary: 'Start history' })));
+  }
+
+  it('lists nothing and answers as before the first commit, then runs the first commit again', async () => {
+    install('history-too-large');
+    const summary = await unwrap(ipc.getWorkspace());
+    expect(summary).toMatchObject({
+      historyState: 'tooLarge',
+      tooLargeFolder: PHOTOS,
+      head: null,
+      fingerprint: '0'.repeat(32),
+      items: 0,
+      metadata: 0,
+      includable: 0,
+    });
+    expect((await unwrap(ipc.listWorkspaceItems({ page: PAGE }))).total).toBe(0);
+    expect((await unwrap(ipc.listMetadataChanges({ page: PAGE }))).total).toBe(0);
+    expect((await unwrap(ipc.listHistory({ page: PAGE, types: null }))).total).toBe(0);
+    const review = { kind: 'entry', entry: entryRef(REVIEW) } as const;
+    expect((await unwrap(ipc.listFileHistory({ file: review, page: PAGE, types: null }))).total).toBe(0);
+    expect(await failure(ipc.getCommit({ commit: `b3:${'0'.repeat(64)}` }))).toBe('NotFound');
+    expect(
+      await failure(ipc.commit({ selection: ALL, fingerprint: summary.fingerprint, base: null, summary: 'x', body: null })),
+    ).toBe('NothingToCommit');
+
+    const id = await unwrap(ipc.startHistory({ summary: 'Start history' }));
+    expect(await unwrap(ipc.getWorkspace())).toMatchObject({ historyState: 'starting', tooLargeFolder: null });
+    expect((await finish(id)).status.state).toBe('done');
+    expect(await unwrap(ipc.getWorkspace())).toMatchObject({ historyState: 'ready', tooLargeFolder: null });
+  });
+
+  it('turns the history off when the first commit fails for its size, naming the folder', async () => {
+    install('history-none', { commitFailure: { code: 'HistoryTooLarge', file: PHOTOS } });
+    const workspace = collect<WorkspaceChanged>(shellEvents.onWorkspaceChanged);
+    expect(await startHistory()).toMatchObject({
+      kind: 'firstCommit',
+      status: { state: 'failed', error: { code: 'HistoryTooLarge' }, file: PHOTOS },
+    });
+    expect(await unwrap(ipc.getWorkspace())).toMatchObject({ historyState: 'tooLarge', tooLargeFolder: PHOTOS, head: null, items: 0 });
+    await settle();
+    expect(workspace.seen.at(-1)).toMatchObject({ historyState: 'tooLarge', head: null, total: 0 });
+    workspace.stop();
+  });
+
+  it('fails before it reads a file, as the limits are checked first (ipc-m2 §7.1)', async () => {
+    for (const scenario of ['history-none', 'small'] as const) {
+      shell?.dispose();
+      install(scenario, { commitFailure: { code: 'HistoryTooLarge', file: PHOTOS } });
+      const jobs = collect<JobChanged>(shellEvents.onJobChanged);
+      const job = scenario === 'small' ? await commitAll() : await startHistory();
+      await settle();
+      jobs.stop();
+      expect(job.status).toMatchObject({ state: 'failed', error: { code: 'HistoryTooLarge' }, file: PHOTOS });
+      const running = jobs.seen.flatMap(({ job: seen }) =>
+        seen.id === job.id && seen.status.state === 'running' ? [seen.status.progress] : [],
+      );
+      expect(running.length).toBeGreaterThan(0);
+      for (const progress of running) expect(progress).toMatchObject({ done: 0, current: null });
+    }
+  });
+
+  it('names no folder when the library as a whole is too large', async () => {
+    install('history-none', { commitFailure: { code: 'HistoryTooLarge', file: null } });
+    expect((await startHistory()).status).toMatchObject({ state: 'failed', error: { code: 'HistoryTooLarge' }, file: null });
+    expect(await unwrap(ipc.getWorkspace())).toMatchObject({ historyState: 'tooLarge', tooLargeFolder: null });
+  });
+
+  it("ends when the catalog's entries change, not their tags, and the first commit then starts the history", async () => {
+    const fake = install('history-too-large');
+    const workspace = collect<WorkspaceChanged>(shellEvents.onWorkspaceChanged);
+    const tags = fake.library.at(REVIEW)?.tags ?? [];
+    const tag = fake.library.tags.find((candidate) => !tags.includes(candidate.id));
+    await unwrap(ipc.setEntryTags({ entries: [entryRef(REVIEW)], add: [tag?.id ?? ''], remove: [] }));
+    await settle();
+    expect((await unwrap(ipc.getWorkspace())).historyState).toBe('tooLarge');
+
+    fake.editFile(WEEK2);
+    await settle();
+    expect(await unwrap(ipc.getWorkspace())).toMatchObject({ historyState: 'none', tooLargeFolder: null, items: 0 });
+    expect(workspace.seen.at(-1)).toMatchObject({ historyState: 'none', head: null, total: 0 });
+    workspace.stop();
+    expect((await startHistory()).status.state).toBe('done');
+    expect((await unwrap(ipc.getWorkspace())).historyState).toBe('ready');
+
+    // An M1 command, and a rebuilt catalog, change the entries too, and only the WorkspaceChanged
+    // that ends the state tells the UI to start the first commit again (they reach no item).
+    shell?.dispose();
+    install('history-too-large');
+    const renamed = collect<WorkspaceChanged>(shellEvents.onWorkspaceChanged);
+    await unwrap(ipc.renameEntry({ entry: entryRef(WEEK2), name: 'week 2 notes (old).md' }));
+    await settle();
+    expect(await unwrap(ipc.getWorkspace())).toMatchObject({ historyState: 'none', tooLargeFolder: null });
+    expect(renamed.seen.at(-1)).toMatchObject({ historyState: 'none', head: null, total: 0 });
+    renamed.stop();
+    shell?.dispose();
+    install('history-too-large');
+    const rebuilt = collect<WorkspaceChanged>(shellEvents.onWorkspaceChanged);
+    await finish(await unwrap(ipc.rebuildCatalog()));
+    await settle();
+    expect(await unwrap(ipc.getWorkspace())).toMatchObject({ historyState: 'none', tooLargeFolder: null });
+    expect(rebuilt.seen.at(-1)).toMatchObject({ historyState: 'none', head: null, total: 0 });
+    rebuilt.stop();
+  });
+
+  it('hides what changed before the history started, and commits none of it, while too large', async () => {
+    const fake = install('history-none', { commitFailure: { code: 'HistoryTooLarge', file: PHOTOS } });
+    fake.addFile('Personal/new.txt');
+    const hidden = fake.versioning.items.find((entry) => entry.path === 'Personal/new.txt');
+    expect(hidden).toMatchObject({ change: 'added', readiness: 'hashing' });
+    expect((await startHistory()).status).toMatchObject({ state: 'failed', error: { code: 'HistoryTooLarge' } });
+    const summary = await unwrap(ipc.getWorkspace());
+    expect(summary).toMatchObject({ historyState: 'tooLarge', fingerprint: '0'.repeat(32), items: 0, hashing: 0 });
+    expect((await unwrap(ipc.listWorkspaceItems({ page: PAGE }))).total).toBe(0);
+    // Refused before the selection is checked: even the hidden item's key is NothingToCommit.
+    const only: Selection = { kind: 'only', keys: [hidden?.key ?? ''] };
+    expect(
+      await failure(ipc.commit({ selection: only, fingerprint: summary.fingerprint, base: null, summary: 'x', body: null })),
+    ).toBe('NothingToCommit');
+  });
+
+  it('commits the files as the console changed them, and leaves only what it left out', async () => {
+    const fake = install('history-too-large');
+    fake.editFile(WEEK2);
+    fake.addFile('Personal/new.txt');
+    // The file another program holds: the first commit leaves it out, as the console left it.
+    fake.editFile(RECORDING);
+    const [week2, recording] = [WEEK2, RECORDING].map((path) => fake.versioning.items.find((entry) => entry.path === path)?.after);
+    expect((await startHistory()).status).toMatchObject({ state: 'done', result: { kind: 'firstCommit', left: 1 } });
+    const listed = await items();
+    expect(listed.map((entry) => [entry.change, entry.path, entry.readiness])).toEqual([['added', RECORDING, 'unreadable']]);
+    expect(listed[0]?.after?.size).toBe(String(recording?.size));
+    expect((await versionOf(WEEK2)).change.after?.hash).toBe(week2?.hash);
+  });
+
+  it('lists what changed while the first commit ran against the version it took', async () => {
+    const fake = install('history-too-large');
+    const NEW = 'Personal/new.txt';
+    fake.editFile(WEEK2);
+    fake.addFile(NEW);
+    const id = await unwrap(ipc.startHistory({ summary: 'Start history' }));
+    fake.stepJobs();
+    fake.stepJobs();
+    expect((await unwrap(ipc.listJobs())).find((job) => job.id === id)?.status.state).toBe('running');
+    for (const path of [WEEK2, NEW, RECORDING]) fake.editFile(path);
+    const recording = fake.versioning.items.find((entry) => entry.path === RECORDING)?.after;
+    expect((await finish(id)).status.state).toBe('done');
+    const { head } = await unwrap(ipc.getWorkspace());
+    const listed = await items();
+    expect(listed.map((entry) => [entry.change, entry.path]).sort()).toEqual(
+      [['modified', WEEK2], ['modified', NEW], ['added', RECORDING]].sort(),
+    );
+    for (const path of [WEEK2, NEW]) {
+      // Its history starts at the first commit, and the diff compares the disk with that version.
+      const took = (await versionOf(path)).change.after?.hash;
+      const diff = await unwrap(ipc.getWorkspaceDiff({ key: (await itemAt(path)).key, window: ROWS }));
+      expect(diff.before).toMatchObject({ commit: head, hash: took });
+      expect(diff.after?.hash).not.toBe(took);
+    }
+    expect((await itemAt(RECORDING)).after?.size).toBe(String(recording?.size));
+  });
+
+  it('keeps a ready history and its items when a commit would be too large', async () => {
+    install('small', { commitFailure: { code: 'HistoryTooLarge', file: PHOTOS } });
+    const before = await unwrap(ipc.getWorkspace());
+    expect((await commitAll()).status).toMatchObject({ state: 'failed', error: { code: 'HistoryTooLarge' }, file: PHOTOS });
+    expect(await unwrap(ipc.getWorkspace())).toEqual(before);
+    expect(before).toMatchObject({ historyState: 'ready', tooLargeFolder: null });
+    expect((await commitAll()).status.state).toBe('done');
+  });
+
+  it('opens the library again at no history, to try once more', async () => {
+    const fake = install('history-too-large');
+    fake.makeUnavailable('missing');
+    fake.makeReachable();
+    await unwrap(ipc.libraryStatus());
+    expect(await unwrap(ipc.getWorkspace())).toMatchObject({ historyState: 'none', tooLargeFolder: null, head: null });
+  });
+
+  it('names no folder in any other state', async () => {
+    const states = [
+      ['small', 'ready'],
+      ['history-none', 'none'],
+      ['history-read-only', 'readOnly'],
+      ['history-damaged', 'damaged'],
+    ] as const;
+    for (const [scenario, historyState] of states) {
+      shell?.dispose();
+      install(scenario);
+      expect(await unwrap(ipc.getWorkspace())).toMatchObject({ historyState, tooLargeFolder: null });
+    }
   });
 });
 

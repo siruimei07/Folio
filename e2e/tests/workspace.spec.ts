@@ -84,6 +84,7 @@ test('a new library has no history: nothing listed, an empty summary and one eve
   expect(revision).toBeGreaterThan(0);
   expect(summary).toEqual({
     historyState: 'none',
+    tooLargeFolder: null,
     head: null,
     fingerprint: NO_CHANGES,
     items: 0,

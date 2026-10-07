@@ -3,7 +3,8 @@
 // and metadata changes. It reproduces the contract's rules (fingerprints, selections, keys, the
 // reword and uncommit rules, restore's outcomes), not the store: versions keep their text in
 // memory, and hashes are short fingerprints of it. Changes made through M1's commands (rename,
-// move, delete, import) do not reach the workspace; the console helpers below stand in for them.
+// move, delete, import) do not reach the workspace's items; the console helpers below stand in for
+// them. Like any change to the catalog's entries, they do end a first commit's `tooLarge`.
 import { hasControl } from '../../../lib/names';
 import { isBelow, isInside, movePath, nameOf, parentOf } from '../../../lib/paths';
 import { charCount } from '../../../lib/text';
@@ -28,6 +29,7 @@ import {
   type HistoryState,
   type HistoryType,
   type ItemPart,
+  type JobStatus,
   type LineEndingChange,
   LIMITS,
   type MetadataChange,
@@ -125,6 +127,8 @@ export type FakeOp =
 /** What a history starts with. Every object belongs to the model from then on. */
 export interface VersioningSeed {
   state: HistoryState;
+  /** State `tooLarge`: the folder that holds too many files; none when absent (ipc-m2 §6.1). */
+  tooLargeFolder?: string | null;
   /** Oldest first. */
   commits: FakeCommit[];
   ops: FakeOp[];
@@ -252,6 +256,11 @@ export function firstChanges(library: FakeLibrary, versions: ReadonlyMap<string,
   return { added, left };
 }
 
+/** The version each item's file has after the change, by path; items without one are skipped. */
+function afterVersions(items: readonly FakeItem[]): Map<string, Version> {
+  return new Map(items.flatMap((entry) => (entry.after === null ? [] : [[entry.path, entry.after] as const])));
+}
+
 function seconds(ms: number): number {
   return Math.floor(ms / 1000) * 1000;
 }
@@ -377,6 +386,8 @@ const DIFFS_KEPT = 8;
 
 export class FakeVersioning {
   state: HistoryState;
+  /** State `tooLarge`: the folder that holds too many files, or `null` (ipc-m2 §6.1). */
+  tooLargeFolder: string | null;
   readonly commits: FakeCommit[];
   readonly ops: FakeOp[];
   items: FakeItem[];
@@ -392,6 +403,7 @@ export class FakeVersioning {
 
   constructor(seed: VersioningSeed, library: FakeLibrary, hooks: VersioningHooks) {
     this.state = seed.state;
+    this.tooLargeFolder = seed.state === 'tooLarge' ? (seed.tooLargeFolder ?? null) : null;
     this.commits = seed.commits;
     this.ops = seed.ops;
     this.items = byPath(seed.items);
@@ -400,20 +412,39 @@ export class FakeVersioning {
     this.hooks = hooks;
   }
 
-  /** The history as it is, to open the library again with it (after "Try again"). */
+  /**
+   * The history as it is, to open the library again with it (after "Try again"). A first commit's
+   * `tooLarge` lives in the session only, so the library opens at `none` and tries again (ipc-m2 §6.1).
+   */
   snapshot(): VersioningSeed {
-    return { state: this.state === 'starting' ? 'none' : this.state, commits: this.commits, ops: this.ops, items: this.items, metadata: this.metadata };
+    const fresh = this.state === 'starting' || this.firstTooLarge();
+    return {
+      state: fresh ? 'none' : this.state,
+      tooLargeFolder: fresh ? null : this.tooLargeFolder,
+      commits: this.commits,
+      ops: this.ops,
+      items: this.items,
+      metadata: this.metadata,
+    };
   }
 
   get head(): FakeCommit | null {
     return this.commits.at(-1) ?? null;
   }
 
-  /** Items while the history is ready; nothing before the first commit (ipc-m2 §6.1). */
+  /** A first commit failed with `HistoryTooLarge`: no `HEAD`, and the state waits for a change. */
+  private firstTooLarge(): boolean {
+    return this.state === 'tooLarge' && this.head === null;
+  }
+
+  /** The workspace lists nothing before the first commit, or while too large (ipc-m2 §6.1). */
+  private listsNothing(): boolean {
+    return this.state === 'none' || this.state === 'starting' || this.state === 'tooLarge';
+  }
+
+  /** Items while the history is ready; nothing while `listsNothing`. */
   private listed(): { items: FakeItem[]; metadata: FakeMeta[] } {
-    return this.state === 'none' || this.state === 'starting'
-      ? { items: [], metadata: [] }
-      : { items: this.items, metadata: this.metadata };
+    return this.listsNothing() ? { items: [], metadata: [] } : { items: this.items, metadata: this.metadata };
   }
 
   private changed(history: boolean): void {
@@ -442,6 +473,7 @@ export class FakeVersioning {
     return {
       revision: this.library.revision,
       historyState: this.state,
+      tooLargeFolder: this.state === 'tooLarge' ? this.tooLargeFolder : null,
       head: this.head?.id ?? null,
       fingerprint: this.fingerprint(),
       items: items.length,
@@ -586,6 +618,7 @@ export class FakeVersioning {
     this.busy = true;
     if (first) {
       this.state = 'starting';
+      this.tooLargeFolder = null;
       this.changed(false);
     }
     return {
@@ -607,22 +640,52 @@ export class FakeVersioning {
   beginCommit(request: { selection: Selection; fingerprint: string; base: string | null; summary: string; body: string | null }): CommitPlan {
     const message = normalizeMessage(request.summary, request.body);
     this.checkWritable();
-    if (this.state === 'none' || this.state === 'starting') fail('NothingToCommit', 'the history has not started');
+    if (this.listsNothing()) fail('NothingToCommit', 'the workspace lists nothing before the history starts or while it is too large');
     const items = this.resolve(request.selection, request.fingerprint);
     if (request.base !== (this.head?.id ?? null)) fail('WorkspaceChanged', 'HEAD changed');
     if (items.length === 0 && this.metadata.length === 0) fail('NothingToCommit', 'nothing selected');
     return this.begin(false, items, [...this.metadata], message, []);
   }
 
-  /** The first commit: every ready file of the library (versioning §7.7). */
+  /** The first commit: every ready file of the library (versioning §7.7); again after a too-large one. */
   beginFirstCommit(summary: string): CommitPlan {
     const message = normalizeMessage(summary, null);
     if (this.head !== null || this.state === 'starting') fail('HistoryExists', 'the history has started');
     this.checkWritable();
-    const { added, left } = firstChanges(this.library);
+    const now = this.edited();
+    const { added, left } = firstChanges(this.library, now);
     const items = added.map((entry) => item(entry));
-    const leftItems = left.map((node) => item({ change: 'added', kind: 'file', path: node.path, after: nodeVersion(node), readiness: 'unreadable' }));
+    const leftItems = left.map((node) =>
+      item({ change: 'added', kind: 'file', path: node.path, after: now.get(node.path) ?? nodeVersion(node), readiness: 'unreadable' }),
+    );
     return this.begin(true, items, [], message, leftItems);
+  }
+
+  /** The files as the console left them: before the history starts, the model's items hold its edits. */
+  private edited(): Map<string, Version> {
+    return afterVersions(this.items);
+  }
+
+  /**
+   * The workspace a first commit leaves, as the shell lists the disk against the `HEAD` it made
+   * (versioning §7.7): a file it took only when it changed again since it began, as modified from
+   * the version it took; a file it left out once, as added, as the disk has it now.
+   */
+  private afterFirst(plan: CommitPlan): FakeItem[] {
+    const took = afterVersions(plan.items);
+    const leftOut = new Set(plan.left.map((entry) => entry.path));
+    const now = this.edited();
+    const kept = this.items.flatMap((entry): FakeItem[] => {
+      if (leftOut.has(entry.path)) return [];
+      const version = took.get(entry.path);
+      if (version === undefined) return [entry];
+      if (entry.after === null || entry.after.hash === version.hash) return [];
+      return [item({ change: 'modified', kind: 'file', path: entry.path, before: version, after: entry.after, readiness: entry.readiness })];
+    });
+    const left = plan.left.flatMap((entry) =>
+      this.library.at(entry.path)?.kind === 'file' ? [{ ...entry, after: now.get(entry.path) ?? entry.after }] : [],
+    );
+    return byPath([...kept, ...left]);
   }
 
   /** Records the commit a job made, and lets go of the history. */
@@ -640,7 +703,7 @@ export class FakeVersioning {
     };
     this.commits.push(commit);
     const committed = new Set<unknown>([...plan.items, ...plan.metadata]);
-    this.items = byPath([...this.items.filter((entry) => !committed.has(entry)), ...plan.left]);
+    this.items = plan.first ? this.afterFirst(plan) : byPath(this.items.filter((entry) => !committed.has(entry)));
     this.metadata = this.metadata.filter((entry) => !committed.has(entry));
     if (this.state === 'starting') this.state = 'ready';
     this.busy = false;
@@ -648,13 +711,34 @@ export class FakeVersioning {
     return commit;
   }
 
-  /** A commit job that failed or was cancelled: nothing changed, the history is free again. */
-  abortCommit(plan: CommitPlan): void {
+  /**
+   * A commit job that failed or was cancelled: nothing changed, the history is free again. A first
+   * commit returns to `none`, or to `tooLarge` when it failed with `HistoryTooLarge`, naming the
+   * job's `file` as the folder (ipc-m2 §6.1, §13). A regular commit leaves the state as it was.
+   */
+  abortCommit(plan: CommitPlan, status: JobStatus): void {
     this.busy = false;
-    if (plan.first) {
+    if (!plan.first) return;
+    if (status.state === 'failed' && status.error.code === 'HistoryTooLarge') {
+      this.state = 'tooLarge';
+      this.tooLargeFolder = status.file;
+    } else {
       this.state = 'none';
-      this.changed(false);
+      this.tooLargeFolder = null;
     }
+    this.changed(false);
+  }
+
+  /**
+   * The catalog's entries changed, and the caller committed the change (ipc-m2 §6.1): a first
+   * commit's `tooLarge` returns to `none`, and the UI starts the first commit again. A too-large
+   * `HEAD` stays until `HEAD` changes.
+   */
+  libraryChanged(): void {
+    if (!this.firstTooLarge()) return;
+    this.state = 'none';
+    this.tooLargeFolder = null;
+    this.hooks.workspaceChanged();
   }
 
   // ---- history (ipc-m2 §8)

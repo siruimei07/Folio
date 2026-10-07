@@ -50,6 +50,7 @@ M2). It extends [ipc-m1](ipc-m1.md) under the decisions of
 | The template, the commit button's count, grouped mode's course headers (versioning §6.6, §8.1; handoff §3.5, §4.6) | `summarize_selection` |
 | Commit with a selection, never one the user did not see (versioning §7) | `commit`, `JobChanged` (kind `commit`) |
 | The first commit by itself (versioning §7.7; handoff §10) | `start_history`, `JobChanged` (kind `firstCommit`) |
+| "History is off: folder X holds too many files", never shown as damage, the library usable and the first commit tried again when the library changes (decisions m2-too-large-folder, history-too-large-contract) | `historyState` `tooLarge` and `tooLargeFolder` (§6.1), `HistoryTooLarge` (§7.1, §13) |
 | The timeline with commits and operations, day headers, "Not synced" (versioning §9.1; handoff §5, §7) | `list_history`, `HistoryChanged` |
 | File cards and commit details (versioning §9.2) | `get_commit`, `list_commit_changes`, `list_commit_metadata` |
 | One file's history and "Current version" (versioning §9.3; handoff §7.4) | `list_file_history` |
@@ -186,10 +187,11 @@ A version can be shown, compared and restored when it is `stored` and not `prune
 | `summarize_selection` | `{ selection: Selection; fingerprint }` → `SelectionSummary` | `WorkspaceChanged`, `InvalidArgument`, `NoLibrary` |
 
 ```ts
-type HistoryState = "none" | "starting" | "ready" | "readOnly" | "damaged";
+type HistoryState = "none" | "starting" | "ready" | "readOnly" | "damaged" | "tooLarge";
 type WorkspaceSummary = {
   revision: number;            // the catalog revision (ipc-m1 §15.2)
   historyState: HistoryState;
+  tooLargeFolder: string | null;   // tooLarge: the folder that holds too many files; null otherwise (below)
   head: string | null;         // HEAD's commit id; null before the first commit
   fingerprint: string;
   items: number;               // rows of list_workspace_items; a bound item counts once
@@ -205,12 +207,62 @@ type WorkspaceSummary = {
   waits for its first full scan and hashing; `starting` while the `firstCommit` job runs;
   `ready`; `readOnly` when a newer Folio wrote the history (commit, reword, uncommit and restore
   fail with `HistoryReadOnly`); `damaged` when `HEAD` cannot be read or names a missing commit
-  (they fail with `HistoryDamaged`). A failed or cancelled first commit returns to `none`.
-- While the state is `none` or `starting`, the workspace lists nothing and its totals are 0
-  (versioning §6.5; the UI never shows the whole library as added, handoff §10). With `damaged`
-  it lists what it can, which is nothing when `HEAD` cannot be read.
+  (they fail with `HistoryDamaged`); `tooLarge` when the history would be, or is, larger than
+  Folio keeps (below). A failed or cancelled first commit returns to `none`, except one that
+  failed with `HistoryTooLarge`, which goes to `tooLarge`.
+- **`tooLarge`** (decision m2-too-large-folder): the history is off because it would be, or is,
+  larger than Folio keeps. It is not damage: the files and the library are fine, and no command
+  answers `HistoryDamaged` for it. It is entered two ways, and left one way each:
+  - **A first commit too large.** The `firstCommit` job fails with `HistoryTooLarge` (§7.1): its
+    tree would have a folder over 64 MiB, more paths or more bytes of paths than a `HEAD` the head
+    sync shows (the store's path budget, `MAX_HEAD_PATH_BYTES`; versioning §6.1), or more metadata
+    in `.folio/` than the head sync reads. That is found before any file is read: `starting` →
+    `tooLarge`, with no `HEAD`. The state ends when the catalog's entries change (a scan that
+    finds a change, a Folio action that adds, deletes, moves or renames a file or folder, or a
+    catalog rebuild), and, when the metadata in `.folio/` was too large, also when tags or
+    settings change, as that metadata holds them. It then returns to `none` with a
+    `WorkspaceChanged`, and the UI starts the first commit again, as it does when the library
+    opens (handoff §10). The state lives in the session only and nothing records it, so each
+    opening of the library starts at `none` and tries once more.
+  - **A `HEAD` too large to show.** The head sync's walk of `HEAD`'s tree goes past the store's
+    path budget, or its paths past `MAX_HEAD_PATH_BYTES` (`HistoryStatus::TooLarge`; versioning
+    §6.1): `tooLarge` until `HEAD` changes, with `head` naming it. Folio's own commits never write
+    such a `HEAD` (they check the limits first, §7.1); it can only come from elsewhere, such as a
+    store changed by hand. An object read over the format's limits (`StoreError::Invalid`), and
+    `HEAD`'s metadata over the head sync's caps, are damage: `damaged`.
+
+  A regular commit that would make the history too large (the same limits) fails with
+  `HistoryTooLarge` and changes nothing: the state stays `ready`, the items stay listed, and the
+  job's `file` names the folder (§13).
+
+  While the state is `tooLarge`, everything answers as before the first commit: the workspace
+  lists nothing (below); `commit` is `NothingToCommit`; `start_history` runs the first commit
+  again when there is no `HEAD` (the state is `starting` again), and is `HistoryExists` when
+  there is one; `list_history`, and `list_file_history` of an entry, list nothing (`total` 0);
+  every command that names a commit (§8–§10) answers `NotFound`, as for an id off `HEAD`'s chain,
+  and the version route (§11) `404`. No command gains a code for the state, and `HistoryTooLarge`
+  is a job's failure only: in any state, a command whose walk of a commit's trees goes past the
+  path budget answers `Internal` (§15.2).
+- **`tooLargeFolder`** names the folder in state `tooLarge`: the folder whose tree is over its
+  limit, a library path (§4). It is `null` when the library as a whole is over the limits (the
+  root folder's own tree, the path budget, `MAX_HEAD_PATH_BYTES`, or the metadata in `.folio/`,
+  which the UI never names), for a too-large `HEAD` whose folder the head sync cannot name, and in
+  every other state. It changes only with the state, so `WorkspaceChanged` (§14) carries no
+  folder: the UI fetches the summary again on every one.
+- While the state is `none`, `starting` or `tooLarge`, the workspace lists nothing and its totals
+  are 0 (versioning §6.5; the UI never shows the whole library as added, handoff §10). With
+  `damaged` it lists what it can, which is nothing when `HEAD` cannot be read.
 - The badge and the header count are `items + metadata`. Counts per kind come from
   `summarize_selection`.
+- **Amended 2026-10-07** (lane `feat/ipc-history-too-large`, decisions `m2-too-large-folder` and
+  `history-too-large-contract`): `tooLarge`, `tooLargeFolder` and the error `HistoryTooLarge`
+  (§7.1, §15) were added. Before, a `HEAD` too large to show was `damaged` (§20 item 2) and every
+  `StoreError::TooLarge` (a walk past the path budget, or a new object over its cap) was
+  `HistoryDamaged` (§15.2); decision m2-too-large-folder rules both out, as the history is not
+  damaged. An object read over the format's limits stays damage (`StoreError::Invalid`, §15.2).
+  A first commit that fails with `HistoryTooLarge` is the one failure that does not return to
+  `none`: started again before the library changes, it would fail the same way, so the state says
+  why the history is off until a change may let it fit.
 
 ### 6.2 Items
 
@@ -383,14 +435,18 @@ type CommitChanges = {
 - **Before the job.** The command checks the request, then the fingerprint and the base
   (versioning §7.1: a different one is `WorkspaceChanged`), resolves the selection to its items,
   and answers with the job id; nothing is read or written yet. A selection that is empty with no
-  metadata change is `NothingToCommit`, which is also the answer while the history is `none` or
-  `starting` (the workspace lists nothing). The job then commits exactly the items it resolved,
-  as the files are when it reads them (versioning §7.3).
+  metadata change is `NothingToCommit`, which is also the answer while the history is `none`,
+  `starting` or `tooLarge` (the workspace lists nothing). The job then commits exactly the items
+  it resolved, as the files are when it reads them (versioning §7.3).
 - **The job** (versioning §7.5) reads the files, then switches `HEAD`. It fails with
-  `FileChanged`, `NotLocal`, `InUse`, `AccessDenied`, `DiskFull`, `FileSystem` or
-  `HistoryDamaged`, and names the file (§13). It is cancellable until the switch begins: then
-  `cancellable` turns `false`, and a later `cancel_job` is `InvalidArgument`. A cancelled commit
-  has written nothing.
+  `FileChanged`, `NotLocal`, `InUse`, `AccessDenied`, `DiskFull`, `FileSystem`,
+  `HistoryDamaged` or `HistoryTooLarge`, and names the file (§13). `HistoryTooLarge`: the commit
+  would make the history larger than Folio keeps (§6.1), found before any file is read; the
+  job's `file` names the folder, and the history stays `ready`. It is a job's failure only, never
+  the answer of `commit` or `start_history`, even when the command's checks could tell: the UI
+  words it in one place, and a first commit's limits are only known once its job runs. The job
+  is cancellable until the switch begins: then `cancellable` turns `false`, and a later
+  `cancel_job` is `InvalidArgument`. A cancelled commit has written nothing.
 - **Done:** `HistoryChanged`, then `WorkspaceChanged` without the committed items; the result
   names the commit (§13).
 - **`start_history`** (versioning §7.7) commits every ready item and the metadata, leaving out
@@ -398,7 +454,9 @@ type CommitChanges = {
   the first full scan and hashing have finished (handoff §10); before that it waits, and so does
   the shell: a call while the scan or hashing runs queues the job until they finish.
   `HistoryExists` once `HEAD` exists, so calling twice is safe. A failure or a cancel leaves no
-  history.
+  history; after a failure with `HistoryTooLarge` the state is `tooLarge` until the catalog's
+  entries change, and also its tags or settings when the metadata in `.folio/` was too large
+  (§6.1), and a call meanwhile runs the first commit again.
 - At most one commit, reword, uncommit or restore runs at a time: a second one is `HistoryBusy`,
   without queueing (versioning §7.5). A catalog rebuild and these exclude each other: `Busy` when
   the rebuild came first, `HistoryBusy` when the history operation did.
@@ -423,8 +481,8 @@ Text is not normalized to NFC: a message is stored as typed. Lengths are counted
 
 | Command | Request → response | Errors |
 |---|---|---|
-| `list_history` | `{ page; types: HistoryType[] \| null }` → `Page<HistoryItem>` | `NoLibrary`, `InvalidArgument`, `HistoryDamaged` |
-| `get_commit` | `{ commit }` → `CommitInfo` | `NotFound`, `NoLibrary`, `HistoryDamaged` |
+| `list_history` | `{ page; types: HistoryType[] \| null }` → `Page<HistoryItem>` | `NoLibrary`, `InvalidArgument`, `HistoryDamaged`, `Internal` |
+| `get_commit` | `{ commit }` → `CommitInfo` | `NotFound`, `NoLibrary`, `HistoryDamaged`, `Internal` |
 
 ```ts
 type HistoryType = "commit" | "reword" | "uncommit" | "restore";   // null: every type
@@ -487,8 +545,8 @@ type RestoreEntry = {
 
 | Command | Request → response | Errors |
 |---|---|---|
-| `list_commit_changes` | `{ commit; page }` → `Page<ChangeRow>` | `NotFound`, `InvalidArgument`, `NoLibrary`, `HistoryDamaged` |
-| `list_commit_metadata` | `{ commit; page }` → `Page<MetadataChange>` | `NotFound`, `InvalidArgument`, `NoLibrary`, `HistoryDamaged` |
+| `list_commit_changes` | `{ commit; page }` → `Page<ChangeRow>` | `NotFound`, `InvalidArgument`, `NoLibrary`, `HistoryDamaged`, `Internal` |
+| `list_commit_metadata` | `{ commit; page }` → `Page<MetadataChange>` | `NotFound`, `InvalidArgument`, `NoLibrary`, `HistoryDamaged`, `Internal` |
 
 ```ts
 type ChangeRow = {
@@ -514,8 +572,8 @@ type ChangeRow = {
 
 | Command | Request → response | Errors |
 |---|---|---|
-| `list_file_history` | `{ file: FileRef; page; types: HistoryType[] \| null }` → `Page<FileVersion>` | `NotFound`, `InvalidArgument`, `NoLibrary`, `HistoryDamaged` |
-| `locate_version` | `VersionRef` → `EntryRow \| null` | `NotFound`, `InvalidArgument`, `NoLibrary`, `HistoryDamaged` |
+| `list_file_history` | `{ file: FileRef; page; types: HistoryType[] \| null }` → `Page<FileVersion>` | `NotFound`, `InvalidArgument`, `NoLibrary`, `HistoryDamaged`, `Internal` |
+| `locate_version` | `VersionRef` → `EntryRow \| null` | `NotFound`, `InvalidArgument`, `NoLibrary`, `HistoryDamaged`, `Internal` |
 
 ```ts
 type FileRef =
@@ -547,8 +605,8 @@ type FileVersion =
 
 | Command | Request → response | Errors |
 |---|---|---|
-| `reword_commit` | `{ commit; summary; body }` → `string` (the new id) | `NotFound`, `CannotReword`, message codes (§7.2), `HistoryReadOnly`, `HistoryDamaged`, `HistoryBusy`, `Busy`, `DiskFull`, `FileSystem`, `NoLibrary` |
-| `uncommit` | `{ commit }` → `null` | `NotFound`, `NotHead`, `CannotUncommit`, `HistoryReadOnly`, `HistoryDamaged`, `HistoryBusy`, `Busy`, `DiskFull`, `FileSystem`, `NoLibrary` |
+| `reword_commit` | `{ commit; summary; body }` → `string` (the new id) | `NotFound`, `CannotReword`, message codes (§7.2), `HistoryReadOnly`, `HistoryDamaged`, `HistoryBusy`, `Busy`, `DiskFull`, `FileSystem`, `NoLibrary`, `Internal` |
+| `uncommit` | `{ commit }` → `null` | `NotFound`, `NotHead`, `CannotUncommit`, `HistoryReadOnly`, `HistoryDamaged`, `HistoryBusy`, `Busy`, `DiskFull`, `FileSystem`, `NoLibrary`, `Internal` |
 
 - `reword_commit` (versioning §8.3) writes the commit again with the new message and every later
   commit on top of it; the answer is the commit's new id, for "b7c1e20 is now …" (handoff §9.1).
@@ -699,7 +757,7 @@ type TagDefinition = { name: string; color: string; order: number };
 
 | Command | Request → response | Errors |
 |---|---|---|
-| `plan_restore` | `VersionRef` → `RestorePlan` | `NotFound`, `NotStored`, `Pruned`, `NotLocal`, `InvalidArgument`, `HistoryReadOnly`, `HistoryDamaged`, `NoLibrary` |
+| `plan_restore` | `VersionRef` → `RestorePlan` | `NotFound`, `NotStored`, `Pruned`, `NotLocal`, `InvalidArgument`, `HistoryReadOnly`, `HistoryDamaged`, `NoLibrary`, `Internal` |
 | `restore_version` | `VersionRef` → `Restored` | as `plan_restore`, and `Unchanged`, `FileChanged`, `InUse`, `AccessDenied`, `NotRecyclable`, `DiskFull`, `PathTooLong`, `FileSystem`, `HistoryBusy`, `Busy` |
 
 ```ts
@@ -755,6 +813,8 @@ type Restored = { target: string; recycled: boolean };
 | `HistoryDamaged` | `500` | The store lacks an object it should have, or an object fails its check |
 | `InvalidArgument` | `400` | `{hash}` is not 64 hexadecimal digits, or `{name}` is not one valid name |
 
+- A walk of a commit's trees past the path budget, should the check need one, is `Internal`
+  with `500`, as ipc-m1 §11.2 has it (§15.2).
 - `versionUrl(side, name)` in `apps/desktop/src/ipc/files.ts` builds the URL.
 
 ## 12. AI
@@ -897,8 +957,10 @@ type JobResult =
   items it `left` out because they were not local or unreadable (they stay in Changes).
 - **`file`** names the file a job failed on, when one file caused it: a commit's `FileChanged`,
   `NotLocal`, `InUse` or `AccessDenied` ("Midterm review.md kept changing while Folio read it",
-  handoff §4.5). `null` for every other failure and for M1's job kinds, which report their files
-  in their results.
+  handoff §4.5). For `HistoryTooLarge` (a `commit` or a `firstCommit` job) it names the folder
+  that holds too many files, as `tooLargeFolder` would (§6.1): `null` when the library as a whole
+  is over the limits. `null` for every other failure and for M1's job kinds, which report their
+  files in their results.
 - **`bytes`** is `null` for M1's job kinds for now; hashing may fill it later without a contract
   change.
 
@@ -935,6 +997,7 @@ type JobResult =
 | `CannotReword` | A prune commit, or (M3) a synced one |
 | `HistoryReadOnly` | A newer Folio wrote the history: update Folio to commit, reword, undo or restore |
 | `HistoryDamaged` | The history cannot be read: `HEAD`, a pack or an object is missing or damaged. The files are fine |
+| `HistoryTooLarge` | A commit or the first commit would make the history larger than Folio keeps: a folder holds too many files (the job's `file`, §13), or the library as a whole does. Found before anything is read; nothing is written, and it is not damage. A job's failure only (§7.1); after a first commit's, the state is `tooLarge` (§6.1) |
 | `NotStored` | That version was not kept: an event-only file, or text over `text_max_size` |
 | `Pruned` | That version was thinned out (M3) |
 | `Unchanged` | `restore_version`: the file already has that content |
@@ -961,7 +1024,7 @@ from the handoff (§4.3, §4.5, §8.3, §9).
 | `HistoryError::Damaged`, `StoreError::Missing`, `StoreError::Invalid` | `HistoryDamaged` |
 | `HistoryError::Cancelled` | The job's `cancelled` state, never a code |
 | `HistoryError::Io`, `StoreError::Io` | By the I/O error (ipc-m1 §16.2) |
-| `StoreError::TooLarge` | `HistoryDamaged` (a store object over the format's limits) |
+| `HistoryError::TooLarge`, `StoreError::TooLarge` | `HistoryTooLarge` as a `commit` or `firstCommit` job's failure, with its `folder` as the job's `file` (`null` for none and for `.folio`, §13); `historyState` `tooLarge` when the head sync finds `HEAD` too large to show (`HistoryStatus::TooLarge`, §6.1). Anywhere else, a walk of a commit's trees past the path budget (a command of §8–§10 or the version route reading a commit or a pair of trees the head sync does not walk: a history larger than Folio can check, or trees that repeat each other) is `Internal`, logged with the commit and the limit, and `500` from the version route. Never `HistoryDamaged` (decision m2-too-large-folder) |
 | `StoreError::Pruned`, `DiffError::Pruned`, `RestoreError::Pruned` | `Pruned` |
 | `DiffError::NotStored`, `NotLocal`, `Unreadable`, `Binary`, `TooLarge` | Content kinds of §9.2, not codes |
 | `RestoreError::NotStored`, `NotLocal`, `InUse`, `Denied`, `NotRecyclable`, `DiskFull`, `FileChanged`, `Unchanged` | `NotStored`, `NotLocal`, `InUse`, `AccessDenied`, `NotRecyclable`, `DiskFull`, `FileChanged`, `Unchanged` |
@@ -1017,21 +1080,30 @@ Scenarios (`?scenario=<name>`; each starts from the small library):
 | `history-long` | 1,200 commits over two years, with imports, a prune commit and pruned Word versions, rewords, uncommits and restores |
 | `diffs` | Changes whose diffs are large (5,000 changed lines over 40,000 rows, paged and folded), empty (only formatting, only line endings, only the encoding), binary, too large and not stored |
 | `history-read-only`, `history-damaged` | `historyState` `readOnly` or `damaged` |
+| `history-too-large` | A library whose first commit failed for its size: `historyState: tooLarge`, `tooLargeFolder: "Personal/Photos"`, no `HEAD`; a change to the catalog's entries returns it to `none` (below) |
 | `ai-off` | AI disabled, no key: Generate uses the template |
 
 URL parameters, beside ipc-m1's:
 
 - `?ai=ok|network|timeout|rejected|rateLimited|unavailable|badResponse|credential|slow`: what
   `generate_commit_message` and `test_ai` do; `slow` answers after 20 seconds unless stopped.
-- `?commit=fail:<code>[:<file>]`: the next commit job fails with that code, naming that file
-  (default `MAT232/Midterm review.md`), as a failed commit does (handoff §4.5).
+- `?commit=fail:<code>[:<file>]`: the next `commit` or `firstCommit` job fails with that code,
+  naming that file (default `MAT232/Midterm review.md`, and `Personal/Photos` for
+  `HistoryTooLarge`; an empty part, as in `fail:HistoryTooLarge:`, names none: `null`), as a
+  failed commit does (handoff §4.5). `HistoryTooLarge` fails the job at its first step, before it
+  reads a file (§7.1); the other codes fail it after the reads. A `firstCommit` job that fails
+  with `HistoryTooLarge` takes the state to `tooLarge`, with the job's `file` as `tooLargeFolder`
+  (§6.1).
 - `?restore=<code>`: `restore_version` fails with that code (`InUse`, `NotRecyclable`,
   `FileChanged`, …); `?restore=unchanged` answers `Unchanged`.
 - `?confirm=allow|cancel`: the answer of the confirmation of §12.3.
 
 The console drives it through `window.__FOLIO_FAKE_SHELL__` as before, plus `editFile(path)`,
 `addFile(path)`, `deleteFile(path)`, `downloadFile(path)` (a not-local item becomes ready) and
-`finishJobs()`, which change the workspace and send its events.
+`finishJobs()`, which change the workspace and send its events. A change to the catalog's entries,
+through these helpers, an M1 command, a scan that finds entries or a catalog rebuild, returns a
+first commit's `tooLarge` to `none` with a `WorkspaceChanged`, as the shell does (§6.1); a change
+of tags alone does not, as the fake never refuses a first commit for its metadata.
 
 ## 18. Tests
 
@@ -1071,6 +1143,66 @@ For later lanes:
      selection name more than `LIMITS.batch` keys (§5.1) is refused as a whole with a toast. The
      view runs on the fake shell; the real shell's commands come with `feat/core-workspace` and
      `feat/core-commit-history` (ui-architecture §8.4).
+4. `feat/core-commit-history` (2026-10-07, from `feat/ipc-history-too-large`): the types of §6.1,
+   §7.1 and §13 for a history too large to keep are in the bindings; the real shell answers
+   `tooLargeFolder: null` and never `HistoryTooLarge` until this lane maps the core's `TooLarge`,
+   in its current step, in place of the interim `Internal` and `damaged` (its lane file's decision
+   from Sirui):
+   - `library/workspace.rs` `history_state`: `HistoryStatus::TooLarge` (which
+     `HeadProblem::status` gives for `StoreError::TooLarge` and `PathsTooLong`) is
+     `HistoryState::TooLarge`, not `Damaged`: a `HEAD` too large to show, `head` naming it and
+     `tooLargeFolder` `null`, as the head sync names no folder. `library/workspace/tests.rs` then
+     expects `TooLarge` for it.
+   - The tracker's first-commit state: a `firstCommit` job that fails with `HistoryError::TooLarge`
+     or `StoreError::TooLarge` takes the state from `starting` to `tooLarge` with its folder, for
+     the library session only, until the catalog's entries change (a scan that finds a change, a
+     Folio action that adds, deletes, moves or renames, a rebuild; tags or settings alone only when
+     the error's folder was `.folio`, as that metadata holds them), then `none` with a
+     `WorkspaceChanged`; a reopening starts at `none`. Meanwhile commands answer as §6.1 lists, and
+     `start_history` runs the first commit again (`starting`, the folder cleared).
+   - `commands/workspace/read.rs`: `too_large_folder` is the tracker's folder in `tooLarge`, `None`
+     in every other state (today always `None`).
+   - The failed job (§13, §15.2): `HistoryTooLarge`, with the error's `folder` as `file`; `null` for
+     `folder: None`, for `.folio` and for `StoreError::TooLarge`. A `commit` job fails the same way
+     and the state stays `ready`. A too-large check found at command time (`prepare_commit`) still
+     answers the job id and fails the job: never the command's answer (§7.1).
+   - The history commands (§8), and `feat/core-diff-restore`'s (§9–§11): a `StoreError::TooLarge`
+     from a walk of a commit's trees is `Internal`, logged with the commit and the limit, in any
+     state; never `HistoryDamaged` (§15.2).
+   - `error.rs`: the `cfg_attr(not(test), expect(dead_code, …))` on `AppError::HistoryTooLarge`
+     goes.
+   - Tests: the code and `file` with a folder and without; the summary's state and folder, ended by
+     an entry change, and by a tag change only after a refusal for `.folio`, gone after a
+     reopening; a read whose walk goes past the path budget is `Internal`; a regular commit too
+     large keeps `ready` and its items. `e2e/tests/workspace.spec.ts` already expects
+     `tooLargeFolder: null`. versioning.md §6.5's interim "shows as `damaged`" line becomes an
+     as-built note.
+5. `feat/ui-history-too-large` (2026-10-07, from `feat/ipc-history-too-large`): renders
+   `tooLarge` on the fake shell (`?scenario=history-too-large`; `?commit=fail:HistoryTooLarge`
+   names `Personal/Photos` and `fail:HistoryTooLarge:` no folder; the console helpers end the
+   state, §17), with no contract change. The handoff has no board for the state yet (§3.8, §7.5,
+   §10), so its design comes first.
+   - The Changes view's first-commit block (`app/FirstCommitBlock.tsx`, `app/firstCommit.ts`) and
+     History's state block (`history/`) show `tooLarge`, naming `tooLargeFolder` when it is not
+     `null`, without "Try again" or "Start history": Folio tries again by itself. Like `none` and
+     `starting` (`isHistoryStarting`), the state lists nothing: no "No changes", no "No history
+     yet", no commit box. With `head` not `null` (a `HEAD` too large to show, which only comes from
+     elsewhere) the state ends only when `HEAD` changes, so the block promises no retry.
+   - Showing the folder in File Explorer (the lane's brief): `reveal_entry` takes an `EntryRef`
+     (ipc-m1 §5.1) and the summary names a path only, so the UI finds the entry with
+     `list_children` from the root, name by name.
+   - When the state goes from `tooLarge` to `none`, the UI starts the first commit again by
+     itself, as when the library opens, although `useAutoStartFirstCommit` has used its one start
+     of the session; `HistoryExists` stays quiet.
+   - The commit note (handoff §4.5, `failureText` in `changes/commit/parts.tsx`) words
+     `HistoryTooLarge` with the job's `file`, shown as the folder's library path (folder names
+     repeat across courses); with `file: null`, `errors.json`'s message. The activity popover
+     already words both jobs' failures with that message.
+   - Suggested copy, to settle with `design:ux-copy`: the block "History is off for this library"
+     / "{{folder}} holds more files than Folio's history can keep. Your files are fine. Folio tries
+     again when the library changes." (without a folder: "This library holds more files than…");
+     the commit note "{{folder}} holds more files than Folio's history can keep, so nothing was
+     committed. Move some files out of it, then commit again."
 
 ## 20. Next lanes
 
@@ -1086,6 +1218,11 @@ For later lanes:
      parts end with `versioningRules`; a course whose folder is gone keeps `HEAD`'s code as well as
      its name. Until `start_history` answers, a new library's Changes view shows the first commit's
      refused start (e2e/tests/changes.spec.ts).
+   - 2026-10-07, `feat/ipc-history-too-large`: the state for a history too large to keep exists in
+     the contract (§6.1: `tooLarge`, `tooLargeFolder`; §7.1, §13, §15: `HistoryTooLarge`) and in the
+     fake shell (§17: `history-too-large`). No command changed: `get_workspace` answers
+     `tooLargeFolder: null`, and a too-large `HEAD` stays `damaged`, until
+     `feat/core-commit-history` maps the core's errors to them (§19 item 4).
 3. **`feat/core-commit-history`**: `commit`, `start_history`, the `commit` and `firstCommit`
    jobs, `list_history`, `get_commit`, `list_commit_changes`, `list_commit_metadata`,
    `list_file_history`, `locate_version`, `reword_commit`, `uncommit`, `HistoryChanged`.

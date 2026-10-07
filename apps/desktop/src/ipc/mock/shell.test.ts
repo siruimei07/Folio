@@ -22,6 +22,7 @@ import { folderScript } from './fixtures/first-run';
 import { LARGE_ENTRIES, largeLibrary } from './fixtures/large';
 import type { Fixture } from './fixtures/types';
 import type { FakeShell } from './shell';
+import { MIDTERM_REVIEW } from './versioning/fixtures';
 
 const NOW = Date.UTC(2026, 8, 30, 12);
 const NAME = { key: 'name', descending: false } as const;
@@ -633,6 +634,24 @@ describe('the fake itself', () => {
     expect(performance.now() - started).toBeLessThan(100);
     expect(far.total).toBe(first.total);
     expect(far.items).toHaveLength(200);
+  });
+
+  it('reads the too-large history and commit failures from the URL (ipc-m2 §17)', async () => {
+    shell = installFakeShell({ ...optionsFromUrl('?scenario=history-too-large', NOW), now: () => NOW });
+    expect(await unwrap(ipc.getWorkspace())).toMatchObject({
+      historyState: 'tooLarge',
+      tooLargeFolder: 'Personal/Photos',
+      head: null,
+      items: 0,
+    });
+    const commitFailure = (search: string) => optionsFromUrl(search, NOW).commitFailure;
+    expect(commitFailure('?commit=fail:HistoryTooLarge')).toEqual({ code: 'HistoryTooLarge', file: 'Personal/Photos' });
+    expect(commitFailure('?commit=fail:HistoryTooLarge:')).toEqual({ code: 'HistoryTooLarge', file: null });
+    expect(commitFailure('?commit=fail:HistoryTooLarge:Fall 2026')).toEqual({ code: 'HistoryTooLarge', file: 'Fall 2026' });
+    expect(commitFailure('?commit=fail:InUse')).toEqual({ code: 'InUse', file: MIDTERM_REVIEW });
+    expect(commitFailure('?commit=fail:InUse:Personal/Todo.txt')).toEqual({ code: 'InUse', file: 'Personal/Todo.txt' });
+    expect(commitFailure('?commit=fail:DiskFull:')).toEqual({ code: 'DiskFull', file: null });
+    expect(commitFailure('?commit=fail:')).toBeUndefined();
   });
 });
 

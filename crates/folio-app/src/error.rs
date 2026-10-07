@@ -308,6 +308,16 @@ pub enum AppError {
     )]
     #[error("invalid AI key: {0}")]
     AiKeyInvalid(String),
+    /// A commit or the first commit would make the history larger than Folio keeps: a folder
+    /// holds too many files (the failed job's `file`), or the library as a whole does. Found
+    /// before anything is read; nothing is written, and it is not damage. A job's failure only,
+    /// never a command's answer (docs/specs/ipc-m2.md §7.1, §13).
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "returned once its M2 lane lands")
+    )]
+    #[error("the history would be too large: {0}")]
+    HistoryTooLarge(String),
 }
 
 #[cfg(test)]
@@ -385,6 +395,7 @@ mod tests {
             AiEndpointInvalid,
             AiModelInvalid,
             AiKeyInvalid,
+            HistoryTooLarge,
         ]
     }
 

@@ -252,6 +252,16 @@ pages of one revision consistent.
      walks and caps, links refused). Bindings unchanged; the fake shell matches the contract (its
      differences are of order, timing and opaque keys). Independent audit (code and security,
      three rounds, every confirmed finding fixed) and `/simplify` done.
+   - 2026-10-07, `feat/ipc-history-too-large` (decisions `m2-too-large-folder` and
+     `history-too-large-contract`): `HistoryState` gains `tooLarge`, `WorkspaceSummary` a nullable
+     `tooLargeFolder`, and `AppError` the code `HistoryTooLarge` (decision 7), a commit or first
+     commit job's failure only, its folder in the failed job's `file` (ipc-m2.md §6.1, §7.1, §13,
+     §15). A walk of the history past the path budget outside those jobs is `Internal`, never
+     `HistoryDamaged`. Bindings regenerated, the fake shell's `history-too-large` scenario and
+     `?commit=fail:HistoryTooLarge` added, `REVIEWED_BINDINGS` updated. No command, event or grant
+     changed; the real shell answers `tooLargeFolder: null` until `feat/core-commit-history` maps
+     the core's too-large errors (ipc-m2.md §19 item 4). Independent audit (code and security, two
+     rounds, every confirmed finding fixed) and `/simplify` done.
 4. [x] Operations lane: amend ADR-0002 and library core §4.2 for the course code, optional badge
    text and colour, 1–3 character badges, and palette keys for preset tags (spec §20).
 5. [ ] Preview lane: the `folio-file` scheme, the main window's CSP sources, and an e2e test that

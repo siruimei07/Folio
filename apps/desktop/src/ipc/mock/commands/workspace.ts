@@ -44,12 +44,15 @@ export function workspaceCommands(
 function startCommitJob(shell: FakeShell, plan: CommitPlan): string {
   const versioning = shell.versioning;
   const failure = shell.takeCommitFailure() ?? plan.blocked;
+  // The limits are checked before any file is read (ipc-m2 §7.1): such a job fails at its first step.
+  const refused = failure?.code === 'HistoryTooLarge';
+  const total = Math.max(1, plan.reads.length);
   return shell.startJob(plan.first ? 'firstCommit' : 'commit', {
     cancellable: true,
-    total: Math.max(1, plan.reads.length),
-    step: Math.max(1, Math.ceil(plan.reads.length / 8)),
+    total,
+    step: refused ? total : Math.max(1, Math.ceil(plan.reads.length / 8)),
     bytes: plan.bytes,
-    finalStep: true,
+    finalStep: !refused,
     ...(plan.first ? { waitFor: ['scan' as const, 'hash' as const] } : {}),
     current: (done) => plan.reads[done] ?? null,
     finish: () => {
@@ -73,7 +76,7 @@ function startCommitJob(shell: FakeShell, plan: CommitPlan): string {
           };
     },
     onEnd: (status) => {
-      if (status.state !== 'done') versioning.abortCommit(plan);
+      if (status.state !== 'done') versioning.abortCommit(plan, status);
     },
   });
 }

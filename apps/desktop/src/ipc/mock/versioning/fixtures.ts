@@ -453,8 +453,15 @@ function diffsHistory(library: FakeLibrary, now: number): VersioningSeed {
 
 // ---- before the first commit
 
+/** The small library's folder that holds too many files in `history-too-large` (ipc-m2 §17). */
+export const TOO_LARGE_FOLDER = 'Personal/Photos';
 
-export type VersioningScenario = 'small' | 'none' | 'long' | 'diffs' | 'readOnly' | 'damaged' | 'aiOff' | 'workspaceLarge';
+/** A first commit that failed for its size: no `HEAD`, and the state names the folder (ipc-m2 §6.1). */
+function tooLargeHistory(): VersioningSeed {
+  return { ...noHistory(), state: 'tooLarge', tooLargeFolder: TOO_LARGE_FOLDER };
+}
+
+export type VersioningScenario = 'small' | 'none' | 'long' | 'diffs' | 'readOnly' | 'damaged' | 'tooLarge' | 'aiOff' | 'workspaceLarge';
 
 export function versioningFixture(scenario: VersioningScenario): VersioningFixture {
   const ai: AiSeed = { enabled: scenario !== 'aiOff', hasKey: scenario !== 'aiOff' };
@@ -468,6 +475,8 @@ export function versioningFixture(scenario: VersioningScenario): VersioningFixtu
       return { history: (library, now) => ({ ...smallHistory(library, now, 'damaged'), items: [], metadata: [] }), ai };
     case 'none':
       return { history: noHistory, ai };
+    case 'tooLarge':
+      return { history: tooLargeHistory, ai };
     case 'long':
       return { history: longHistory, ai };
     case 'diffs':

@@ -57,5 +57,6 @@
   "AiCredential": "Folio couldn't reach Windows Credential Manager for the API key. Set the key again in App settings → AI.",
   "AiEndpointInvalid": "Enter an https:// address, like https://api.deepseek.com, without a user name, ? or #.",
   "AiModelInvalid": "Enter a model name, like deepseek-chat, without spaces.",
-  "AiKeyInvalid": "This doesn't look like an API key. Paste the whole key, without spaces or line breaks."
+  "AiKeyInvalid": "This doesn't look like an API key. Paste the whole key, without spaces or line breaks.",
+  "HistoryTooLarge": "A folder, or the library as a whole, holds more files than Folio's history can keep, so nothing was saved. Your files are fine. Move some files out of the library, then try again."
 }

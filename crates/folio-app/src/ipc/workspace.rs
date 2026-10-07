@@ -37,6 +37,13 @@ pub enum HistoryState {
     /// `HEAD` cannot be read or names a missing commit: those fail with `HistoryDamaged`. The
     /// files are fine.
     Damaged,
+    /// The history would be, or is, larger than Folio keeps; not damage. After a first commit
+    /// that failed with `HistoryTooLarge`, until the catalog's entries change, and also its
+    /// tags or settings when the metadata in `.folio/` was too large (then `none` again); with
+    /// a `HEAD` too large to show, until `HEAD` changes. Everything answers as before the first
+    /// commit: the workspace lists nothing, `commit` is `NothingToCommit`, and the history
+    /// lists no commit.
+    TooLarge,
 }
 
 /// The Changes view's totals. Refetch it on `WorkspaceChanged`.
@@ -46,6 +53,10 @@ pub struct WorkspaceSummary {
     /// The catalog revision it was read at.
     pub revision: u32,
     pub history_state: HistoryState,
+    /// In state `tooLarge`: the folder that holds too many files, a library path. `null` when
+    /// the library as a whole is over the limits, when the head sync cannot name the folder,
+    /// and in every other state. It changes only with the state.
+    pub too_large_folder: Option<String>,
     /// `HEAD`'s commit id; `null` before the first commit. Send it back as a commit's `base`.
     pub head: Option<String>,
     /// 32 lowercase hexadecimal digits over the keys of every item, whether it is includable,
@@ -289,4 +300,62 @@ pub struct CommitChanges {
 pub struct StartHistory {
     /// "Start history", from the UI's strings.
     pub summary: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::{HistoryState, WorkspaceSummary};
+
+    fn summary(history_state: HistoryState, too_large_folder: Option<&str>) -> WorkspaceSummary {
+        WorkspaceSummary {
+            revision: 7,
+            history_state,
+            too_large_folder: too_large_folder.map(str::to_owned),
+            head: None,
+            fingerprint: "0".repeat(32),
+            items: 0,
+            metadata: 0,
+            includable: 0,
+            hashing: 0,
+            not_local: 0,
+            unreadable: 0,
+        }
+    }
+
+    /// The too-large state and its folder as the UI reads them (ipc-m2.md §6.1).
+    #[test]
+    fn a_too_large_history_names_its_state_and_its_folder() {
+        assert_eq!(
+            serde_json::to_value(HistoryState::TooLarge).unwrap(),
+            json!("tooLarge")
+        );
+        assert_eq!(
+            serde_json::from_value::<HistoryState>(json!("tooLarge")).unwrap(),
+            HistoryState::TooLarge
+        );
+
+        let folder =
+            serde_json::to_value(summary(HistoryState::TooLarge, Some("Personal/Photos"))).unwrap();
+        assert_eq!(folder["historyState"], json!("tooLarge"));
+        assert_eq!(folder["tooLargeFolder"], json!("Personal/Photos"));
+
+        assert_eq!(
+            serde_json::to_value(summary(HistoryState::None, None)).unwrap(),
+            json!({
+                "revision": 7,
+                "historyState": "none",
+                "tooLargeFolder": null,
+                "head": null,
+                "fingerprint": "0".repeat(32),
+                "items": 0,
+                "metadata": 0,
+                "includable": 0,
+                "hashing": 0,
+                "notLocal": 0,
+                "unreadable": 0,
+            })
+        );
+    }
 }

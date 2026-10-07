@@ -50,7 +50,8 @@ pub enum JobStatus {
     Failed {
         error: AppError,
         /// The library path of the file the job failed on, when one file caused it (a commit's
-        /// `FileChanged`, `NotLocal`, `InUse`, `AccessDenied`); `null` otherwise.
+        /// `FileChanged`, `NotLocal`, `InUse`, `AccessDenied`); for `HistoryTooLarge` the folder
+        /// that holds too many files, `null` when the library as a whole does; `null` otherwise.
         file: Option<String>,
     },
     /// Stopped between files; what was done stays done. An import that had started reports

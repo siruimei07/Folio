@@ -2934,8 +2934,16 @@
         "feat/core-workspace"
       ],
       "summary": "按决策 m2-too-large-folder 给「历史已关闭：文件夹 X 里的文件太多」一个合约位置：HistoryState 加 tooLarge，WorkspaceSummary 加可空的文件夹路径，AppError 加 HistoryTooLarge（提交和首次提交任务失败），加假 shell 场景、errors.json 文案和 REVIEWED_BINDINGS（决策 history-too-large-contract）",
-      "status": "planned",
+      "status": "done",
       "updated": "2026-10-07",
+      "landed": "2026-10-07",
+      "gates": {
+        "check": "pass",
+        "e2e": "pass",
+        "codeReview": "pass",
+        "securityReview": "pass",
+        "simplify": "pass"
+      },
       "links": [
         "docs/specs/ipc-m2.md",
         "docs/specs/versioning.md",

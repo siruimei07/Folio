@@ -61,7 +61,7 @@ export interface FakeShellOptions {
   aiMode?: AiMode;
   /** The answer of the confirmation for another AI service (`?confirm=`). */
   confirm?: 'allow' | 'cancel';
-  /** The next commit job fails with this code, naming this file (`?commit=fail:…`). */
+  /** The next `commit` or `firstCommit` job fails with this code, naming this file (`?commit=fail:…`). */
   commitFailure?: { code: ErrorCode; file: string | null };
 }
 
@@ -381,7 +381,10 @@ export class FakeShell {
 
   // ---- catalog changes
 
-  /** Commits changes: the next revision, and a CatalogChanged soon after the answer. */
+  /**
+   * Commits changes: the next revision, and a CatalogChanged soon after the answer. Entries that
+   * changed other than by their tags end a first commit's `tooLarge` (ipc-m2 §6.1).
+   */
   changed(entries: EntryChange[], flags: { tags?: boolean; groups?: boolean } = {}): void {
     this.library.commit();
     const pending = (this.pending ??= { entries: [], complete: true, tags: false, groups: false });
@@ -389,12 +392,14 @@ export class FakeShell {
     pending.tags ||= flags.tags ?? false;
     pending.groups ||= flags.groups ?? false;
     this.scheduleCatalogEvent();
+    if (entries.some((entry) => entry.kind !== 'tagged')) this.versioning.libraryChanged();
   }
 
   /** Everything changed (a rebuilt catalog): `complete: false`. */
   changedEverything(): void {
     this.changed([], { tags: true, groups: true });
     if (this.pending) this.pending.complete = false;
+    this.versioning.libraryChanged();
   }
 
   private scheduleCatalogEvent(): void {

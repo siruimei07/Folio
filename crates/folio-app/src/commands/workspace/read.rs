@@ -28,6 +28,8 @@ pub(super) fn summary(state: &LibraryState) -> Result<WorkspaceSummary, AppError
     Ok(WorkspaceSummary {
         revision: current.revision(),
         history_state: current.history_state(),
+        // The tracker has no too-large state yet; feat/core-commit-history maps the core's.
+        too_large_folder: None,
         head: current.head(),
         fingerprint: workspace.fingerprint().to_string(),
         items: totals.items,

@@ -3,6 +3,7 @@
 //
 //   ?scenario=small|large|first-run|read-only|unavailable|errors
 //            |history-none|history-long|diffs|history-read-only|history-damaged|ai-off   (ipc-m2 §17)
+//            |history-too-large                a first commit too large: state tooLarge, Personal/Photos
 //            |workspace-large                  50,000 changes over the large library
 //   ?latency=<ms>                     every answer waits this long (loading states)
 //   ?fail=<command>[:<code>],…        these commands fail, with `Internal` unless a code is given
@@ -13,7 +14,9 @@
 //   ?theme=light|dark&motion=on|off    App settings → Appearance as stored (ipc-m1 §22)
 //   ?ai=ok|network|timeout|rejected|rateLimited|unavailable|badResponse|credential|slow
 //                                      how the fake AI service answers (ipc-m2 §17)
-//   ?commit=fail:<code>[:<file>]       the next commit job fails with that code, naming that file
+//   ?commit=fail:<code>[:<file>]       the next commit or first-commit job fails with that code, naming
+//                                      that file (an empty part names none; HistoryTooLarge's default
+//                                      is Personal/Photos)
 //   ?restore=<code>|unchanged          restore_version fails with that code
 //   ?confirm=allow|cancel              the answer of the confirmation for another AI service
 import type { AppError, SyncProvider, Unavailable } from '../bindings';
@@ -24,7 +27,7 @@ import { sampleImport, smallLibrary } from './fixtures/small';
 import type { Fixture } from './fixtures/types';
 import { DEFAULT_APP_SETTINGS, type Failure, type FakeShellOptions } from './shell';
 import { AI_MODES } from './versioning/ai';
-import { MIDTERM_REVIEW, type VersioningScenario, versioningFixture } from './versioning/fixtures';
+import { MIDTERM_REVIEW, TOO_LARGE_FOLDER, type VersioningScenario, versioningFixture } from './versioning/fixtures';
 
 export const SCENARIOS = [
   'small',
@@ -38,6 +41,7 @@ export const SCENARIOS = [
   'diffs',
   'history-read-only',
   'history-damaged',
+  'history-too-large',
   'ai-off',
   'workspace-large',
 ] as const;
@@ -83,6 +87,7 @@ const VERSIONING: Partial<Record<Scenario, VersioningScenario>> = {
   diffs: 'diffs',
   'history-read-only': 'readOnly',
   'history-damaged': 'damaged',
+  'history-too-large': 'tooLarge',
   'ai-off': 'aiOff',
   'workspace-large': 'workspaceLarge',
 };
@@ -119,6 +124,7 @@ function fixtureOf(scenario: Scenario, now: number, options: ScenarioOptions): F
     case 'diffs':
     case 'history-read-only':
     case 'history-damaged':
+    case 'history-too-large':
     case 'ai-off':
       return opened(smallLibrary(now));
     case 'large':
@@ -190,9 +196,18 @@ export function optionsFromUrl(search: string, now: number = Date.now()): FakeSh
       ? {
           commitFailure: {
             code: commitCode as AppError['code'],
-            file: commitFile ?? MIDTERM_REVIEW,
+            file: failedFile(commitCode, commitFile),
           },
         }
       : {}),
   };
+}
+
+/**
+ * The file a `?commit=fail:<code>[:<file>]` job names (ipc-m2 §17): the given one, none for an empty
+ * part, else the midterm review, or the too-large folder for `HistoryTooLarge`.
+ */
+function failedFile(code: string, file: string | undefined): string | null {
+  if (file === undefined) return code === 'HistoryTooLarge' ? TOO_LARGE_FOLDER : MIDTERM_REVIEW;
+  return file === '' ? null : file;
 }

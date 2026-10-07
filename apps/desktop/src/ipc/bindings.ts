@@ -344,7 +344,14 @@ export type AppError =
 /**  A typed AI model name is empty, too long or not visible ASCII. */
 { code: "AiModelInvalid"; detail: string } | 
 /**  A typed AI key is empty, too long or not visible ASCII. */
-{ code: "AiKeyInvalid"; detail: string };
+{ code: "AiKeyInvalid"; detail: string } | 
+/**
+ *  A commit or the first commit would make the history larger than Folio keeps: a folder
+ *  holds too many files (the failed job's `file`), or the library as a whole does. Found
+ *  before anything is read; nothing is written, and it is not damage. A job's failure only,
+ *  never a command's answer (docs/specs/ipc-m2.md §7.1, §13).
+ */
+{ code: "HistoryTooLarge"; detail: string };
 
 /**  Versions and the data directory, for the placeholder screen and for bug reports. */
 export type AppInfo = {
@@ -895,7 +902,16 @@ export type HistoryState =
  *  `HEAD` cannot be read or names a missing commit: those fail with `HistoryDamaged`. The
  *  files are fine.
  */
-"damaged";
+"damaged" | 
+/**
+ *  The history would be, or is, larger than Folio keeps; not damage. After a first commit
+ *  that failed with `HistoryTooLarge`, until the catalog's entries change, and also its
+ *  tags or settings when the metadata in `.folio/` was too large (then `none` again); with
+ *  a `HEAD` too large to show, until `HEAD` changes. Everything answers as before the first
+ *  commit: the workspace lists nothing, `commit` is `NothingToCommit`, and the history
+ *  lists no commit.
+ */
+"tooLarge";
 
 /**  The kinds of entry the timeline can show; `null` in a request shows every kind. */
 export type HistoryType = 
@@ -1054,7 +1070,8 @@ export type JobResult = ({ kind: "scan"; changes: number; problems: number }) & 
 export type JobStatus = { state: "queued" } | { state: "running"; progress: Progress } | { state: "done"; result: JobResult } | { state: "failed"; error: AppError; 
 /**
  *  The library path of the file the job failed on, when one file caused it (a commit's
- *  `FileChanged`, `NotLocal`, `InUse`, `AccessDenied`); `null` otherwise.
+ *  `FileChanged`, `NotLocal`, `InUse`, `AccessDenied`); for `HistoryTooLarge` the folder
+ *  that holds too many files, `null` when the library as a whole does; `null` otherwise.
  */
 file: string | null } | 
 /**
@@ -1984,6 +2001,12 @@ export type WorkspaceSummary = {
 	/**  The catalog revision it was read at. */
 	revision: number,
 	historyState: HistoryState,
+	/**
+	 *  In state `tooLarge`: the folder that holds too many files, a library path. `null` when
+	 *  the library as a whole is over the limits, when the head sync cannot name the folder,
+	 *  and in every other state. It changes only with the state.
+	 */
+	tooLargeFolder: string | null,
 	/**  `HEAD`'s commit id; `null` before the first commit. Send it back as a commit's `base`. */
 	head: string | null,
 	/**
