@@ -17,13 +17,13 @@
     ]
   },
   "now": {
-    "stage": "M2 实现：10-07 恢复，工作区视图已合并",
+    "stage": "M2 实现：工作区核心和正文抽取已合并，提交和历史开工",
     "focus": "M2",
     "summary": [
-      "10-07 恢复（Sirui 说继续）：工作区视图 `feat/ui-changes-view` 已合并（34ea8bd9，CI 37590630118 绿；第 3 轮修复复审后又修了 7 处，复审通过）。进行中：`feat/core-text-extract` 第 2 轮修复；`feat/core-workspace` 独立审查（叠在正文抽取上，第 6 步问的合并顺序已定：工作区视图先合，它收尾时更新 changes.spec.ts）；`feat/ui-history-view` 第 8 步（放上导轨、端到端测试）。恢复参数在 folio-agent-work/roadmap-session/m2-resume.md。",
-      "已合并（M2）：M2 合约、AI 设置页、差异组件、对象库、选择汇总加两个计数、工作区视图，以及回收站两个修复、标签丢失修复、问题列表两个偶发测试的修复；另有中文 README 和截图（仓库公开时补的）。main 34ea8bd9。",
-      "接下来：正文抽取 → 工作区核心（合并后开 `feat/core-commit-history`，关键路径）；历史视图审完就合；正文抽取合并后加 `feat/ipc-extract-followups`（搜索结果随正文刷新、损坏文档的文案）。`feat/ipc-recycle-cloud-trash` 暂缓：Sirui 10-07 决定现在不做 iCloud 里的删除策略，所有删除在 Mac 上进行（决策 icloud-no-delete）。",
-      "你 10-06 授权：之后的判断由路线图会话自己定、自己合并，事后汇报（决策 m2-subagents）。和模型训练会话共用内存。要你做的：在 Mac 上删掉 iCloud Drive 里的测试文件夹 folio-recycle-test-giUDQa（10-07 中途停掉的测试留下的）。仓库已改回 private，M2 合并完的空档重写历史后再决定是否公开（决策 public-history）。",
+      "10-07：工作区视图（34ea8bd9）、正文抽取（320862db）、工作区核心（2e93d660）已合并；工作区核心合并前做了聚焦复审（多角度、逐条反驳）和第 4 轮修复，逐条用改回旧代码的方法核验。进行中：`feat/core-commit-history`（关键路径，规划时问的「历史太大」已定：决策 history-too-large-contract）；`feat/ui-history-view` 审完 3 轮，在做聚焦复审。恢复参数在 folio-agent-work/roadmap-session/m2-resume.md。",
+      "已合并（M2）：M2 合约、AI 设置页、差异组件、对象库、选择汇总加两个计数、工作区视图、正文抽取、工作区核心，以及回收站两个修复、标签丢失修复、问题列表两个偶发测试的修复；另有中文 README 和截图。main 2e93d660。",
+      "接下来：历史视图复审完就合；然后 `feat/ipc-history-too-large`（合约）→ `feat/ipc-extract-followups`（都重新生成绑定，排开）；`feat/ui-history-too-large` 跟在合约后面。提交和历史之后是差异和恢复、AI 提交说明、M2 验收。`feat/ipc-recycle-cloud-trash` 暂缓（决策 icloud-no-delete）。",
+      "你 10-06 授权：之后的判断由路线图会话自己定、自己合并，事后汇报（决策 m2-subagents）。和模型训练会话共用内存：子代理的测试单个超过 4 GB 就停下排查。现在没有要你做的事。仓库已改回 private，M2 合并完的空档重写历史后再决定是否公开（决策 public-history）。",
       "按你批准的 versioning.md §19：差异和恢复也等正文抽取；AI 提交说明等差异做完再开；M3 新增 `feat/core-retention`（Word 旧版本稀疏保留）；M1 的三处资料库细节由新的 `feat/ui-library-m1-notes` 做。关键路径：工作区 → 提交和历史 → 差异和恢复 → AI 提交说明 → M2 验收。",
       "模型：Fable 5.1 暂停（你 10-03 的决定）：推荐给它的 lane（关卡、规格、IPC 合约、推理强度 max）都由 Opus 5.5 用同样的推理强度代替；界面、核心、测试、设计用 Opus 5.5，只改文档和只合并的用 Sonnet 5.5。恢复时删掉 meta.pausedModels 里的 fable 即可。",
       "Codex 的项目级 skills（`AGENTS.md`、`.agents/skills/`、`.codex/`、`.claude/skills/`）和 CLAUDE.md 里的两处改动不进仓库，由 Codex 管理：任何 lane 都不提交、不丢弃。"
@@ -2923,6 +2923,60 @@
       }
     },
     {
+      "id": "feat/ipc-history-too-large",
+      "title": "历史关闭状态的合约：文件夹太大",
+      "milestone": "M2",
+      "phase": "m2-impl",
+      "track": "core",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "feat/core-workspace"
+      ],
+      "summary": "按决策 m2-too-large-folder 给「历史已关闭：文件夹 X 里的文件太多」一个合约位置：HistoryState 加 tooLarge，WorkspaceSummary 加可空的文件夹路径，AppError 加 HistoryTooLarge（提交和首次提交任务失败），加假 shell 场景、errors.json 文案和 REVIEWED_BINDINGS（决策 history-too-large-contract）",
+      "status": "planned",
+      "updated": "2026-10-07",
+      "links": [
+        "docs/specs/ipc-m2.md",
+        "docs/specs/versioning.md",
+        "docs/adr/ADR-0004-ipc-contract.md",
+        "docs/design/handoff/workspace-history.md"
+      ],
+      "prompt": {
+        "extra": [
+          "Start only after feat/ui-history-view has landed (it builds on the fake shell this lane changes) and land before feat/ipc-extract-followups (both regenerate the bindings).",
+          "Contract (ipc-m2): HistoryState gains `tooLarge` (a distinct non-damage state, decision m2-too-large-folder: the library stays usable, never HistoryDamaged); WorkspaceSummary gains a nullable folder path naming the folder that holds too many files (null when the whole library is over the path limits); AppError gains `HistoryTooLarge` for commit and start_history job failures. Say in ipc-m2 how the shell sets and clears the state (feat/core-commit-history's lane file, Decisions: a too-large first commit sets it until the catalog's entries change, then back to none so the UI starts the first commit again; a reopening retries once; a regular commit that would make a folder too large fails and the history stays ready).",
+          "Regenerate the bindings (`cargo test -p folio-app export_bindings`), add a fake-shell scenario (e.g. ?scenario=history-too-large) and the failure mode, errors.json copy through design:ux-copy (e.g. title 'History is off for this library', body '<folder> holds too many files for Folio's history. Folio tries again when the library changes.'), and REVIEWED_BINDINGS, all in one commit; no view changes here (feat/ui-history-too-large renders it).",
+          "If feat/core-commit-history has landed by then, switch its interim mapping in the shell (a too-large first commit's job failure is Internal with the folder in the log; a too-large HEAD shows as damaged) to the new state and code in this lane; otherwise tell that lane through its lane file."
+        ]
+      }
+    },
+    {
+      "id": "feat/ui-history-too-large",
+      "title": "历史关闭状态的界面",
+      "milestone": "M2",
+      "phase": "m2-impl",
+      "track": "ui",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "feat/ipc-history-too-large",
+        "feat/ui-history-view"
+      ],
+      "summary": "在改动视图的首次提交区块和历史视图的状态区块里显示「这个资料库的历史已关闭：文件夹 X 里的文件太多」，没有「重试」（资料库有变化时 Folio 自己再试）",
+      "status": "planned",
+      "updated": "2026-10-07",
+      "links": [
+        "docs/design/handoff/workspace-history.md",
+        "docs/specs/ipc-m2.md"
+      ],
+      "prompt": {
+        "extra": [
+          "Render HistoryState tooLarge (with WorkspaceSummary's folder path) in the Changes view's first-commit block (changes/, app/FirstCommitBlock.tsx) and History's state block (history/): no Try again (Folio retries when the library changes), a way to show the folder in File Explorer when it is named; copy from feat/ipc-history-too-large's errors.json; component tests for both blocks and the fake shell scenario; design:design-critique and design:accessibility-review on both."
+        ]
+      }
+    },
+    {
       "id": "feat/core-diff-restore",
       "title": "差异和恢复",
       "milestone": "M2",
@@ -3336,7 +3390,10 @@
         "feat/core-ai-message",
         "feat/ui-changes-view",
         "feat/ui-history-view",
-        "feat/ui-settings-ai"
+        "feat/ui-settings-ai",
+        "feat/ipc-history-too-large",
+        "feat/ui-history-too-large",
+        "feat/core-commit-history"
       ],
       "summary": "提交和恢复在崩溃注入下不丢数据；你自己用 v0.2 至少一两周",
       "status": "planned",
@@ -4114,6 +4171,29 @@
           "Two or three classmates try the release candidate. Prepare a short trial guide and feedback form, collect the reports, run design:research-synthesis on them and turn the problems into fix lanes ranked by severity. v1.0 ships when I decide the fixes are enough."
         ]
       }
+    },
+    {
+      "id": "refactor/ui-change-rows",
+      "title": "改动行的共用组件",
+      "milestone": "M3",
+      "phase": "m3-pre",
+      "track": "ui",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "feat/ui-history-view"
+      ],
+      "summary": "历史视图的文件卡片行复制了改动列表的行代码（图标表、状态和路径拆分、设置行标题、.card-row 样式），差异组件里还有第三份标题：合成一个共用的改动行模块（CLAUDE.md §3.1）",
+      "status": "planned",
+      "updated": "2026-10-07",
+      "links": [
+        "docs/specs/ui-architecture.md"
+      ],
+      "prompt": {
+        "extra": [
+          "From feat/ui-history-view's third fix round (lane file): move the change row's icon map, words (statusOf/pathParts/whole/joined/subjectTitle) and base CSS out of changes/list/ into a shared components/ module, and the settings-row titles into the common i18n namespace (today copied in changes.json, history.json and diff.json); rework the Changes list, History's cards and the diff header onto it with their tests passing unchanged in behaviour."
+        ]
+      }
     }
   ],
   "landingQueue": [],
@@ -4377,6 +4457,14 @@
       "type": "decide",
       "state": "done",
       "result": "路线图会话按授权决定：只按文件名跳过（文件名主干以 .min 结尾、常见的依赖锁文件），不按内容判断；改了普通名字的压缩包会被收录，最多 1 MiB。文件名照样能搜到（library-core §9 第七条）"
+    },
+    {
+      "id": "history-too-large-contract",
+      "when": "2026-10-07",
+      "item": "「历史已关闭：文件夹太大」（决策 m2-too-large-folder）怎么到界面：现有合约里没有这个状态和错误码",
+      "type": "decide",
+      "state": "done",
+      "result": "路线图会话按授权决定（方案 A）：单开合约 lane feat/ipc-history-too-large（HistoryState tooLarge、WorkspaceSummary 的文件夹路径、AppError HistoryTooLarge），再开界面 lane feat/ui-history-too-large；顺序：历史视图 → 这个合约 → 正文抽取后续。合约合并前，feat/core-commit-history 把超大的首次提交报成 Internal（日志里写文件夹），超大的 HEAD 暂时显示成损坏"
     }
   ],
   "looseEnds": [
@@ -5021,6 +5109,11 @@
       "at": "2026-10-07",
       "by": "Claude Code",
       "text": "正文抽取合并（320862db，第 3 轮修复复审通过）；按文件名跳过自动生成的文件（决策 search-generated-by-name）；新增 feat/ipc-extract-followups（搜索刷新、损坏文档、进度数字）"
+    },
+    {
+      "at": "2026-10-07",
+      "by": "Claude Code",
+      "text": "工作区核心合并（2e93d660，聚焦复审 + 第 4 轮修复逐条核验）；feat/core-commit-history 开工，「历史太大」走方案 A（决策 history-too-large-contract：新 lane feat/ipc-history-too-large、feat/ui-history-too-large）；新增 refactor/ui-change-rows"
     }
   ]
 }
