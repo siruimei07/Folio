@@ -32,17 +32,27 @@ export function receiveAiSettings(client: QueryClient, settings: AiSettings): vo
   client.setQueryData(keys.aiSettings(), settings);
 }
 
-/** An update that changes nothing: every field `null`. */
-const KEEP: UpdateAiSettings = { enabled: null, endpoint: null, model: null, sendContent: null };
+/**
+ * AI settings to change: each field given replaces the stored one; a field left out, or given as
+ * `undefined`, stays as it is (`update_ai_settings` takes `null` for that, which only this module
+ * sends).
+ */
+export type AiSettingsChange = { [Field in keyof UpdateAiSettings]?: NonNullable<UpdateAiSettings[Field]> };
 
 /**
- * Changes the fields given and not `null` (ipc-m2 §12.1); the others stay as they are. An endpoint
- * on another origin deletes the stored key in the same update, so the answer says `hasKey: false`.
- * Resolves to the settings as saved.
+ * Changes the fields given (ipc-m2 §12.1); the others stay as they are. An endpoint on another
+ * origin deletes the stored key in the same update, so the answer says `hasKey: false`. Resolves
+ * to the settings as saved.
  */
 export function useUpdateAiSettings() {
   return useCommandMutation(
-    (request: Partial<UpdateAiSettings>) => ipc.updateAiSettings({ ...KEEP, ...request }),
+    (change: AiSettingsChange) =>
+      ipc.updateAiSettings({
+        enabled: change.enabled ?? null,
+        endpoint: change.endpoint ?? null,
+        model: change.model ?? null,
+        sendContent: change.sendContent ?? null,
+      }),
     {},
     receiveAiSettings,
   );

@@ -92,6 +92,16 @@ describe('combinePages', () => {
     expect(refetch).toHaveBeenCalledOnce();
     expect(other.refetch).not.toHaveBeenCalled();
   });
+
+  it('is loading while a visible page without rows is read, such as a failed page asked again past the first', () => {
+    // A retried page is pending again without its error, so the list alone says success.
+    const reading = { ...pending, isFetching: true } as unknown as UseQueryResult<Page<EntryRow>>;
+    expect(combinePages([0, 2], [loaded(0, 1, ['a']), reading])).toMatchObject({ status: 'success', error: null, loading: true });
+    // A page refetched with its rows still on screen is not.
+    const refetching = { ...loaded(0, 1, ['a']), isFetching: true } as unknown as UseQueryResult<Page<EntryRow>>;
+    expect(combinePages([0, 2], [refetching, loaded(2, 1, ['c'])]).loading).toBe(false);
+    expect(combinePages([0], [pending]).loading).toBe(false);
+  });
 });
 
 describe('usePagedList', () => {

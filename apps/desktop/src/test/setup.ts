@@ -34,16 +34,19 @@ vi.stubGlobal(
 );
 
 // jsdom has no matchMedia. `(width < Npx)`, the app's layout query, follows `window.innerWidth`
-// (tests set it and dispatch `resize`); every other query, such as reduced motion, does not match.
-function matchWidth(query: string): boolean {
+// (tests set it and dispatch `resize`), and `(height < Npx)` (the commit bar's short window)
+// `window.innerHeight`; every other query, such as reduced motion, does not match.
+function matchSize(query: string): boolean {
   const below = /\(width < (\d+)px\)/.exec(query);
-  return below ? window.innerWidth < Number(below[1]) : false;
+  if (below) return window.innerWidth < Number(below[1]);
+  const lower = /\(height < (\d+)px\)/.exec(query);
+  return lower ? window.innerHeight < Number(lower[1]) : false;
 }
 vi.stubGlobal('matchMedia', (query: string): MediaQueryList => {
   const list = new EventTarget() as MediaQueryList;
-  let matches = matchWidth(query);
+  let matches = matchSize(query);
   window.addEventListener('resize', () => {
-    const next = matchWidth(query);
+    const next = matchSize(query);
     if (next === matches) return;
     matches = next;
     list.dispatchEvent(Object.assign(new Event('change'), { matches, media: query }));

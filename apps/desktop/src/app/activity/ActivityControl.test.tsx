@@ -5,13 +5,14 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
+import { unwrap } from '../../data/errors';
 import { keys } from '../../data/keys';
-import type { Job } from '../../ipc';
+import { ipc, type Job } from '../../ipc';
 import { NOW } from '../../test/data';
 import { renderApp } from '../../test/render';
 import { closeDialog, HostedDialogs, useNavigation } from '../navigation';
 import { ActivityControl } from './ActivityControl';
-import { noteImport, resetJobNotes } from './notes';
+import { noteCommit, noteImport, resetJobNotes } from './notes';
 
 function renderActivity(hosted: readonly ('problems' | 'importResult')[] = ['importResult'], jobStepMs = 40) {
   closeDialog();
@@ -83,5 +84,21 @@ describe('ActivityControl', () => {
     await waitFor(() => {
       expect(shell.jobs().find((job) => job.kind === 'scan')?.status.state).toBe('cancelled');
     });
+  });
+
+  it('names a commit by the changes the commit box noted, and counts its bytes', async () => {
+    const { user } = renderActivity(['importResult'], 300);
+    const workspace = await unwrap(ipc.getWorkspace());
+    const id = await unwrap(
+      ipc.commit({ selection: { kind: 'allExcept', keys: [] }, fingerprint: workspace.fingerprint, base: workspace.head, summary: 'Update', body: null }),
+    );
+    act(() => {
+      noteCommit(id, 9);
+    });
+    await user.click(await screen.findByRole('button', { name: /^Activity: committing changes, \d+ percent\.$/ }));
+    const panel = await screen.findByRole('dialog', { name: 'Activity' });
+    expect(within(panel).getByText('Committing 9 changes')).toBeInTheDocument();
+    expect(within(panel).getByText(/^[\d.]+ of [\d.]+ KB$/)).toBeInTheDocument();
+    expect(within(panel).getByRole('button', { name: 'Cancel commit' })).toBeInTheDocument();
   });
 });

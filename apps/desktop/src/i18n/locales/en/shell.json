@@ -82,6 +82,8 @@
       "importCountTo_other": "Adding {{count}} files to {{target}}",
       "rebuild": "Rebuilding the search index",
       "commit": "Committing changes",
+      "commitCount_one": "Committing {{count, number}} change",
+      "commitCount_other": "Committing {{count, number}} changes",
       "firstCommit": "Starting history"
     },
     "runningMeta": {
@@ -95,7 +97,14 @@
       "commit": "{{done, number}} of {{total, number}} files",
       "commitSoFar": "{{done, number}} files so far",
       "firstCommit": "{{done, number}} of {{total, number}} files",
-      "firstCommitSoFar": "{{done, number}} files so far"
+      "firstCommitSoFar": "{{done, number}} files so far",
+      "bytes": {
+        "bytes": "{{done}} of {{total}} B",
+        "kilobytes": "{{done}} of {{total}} KB",
+        "megabytes": "{{done}} of {{total}} MB",
+        "gigabytes": "{{done}} of {{total}} GB",
+        "terabytes": "{{done}} of {{total}} TB"
+      }
     },
     "queued": {
       "scan": "Waiting",
@@ -221,5 +230,39 @@
     "previewTitle": "The preview stopped working",
     "text": "Reload it to carry on. If this keeps happening, copy the details and send them to the developer.",
     "reload": "Reload this view"
+  },
+  "fileActions": {
+    "editor": "Opened {{name}} in an editor",
+    "editorText": "Folio doesn't run programs or scripts, so it opened this one for editing.",
+    "blocked": "Folio doesn't open programs",
+    "blockedText": "To keep you safe, it won't run {{name}}. Show it in File Explorer if you want to open it yourself.",
+    "reveal": "Show in File Explorer",
+    "openFailed": "Couldn't open {{name}}",
+    "revealFailed": "Couldn't show {{name}} in File Explorer",
+    "copied_one": "Copied the path",
+    "copied_other": "Copied {{count, number}} paths",
+    "copyFailed": "Couldn't copy the path"
+  },
+  "firstCommit": {
+    "summary": "Start history",
+    "title": "Starting your history",
+    "waiting": "Waiting for the scan to finish",
+    "bytes": {
+      "bytes": "{{done}} B of {{total}} B",
+      "kilobytes": "{{done}} KB of {{total}} KB",
+      "megabytes": "{{done}} MB of {{total}} MB",
+      "gigabytes": "{{done}} GB of {{total}} GB",
+      "terabytes": "{{done}} TB of {{total}} TB"
+    },
+    "cancelled": {
+      "title": "Your history hasn't started",
+      "text": "Folio starts it the next time you open the library."
+    },
+    "start": "Start history",
+    "failed": {
+      "title": "Couldn't start your history",
+      "text": "{{reason}} Folio also tries again the next time you open the library."
+    },
+    "started": "Your history has started."
   }
 }

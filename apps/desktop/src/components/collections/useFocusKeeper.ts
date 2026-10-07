@@ -1,28 +1,32 @@
-// Keeping the focus in the diff when React removes the element that has it (WCAG 2.4.3): a fold that
-// turns into its lines, a "Try again" whose row, block or banner goes as its read starts or
-// succeeds, the lines' region that a refresh turns into a state block. The browser then focuses the
-// page; once the DOM has changed, the part puts the focus back. Focus the person moved elsewhere
-// (Tab, a click on text or on another pane) stays where they put it.
+// Keeping the focus in a part of a view when React removes the element that has it (WCAG 2.4.3):
+// in the diff, a fold that turns into its lines, a "Try again" whose row, block or banner goes as
+// its read starts or succeeds, the lines' region that a refresh turns into a state block; in a
+// virtualised collection (`useVirtualRows`), the focused row whose placeholder gets its page, and
+// with it a new element. The browser then focuses the page; once the DOM has changed, the part puts
+// the focus back. Focus the person moved elsewhere (Tab, a click on text or on another pane) stays
+// where they put it.
 //
 // It watches the part's DOM rather than renders, so a removal is seen whichever component made it
 // (the lookup behind a file's preview renders on its own). Whether the element that lost the focus
 // was removed or the person moved the focus is known only once it is, or is not, out of the page:
 // Chrome sends `focusout` while it removes an element, before it is gone. So `focusout` notes the
 // element and decides in a microtask, and until then a change that finds the focus on the page
-// restores it only if that element has gone. `useVirtualRows` keeps the focus the same way.
+// restores it only if that element has gone.
 //
-// Parts nest (the lines' region in the pane), so they listen in the capture phase: the outer part
-// hears the focus leave before the inner one. When the person moves the focus, Chromium runs the
-// microtasks a listener queues before the next listener; an inner part that heard it first would
-// let its element go (`onLeave`), React would remove it in those microtasks, and the outer part,
-// not told yet, would take the focus back from where the person put it.
+// Parts listen in the capture phase, so they hear the focus leave before anything inside them
+// does. When the person moves the focus, Chromium runs the microtasks a listener queues before the
+// next listener: an inner part that heard it first would let its element go (`onLeave`), or a
+// control in a collection's row would end its edit, React would render in those microtasks, and
+// the outer part, not told yet, would take the focus back from where the person put it. Parts nest
+// (the lines' region in the diff pane): the outer one hears it before the inner one.
 import { useCallback, useLayoutEffect, useRef } from 'react';
 
 /**
- * A callback ref for the part of the pane that keeps the focus: when the focus was last in it and
- * a change to its DOM leaves the focus on the page, with the element that had it gone, `restore`
- * puts it back. `onLeave` runs once the focus has really left the part. Elements React renders
- * elsewhere (a menu's popover) are not the part's.
+ * A callback ref for the part that keeps the focus: when the focus was last in it and a change to
+ * its DOM leaves the focus on the page, with the element that had it gone, `restore` puts it back.
+ * `onLeave` runs once the focus has really left the part. Elements React renders elsewhere (a
+ * menu's popover) are not the part's. A part whose element is not its own to render (a
+ * collection's scroller) calls the ref with it from an effect and returns what it returns.
  */
 export function useFocusKeeper(restore: () => void, onLeave?: () => void): (part: HTMLElement | null) => (() => void) | undefined {
   const latest = useRef({ restore, onLeave });

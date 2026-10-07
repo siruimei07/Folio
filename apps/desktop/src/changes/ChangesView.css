@@ -1,0 +1,108 @@
+/* The Changes view (workspace-history handoff §2.1): the list (290), the commit lane (320) and the
+   diff, 8 px apart. */
+
+.changes-view {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  gap: var(--space-panel-gap);
+}
+
+/* The list's place: the list alone in a wide window. In a narrow one (§2.2) it takes the width and
+   the height above the commit bar, which is pinned under it, and the diff covers the list there.
+   Narrow is the view's own (`data-narrow`): below size.changes-narrow-breakpoint (1,000 px), so
+   also while the shell is wide (§2.1 as built). */
+.changes-view__main {
+  display: flex;
+  flex: none;
+  min-height: 0;
+}
+
+.changes-view[data-narrow] {
+  flex-direction: column;
+}
+
+.changes-view[data-narrow] .changes-view__main {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+/* The diff over the list fades in and rises 4 px, at once with reduced motion (§14). The list
+   stays laid out under it, hidden, so Back finds its scroll and selection; it comes back the same
+   way. */
+.changes-view__cover {
+  position: absolute;
+  inset: 0;
+  animation: rise-in var(--motion-duration-base) var(--motion-easing-standard);
+}
+
+.changes-view[data-covered] .changes-list {
+  visibility: hidden;
+}
+
+.changes-view__main[data-returned] > .changes-list {
+  animation: rise-in var(--motion-duration-base) var(--motion-easing-standard);
+}
+
+/* The commit lane (app-shell §6): the dotted lane whose cards are panels; it scrolls in a short
+   window. */
+.changes-view__lane {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--space-10);
+  box-sizing: border-box;
+  min-height: 0;
+  overflow-y: auto;
+  width: var(--size-commit-lane);
+  padding: var(--space-12);
+  border: var(--border-width) solid var(--color-border-default);
+  border-radius: var(--radius-panel);
+  background-color: var(--color-surface-app);
+  background-image: radial-gradient(var(--color-pattern-dots) var(--border-width), transparent var(--border-width));
+  background-size: var(--space-14) var(--space-14);
+}
+
+.changes-view__diff {
+  flex: 1;
+}
+
+/* Before the history has started: one panel in the three columns' space (§10). */
+.changes-view__first-commit {
+  flex: 1;
+}
+
+/* Nothing to show: the desk illustration on the dot grid (§3.8, app-shell 9C). */
+.changes-view__empty {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-18);
+  padding: var(--space-16);
+  background-color: var(--color-surface-app);
+  background-image: radial-gradient(var(--color-pattern-dots) var(--border-width), transparent var(--border-width));
+  background-size: var(--space-14) var(--space-14);
+  text-align: center;
+}
+
+.changes-view__empty-words {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.changes-view__empty-title {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-body);
+}
+
+.changes-view__empty-text {
+  margin: 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-small);
+}

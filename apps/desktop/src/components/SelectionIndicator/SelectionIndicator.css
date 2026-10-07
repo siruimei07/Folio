@@ -1,0 +1,40 @@
+/* The selection bar (workspace-history handoff §8.6): the only stylesheet that draws it. Its item is
+   positioned; `--selection-indicator-start` (a host's, else 0) moves the bar out of the item's
+   padding to the edge of the card around it. */
+.selection-indicator {
+  position: absolute;
+  top: var(--size-selection-bar-inset);
+  bottom: var(--size-selection-bar-inset);
+  left: var(--selection-indicator-start, 0);
+  width: var(--size-selection-bar-width);
+  border-radius: 0 var(--radius-indicator) var(--radius-indicator) 0;
+  background: var(--color-selection-indicator);
+  pointer-events: none;
+}
+
+/* The rail's active view: 20 px tall, centred on its button, at the window's left edge. */
+.selection-indicator[data-placement='edge'] {
+  top: 50%;
+  bottom: auto;
+  height: var(--size-rail-indicator);
+  transform: translateY(-50%);
+}
+
+/* A horizontal tab list (the settings nav in a narrow window): along the tab's bottom edge. */
+[role='tablist'][data-orientation='horizontal'] .selection-indicator[data-placement='tab'] {
+  top: auto;
+  right: var(--size-selection-bar-inset);
+  bottom: 0;
+  left: var(--size-selection-bar-inset);
+  width: auto;
+  height: var(--size-selection-bar-width);
+  border-radius: var(--radius-indicator) var(--radius-indicator) 0 0;
+}
+
+/* Windows contrast themes replace backgrounds: keep the bar, in the theme's selection colour. */
+@media (forced-colors: active) {
+  .selection-indicator {
+    background: Highlight;
+    forced-color-adjust: none;
+  }
+}

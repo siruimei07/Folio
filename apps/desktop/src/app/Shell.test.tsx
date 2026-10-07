@@ -9,7 +9,7 @@ import shell from '../i18n/locales/en/shell.json';
 import titlebar from '../i18n/locales/en/titlebar.json';
 import { SIZE } from '../tokens/tokens';
 import { watchLayout } from './layout';
-import { useNavigation } from './navigation';
+import { useCanShowView, useNavigation } from './navigation';
 import type { DialogComponentProps, ShellRegistry, ToolbarControlProps } from './registry';
 import { Shell } from './Shell';
 import { showToast } from './toasts';
@@ -246,5 +246,24 @@ describe('Shell', () => {
     );
     expect(screen.getByRole('heading', { name: shell.viewError.title })).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: shell.rail.label })).toBeInTheDocument();
+  });
+
+  it('tells views which views are on the rail, for actions that show another view', () => {
+    function Hosted() {
+      const changes = useCanShowView('changes');
+      const history = useCanShowView('history');
+      return <p>{`changes ${String(changes)}, history ${String(history)}`}</p>;
+    }
+    render(
+      <Shell
+        registry={registry({
+          views: [
+            { id: 'library', icon: LibraryBig, label: 'rail.library', key: '1', component: Hosted },
+            { id: 'history', icon: History, label: 'rail.history', key: '3', component: () => null },
+          ],
+        })}
+      />,
+    );
+    expect(screen.getByText('changes false, history true')).toBeInTheDocument();
   });
 });

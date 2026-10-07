@@ -8,6 +8,7 @@ import type { CollectionHandle, IndexRange } from '../../components/collections/
 import { type CollectionItem, VirtualList } from '../../components/collections/VirtualList';
 import { type GridSection, VirtualGrid } from '../../components/collections/VirtualGrid';
 import { FileTypeIcon } from '../../components/FileTypeIcon/FileTypeIcon';
+import { SelectionIndicator } from '../../components/SelectionIndicator/SelectionIndicator';
 import { useCourses } from '../../data/groups';
 import type { LoadingPagedList } from '../../data/paged';
 import { type EntryRef, type EntryRow, thumbnailUrl } from '../../ipc';
@@ -287,7 +288,7 @@ export function EntriesView({ label, list, mode, onRangeChange, folder, showPlac
         const modified = row.modifiedMs === null ? null : Number(row.modifiedMs);
         return (
           <div className="entry-row" data-selected={item.selected || undefined}>
-            {item.selected && <span className="tree-row__bar" aria-hidden />}
+            {item.selected && <SelectionIndicator />}
             {row.kind === 'folder' ? (
               <Folder aria-hidden size={SIZE.icon} className="tree-row__icon" />
             ) : (

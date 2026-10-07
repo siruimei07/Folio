@@ -10,9 +10,9 @@ import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { installShortcuts } from '../app/shortcuts';
 import { MenuItem } from '../components/Menu/Menu';
 import type { DiffRow, DiffWindow } from '../ipc';
+import { focusBlurrer } from '../test/focus';
 import { cubicBezier, durationMs, easingOf } from './lines/reveal';
 import { foldedRows, textDiff } from './test/diffs';
-import { focusBlurrer } from './test/focus';
 import {
   BAR,
   diffQueries,

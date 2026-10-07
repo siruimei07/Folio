@@ -1,12 +1,10 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import type { Page } from '@playwright/test';
-
 import errors from '../../apps/desktop/src/i18n/locales/en/errors.json' with { type: 'json' };
 import settings from '../../apps/desktop/src/i18n/locales/en/settings.json' with { type: 'json' };
 import shell from '../../apps/desktop/src/i18n/locales/en/shell.json' with { type: 'json' };
-import { blockingViolations, expect, openLibrary, test } from '../fixtures';
+import { blockingViolations, countCalls, expect, openLibrary, test } from '../fixtures';
 
 // App settings → AI on the real shell (app-shell handoff §9; ipc-m2 §12). The AI commands are
 // planned stubs until feat/core-ai-message registers them, so get_ai_settings resolves to a
@@ -15,18 +13,6 @@ import { blockingViolations, expect, openLibrary, test } from '../fixtures';
 // that registers the commands adds the real-shell set/test flow (FOLIO_TEST_AI_CONFIRM).
 
 test.use({ libraryFolder: true });
-
-/**
- * Counts the page's calls of a command. Tauri's invoke cannot be wrapped (the shell makes it
- * read-only), so this counts the IPC requests WebView2 sends (`http://ipc.localhost/<command>`).
- */
-function countCalls(page: Page, command: string): () => number {
-  let count = 0;
-  page.on('request', (request) => {
-    if (new URL(request.url()).pathname === `/${command}`) count += 1;
-  });
-  return () => count;
-}
 
 test('App settings → AI from the keyboard shows the load failure with Try again, passes axe, and Esc returns to the avatar', async ({ folio }) => {
   test.setTimeout(120_000);

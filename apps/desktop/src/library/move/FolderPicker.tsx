@@ -10,6 +10,7 @@ import { VirtualTree } from '../../components/collections/VirtualTree';
 import { CourseBadge } from '../../components/CourseBadge/CourseBadge';
 import { CourseLabel } from '../../components/CourseLabel/CourseLabel';
 import { Select } from '../../components/Select/Select';
+import { SelectionIndicator } from '../../components/SelectionIndicator/SelectionIndicator';
 import { type FolderPages, useFolderChildren } from '../../data/entries';
 import { useCourses, useSemesters } from '../../data/groups';
 import { LIST_PAGE } from '../../data/paged';
@@ -226,7 +227,7 @@ export function FolderPicker({ semester: initialSemester, moving, chosen, onChoo
                 data-disabled={row.disabled === true || undefined}
                 style={{ '--depth': item.level - 1 } as CSSProperties}
               >
-                {row.selected && <span className="tree-row__bar" aria-hidden />}
+                {row.selected && <SelectionIndicator />}
                 <span className="tree-row__chevron" aria-hidden>
                   <Chevron size={SIZE.iconSmall} />
                 </span>

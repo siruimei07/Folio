@@ -2,8 +2,8 @@
 
 import type { TFunction } from 'i18next';
 
-import type { JobResult } from '../../ipc';
-import { formatMoment } from '../../lib/format';
+import type { ByteProgress, JobResult } from '../../ipc';
+import { formatMoment, sizeProgressParts } from '../../lib/format';
 import { type ActivityJob, type ActivityStatus, endedWithProblems, importResultOf, jobPercent } from './status';
 
 /** `t` of `useTranslation(['shell', 'errors'])`. */
@@ -35,6 +35,22 @@ function importTitle(t: ShellT, total: number | null, target: string | undefined
   return target === undefined
     ? t('activity.runningTitle.importCount', { count: total })
     : t('activity.runningTitle.importCountTo', { count: total, target });
+}
+
+/**
+ * A waiting or running job's title: an import's count and destination, a commit's changes
+ * ("Committing 9 changes", workspace-history handoff §4.4) when the UI started it.
+ */
+function activeTitle(t: ShellT, { job, target, changes }: ActivityJob, total: number | null): string {
+  if (job.kind === 'import') return importTitle(t, total, target);
+  if (job.kind === 'commit' && changes !== undefined) return t('activity.runningTitle.commitCount', { count: changes });
+  return t(`activity.runningTitle.${job.kind}`);
+}
+
+/** "12.4 of 48.0 MB": the bytes a commit has read, both in the unit of the total (§4.4, §10). */
+function bytesMeta(t: ShellT, bytes: ByteProgress, language: string): string {
+  const { done, total, unit } = sizeProgressParts(Number(bytes.done), Number(bytes.total), language);
+  return t(`activity.runningMeta.bytes.${unit}`, { done, total });
 }
 
 function doneTexts(t: ShellT, result: JobResult, target: string | undefined): { title: string; meta: string | null } {
@@ -98,30 +114,28 @@ function doneTexts(t: ShellT, result: JobResult, target: string | undefined): { 
 }
 
 /** One row of the Activity popover. `now` and `language` place the finish time. */
-export function describeJob(t: ShellT, { job, target, files, finishedAt }: ActivityJob, now: number, language: string): JobRow {
+export function describeJob(t: ShellT, item: ActivityJob, now: number, language: string): JobRow {
+  const { job, target, files, finishedAt } = item;
   const { kind, status } = job;
   const time = finishedAt === undefined ? null : formatMoment(finishedAt, now, language);
   const cancelLabel = job.cancellable ? t(`activity.cancel.${kind}`) : null;
   const base = { percent: null, current: null, time: null, cancelLabel: null, hasDetails: false };
   switch (status.state) {
     case 'queued':
-      return {
-        ...base,
-        look: 'queued',
-        title: kind === 'import' ? importTitle(t, null, target) : t(`activity.runningTitle.${kind}`),
-        meta: t(`activity.queued.${kind}`),
-        cancelLabel,
-      };
+      return { ...base, look: 'queued', title: activeTitle(t, item, null), meta: t(`activity.queued.${kind}`), cancelLabel };
     case 'running': {
-      const { done, total, current } = status.progress;
-      const title = kind === 'import' ? importTitle(t, total, target) : t(`activity.runningTitle.${kind}`);
+      const { done, total, current, bytes } = status.progress;
+      // Commits measure what they read in bytes; hashing may report bytes later and keeps its
+      // own words (ipc-m2 §13).
       const meta =
-        kind === 'rebuild'
-          ? t('activity.runningMeta.rebuild', { done })
-          : total === null
-            ? t(`activity.runningMeta.${kind}SoFar`, { done })
-            : t(`activity.runningMeta.${kind}`, { done, total });
-      return { ...base, look: 'running', title, meta, percent: jobPercent(job), current, cancelLabel };
+        (kind === 'commit' || kind === 'firstCommit') && bytes !== null
+          ? bytesMeta(t, bytes, language)
+          : kind === 'rebuild'
+            ? t('activity.runningMeta.rebuild', { done })
+            : total === null
+              ? t(`activity.runningMeta.${kind}SoFar`, { done })
+              : t(`activity.runningMeta.${kind}`, { done, total });
+      return { ...base, look: 'running', title: activeTitle(t, item, total), meta, percent: jobPercent(job), current, cancelLabel };
     }
     case 'done': {
       const texts = doneTexts(t, status.result, target);

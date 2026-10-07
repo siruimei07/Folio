@@ -2,11 +2,15 @@
 // windows asked of the fake shell, and stubbed diffs of any shape answered window by window.
 import type { Query, QueryClient } from '@tanstack/react-query';
 import { act, fireEvent, within } from '@testing-library/react';
-import { onTestFinished, vi } from 'vitest';
+import { vi } from 'vitest';
 
 import type { Diff, DiffRow, DiffWindow } from '../../ipc';
 import { textDiff } from './diffs';
+import { maxScroll } from '../../test/virtual';
 import { fake, item, PHY, REVIEW } from './pane';
+
+// Scrolling as jsdom cannot, shared with the other virtualised views' tests.
+export { maxScroll, mockScrolling } from '../../test/virtual';
 
 /** The estimates jsdom keeps: a line, a fold or failed window, the lead's gap. */
 export const LINE = 22;
@@ -50,11 +54,6 @@ export function texts(region: HTMLElement): string[] {
 
 export function findRegion(pane: HTMLElement, name: string | RegExp = /^Changes in /) {
   return within(pane).findByRole('region', { name });
-}
-
-/** The farthest an element scrolls, as a browser has it: its content's height less its own. */
-export function maxScroll(element: HTMLElement): number {
-  return Math.max(0, element.scrollHeight - element.clientHeight);
 }
 
 /** Scrolls the region as a person would: the offset moves, within the content, then the scroll event. */
@@ -129,42 +128,3 @@ export function stubbedItem(path = `${PHY}/Stubbed.md`) {
   return { kind: 'workspace', item: { ...target.item, key: 'item:stubbed', path, class: path.endsWith('.docx') ? 'word' : 'text' } } as const;
 }
 
-/**
- * jsdom has no Element.scrollTo and no scroll sizes, so the virtualiser cannot move the view: until
- * the test ends, the content is as tall as the virtualiser's sizer, the box as tall as the 600 px
- * every element reports (`renderApp`), and scrollTo moves the view within it and sends the scroll
- * event a task later, as a browser does.
- */
-export function mockScrolling() {
-  const prototype = HTMLElement.prototype;
-  Object.defineProperties(prototype, {
-    clientHeight: {
-      configurable: true,
-      get(this: HTMLElement) {
-        return this.offsetHeight;
-      },
-    },
-    scrollHeight: {
-      configurable: true,
-      get(this: HTMLElement) {
-        const sizer = this.firstElementChild;
-        const content = sizer instanceof HTMLElement ? Number.parseFloat(sizer.style.height) : Number.NaN;
-        return Math.max(this.offsetHeight, Number.isNaN(content) ? 0 : content);
-      },
-    },
-    scrollTo: {
-      configurable: true,
-      writable: true,
-      value(this: HTMLElement, options?: ScrollToOptions) {
-        if (options?.top === undefined) return;
-        this.scrollTop = Math.min(Math.max(0, options.top), maxScroll(this));
-        setTimeout(() => {
-          this.dispatchEvent(new Event('scroll'));
-        }, 0);
-      },
-    },
-  });
-  onTestFinished(() => {
-    for (const property of ['clientHeight', 'scrollHeight', 'scrollTo']) Reflect.deleteProperty(prototype, property);
-  });
-}

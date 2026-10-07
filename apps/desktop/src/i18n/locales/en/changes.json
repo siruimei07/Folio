@@ -1,1 +1,250 @@
-{}
+{
+  "list": {
+    "title": "Changes",
+    "label": "Changes",
+    "count_one": "{{count, number}} change",
+    "count_other": "{{count, number}} changes",
+    "countLoading": "Counting changes",
+    "countUnknown": "Number of changes unknown",
+    "includeAll": "Include all changes",
+    "layout": "List layout",
+    "flat": "Flat list",
+    "grouped": "Group by course"
+  },
+  "rows": {
+    "loading": "Loading…",
+    "files_one": "{{count, number}} file",
+    "files_other": "{{count, number}} files",
+    "emptyFolder": "Empty folder",
+    "changes_one": "{{count, number}} change",
+    "changes_other": "{{count, number}} changes",
+    "tags": "Tags",
+    "tagsChanged": "Its tags changed too",
+    "tagsChangedPart": "tags changed too",
+    "notLocal": "Not downloaded yet. Folio can commit it once the file is on this computer.",
+    "unreadable": "Folio couldn't read it. Close it in other apps, then try again.",
+    "required": "Always in the commit: it goes with a settings change, which every commit records.",
+    "metadata": "Tags and settings: in every commit, but a change that belongs to a file you leave out waits for that file.",
+    "semesterSettings": "{{name}} semester settings",
+    "courseSettings": "{{name}} course settings",
+    "tagDefinitions": "Tag definitions",
+    "librarySettings": "Library settings",
+    "ignoreRules": "Ignore rules",
+    "rangeFailed": "Couldn't change those check boxes",
+    "listChanged": "The list changed meanwhile, so the check boxes stay as they were. Check the list, then try again.",
+    "limit": {
+      "leaveOut": "That's the most you can leave out",
+      "include": "That's the most you can pick"
+    },
+    "tooMany": {
+      "leaveOut": "You can leave out up to {{count, number}} changes one by one. To commit only a few, turn off Include all changes, then check the ones you want.",
+      "include": "You can pick up to {{count, number}} changes one by one. To commit most of them, turn on Include all changes, then leave out the ones you don't want."
+    }
+  },
+  "group": {
+    "metadata": "Tags and settings",
+    "always": "Always in the commit",
+    "alwaysSome_one": "{{count, number}} of them is always in the commit. The rest can't be committed yet.",
+    "alwaysSome_other": "{{count, number}} of them are always in the commit. The rest can't be committed yet.",
+    "alwaysTip": "Tag and settings changes go into every commit. A change that belongs to a file you leave out waits for that file.",
+    "library": "Library",
+    "label_one": "{{place}}, {{count, number}} change",
+    "label_other": "{{place}}, {{count, number}} changes",
+    "committable": "{{count, number}} of them can be committed now.",
+    "toggle": "Space includes or leaves out every change in it.",
+    "mixed": "Some of its changes are included. Space includes them all.",
+    "blocked": "None of its changes can be committed yet."
+  },
+  "menu": {
+    "label": "Actions for {{name}}",
+    "open": "Open with default app",
+    "reveal": "Show in File Explorer",
+    "openFolder": "Open in File Explorer",
+    "include": "Include in this commit",
+    "leaveOut": "Leave out of this commit",
+    "notLocal": "Not downloaded yet",
+    "unreadable": "Couldn't read it",
+    "required": "Always in the commit",
+    "committing": "Wait until the commit is done",
+    "copyPath": "Copy path"
+  },
+  "commit": {
+    "label": "Commit",
+    "summary": "Summary",
+    "summaryPlaceholder": "Summary (optional)",
+    "description": "Description",
+    "descriptionPlaceholder": "Description (optional). Leave both empty and Folio writes a short summary.",
+    "descriptionPlaceholderAi": "Description (optional). Leave both empty and {{service}} writes them.",
+    "message": "Message",
+    "generate": "Generate",
+    "generateMessage": "Generate a message",
+    "stop": "Stop",
+    "useTemplate": "Use template",
+    "options": "Message options",
+    "writeWith": "Write with {{service}}",
+    "useTheTemplate": "Use the template",
+    "aiSettings": "AI settings…",
+    "aiSettingsLink": "AI settings",
+    "service": {
+      "deepseek": "DeepSeek",
+      "other": "the AI service"
+    },
+    "serviceStart": {
+      "deepseek": "DeepSeek",
+      "other": "The AI service"
+    },
+    "writing": "{{service}} is writing…",
+    "writingMessage": "Writing the message…",
+    "written": "Written by {{service}}. Change anything you like.",
+    "templateAdded": "Added the template message.",
+    "templateFailed": "Couldn't write the template message",
+    "aiFailed": {
+      "AiNetwork": {
+        "title": "{{service}} didn't answer",
+        "text": "Check your connection and try again. You can still commit: Folio writes a template message."
+      },
+      "AiTimeout": {
+        "title": "{{service}} took too long",
+        "text": "Try again in a moment. You can still commit: Folio writes a template message."
+      },
+      "AiRejected": {
+        "title": "{{service}} turned down the API key",
+        "text": "Check the key in App settings → AI. You can still commit: Folio writes a template message."
+      },
+      "AiRateLimited": {
+        "title": "{{service}} is busy right now",
+        "text": "Try again in a minute. You can still commit: Folio writes a template message."
+      },
+      "AiUnavailable": {
+        "title": "{{service}} isn't working right now",
+        "text": "Try again later. You can still commit: Folio writes a template message."
+      },
+      "AiBadResponse": {
+        "title": "{{service}}'s answer couldn't be used",
+        "text": "Try again, or write the message yourself."
+      },
+      "AiCredential": {
+        "title": "Folio couldn't read the API key",
+        "text": "Windows Credential Manager didn't answer. Set the key again in App settings → AI."
+      },
+      "unknown": {
+        "title": "{{service}} couldn't write a message",
+        "text": "You can still commit: Folio writes a template message."
+      }
+    },
+    "fallback": {
+      "title": "Committed with a template message",
+      "text": "{{reason}}, so the message is “{{summary}}”. You can edit it until you sync."
+    },
+    "showDescription": "Add a description",
+    "showWrittenDescription": "Show the description",
+    "hideDescription": "Hide the description",
+    "button_one": "Commit {{count, number}} change",
+    "button_other": "Commit {{count, number}} changes",
+    "buttonUnknown": "Commit",
+    "nothingSelected": "Nothing selected",
+    "nothingToCommit": "Nothing to commit",
+    "committing": "Committing…",
+    "done_one": "Committed {{count, number}} change: {{summary}}",
+    "done_other": "Committed {{count, number}} changes: {{summary}}",
+    "failed": {
+      "title": "Couldn't commit",
+      "WorkspaceChanged": "The changes changed while you were committing. Check the list, then commit again.",
+      "NothingToCommit": "There's nothing to commit any more. Another change may have undone it.",
+      "FileChanged": "{{name}} kept changing while Folio read it. Save it and close it, then commit again.",
+      "NotLocal": "{{name}} isn't downloaded yet. Open it so it downloads, then commit again.",
+      "InUse": "Another app is using {{name}}. Close it there, then commit again. Your message and choices are kept.",
+      "AccessDenied": "Windows didn't let Folio read {{name}}.",
+      "DiskFull": "The disk is full. Free up some space, then commit again.",
+      "ReadOnly": "A newer version of Folio changed this library. Update Folio to commit.",
+      "HistoryDamaged": "Folio can't read this library's history. Your files are fine.",
+      "Busy": "Folio is rebuilding its search index. Commit again when it's done."
+    },
+    "block": {
+      "busy": "Folio is rebuilding its search index. You can commit when it's done.",
+      "readOnly": "A newer version of Folio changed this library. Update Folio to commit.",
+      "damaged": "Folio can't read this library's history, so you can't commit until it's fixed."
+    }
+  },
+  "template": {
+    "clause": "{{place}}: {{changes}}",
+    "library": "Library",
+    "add": "add {{what}}",
+    "update": "update {{what}}",
+    "move": "move {{what}}",
+    "delete": "delete {{what}}",
+    "tag": "tag {{what}}",
+    "files_one": "{{count, number}} file",
+    "files_other": "{{count, number}} files",
+    "folders_one": "{{count, number}} folder",
+    "folders_other": "{{count, number}} folders",
+    "both": "{{first}} and {{second}}",
+    "courseSettings": "course settings",
+    "semesterSettings": "semester settings",
+    "librarySettings": "library settings",
+    "tagDefinitions": "tags",
+    "ignoreRules": "ignore rules",
+    "updateOnly": "Update {{what}}",
+    "more_one": "and {{count, number}} more",
+    "more_other": "and {{count, number}} more",
+    "fallback": "Update the library"
+  },
+  "diff": {
+    "back": "Back to changes"
+  },
+  "target": {
+    "gone": "That change isn't in the list anymore",
+    "failed": "Couldn't find that change"
+  },
+  "states": {
+    "loadFailed": "Couldn't load your changes",
+    "empty": {
+      "title": "No changes",
+      "text": "Everything is committed. When you add, edit, move or delete files, the changes show up here."
+    },
+    "emptyDiff": {
+      "title": "Nothing has changed since your last commit",
+      "text": "Changes to the files in your library show up in the list."
+    }
+  },
+  "banners": {
+    "scanning": {
+      "title": "Still checking your library.",
+      "text": "More changes may show up."
+    },
+    "rebuilding": {
+      "title": "Rebuilding the search index.",
+      "text": "You can commit when it's done."
+    },
+    "readOnly": {
+      "title": "History is read-only.",
+      "text": "A newer version of Folio changed it. Update Folio to commit."
+    },
+    "damaged": {
+      "title": "Folio can't read this library's history.",
+      "text": "Your files are fine, but you can't commit until it's fixed."
+    }
+  },
+  "notSynced": {
+    "title": "Not synced",
+    "count_one": "{{count, number}} commit not synced",
+    "count_other": "{{count, number}} commits not synced",
+    "countLoading": "Counting commits",
+    "countUnknown": "Number of commits unknown",
+    "text": "Cloud sync comes in a later version. Until then, commits stay on this computer.",
+    "next": "Your commit goes here",
+    "commits": "Newest commits",
+    "noMessage": "No message",
+    "meta": "{{id}} · {{when}}",
+    "today": "Today {{time}}",
+    "failed": "Couldn't load your commits."
+  },
+  "firstCommit": {
+    "text": "Folio is saving the first version of your library: every text and Word file, and a record of everything else. You can keep working; changes show up here when it's done."
+  },
+  "railBadge": {
+    "label_one": "Changes, {{count, number}} change",
+    "label_other": "Changes, {{count, number}} changes",
+    "overflow": "{{count, number}}+"
+  }
+}

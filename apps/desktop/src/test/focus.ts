@@ -2,7 +2,9 @@
 // The focus is on the page before any listener runs; the event is the person's, so no script is on
 // the stack between two of its listeners, and the microtasks one listener queues (a state update,
 // React's commit, a MutationObserver's callback) run before the next listener, while `window.event`
-// is still the event. jsdom's `element.blur()` runs them only after the last listener.
+// is still the event. jsdom's `element.blur()` runs them only after the last listener. The tests of
+// the parts that keep the focus (components/collections/useFocusKeeper.ts: the diff pane, its
+// lines, the virtualised collections) blur with it.
 import { getConfig } from '@testing-library/react';
 import { onTestFinished } from 'vitest';
 

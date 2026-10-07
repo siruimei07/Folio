@@ -1,11 +1,12 @@
 // Fixtures built for one view test: a library of a test's own, or the small library with more
 // entries. Feature folders never import the fake shell (eslint.config.js), so they build their
 // fixtures here.
-import type { SyncProvider } from '../ipc';
+import type { ChangeKind, EntryKind, Readiness, SyncProvider } from '../ipc';
 import { presetTags, SeedBuilder } from '../ipc/mock/fixtures/build';
 import { type FolderKind, folderScript } from '../ipc/mock/fixtures/first-run';
 import type { Fixture, FolderScript, LibrarySeed, SeedEntry } from '../ipc/mock/fixtures/types';
 import { type ScenarioOptions, scenarioFixture } from '../ipc/mock/scenarios';
+import { item, textVersion } from '../ipc/mock/versioning/model';
 import { NOW } from './data';
 
 const DAY = 86_400_000;
@@ -65,4 +66,47 @@ export function startFixture(
   const { choices, ...rest } = options;
   const { fixture } = scenarioFixture(scenario, NOW, rest);
   return choices === undefined ? fixture : { ...fixture, folderChoices: choices };
+}
+
+/** A change of a workspace a test builds (ipc-m2 §6.2): a text file's unless it says otherwise. */
+export interface TestItem {
+  change: ChangeKind;
+  path: string;
+  kind?: EntryKind;
+  fromPath?: string;
+  readiness?: Readiness;
+  required?: boolean;
+  /** A folder item's files. */
+  files?: number;
+  /** Bound changes besides the main one: 1 reads "2 changes". */
+  parts?: number;
+}
+
+/**
+ * The small library and its history with a workspace of the test's own: `items` replace the small
+ * workspace's items (the fake keeps them in path order); its four tag and settings changes stay
+ * unless `metadata` is false.
+ */
+export function smallWorkspace(items: readonly TestItem[], { metadata = true }: { metadata?: boolean } = {}): Fixture {
+  const { fixture } = scenarioFixture('small', NOW);
+  const library = fixture.library;
+  const history = library?.history;
+  if (library === null || history === undefined) throw new Error('the small fixture has a library and a history');
+  library.history = (opened, now) => {
+    const seed = history(opened, now);
+    return {
+      ...seed,
+      metadata: metadata ? seed.metadata : [],
+      items: items.map(({ parts = 0, kind = 'file', ...fields }) =>
+        item({
+          ...fields,
+          kind,
+          before: kind === 'folder' || fields.change === 'added' ? null : textVersion(`${fields.path}\n`),
+          after: kind === 'folder' || fields.change === 'deleted' ? null : textVersion(`${fields.path}\nedited\n`),
+          parts: Array.from({ length: parts }, () => ({ kind: 'versioningRules' as const })),
+        }),
+      ),
+    };
+  };
+  return fixture;
 }

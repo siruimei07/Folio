@@ -2,9 +2,7 @@ import './PathHeading.css';
 
 import type { ReactNode, Ref } from 'react';
 
-export interface PathHeadingProps {
-  /** The 16 px icon before the heading, such as `FileTypeIcon`; decorative (`aria-hidden`). */
-  icon: ReactNode;
+interface PathPartsProps {
   /** The course code before the folders, "MAT232/", which stays whole (`headingPrefix`); `''` for none. */
   label?: string;
   /** The folders before the name, "Problem sets/", cut from the left first; `''` for none. */
@@ -13,10 +11,41 @@ export interface PathHeadingProps {
   name: string;
   /** After the name in the secondary colour, such as " · Tags". */
   suffix?: string;
+}
+
+export interface PathHeadingProps extends PathPartsProps {
+  /** The 16 px icon before the heading, such as `FileTypeIcon`; decorative (`aria-hidden`). */
+  icon: ReactNode;
   /** The heading's id, for a pane named by it (`aria-labelledby`). */
   id?: string;
   /** Where Esc and "Back" return focus: the heading takes focus from code only. */
   ref?: Ref<HTMLHeadingElement>;
+}
+
+function wholePath({ label = '', prefix, name, suffix }: PathPartsProps): string {
+  return `${label}${prefix}${name}${suffix ?? ''}`;
+}
+
+/** The code, then the folders and the name in what the code leaves. */
+function PathParts({ label = '', prefix, name, suffix }: PathPartsProps) {
+  return (
+    <>
+      {label !== '' && <span className="path-heading__label">{label}</span>}
+      <span className="path-heading__rest">
+        {prefix !== '' && (
+          // Laid out right to left so the ellipsis cuts the start; `bdi` keeps the path itself in
+          // its own order, with the final slash at the end.
+          <span className="path-heading__path">
+            <bdi>{prefix}</bdi>
+          </span>
+        )}
+        <span className="path-heading__name">
+          {name}
+          {suffix !== undefined && <span className="path-heading__suffix">{suffix}</span>}
+        </span>
+      </span>
+    </>
+  );
 }
 
 /**
@@ -25,28 +54,29 @@ export interface PathHeadingProps {
  * 600. When it does not fit, the code stays whole, the folders are cut from the left first, then
  * the name at its end; the tooltip has the full path.
  */
-export function PathHeading({ icon, label = '', prefix, name, suffix, id, ref }: PathHeadingProps) {
+export function PathHeading({ icon, id, ref, ...path }: PathHeadingProps) {
   return (
     <div className="path-heading">
       <span className="path-heading__icon" aria-hidden>
         {icon}
       </span>
-      <h2 className="path-heading__title" id={id} ref={ref} tabIndex={-1} title={`${label}${prefix}${name}${suffix ?? ''}`}>
-        {label !== '' && <span className="path-heading__label">{label}</span>}
-        <span className="path-heading__rest">
-          {prefix !== '' && (
-            // Laid out right to left so the ellipsis cuts the start; `bdi` keeps the path itself in
-            // its own order, with the final slash at the end.
-            <span className="path-heading__path">
-              <bdi>{prefix}</bdi>
-            </span>
-          )}
-          <span className="path-heading__name">
-            {name}
-            {suffix !== undefined && <span className="path-heading__suffix">{suffix}</span>}
-          </span>
-        </span>
+      <h2 className="path-heading__title" id={id} ref={ref} tabIndex={-1} title={wholePath(path)}>
+        <PathParts {...path} />
       </h2>
     </div>
+  );
+}
+
+/**
+ * A path in a row, such as a change in the Changes list (workspace-history handoff §3.2): the
+ * heading's parts and truncation in the row's own font, its tooltip the full path unless `title`
+ * says more (History's moved files add their old path, §7.2). The row gives the accessible name;
+ * a menu opened from the keyboard opens under the path (`data-menu-anchor`).
+ */
+export function PathText({ title, ...path }: PathPartsProps & { title?: string }) {
+  return (
+    <span className="path-text" title={title ?? wholePath(path)} data-menu-anchor>
+      <PathParts {...path} />
+    </span>
   );
 }

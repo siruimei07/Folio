@@ -4,7 +4,7 @@
 import type { QueryClient } from '@tanstack/react-query';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import type { UserEvent } from '@testing-library/user-event';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { announce } from '../app/announcer';
 import { openDialog } from '../app/navigation';
@@ -748,6 +748,39 @@ function keySave(label: 'Key' | 'New key' = 'Key'): HTMLElement {
   return within(field).getByRole('button', { name: 'Save' });
 }
 
+/** The part of Node's `process` that unhandled rejections reach. */
+interface RejectionEvents {
+  listeners: (event: 'unhandledRejection') => ((...args: unknown[]) => void)[];
+  on: (event: 'unhandledRejection', listener: (...args: unknown[]) => void) => void;
+  removeListener: (event: 'unhandledRejection', listener: (...args: unknown[]) => void) => void;
+}
+
+/**
+ * Runs `run` with Node's unhandled-rejection listeners set aside, and resolves to the reasons of
+ * the rejections nothing handled meanwhile. The app leaves a throw that is not the shell's error
+ * to its global handler (`app/log.ts`), which jsdom never calls; the test runner's own listener
+ * would fail the run instead.
+ */
+async function unhandledRejections(run: () => Promise<void>): Promise<unknown[]> {
+  const events = (globalThis as unknown as { process: RejectionEvents }).process;
+  const reasons: unknown[] = [];
+  const keep = (reason: unknown) => {
+    reasons.push(reason);
+  };
+  const others = events.listeners('unhandledRejection');
+  for (const listener of others) events.removeListener('unhandledRejection', listener);
+  events.on('unhandledRejection', keep);
+  try {
+    await run();
+    // Node reports a rejection once the microtasks after it have run.
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+  } finally {
+    events.removeListener('unhandledRejection', keep);
+    for (const listener of others) events.on('unhandledRejection', listener);
+  }
+  return reasons;
+}
+
 /**
  * The page's markup (every node and attribute) and the values of its inputs, which markup leaves
  * out. Serialized, not read through `innerHTML`, which the app's lint rules keep out of the code.
@@ -928,6 +961,39 @@ describe('App settings → AI → API key', () => {
     expect(banner).toHaveTextContent("Folio can't find a place to keep its data.");
     expect(screen.getByText('A key is saved')).toBeInTheDocument();
     expect(remove).toHaveFocus();
+    expect(shell.ai.settings().hasKey).toBe(true);
+  });
+
+  it('leaves a throw that is not the shell’s error to the app’s handler, and is not left busy', async () => {
+    const { user, shell, client } = renderSettings('appSettings', { page: 'ai' });
+    const remove = await screen.findByRole('button', { name: 'Remove key' });
+    // A bug below the card: putting the removal's answer in the cache throws once.
+    const cancelQueries = client.cancelQueries.bind(client);
+    let armed = true;
+    vi.spyOn(client, 'cancelQueries').mockImplementation((filters, options) => {
+      if (armed && JSON.stringify(filters?.queryKey) === JSON.stringify(keys.aiSettings())) {
+        armed = false;
+        throw new TypeError('a bug below the key card');
+      }
+      return cancelQueries(filters, options);
+    });
+
+    const rejections = await unhandledRejections(async () => {
+      await user.click(remove);
+      // The removal went through; AiSettingsChanged brings the card its new state.
+      await waitFor(() => {
+        expect(keyInput()).toBeInTheDocument();
+      });
+    });
+
+    expect(rejections).toEqual([new TypeError('a bug below the key card')]);
+    expect(shell.ai.settings().hasKey).toBe(false);
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(toastTexts()).toEqual([]);
+    // Not busy: a typed key saves.
+    await user.type(keyInput(), FAKE_KEY);
+    await user.click(keySave());
+    expect(await screen.findByText('A key is saved')).toBeInTheDocument();
     expect(shell.ai.settings().hasKey).toBe(true);
   });
 

@@ -11,6 +11,17 @@ import { type Move, moveOf } from './selection';
 export type Across = (index: number, step: 1 | -1, page: boolean) => number | null;
 
 /**
+ * The first item from `from` going `step` that `focusable` accepts, or `null`: the rows the keys
+ * and type-ahead stop on in a tree with separators or a list with header rows.
+ */
+export function nextFocusable(focusable: (index: number) => boolean, count: number, from: number, step: 1 | -1): number | null {
+  for (let index = from; index >= 0 && index < count; index += step) {
+    if (focusable(index)) return index;
+  }
+  return null;
+}
+
+/**
  * `Across` for a list or tree: an arrow moves `vertical` items and a page `page` items, both to
  * what `next` finds focusable; a page stops at the ends.
  */

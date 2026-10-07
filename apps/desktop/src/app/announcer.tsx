@@ -19,11 +19,55 @@ const useAnnouncer = create<AnnouncerState>()(() => ({ polite: null, assertive: 
 
 let nextId = 1;
 
-/** Reads `message` to screen reader users: politely, or at once for failures that need action. */
-export function announce(message: string, politeness: 'polite' | 'assertive' = 'polite'): void {
+/** How long a held polite message keeps its region before a later one may replace it. */
+const HOLD_MS = 1000;
+/** Until when the polite region is held (`Date.now()` time); 0 when it is not. */
+let heldUntil = 0;
+/** The latest polite message waiting for a hold to end. */
+let waiting: ReturnType<typeof setTimeout> | undefined;
+
+function say(message: string, politeness: 'polite' | 'assertive'): void {
   const announcement = { id: nextId, message };
   nextId += 1;
   useAnnouncer.setState(politeness === 'polite' ? { polite: announcement } : { assertive: announcement });
+}
+
+export interface AnnounceOptions {
+  /**
+   * The result of something the person did, which must be heard (a commit's "Committed 9
+   * changes: …"): for a second, a later polite message waits for it instead of replacing it in
+   * the region, where a screen reader would most likely hear only the later one (a diff that
+   * fails as the selection moves on).
+   */
+  hold?: boolean;
+}
+
+/** Reads `message` to screen reader users: politely, or at once for failures that need action. */
+export function announce(message: string, politeness: 'polite' | 'assertive' = 'polite', { hold = false }: AnnounceOptions = {}): void {
+  if (politeness === 'assertive') {
+    say(message, politeness);
+    return;
+  }
+  clearTimeout(waiting);
+  waiting = undefined;
+  const now = Date.now();
+  if (!hold && now < heldUntil) {
+    waiting = setTimeout(() => {
+      waiting = undefined;
+      say(message, 'polite');
+    }, heldUntil - now);
+    return;
+  }
+  heldUntil = hold ? now + HOLD_MS : 0;
+  say(message, 'polite');
+}
+
+/** Empties both regions, and lets the polite one go: a test that starts afresh. */
+export function clearAnnouncements(): void {
+  clearTimeout(waiting);
+  waiting = undefined;
+  heldUntil = 0;
+  useAnnouncer.setState({ polite: null, assertive: null });
 }
 
 /**

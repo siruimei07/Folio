@@ -30,7 +30,8 @@
   color: var(--color-text-on-button-accent);
 }
 
-.checkbox[data-selected] .checkbox__box {
+.checkbox[data-selected] .checkbox__box,
+.checkbox[data-indeterminate] .checkbox__box {
   border-color: var(--color-toggle-on);
   background: var(--color-toggle-on);
 }
@@ -42,4 +43,14 @@
 
 .checkbox[data-disabled] {
   color: var(--color-text-tertiary);
+}
+
+/* A box that cannot change now (workspace-history handoff §3.4): the box at 45 % opacity. */
+.checkbox[data-disabled] .checkbox__box {
+  opacity: var(--opacity-disabled);
+}
+
+/* The box of a row (`CheckboxMark`): only its hit area. */
+.checkbox--mark {
+  flex: none;
 }

@@ -32,17 +32,6 @@
   background: var(--color-surface-selected);
 }
 
-/* The selection bar: 3 px at the row's left edge, 7 px inset top and bottom. */
-.tree-row__bar {
-  position: absolute;
-  top: var(--size-selection-bar-inset);
-  bottom: var(--size-selection-bar-inset);
-  left: 0;
-  width: var(--size-selection-bar-width);
-  border-radius: 0 var(--radius-indicator) var(--radius-indicator) 0;
-  background: var(--color-selection-indicator);
-}
-
 /* Indent guides through the chevron column of each level above. */
 .tree-row__guide {
   --guide: 0;

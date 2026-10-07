@@ -1,6 +1,8 @@
 // What the virtualised tree, list and grid share (docs/specs/ui-architecture.md §7.2, §8.1): one
 // TanStack virtualiser over fixed-height rows, the visible range for the paged lists, the scroll
-// offset for the view's store, and moving DOM focus to the focused row after keyboard navigation.
+// offset for the view's store, moving DOM focus to the focused row after keyboard navigation and
+// keeping it there when the row's element is replaced (`useFocusKeeper`), and, for a collection
+// that gives its rows' keys, the first visible row in place when rows above it come or go.
 import { defaultRangeExtractor, type Range, useVirtualizer } from '@tanstack/react-virtual';
 import {
   type Ref,
@@ -12,6 +14,8 @@ import {
   useLayoutEffect,
   useRef,
 } from 'react';
+
+import { useFocusKeeper } from './useFocusKeeper';
 
 /** Rows rendered beyond the visible ones, each way. */
 export const OVERSCAN = 8;
@@ -26,6 +30,16 @@ const RANGE_STEP = 16;
 export interface IndexRange {
   start: number;
   end: number;
+}
+
+/**
+ * How a collection finds a row again after rows above it came or went without anyone scrolling,
+ * as when the changes list finds a group's header on a page that arrives: each row's key, and
+ * where a key is now (`null` when it is gone). The first visible row then stays where it was.
+ */
+export interface RowAnchor {
+  keyAt: (index: number) => string;
+  indexOfKey: (key: string) => number | null;
 }
 
 /** What a view can ask a collection to do. */
@@ -60,6 +74,8 @@ export interface VirtualRowsOptions {
    * again only then, or when the count changes, and the range is reported again.
    */
   sizesKey?: string;
+  /** Keeps the first visible row in place when rows above it come or go (`RowAnchor`). */
+  anchor?: RowAnchor;
   ref?: Ref<CollectionHandle>;
 }
 
@@ -76,6 +92,7 @@ export function useVirtualRows({
   focusedElement,
   rowOfItem = (index) => index,
   sizesKey,
+  anchor,
   ref,
 }: VirtualRowsOptions) {
   const rangeExtractor = useCallback(
@@ -103,6 +120,32 @@ export function useVirtualRows({
   useLayoutEffect(() => {
     if (sizesKey !== undefined) virtualizer.measure();
   }, [virtualizer, sizesKey]);
+
+  // Rows that came or went above the visible ones moved the rest: the first visible row goes back
+  // to where it was on screen, found by its key, before the browser paints. At the very top nothing
+  // is kept, so what arrives above shows, as the browser's own scroll anchoring does.
+  const anchored = useRef<{ key: string; start: number } | null>(null);
+  useLayoutEffect(() => {
+    const scroller = scrollRef.current;
+    if (anchor === undefined || scroller === null) {
+      anchored.current = null;
+      return;
+    }
+    let top = scroller.scrollTop;
+    const saved = anchored.current;
+    if (saved !== null && top > 0) {
+      // Asking for a row lays the rows out as this render has them.
+      virtualizer.getVirtualItemForOffset(top);
+      const index = anchor.indexOfKey(saved.key);
+      const start = index === null ? undefined : virtualizer.measurementsCache[index]?.start;
+      if (start !== undefined && start !== saved.start) {
+        top = Math.max(0, top + start - saved.start);
+        scroller.scrollTo({ top });
+      }
+    }
+    const first = top > 0 ? virtualizer.getVirtualItemForOffset(top) : undefined;
+    anchored.current = first === undefined ? null : { key: anchor.keyAt(first.index), start: first.start };
+  });
 
   // The visible rows widened by the overscan and out to whole steps: what the paged lists load.
   const visible = virtualizer.range;
@@ -153,37 +196,13 @@ export function useVirtualRows({
   }, []);
 
   // Focus stays when React replaces the focused item's element: a placeholder whose page arrives
-  // gets the entry's key, and a new element. The browser then focuses the body, and the next
-  // layout effect puts focus back on the focused item. Focus the user moved elsewhere stays there.
-  const holdsFocus = useRef(false);
-  useEffect(() => {
+  // gets the entry's key, and a new element. The browser then focuses the body, and the focus
+  // keeper puts it back on the focused item. Focus the person moved elsewhere stays there.
+  const keepFocus = useFocusKeeper(() => {
     const scroller = scrollRef.current;
-    if (scroller === null) return undefined;
-    const onFocusIn = () => {
-      holdsFocus.current = true;
-    };
-    const onFocusOut = (event: FocusEvent) => {
-      const left = event.target;
-      queueMicrotask(() => {
-        // A removed element did not give its focus away; one still in the page did.
-        if (!scroller.contains(document.activeElement) && left instanceof Element && left.isConnected) {
-          holdsFocus.current = false;
-        }
-      });
-    };
-    scroller.addEventListener('focusin', onFocusIn);
-    scroller.addEventListener('focusout', onFocusOut);
-    return () => {
-      scroller.removeEventListener('focusin', onFocusIn);
-      scroller.removeEventListener('focusout', onFocusOut);
-    };
-  }, [scrollRef]);
-  useLayoutEffect(() => {
-    const scroller = scrollRef.current;
-    const active = document.activeElement;
-    if (!holdsFocus.current || scroller === null || (active !== null && active !== document.body)) return;
-    findFocused.current(scroller)?.focus({ preventScroll: true });
+    if (scroller !== null) findFocused.current(scroller)?.focus({ preventScroll: true });
   });
+  useEffect(() => keepFocus(scrollRef.current), [keepFocus, scrollRef]);
 
   useImperativeHandle(
     ref,

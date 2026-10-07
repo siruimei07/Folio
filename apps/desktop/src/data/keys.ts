@@ -54,6 +54,13 @@ export type DiffSource =
   | { source: 'workspace'; key: string }
   | { source: 'version'; commit: string; key: string };
 
+/**
+ * A part of the workspace (ipc-m2 §6, §8.1): its summary, the pages of its items and of its
+ * metadata changes, a selection's summary, and the newest commits ("Not synced"). `workspace.ts`
+ * says what each part's key holds besides its name.
+ */
+export type WorkspacePart = 'summary' | 'items' | 'metadata' | 'summarize' | 'notSynced';
+
 export const keys = {
   /** `library_status`; outside a library, like the App settings. */
   libraryStatus: () => ['app', 'libraryStatus'] as const,
@@ -63,6 +70,9 @@ export const keys = {
   libraries: () => ['lib'] as const,
   /** Every query of one library. */
   library: (libraryId: string) => ['lib', libraryId] as const,
+  /** One part of the workspace and what it asks; `usePagedRows` appends a page index. */
+  workspace: <Query extends { part: WorkspacePart }>(libraryId: string, query: Query) =>
+    ['lib', libraryId, 'workspace', query.part, query] as const,
   /** Pages of a folder's children; `usePagedList` appends the page index. */
   children: (libraryId: string, list: ChildrenList) =>
     ['lib', libraryId, 'children', list] as const,
@@ -120,6 +130,7 @@ export function libraryQuery<T, Key extends QueryKey>(
 
 /** A library query, read back from its key. */
 export type LibraryQuery =
+  | { kind: 'workspace'; part: WorkspacePart }
   | { kind: 'children'; folder: EntryRef | null }
   | { kind: 'files'; scope: EntryRef | null }
   | { kind: 'count'; request: CountRequest }
@@ -142,6 +153,8 @@ export function readKey(queryKey: QueryKey): LibraryQuery {
   const kind = queryKey[2];
   const detail = queryKey[3];
   switch (kind) {
+    case 'workspace':
+      return { kind, part: detail as WorkspacePart };
     case 'children':
       return { kind, folder: (detail as ChildrenList).folder };
     case 'files':

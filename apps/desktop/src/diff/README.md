@@ -46,20 +46,35 @@ comes back after another one.
 
 ## Examples
 
-Changes (`feat/ui-changes-view`):
+Changes (`feat/ui-changes-view`, as built in `changes/ChangesView.tsx`):
 
 ```tsx
 const Diff = DIFF_PANE;
 const diffRef = useRef<DiffPaneHandle>(null);
-// …the list's onAction (Enter): diffRef.current?.focus()
+const files = useFileActions(); // app/fileActions.ts: open, show in File Explorer, copy path
+const moreItems = useDiffMoreItems(shown); // changes/menus/ChangeMenu.tsx
+// …the list's Enter: diffRef.current?.focus()
 <Diff
   ref={diffRef}
-  target={{ kind: 'workspace', item }}
-  actions={{ open: commands.open }}
-  moreItems={<ChangesFileMenuItems item={item} />}
-  back={narrow ? { label: t('changes:backToChanges'), onBack: closeDiff } : undefined}
+  target={shown.kind === 'item' ? { kind: 'workspace', item: shown.item } : { kind: 'workspaceMetadata', change: shown.change }}
+  actions={{ open: files.open }}
+  moreItems={moreItems}
+  back={narrow ? { label: t('changes:diff.back'), onBack: back } : undefined}
 />
 ```
+
+How Changes hosts it:
+
+- The target is the list's selected row, which follows the keyboard focus (§3.6); the rows of the
+  latest page go in as they are. A course header takes the focus but is no change, so the column
+  then shows nothing; so does a list that failed to load, and an empty workspace shows the desk.
+  When the selected row's page scrolls out of the cache, the pane keeps the change it last showed.
+- Wide, the pane sits in the third column; narrow, Enter or a click on a row puts it over the list
+  (`back` given only then), and Back, Esc or Alt+Left hand the focus back to the row. The list
+  stays laid out under it, hidden, so its scroll and measured rows stay.
+- "More" holds the row menu's file items and Copy path (Ctrl+Shift+C copies from the list or the
+  diff). "View history of this file" is `feat/ui-history-view`'s, which adds it in `fileItems`
+  (changes/menus/ChangeMenu.tsx) for both menus.
 
 History (`feat/ui-history-view`):
 
@@ -143,7 +158,7 @@ panes'.
 | `lines/` | The virtualised region, its lines, folds and scrolling. |
 | `model/` | Pure: targets, the description of a row (`describe.ts`), the windows' layout, changes. |
 | `useChangeNavigation.ts` | F7, Shift+F7 and the strip's buttons. |
-| `useFocusKeeper.ts`, `useRetry.ts` | The focus when what had it goes; "Try again" that reads a failure again. |
+| `useRetry.ts` | "Try again" that reads a failure again. The focus when what had it goes is `components/collections/useFocusKeeper.ts`, shared with the virtualised collections. |
 | `types.ts` | The props, re-exported by `app/panes.ts`. |
 | `test/` | Fixtures and helpers for the pane's tests. |
 
@@ -155,7 +170,8 @@ The dev gallery shows the pane on the fake shell: `/gallery.html?view=diff&scena
 
 - The Playwright flow over the pane belongs to the hosts (this lane has no view to host it):
   selection → diff, F7, unfolding, "This version", narrow Back. It needs the real diff commands,
-  which stay planned stubs until `feat/core-diff-restore` lands.
+  which stay planned stubs until `feat/core-diff-restore` lands; `e2e/tests/changes.spec.ts`
+  covers only the view's load failure until then, and says where the flow goes.
 - When `locate_version` fails, History's blocks offer no "Open with default app", and a stored
   note's images show as missing, without saying why; `feat/ui-history-view`, whose entry actions
   (Open, Show in File Explorer) use the same lookup, should say so where it shows them.

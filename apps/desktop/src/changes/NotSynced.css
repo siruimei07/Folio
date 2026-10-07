@@ -1,0 +1,155 @@
+/* "Not synced" (workspace-history handoff §5, app-shell §6): a card of the commit lane. The
+   sentence and the commits line up with the title; the lane runs down from under the tile. */
+
+.not-synced {
+  flex: none;
+  gap: var(--space-8);
+  padding: var(--space-12);
+}
+
+.not-synced__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.not-synced__tile {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--size-card-tile);
+  height: var(--size-card-tile);
+  border: var(--border-width) solid var(--color-border-default);
+  border-radius: var(--radius-badge);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-secondary);
+}
+
+.not-synced__title {
+  margin: 0;
+  font-size: var(--font-size-heading);
+  font-weight: var(--font-weight-strong);
+  line-height: var(--font-line-height-heading);
+}
+
+.not-synced__text,
+.not-synced__failed {
+  margin: 0;
+  padding-left: calc(var(--size-card-tile) + var(--space-8));
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-small);
+}
+
+.not-synced__failed {
+  color: var(--color-text-secondary);
+}
+
+/* The lane: a line from under the tile through a node per entry, the entries at the title's edge. */
+.not-synced__lane {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding-top: var(--space-4);
+  padding-left: calc(var(--size-card-tile) + var(--space-8));
+}
+
+.not-synced__lane::before {
+  position: absolute;
+  top: 0;
+  bottom: var(--space-12);
+  left: calc((var(--size-card-tile) - var(--border-width)) / 2);
+  width: var(--border-width);
+  background: var(--color-border-default);
+  content: '';
+}
+
+.not-synced__next,
+.not-synced__commit {
+  position: relative;
+}
+
+/* Each entry's node, centred on the line. The next commit's is hollow: it is not made yet. */
+.not-synced__next::before,
+.not-synced__commit::before {
+  position: absolute;
+  top: calc(var(--size-count-pill) / 2 - var(--size-lane-node) / 2);
+  left: calc(-1 * (var(--space-8) + (var(--size-card-tile) + var(--size-lane-node)) / 2));
+  box-sizing: border-box;
+  width: var(--size-lane-node);
+  height: var(--size-lane-node);
+  border-radius: var(--radius-pill);
+  background: var(--color-text-tertiary);
+  content: '';
+}
+
+.not-synced__next::before {
+  border: var(--border-width) solid var(--color-accent-default);
+  background: var(--color-surface-panel);
+}
+
+.not-synced__next {
+  margin: 0;
+}
+
+.not-synced__pill {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  min-height: var(--size-count-pill);
+  padding: 0 var(--space-8);
+  border-radius: var(--radius-pill);
+  background: var(--color-button-accent);
+  color: var(--color-text-on-button-accent);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-strong);
+}
+
+.not-synced__commits {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A commit: its summary on one line, then the short id and time. A commit that has just arrived
+   fades and rises in on the soft background, which fades after FRESH_COMMIT_MS (§14); reduced
+   motion makes both instant. The padding is outside the text column, so it stays in line. */
+.not-synced__commit {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-left: calc(-1 * var(--space-6));
+  padding: var(--space-4) var(--space-6);
+  border-radius: var(--radius-row);
+  transition: background-color var(--motion-duration-base) var(--motion-easing-standard);
+}
+
+.not-synced__commit::before {
+  top: calc(var(--space-4) + (var(--font-size-label) * var(--font-line-height-body) - var(--size-lane-node)) / 2);
+  left: calc(var(--space-6) - (var(--space-8) + (var(--size-card-tile) + var(--size-lane-node)) / 2));
+}
+
+.not-synced__commit[data-fresh] {
+  background-color: var(--color-accent-soft);
+  animation: rise-in var(--motion-duration-base) var(--motion-easing-standard);
+}
+
+.not-synced__summary {
+  overflow: hidden;
+  font-size: var(--font-size-label);
+  line-height: var(--font-line-height-body);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.not-synced__meta {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-caption);
+  font-variant-numeric: tabular-nums;
+}

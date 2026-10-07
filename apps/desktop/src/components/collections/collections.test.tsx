@@ -1,11 +1,12 @@
 // The virtualised collections (UI architecture §7.2): their ARIA attributes and keyboard patterns,
 // driven by hand-made rows so each behaviour is visible on its own.
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { describe, expect, it, onTestFinished, vi } from 'vitest';
 
-import { mockLayout } from '../../test/virtual';
+import { focusBlurrer } from '../../test/focus';
+import { mockLayout, mockScrolling } from '../../test/virtual';
 import type { Move } from './selection';
 import { columnsFor, VirtualGrid } from './VirtualGrid';
 import { type CollectionItem, VirtualList } from './VirtualList';
@@ -13,6 +14,11 @@ import { type TreeRow, VirtualTree } from './VirtualTree';
 
 function layout() {
   onTestFinished(mockLayout());
+}
+
+/** Lets timers and microtasks run for `ms`. */
+async function wait(ms: number) {
+  await act(() => new Promise((resolve) => setTimeout(resolve, ms)));
 }
 
 interface Node {
@@ -185,6 +191,86 @@ function List({ onSelectAll }: { onSelectAll: () => void }) {
   );
 }
 
+interface CheckedRow {
+  name: string;
+  checked?: boolean | 'mixed';
+  header?: boolean;
+}
+
+const HEADER_ROW: CheckedRow = { name: 'Tags and settings', header: true };
+
+/** Changes with check boxes, then a tag change without one under a header row. */
+const CHECKED_ROWS: CheckedRow[] = [
+  { name: 'alpha', checked: true },
+  { name: 'beta', checked: false },
+  { name: 'gamma' },
+  HEADER_ROW,
+  { name: 'delta', checked: true },
+  { name: 'epsilon', checked: false },
+];
+
+/** A list like the Changes list: one option is selected, options carry check boxes, a header row is 28 px. */
+function CheckedList({
+  rows,
+  initialFocus = null,
+  onRowClick,
+}: {
+  rows: readonly CheckedRow[];
+  initialFocus?: number | null;
+  onRowClick?: (index: number, intent: string, event: unknown) => void;
+}) {
+  const [focused, setFocused] = useState<number | null>(initialFocus);
+  const header = rows.findIndex((row) => row.header === true);
+  const itemAt = (index: number): CollectionItem => {
+    const row = rows[index] ?? { name: '' };
+    if (row.header === true) return { key: 'header', selected: false, header: true };
+    return {
+      key: row.name,
+      selected: index === focused,
+      name: row.name,
+      checked: row.checked,
+      position: header >= 0 && index > header ? index : index + 1,
+      description: header >= 0 && index > header ? 'always' : undefined,
+    };
+  };
+  return (
+    <VirtualList
+      label="Changes"
+      count={rows.length}
+      optionCount={rows.length - (header >= 0 ? 1 : 0)}
+      multiselectable={false}
+      itemAt={itemAt}
+      itemHeight={(index) => (index === header ? 28 : 32)}
+      sizesKey={String(header)}
+      renderItem={(index) => rows[index]?.name}
+      focusedIndex={focused}
+      onNavigate={setFocused}
+      onToggle={vi.fn()}
+      onAction={vi.fn()}
+      onRowClick={onRowClick}
+    />
+  );
+}
+
+/** A list of rows known by their keys, which keeps its first visible row when rows above it change. */
+function KeyedList({ keys }: { keys: readonly string[] }) {
+  const indexes = new Map(keys.map((key, index) => [key, index]));
+  return (
+    <VirtualList
+      label="Keyed"
+      count={keys.length}
+      itemAt={(index) => ({ key: keys[index] ?? '', selected: false, name: keys[index] })}
+      itemHeight={32}
+      renderItem={(index) => keys[index]}
+      focusedIndex={null}
+      onNavigate={vi.fn()}
+      onToggle={vi.fn()}
+      onAction={vi.fn()}
+      anchor={{ keyAt: (index) => keys[index] ?? '', indexOfKey: (key) => indexes.get(key) ?? null }}
+    />
+  );
+}
+
 describe('VirtualList', () => {
   it('is a multi-select list box whose options know their place, with Ctrl+A', async () => {
     layout();
@@ -200,6 +286,100 @@ describe('VirtualList', () => {
     expect(screen.getByRole('option', { name: 'iota' })).toHaveFocus();
     await user.keyboard('{Control>}a{/Control}');
     expect(onSelectAll).toHaveBeenCalled();
+  });
+
+  it('checks options apart from selecting them, and shows header rows that are not options', () => {
+    layout();
+    render(<CheckedList rows={CHECKED_ROWS} />);
+    expect(screen.getByRole('listbox', { name: 'Changes' })).toHaveAttribute('aria-multiselectable', 'false');
+    expect(screen.getByRole('option', { name: 'alpha' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('option', { name: 'beta' })).toHaveAttribute('aria-checked', 'false');
+    // An option without a check box, like a tag change that every commit records.
+    expect(screen.getByRole('option', { name: 'gamma' })).not.toHaveAttribute('aria-checked');
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual(['alpha', 'beta', 'gamma', 'delta', 'epsilon']);
+    // The header shows, but screen readers pass it by; the options count without it.
+    const header = screen.getByText('Tags and settings');
+    expect(header.closest('[data-index]')).toHaveAttribute('aria-hidden', 'true');
+    const delta = screen.getByRole('option', { name: 'delta' });
+    expect(delta).toHaveAttribute('aria-posinset', '4');
+    expect(delta).toHaveAttribute('aria-setsize', '5');
+    expect(delta).toHaveAttribute('aria-describedby', 'always');
+  });
+
+  it('passes header rows by with the keys, type-ahead and clicks, and never gives them the tab stop', async () => {
+    layout();
+    const user = userEvent.setup();
+    const onRowClick = vi.fn();
+    const { unmount } = render(<CheckedList rows={CHECKED_ROWS} onRowClick={onRowClick} />);
+    screen.getByRole('option', { name: 'gamma' }).focus();
+    await user.keyboard('{ArrowDown}');
+    expect(screen.getByRole('option', { name: 'delta' })).toHaveFocus();
+    await user.keyboard('{ArrowUp}');
+    expect(screen.getByRole('option', { name: 'gamma' })).toHaveFocus();
+    await user.keyboard('{Home}t');
+    // Only "Tags and settings" starts with t, and it is no option: type-ahead stays.
+    expect(screen.getByRole('option', { name: 'alpha' })).toHaveFocus();
+    await user.click(screen.getByText('Tags and settings'));
+    expect(onRowClick).not.toHaveBeenCalled();
+    await user.click(screen.getByText('beta'));
+    expect(onRowClick).toHaveBeenCalledWith(1, 'replace', expect.anything());
+    unmount();
+    // When the focused row's place holds a header (the row above it went), the next option takes it.
+    render(<CheckedList rows={CHECKED_ROWS} initialFocus={3} />);
+    expect(screen.getByRole('option', { name: 'delta' })).toHaveAttribute('tabindex', '0');
+  });
+
+  it('gives each row its own height, and lays them out again when they move', () => {
+    layout();
+    const offsetOf = (name: string) => screen.getByRole('option', { name }).style.transform;
+    const { rerender } = render(<CheckedList rows={CHECKED_ROWS} />);
+    expect(screen.getByText('Tags and settings').closest('[data-index]')).toHaveStyle({ height: '28px' });
+    expect(offsetOf('delta')).toBe('translateY(124px)');
+    // The header moves up a row: the same count, other heights.
+    const moved = [CHECKED_ROWS[0], HEADER_ROW, CHECKED_ROWS[1], CHECKED_ROWS[2], CHECKED_ROWS[4], CHECKED_ROWS[5]].filter(
+      (row) => row !== undefined,
+    );
+    rerender(<CheckedList rows={moved} />);
+    expect(offsetOf('beta')).toBe('translateY(60px)');
+    expect(offsetOf('delta')).toBe('translateY(124px)');
+  });
+
+  it('checks a group option as mixed when some of what it covers is checked', () => {
+    layout();
+    render(<CheckedList rows={[{ name: 'MAT232', checked: 'mixed' }, { name: 'alpha', checked: true }, { name: 'beta', checked: false }]} />);
+    expect(screen.getByRole('option', { name: 'MAT232' })).toHaveAttribute('aria-checked', 'mixed');
+  });
+
+  it('keeps the first visible row in place when rows come or go above it, found by its key', async () => {
+    layout();
+    mockScrolling();
+    const rows = Array.from({ length: 100 }, (_, index) => `row ${String(index)}`);
+    const { rerender } = render(<KeyedList keys={rows} />);
+    const list = screen.getByRole('listbox', { name: 'Keyed' });
+    act(() => {
+      list.scrollTo({ top: 320 });
+    });
+    await wait(10);
+    const onScreen = (name: string) => {
+      const match = /translateY\((\d+)px\)/.exec(screen.getByRole('option', { name }).style.transform);
+      return Number(match?.[1]) - list.scrollTop;
+    };
+    expect(onScreen('row 10')).toBe(0);
+    rerender(<KeyedList keys={['new a', 'new b', ...rows]} />);
+    expect(onScreen('row 10')).toBe(0);
+    expect(list.scrollTop).toBe(384);
+    await wait(10);
+    rerender(<KeyedList keys={rows.slice(3)} />);
+    expect(onScreen('row 10')).toBe(0);
+    expect(list.scrollTop).toBe(224);
+    // At the very top nothing is kept: what arrives above shows.
+    act(() => {
+      list.scrollTo({ top: 0 });
+    });
+    await wait(10);
+    rerender(<KeyedList keys={['newest', ...rows.slice(3)]} />);
+    expect(list.scrollTop).toBe(0);
+    expect(onScreen('newest')).toBe(0);
   });
 
   it('keeps focus on the focused item when its element is replaced, as when its page arrives', async () => {
@@ -231,8 +411,77 @@ describe('VirtualList', () => {
     screen.getByRole('option', { name: 'alpha' }).focus();
     await user.keyboard('{End}');
     expect(document.activeElement).toHaveAttribute('aria-posinset', '9');
+    const placeholder = document.activeElement;
     rerender(<Loading loaded />);
-    expect(screen.getByRole('option', { name: 'iota' })).toHaveFocus();
+    expect(placeholder?.isConnected).toBe(false);
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'iota' })).toHaveFocus();
+    });
+  });
+
+  it('lets the focus go where the person puts it, even when the list renders before it hears the blur', async () => {
+    // Each listener of the blur runs on its own, with the microtasks it queues (React's commit)
+    // after it, as in Chromium: the name field in a row ends its edit on its own focusout, which
+    // runs before the list's bubbling listeners do, and removes it.
+    const blur = focusBlurrer();
+    layout();
+    function Editing({ suffix = '' }: { suffix?: string }) {
+      const [focused, setFocused] = useState<number | null>(0);
+      const [editing, setEditing] = useState(true);
+      const field = useCallback((element: HTMLInputElement | null) => {
+        if (element === null) return undefined;
+        const stop = () => {
+          setEditing(false);
+        };
+        element.addEventListener('focusout', stop);
+        return () => {
+          element.removeEventListener('focusout', stop);
+        };
+      }, []);
+      const itemAt = (index: number): CollectionItem => ({ key: String(index), selected: index === focused, name: NAMES[index] });
+      return (
+        <VirtualList
+          label="Files"
+          count={NAMES.length}
+          itemAt={itemAt}
+          itemHeight={32}
+          renderItem={(index) =>
+            index === 0 && editing ? (
+              <input ref={field} aria-label="Name" defaultValue={NAMES[0]} />
+            ) : (
+              `${NAMES[index] ?? ''}${suffix}`
+            )
+          }
+          focusedIndex={focused}
+          onNavigate={setFocused}
+          onToggle={vi.fn()}
+          onAction={vi.fn()}
+        />
+      );
+    }
+    const { rerender } = render(<Editing />);
+    const field = screen.getByRole('textbox', { name: 'Name' });
+    act(() => {
+      field.focus();
+    });
+    // The virtualiser's first measure renders the rows again; the list hears that before the blur,
+    // as it would in a browser, where the person's click comes in a task of its own.
+    await wait(0);
+    // A click on text elsewhere: the field gives the focus to the page and goes.
+    await blur(field);
+    expect(field.isConnected).toBe(false);
+    await wait(50);
+    expect(document.activeElement).toBe(document.body);
+    // The same from a row; rows that change later leave the focus where it is.
+    const beta = screen.getByRole('option', { name: 'beta' });
+    act(() => {
+      beta.focus();
+    });
+    await blur(beta);
+    rerender(<Editing suffix="." />);
+    expect(screen.getByRole('option', { name: 'beta.' })).toBeInTheDocument();
+    await wait(50);
+    expect(document.activeElement).toBe(document.body);
   });
 });
 

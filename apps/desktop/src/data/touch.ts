@@ -64,6 +64,10 @@ function touchesCount(request: CountRequest, change: EntryChange): boolean {
 /** Whether one change touches a query. */
 export function touches(query: LibraryQuery, change: EntryChange): boolean {
   switch (query.kind) {
+    case 'workspace':
+      // It waits for the WorkspaceChanged that follows (ipc-m2 §14, `events.ts`), which also
+      // brings what the catalog does not hold: hashing, readiness and HEAD.
+      return false;
     case 'children':
       return touchesFolder(query.folder, change);
     case 'files':
@@ -147,12 +151,12 @@ export function touchesGone(query: LibraryQuery, entry: EntryRef): boolean {
 }
 
 /**
- * Whether an event touches a query. `complete: false` touches everything but diffs (the event
- * lists only part of what changed, or the catalog was rebuilt).
+ * Whether an event touches a query. `complete: false` touches everything but diffs and the
+ * workspace (the event lists only part of what changed, or the catalog was rebuilt).
  */
 export function isTouched(query: LibraryQuery, event: CatalogChanged): boolean {
   // Not even after a rebuild: WorkspaceChanged follows that too.
-  if (query.kind === 'diff') return false;
+  if (query.kind === 'diff' || query.kind === 'workspace') return false;
   if (!event.complete) return true;
   // Search ranks by tag names too (library core §5.2), so a renamed tag changes its results.
   if (event.tags && (query.kind === 'tags' || query.kind === 'search')) return true;

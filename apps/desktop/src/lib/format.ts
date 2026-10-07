@@ -45,18 +45,37 @@ export function formatNumber(value: number, language: string): string {
  * decimal.
  */
 export function sizeParts(bytes: number, language: string): { value: string; unit: SizeUnit } {
-  if (bytes < 1024) return { value: formatNumber(Math.max(0, Math.round(bytes)), language), unit: 'bytes' };
+  const unit = unitOf(bytes);
+  return { value: sizeIn(bytes, unit, language), unit };
+}
+
+/**
+ * Bytes done of a total, both in the total's unit, for "12.4 of 48.0 MB": a job that reads files
+ * (`Progress.bytes`). Digits as in `sizeParts`.
+ */
+export function sizeProgressParts(done: number, total: number, language: string): { done: string; total: string; unit: SizeUnit } {
+  const unit = unitOf(total);
+  return { done: sizeIn(done, unit, language), total: sizeIn(total, unit, language), unit };
+}
+
+/** The unit `bytes` is shown in: the largest in which it is at least 1, bytes below 1 KB. */
+function unitOf(bytes: number): SizeUnit {
+  if (bytes < 1024) return 'bytes';
   let value = bytes / 1024;
   let index = 0;
   while (value >= 1024 && index < UNITS.length - 1) {
     value /= 1024;
     index += 1;
   }
-  const digits = index === 0 ? 0 : 1;
-  const text = numberFormat(language, { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(
-    value,
-  );
-  return { value: text, unit: UNITS[index] ?? 'terabytes' };
+  return UNITS[index] ?? 'terabytes';
+}
+
+/** `bytes` in `unit`: bytes and kilobytes whole, larger units with one decimal. */
+function sizeIn(bytes: number, unit: SizeUnit, language: string): string {
+  if (unit === 'bytes') return formatNumber(Math.max(0, Math.round(bytes)), language);
+  const digits = unit === 'kilobytes' ? 0 : 1;
+  const format = numberFormat(language, { minimumFractionDigits: digits, maximumFractionDigits: digits });
+  return format.format(bytes / 1024 ** (UNITS.indexOf(unit) + 1));
 }
 
 /** "5:05 PM". */

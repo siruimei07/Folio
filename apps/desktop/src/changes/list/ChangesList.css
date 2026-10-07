@@ -1,0 +1,210 @@
+/* The changes list (workspace-history handoff §3): 290 px wide beside the commit lane; the whole
+   width in the view's narrow layout (ChangesView.css). */
+
+.changes-list {
+  flex: none;
+  width: var(--size-changes-panel);
+}
+
+.changes-view[data-narrow] .changes-list {
+  flex: 1;
+  width: auto;
+}
+
+.changes-list .banner {
+  margin: var(--space-8) var(--space-8) 0;
+}
+
+/* The header's check box, disabled while there is nothing to include or a commit runs, is at
+   55 % (§3.1), not the shared 45 % of a box that cannot change. */
+.changes-list .panel__header .checkbox[data-disabled] .checkbox__box {
+  opacity: var(--opacity-busy);
+}
+
+/* A commit runs (§3.8 as built): only the boxes, which do nothing now, fade to 55 %, a row's and a
+   course header's alike (the header's select-all, disabled, by the rule above). The rows keep full
+   contrast, focus ring and selection: the selection still moves, the diff still shows and the menu
+   still opens (WCAG 2.1 AA, CLAUDE.md §5). A box that cannot change anyway stays at 45 %. */
+.changes-list--committing .checkbox--mark:not([data-disabled]) .checkbox__box {
+  opacity: var(--opacity-busy);
+}
+
+.changes-list__rows {
+  flex: 1;
+}
+
+/* Rows run edge to edge between their guide lines. */
+.changes-list__rows > .virtual-collection__sizer > .virtual-collection__row {
+  border-radius: 0;
+}
+
+/* A row (§3.2): 32 px, the check box column, the icon, the path, then what follows the name. Not
+   positioned: a positioned row would paint its background over the focus ring that its virtual
+   row draws inside itself (app-shell §10); that row, absolutely positioned, holds the selection bar. */
+.change-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  box-sizing: border-box;
+  height: 100%;
+  padding: 0 var(--space-10) 0 var(--space-6);
+  border-bottom: var(--border-width) solid var(--color-border-guide);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-body);
+  white-space: nowrap;
+  cursor: default;
+}
+
+.virtual-collection__row:hover > .change-row {
+  background: var(--color-surface-hover);
+}
+
+.virtual-collection__row > .change-row[data-selected] {
+  background: var(--color-surface-selected);
+}
+
+.change-row__box,
+.change-row__no-box {
+  display: flex;
+  flex: none;
+}
+
+.change-row__no-box {
+  width: var(--size-target-min);
+}
+
+.change-row__icon {
+  display: flex;
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+/* Not on this computer, or unreadable (§3.4): the name in the secondary colour. */
+.change-row[data-blocked] .path-text {
+  color: var(--color-text-secondary);
+}
+
+.change-row[data-deleted] .path-text {
+  text-decoration: line-through;
+}
+
+/* The "Tags" tag of a tag change (§3.3). */
+.change-row__tag {
+  flex: none;
+  box-sizing: border-box;
+  height: var(--size-changes-tag);
+  padding: 0 var(--space-4);
+  border: var(--border-width) solid var(--color-border-default);
+  border-radius: var(--radius-row);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+  line-height: calc(var(--size-changes-tag) - 2 * var(--border-width));
+}
+
+.change-row__count {
+  flex: none;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-caption);
+}
+
+.change-row__mark {
+  display: flex;
+  flex: none;
+  color: var(--color-text-tertiary);
+}
+
+.change-row__mark[data-mark='unreadable'] {
+  color: var(--color-feedback-warning);
+}
+
+.change-row__status {
+  display: flex;
+  flex: none;
+  margin-left: auto;
+}
+
+/* A row whose page has not arrived. */
+.change-row__placeholder {
+  width: 60%;
+  height: var(--space-8);
+  margin-left: calc(var(--size-target-min) + var(--space-6));
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-sunken);
+  box-shadow: inset 0 0 0 var(--border-width) var(--color-border-guide);
+}
+
+/* A place's header when grouped by course (§3.5): 32 px on the sunken surface, the check box, the
+   course's 20 px badge, its code in 600 and its name, and on the right what the box covers. */
+.changes-place-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  box-sizing: border-box;
+  height: 100%;
+  padding: 0 var(--space-10) 0 var(--space-6);
+  border-bottom: var(--border-width) solid var(--color-border-guide);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-small);
+  white-space: nowrap;
+  cursor: default;
+}
+
+.changes-place-header__code {
+  flex: none;
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A semester's name, "Library", or a course without a code: the whole name, cut when it must be. */
+.changes-place-header__code[data-alone] {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-variant-numeric: normal;
+  text-overflow: ellipsis;
+}
+
+.changes-place-header__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.changes-place-header__count {
+  flex: none;
+  margin-left: auto;
+  color: var(--color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* "Tags and settings" (§3.3): 28 px on the sunken surface, "Always in the commit" on the right. */
+.changes-group-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  box-sizing: border-box;
+  height: 100%;
+  padding: 0 var(--space-10);
+  border-bottom: var(--border-width) solid var(--color-border-guide);
+  background: var(--color-surface-sunken);
+  white-space: nowrap;
+}
+
+.changes-group-header__title {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-strong);
+}
+
+.changes-group-header__always {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-left: auto;
+  overflow: hidden;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-small);
+  text-overflow: ellipsis;
+}

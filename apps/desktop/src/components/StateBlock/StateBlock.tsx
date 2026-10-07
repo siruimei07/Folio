@@ -18,6 +18,8 @@ export interface StateBlockProps {
   spinning?: boolean;
   title: string;
   text?: ReactNode;
+  /** Under the words, before the buttons: a progress bar (the first commit, workspace-history §10). */
+  children?: ReactNode;
   /** Buttons, `space.8` apart. */
   actions?: ReactNode;
   /** A small line under the buttons. */
@@ -39,6 +41,7 @@ export function StateBlock({
   spinning = false,
   title,
   text,
+  children,
   actions,
   hint,
   placement = 'panel',
@@ -52,6 +55,7 @@ export function StateBlock({
         <h3 className="state-block__title">{title}</h3>
         {text !== undefined && <p className="state-block__text">{text}</p>}
       </div>
+      {children}
       {actions !== undefined && <div className="state-block__actions">{actions}</div>}
       {hint !== undefined && <p className="state-block__hint">{hint}</p>}
     </div>

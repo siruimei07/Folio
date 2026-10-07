@@ -1,20 +1,18 @@
 // What the Library does to entries (library-actions handoff §6, §7, §9): open, show in File
-// Explorer, copy paths, delete, move and tag, each with its feedback; and the keys the tree, list
-// and grid share (§6 "Library shortcuts", §12): F2, Del, Ctrl+Shift+N, Ctrl+Shift+C, Shift+F10 and
-// the Menu key. None fires during IME composition; a dialog's keys never reach the collections.
+// Explorer, copy paths (the app's file actions, `app/fileActions.ts`), delete, move and tag, each
+// with its feedback; and the keys the tree, list and grid share (§6 "Library shortcuts", §12): F2,
+// Del, Ctrl+Shift+N, Ctrl+Shift+C, Shift+F10 and the Menu key. None fires during IME composition;
+// a dialog's keys never reach the collections.
 import i18n from 'i18next';
 import type { KeyboardEvent, MouseEvent } from 'react';
 
-import { copyText } from '../app/clipboard';
-import { showToast } from '../app/toasts';
+import { useFileActions } from '../app/fileActions';
+import { keyboardMenuAnchor } from '../components/collections/rows';
 import { useDeleteEntries, useMoveEntries } from '../data/entries';
-import { useOpenEntry, useRevealEntry } from '../data/files';
 import { useCourses } from '../data/groups';
-import { useLibrary } from '../data/library';
 import { useSetEntryTags } from '../data/tags';
-import type { Course, EntryRef } from '../ipc';
-import { courseLabel } from '../lib/courses';
-import { nameOf, windowsPath } from '../lib/paths';
+import type { EntryRef } from '../ipc';
+import { displayName } from '../lib/courses';
 import { messageOf, showBatchResult, showFailure, whenSettled } from './feedback';
 import { placeOf } from './places';
 import type { SelectableRows } from './selecting';
@@ -29,11 +27,8 @@ import {
   useLibraryView,
 } from './state';
 
-/** The name of an entry in messages: a course's label, else its name. */
-export function displayName(entry: EntryRef, courses: readonly Course[]): string {
-  const course = courses.find((candidate) => candidate.folder.id === entry.id);
-  return course === undefined ? nameOf(entry.path) : courseLabel(course);
-}
+// The name of an entry in messages, shared with the app's file actions.
+export { displayName } from '../lib/courses';
 
 /** The codes whose reason library-actions §9.4 words for deleting. */
 const DELETE_REASONS = ['InUse', 'NotFound', 'NotRecyclable'] as const;
@@ -43,83 +38,23 @@ function isDeleteReason(code: string): code is (typeof DELETE_REASONS)[number] {
 }
 
 export function useLibraryCommands() {
-  const library = useLibrary();
   const courses = useCourses().data ?? [];
-  const openEntry = useOpenEntry();
-  const revealEntry = useRevealEntry();
+  const files = useFileActions();
   const deleteNow = useDeleteNow();
   const moveEntries = useMoveEntries();
   const setEntryTags = useSetEntryTags();
   const name = (entry: EntryRef) => displayName(entry, courses);
   const place = (path: string) => placeOf(path, courses);
 
-  const showInExplorer = (entry: EntryRef) => {
-    whenSettled(
-      revealEntry.mutateAsync({ entry }),
-      'library.reveal',
-      () => undefined,
-      (failure) => {
-        showFailure(i18n.t('library:open.revealFailed', { name: name(entry) }), failure.error, 'library.reveal');
-      },
-    );
-  };
-
   return {
     /** "Open with default app"; a folder or course opens in File Explorer. */
-    open: (entry: EntryRef) => {
-      whenSettled(
-        openEntry.mutateAsync({ entry }),
-        'library.open',
-        ({ mode }) => {
-          if (mode === 'editor') {
-            showToast({
-              tone: 'info',
-              title: i18n.t('library:open.editor', { name: name(entry) }),
-              body: i18n.t('library:open.editorText'),
-            });
-          }
-        },
-        (failure) => {
-          if (failure.error.code === 'Blocked') {
-            showToast({
-              tone: 'warning',
-              title: i18n.t('library:open.blocked'),
-              body: i18n.t('library:open.blockedText', { name: name(entry) }),
-              actions: [
-                {
-                  label: i18n.t('library:menu.reveal'),
-                  onPress: () => {
-                    showInExplorer(entry);
-                  },
-                },
-              ],
-            });
-          } else {
-            showFailure(i18n.t('library:open.failed', { name: name(entry) }), failure.error, 'library.open');
-          }
-        },
-      );
-    },
+    open: files.open,
 
-    showInExplorer,
+    showInExplorer: files.showInExplorer,
 
     /** The absolute Windows paths, one per line (library-actions §6). */
     copyPaths: (entries: readonly EntryRef[]) => {
-      if (library === null || entries.length === 0) return;
-      const text = entries.map((entry) => windowsPath(library.root, entry.path)).join('\n');
-      void copyText(text).then((copied) => {
-        showToast(
-          copied
-            ? {
-                tone: 'info',
-                title:
-                  entries.length === 1
-                    ? i18n.t('library:copy.one')
-                    : i18n.t('library:copy.several', { count: entries.length }),
-              }
-            : { tone: 'danger', title: i18n.t('library:copy.failed') },
-        );
-      });
+      files.copyPaths(entries.map((entry) => entry.path));
     },
 
     /** Files and folders go to the Recycle Bin at once; a course asks first (§7.4). */
@@ -254,13 +189,6 @@ export function targetsOf(region: Region, rows: SelectableRows): Selected[] {
   return entry === null ? [] : [entry];
 }
 
-/** Where a menu opened from the keyboard goes: under the focused row's name (library-actions §2.7). */
-function anchorUnder(row: Element | null): { x: number; y: number } {
-  const target = row?.querySelector('[data-menu-anchor]') ?? row;
-  const box = target?.getBoundingClientRect();
-  return box === undefined ? { x: 0, y: 0 } : { x: box.left, y: box.bottom };
-}
-
 export interface EntryKeys {
   onKeyDown: (event: KeyboardEvent<HTMLElement>, index: number | null) => void;
   contextMenu: (index: number, event: MouseEvent) => void;
@@ -314,8 +242,7 @@ export function useEntryKeys(
         commands.copyPaths(targetsOf(region, rows));
       } else if ((key === 'F10' && shiftKey && !ctrlKey && !altKey) || key === 'ContextMenu') {
         if (rows.entryAt(index) === null) return;
-        const row = event.target instanceof Element ? event.target.closest('[data-index]') : null;
-        menuAt(anchorUnder(row), true);
+        menuAt(keyboardMenuAnchor(event.target), true);
       } else {
         return;
       }

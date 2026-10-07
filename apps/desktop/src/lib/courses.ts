@@ -1,7 +1,7 @@
 // How a course shows: its colour, badge text and label (app-shell handoff 12B, 23A, 26C, 27B;
 // first-run handoff §1). The same rules everywhere: tree, grid headers, settings, paths.
 
-import type { Course } from '../ipc';
+import type { Course, EntryRef } from '../ipc';
 import { isPaletteColor, PALETTE, type PaletteColor } from './palette';
 import { nameOf } from './paths';
 
@@ -88,4 +88,10 @@ export function courseTitle(course: Pick<Course, 'code' | 'name'>): string {
 /** The course in paths, search locations and commit titles: its code, else its name (27B). */
 export function courseLabel(course: Pick<Course, 'code' | 'name'>): string {
   return courseCode(course) ?? course.name;
+}
+
+/** The name of an entry in messages ("Couldn't open ps2.pdf"): a course's label, else its name. */
+export function displayName(entry: EntryRef, courses: readonly Course[]): string {
+  const course = courses.find((candidate) => candidate.folder.id === entry.id);
+  return course === undefined ? nameOf(entry.path) : courseLabel(course);
 }

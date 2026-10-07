@@ -3,8 +3,8 @@
 // (UI architecture §6.2). A view or dialog that is not registered does not exist yet: its rail
 // button, toolbar button and shortcut stay hidden, not disabled (ADR-0005, product decision 3).
 
-import { LibraryBig, type LucideIcon } from 'lucide-react';
-import type { ComponentType } from 'react';
+import { FileDiff, LibraryBig, type LucideIcon } from 'lucide-react';
+import type { ComponentType, ReactNode } from 'react';
 
 import { importDialog, ImportResultDialog } from '../import';
 import { LibraryView } from '../library/LibraryView';
@@ -15,6 +15,7 @@ import { SearchDialog } from '../search/SearchDialog';
 import { AddCoursesDialog, AppSettings, LibrarySettings, NewSemesterDialog } from '../settings';
 import { ActivityControl } from './activity/ActivityControl';
 import type { DialogKind, DialogParams, ViewId } from './navigation';
+import { ChangesRailBadge, ChangesView } from '../changes';
 
 export interface ViewDefinition {
   id: ViewId;
@@ -29,6 +30,7 @@ export interface ViewDefinition {
 /** The rail views, top to bottom. */
 export const VIEWS: readonly ViewDefinition[] = [
   { id: 'library', icon: LibraryBig, label: 'rail.library', key: '1', component: LibraryView },
+  { id: 'changes', icon: FileDiff, label: 'rail.changes', key: '2', component: ChangesView },
 ];
 
 export interface DialogComponentProps<K extends DialogKind> {
@@ -78,6 +80,29 @@ export interface ShellRegistry {
   views: readonly ViewDefinition[];
   dialogs: DialogRegistry;
   toolbar: ToolbarControls;
+  badges?: RailBadges;
 }
 
-export const REGISTRY: ShellRegistry = { views: VIEWS, dialogs: DIALOGS, toolbar: TOOLBAR };
+/** A count on a view's rail button (app-shell §4): what it shows, and the button's name with it. */
+export interface RailBadge {
+  /** "10", "999+". */
+  text: string;
+  /** The button's accessible name with the count: "Changes, 10 changes". */
+  label: string;
+}
+
+export interface RailBadgeProps {
+  /** Draws the view's rail button with the badge, or without one (`null`). */
+  children: (badge: RailBadge | null) => ReactNode;
+}
+
+/**
+ * Rail badges by view, shown while the view is registered. A badge is mounted while the shell is,
+ * so it may also keep work going for its view: the Changes badge starts the first commit
+ * (versioning §19 item 4).
+ */
+export type RailBadges = Partial<Record<ViewId, ComponentType<RailBadgeProps>>>;
+
+export const BADGES: RailBadges = { changes: ChangesRailBadge };
+
+export const REGISTRY: ShellRegistry = { views: VIEWS, dialogs: DIALOGS, toolbar: TOOLBAR, badges: BADGES };

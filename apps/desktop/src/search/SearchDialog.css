@@ -148,20 +148,10 @@
   background: var(--color-surface-hover);
 }
 
-/* The active row (moved to with ↑ ↓ while the field keeps focus): selected background and bar. */
+/* The active row (moved to with ↑ ↓ while the field keeps focus): selected background; the bar is
+   the shared SelectionIndicator. */
 .search-hit[data-focused] {
   background: var(--color-surface-selected);
-}
-
-.search-hit[data-focused]::before {
-  position: absolute;
-  top: var(--size-selection-bar-inset);
-  bottom: var(--size-selection-bar-inset);
-  left: 0;
-  width: var(--size-selection-bar-width);
-  border-radius: 0 var(--radius-indicator) var(--radius-indicator) 0;
-  background: var(--color-selection-indicator);
-  content: '';
 }
 
 .search-mark {

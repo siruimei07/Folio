@@ -15,14 +15,23 @@
   color: var(--color-text-secondary);
 }
 
-.path-heading__title {
+.path-heading__title,
+.path-text {
   display: flex;
   min-width: 0;
   margin: 0;
   overflow: hidden;
-  font-size: var(--font-size-body);
   font-weight: var(--font-weight-regular);
   white-space: nowrap;
+}
+
+.path-heading__title {
+  font-size: var(--font-size-body);
+}
+
+/* A row's path (`PathText`) takes what the row leaves after its fixed parts. */
+.path-text {
+  flex: 0 1 auto;
 }
 
 .path-heading__title:focus-visible {

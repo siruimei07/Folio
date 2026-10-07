@@ -3,6 +3,7 @@
 //
 //   ?scenario=small|large|first-run|read-only|unavailable|errors
 //            |history-none|history-long|diffs|history-read-only|history-damaged|ai-off   (ipc-m2 §17)
+//            |workspace-large                  50,000 changes over the large library
 //   ?latency=<ms>                     every answer waits this long (loading states)
 //   ?fail=<command>[:<code>],…        these commands fail, with `Internal` unless a code is given
 //   ?choice=empty|folders|library|insideLibrary|incomplete   first run: what the chosen folder holds
@@ -38,6 +39,7 @@ export const SCENARIOS = [
   'history-read-only',
   'history-damaged',
   'ai-off',
+  'workspace-large',
 ] as const;
 export type Scenario = (typeof SCENARIOS)[number];
 
@@ -82,6 +84,7 @@ const VERSIONING: Partial<Record<Scenario, VersioningScenario>> = {
   'history-read-only': 'readOnly',
   'history-damaged': 'damaged',
   'ai-off': 'aiOff',
+  'workspace-large': 'workspaceLarge',
 };
 
 export function scenarioFixture(
@@ -119,6 +122,7 @@ function fixtureOf(scenario: Scenario, now: number, options: ScenarioOptions): F
     case 'ai-off':
       return opened(smallLibrary(now));
     case 'large':
+    case 'workspace-large':
       return opened(largeLibrary(now));
     case 'read-only':
       return opened({

@@ -25,6 +25,7 @@ import { Modal } from '../components/Dialog/Dialog';
 import { FileTypeIcon } from '../components/FileTypeIcon/FileTypeIcon';
 import { KeyCap } from '../components/KeyCap/KeyCap';
 import { MiddleTruncate } from '../components/MiddleTruncate/MiddleTruncate';
+import { SelectionIndicator } from '../components/SelectionIndicator/SelectionIndicator';
 import { Skeleton } from '../components/Skeleton/Skeleton';
 import { StateBlock } from '../components/StateBlock/StateBlock';
 import { useCourses } from '../data/groups';
@@ -235,38 +236,44 @@ function SearchResultsList({ search, onAction }: { search: SearchResults; onActi
 /**
  * A hit, a file or a folder (a course, too): its icon, name with its matches, the folder it is in
  * ("MAT232 / Problem sets") and, for a content match, the text around it. The folder and snippet
- * are the option's description.
+ * are the option's description. The active hit (moved to with ↑ ↓ while the field keeps focus)
+ * has the selected background and the selection bar.
  */
 function HitRow({ id, hit, courses }: { id: string; hit: SearchHit; courses: readonly Course[] | undefined }) {
   // Only with the courses: without them a place would show folder names instead of course codes.
   const place = courses === undefined ? '' : placeOf(parentOf(hit.entry.path), courses);
   return (
     <ListBoxItem id={id} textValue={hit.entry.name} className="search-hit">
-      {hit.entry.kind === 'folder' ? (
-        <Folder aria-hidden size={SIZE.icon} className="search-hit__folder" />
-      ) : (
-        <FileTypeIcon name={hit.entry.name} />
+      {({ isFocused }) => (
+        <>
+          {isFocused && <SelectionIndicator />}
+          {hit.entry.kind === 'folder' ? (
+            <Folder aria-hidden size={SIZE.icon} className="search-hit__folder" />
+          ) : (
+            <FileTypeIcon name={hit.entry.name} />
+          )}
+          <Text slot="label" className="search-hit__name" title={hit.entry.name}>
+            <Highlighted spans={hit.name} />
+          </Text>
+          <Text slot="description" className="search-hit__about">
+            {place !== '' && (
+              <span className="search-hit__place">
+                {/* Cut in the middle for sight, so a long course name never hides the folder at
+                    the end; screen readers get the whole place. */}
+                <span className="search-hit__place-cut" aria-hidden>
+                  <MiddleTruncate text={place} />
+                </span>
+                <span className="visually-hidden">{place}</span>
+              </span>
+            )}
+            {hit.snippet !== null && (
+              <span className="search-hit__snippet">
+                <Highlighted spans={hit.snippet} />
+              </span>
+            )}
+          </Text>
+        </>
       )}
-      <Text slot="label" className="search-hit__name" title={hit.entry.name}>
-        <Highlighted spans={hit.name} />
-      </Text>
-      <Text slot="description" className="search-hit__about">
-        {place !== '' && (
-          <span className="search-hit__place">
-            {/* Cut in the middle for sight, so a long course name never hides the folder at the
-                end; screen readers get the whole place. */}
-            <span className="search-hit__place-cut" aria-hidden>
-              <MiddleTruncate text={place} />
-            </span>
-            <span className="visually-hidden">{place}</span>
-          </span>
-        )}
-        {hit.snippet !== null && (
-          <span className="search-hit__snippet">
-            <Highlighted spans={hit.snippet} />
-          </span>
-        )}
-      </Text>
     </ListBoxItem>
   );
 }

@@ -65,7 +65,10 @@
   gap: var(--space-2);
 }
 
+/* The selection bar sits at the card's inner left edge (§10), out of the nav's padding. */
 .settings__tab {
+  --selection-indicator-start: calc(var(--space-10) * -1);
+
   position: relative;
   display: flex;
   align-items: center;
@@ -95,22 +98,6 @@
 .settings__tab[data-focus-visible] {
   outline: var(--focus-ring-width) solid var(--color-focus-ring);
   outline-offset: calc(var(--focus-ring-width) * -1);
-}
-
-/* The 3 px bar at the card's inner left edge (§10 "Selection indicator"). */
-.settings__tab-indicator {
-  position: absolute;
-  top: var(--size-selection-bar-inset);
-  bottom: var(--size-selection-bar-inset);
-  left: calc(var(--space-10) * -1);
-  width: var(--size-selection-bar-width);
-  border-radius: var(--radius-indicator);
-  background: var(--color-selection-indicator);
-  visibility: hidden;
-}
-
-.settings__tab[data-selected] .settings__tab-indicator {
-  visibility: visible;
 }
 
 .settings__tab-icon {
@@ -160,15 +147,6 @@
 
 :root[data-layout='narrow'] .settings__tabs-scroll {
   overflow: auto hidden;
-}
-
-:root[data-layout='narrow'] .settings__tab-indicator {
-  top: auto;
-  right: var(--size-selection-bar-inset);
-  bottom: 0;
-  left: var(--size-selection-bar-inset);
-  width: auto;
-  height: var(--size-selection-bar-width);
 }
 
 /* ---- Page and cards. */

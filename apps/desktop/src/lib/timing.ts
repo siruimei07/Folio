@@ -17,6 +17,12 @@ export const ACTIVITY_LINGER_MS = 10_000;
 /** How long a region waits for data before it shows skeleton rows (UI architecture §13). */
 export const LOADING_DELAY_MS = 150;
 
+/**
+ * How long a commit that has just arrived keeps its soft background in "Not synced" and History
+ * (workspace-history handoff §14): reduced motion fades it at once, but never sooner.
+ */
+export const FRESH_COMMIT_MS = 2000;
+
 /** The pause in typing after which search asks for the text (UI architecture §9). */
 export const SEARCH_PAUSE_MS = 120;
 

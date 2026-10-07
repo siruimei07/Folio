@@ -259,19 +259,6 @@
     "failedOne": "Couldn't change the tags of {{name}}",
     "partial": "Changed the tags of {{done, number}} of {{total, number}} items"
   },
-  "open": {
-    "editor": "Opened {{name}} in an editor",
-    "editorText": "Folio doesn't run programs or scripts, so it opened this one for editing.",
-    "blocked": "Folio doesn't open programs",
-    "blockedText": "To keep you safe, it won't run {{name}}. Show it in File Explorer if you want to open it yourself.",
-    "failed": "Couldn't open {{name}}",
-    "revealFailed": "Couldn't show {{name}} in File Explorer"
-  },
-  "copy": {
-    "one": "Copied the path",
-    "several": "Copied {{count, number}} paths",
-    "failed": "Couldn't copy the path"
-  },
   "results": {
     "title_one": "{{count, number}} item wasn't changed",
     "title_other": "{{count, number}} items weren't changed",

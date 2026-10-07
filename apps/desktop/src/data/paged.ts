@@ -36,16 +36,30 @@ export interface RowRange {
   end: number;
 }
 
+/**
+ * What tells a list's rows apart, across pages and revisions: an entry's id, which renames and
+ * moves keep; a workspace item's key. Pass a function that keeps its identity (a module-level one).
+ */
+export type RowId<T> = (row: T) => string;
+
+/** Entries and problems: by `id`. */
+const byId: RowId<{ id: string }> = (row) => row.id;
+
 export interface PagedList<T> {
   /** Rows in the whole list, from the newest page; `undefined` until a page arrives. */
   total: number | undefined;
   /** The row at `index`, or `undefined` while its page is not loaded: render a placeholder. */
   rowAt: (index: number) => T | undefined;
-  /** The React key of the row at `index`: its id, which renames and moves keep. */
+  /** The React key of the row at `index`: its row id (`RowId`). */
   rowKey: (index: number) => string;
   /** `error` when a visible page failed; `pending` until the first page arrives. */
   status: 'pending' | 'error' | 'success';
   error: IpcFailure | null;
+  /**
+   * A visible page without rows is being read: one scrolled to, or one asked again after it failed,
+   * which is `pending` again then, without its error, while `status` may say `success`.
+   */
+  loading: boolean;
   /** The catalog revision of the newest page. */
   revision: number | undefined;
   /** Fetches the pages that failed again. */
@@ -98,14 +112,23 @@ export function pageQuery<T>(
   });
 }
 
-/**
- * Reads the visible pages of a list. Rows are keyed by entry id. While pages of two revisions
- * are both on screen (a refetch is under way), a row that the newer pages already hold is a
- * placeholder in the older one, so no id appears twice.
- */
+/** `combineRows` for rows keyed by entry id. */
 export function combinePages<T extends { id: string }>(
   pages: readonly number[],
   results: readonly UseQueryResult<Page<T>>[],
+): PagedList<T> {
+  return combineRows(pages, results, byId);
+}
+
+/**
+ * Reads the visible pages of a list, its rows keyed by `rowId`. While pages of two revisions are
+ * both on screen (a refetch is under way), a row that the newer pages already hold is a
+ * placeholder in the older one, so no row appears twice.
+ */
+function combineRows<T>(
+  pages: readonly number[],
+  results: readonly UseQueryResult<Page<T>>[],
+  rowId: RowId<T>,
 ): PagedList<T> {
   const loaded = new Map<number, Page<T>>();
   let newest: Page<T> | undefined;
@@ -119,21 +142,25 @@ export function combinePages<T extends { id: string }>(
   });
   const fresh = new Set<string>();
   for (const page of loaded.values()) {
-    if (page.revision === newest?.revision) for (const row of page.items) fresh.add(row.id);
+    if (page.revision === newest?.revision) for (const row of page.items) fresh.add(rowId(row));
   }
   const rowAt = (index: number): T | undefined => {
     const page = loaded.get(Math.floor(index / LIST_PAGE));
     const row = page?.items[index % LIST_PAGE];
     if (row === undefined || page === undefined) return undefined;
-    return page.revision === newest?.revision || !fresh.has(row.id) ? row : undefined;
+    return page.revision === newest?.revision || !fresh.has(rowId(row)) ? row : undefined;
   };
   const failed = results.find((result) => result.isError);
   return {
     total: newest?.total,
     rowAt,
-    rowKey: (index) => rowAt(index)?.id ?? `placeholder:${String(index)}`,
+    rowKey: (index) => {
+      const row = rowAt(index);
+      return row === undefined ? `placeholder:${String(index)}` : rowId(row);
+    },
     status: failed ? 'error' : newest === undefined ? 'pending' : 'success',
     error: failed?.error ?? null,
+    loading: results.some((result) => result.data === undefined && result.isFetching),
     revision: newest?.revision,
     retry: () => {
       for (const result of results) if (result.isError) void result.refetch();
@@ -170,15 +197,27 @@ export function useSettled<T>(value: T, key: string): T {
   return settled;
 }
 
-/**
- * The pages of one list of the open library that `range` shows, plus page 0. Pages within
- * `PREFETCH_ROWS` of the range are fetched ahead but not watched, so a refresh leaves them to be
- * fetched again. `listKey` builds the list's key for a library id (`keys.children`, …).
- */
+/** `usePagedRows` for rows keyed by entry id. */
 export function usePagedList<T extends { id: string }>(
   listKey: (libraryId: string) => QueryKey,
   fetchPage: FetchPage<T>,
   visibleRange: RowRange | null,
+  options: PagedListOptions = {},
+): LoadingPagedList<T> {
+  return usePagedRows(listKey, fetchPage, visibleRange, byId, options);
+}
+
+/**
+ * The pages of one list of the open library that `range` shows, plus page 0, its rows keyed by
+ * `rowId`. Pages within `PREFETCH_ROWS` of the range are fetched ahead but not watched, so a
+ * refresh leaves them to be fetched again. `listKey` builds the list's key for a library id
+ * (`keys.children`, …).
+ */
+export function usePagedRows<T>(
+  listKey: (libraryId: string) => QueryKey,
+  fetchPage: FetchPage<T>,
+  visibleRange: RowRange | null,
+  rowId: RowId<T>,
   options: PagedListOptions = {},
 ): LoadingPagedList<T> {
   const client = useQueryClient();
@@ -191,8 +230,8 @@ export function usePagedList<T extends { id: string }>(
   const visibleHash = visible.join(',');
   const pages = useMemo(() => visibleHash.split(',').map(Number), [visibleHash]);
   const combine = useCallback(
-    (results: UseQueryResult<Page<T>>[]) => combinePages(pages, results),
-    [pages],
+    (results: UseQueryResult<Page<T>>[]) => combineRows(pages, results, rowId),
+    [pages, rowId],
   );
   const list = useQueries({
     queries: pages.map((page) => pageQuery(key, page, fetchPage, enabled, options.gcTime)),
@@ -233,6 +272,7 @@ export function usePagedList<T extends { id: string }>(
       rowKey: list.rowKey,
       status: list.status,
       error: list.error,
+      loading: list.loading,
       revision: list.revision,
       retry: list.retry,
       loadPage,

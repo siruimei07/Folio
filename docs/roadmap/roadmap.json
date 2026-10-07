@@ -2982,8 +2982,18 @@
         "feat/ui-diff-viewer"
       ],
       "summary": "改动列表、勾选、提交框、Ctrl+Enter、待同步列表",
-      "status": "planned",
-      "updated": "2026-10-03",
+      "status": "done",
+      "updated": "2026-10-07",
+      "landed": "2026-10-07",
+      "gates": {
+        "check": "pass",
+        "e2e": "pass",
+        "codeReview": "pass",
+        "simplify": "pass",
+        "designCritique": "pass",
+        "a11y": "pass",
+        "securityReview": "na"
+      },
       "links": [
         "docs/design/handoff/workspace-history.md",
         "docs/specs/ipc-m2.md"

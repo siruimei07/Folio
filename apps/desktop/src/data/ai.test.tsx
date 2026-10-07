@@ -4,7 +4,7 @@
 // An answer is checked in the cache itself right after the call, so the test shows that the
 // answer put it there and not the AiSettingsChanged that follows it.
 import { act, waitFor } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { type AiSettings, DEFAULT_AI_ENDPOINT, LIMITS, type UpdateAiSettings } from '../ipc';
 import { renderAppHook } from '../test/render';
@@ -58,7 +58,7 @@ describe('AI settings in the cache', () => {
   it('takes an update’s answer; an endpoint on another origin drops the key', async () => {
     const { result, cached } = await renderAi();
     const saved = await act(() =>
-      result.current.update.mutateAsync({ enabled: null, endpoint: OTHER_ENDPOINT, model: 'm-1', sendContent: false }),
+      result.current.update.mutateAsync({ endpoint: OTHER_ENDPOINT, model: 'm-1', sendContent: false }),
     );
     expect(saved).toMatchObject({ endpoint: OTHER_ENDPOINT, model: 'm-1', sendContent: false, hasKey: false });
     expect(cached()).toEqual(saved);
@@ -72,13 +72,23 @@ describe('AI settings in the cache', () => {
     const before = cached();
     await act(async () => {
       expect(
-        await failureOf(result.current.update.mutateAsync({ ...KEEP, endpoint: 'http://plain.example.test' })),
+        await failureOf(result.current.update.mutateAsync({ endpoint: 'http://plain.example.test' })),
       ).toMatchObject({ error: { code: 'AiEndpointInvalid' } });
-      expect(await failureOf(result.current.update.mutateAsync({ ...KEEP, model: 'two words' }))).toMatchObject({
+      expect(await failureOf(result.current.update.mutateAsync({ model: 'two words' }))).toMatchObject({
         error: { code: 'AiModelInvalid' },
       });
     });
     expect(cached()).toEqual(before);
+  });
+
+  it('keeps a field given as undefined, sending null for it as for one left out', async () => {
+    const { result, shell } = await renderAi();
+    const invoke = vi.spyOn(shell, 'invoke');
+    const saved = await act(() => result.current.update.mutateAsync({ endpoint: undefined, model: 'm-2' }));
+    expect(invoke).toHaveBeenCalledWith('update_ai_settings', {
+      request: { enabled: null, endpoint: null, model: 'm-2', sendContent: null },
+    });
+    expect(saved).toMatchObject({ enabled: true, endpoint: DEFAULT_AI_ENDPOINT, model: 'm-2', sendContent: true, hasKey: true });
   });
 
   it('follows AiSettingsChanged for a change made elsewhere', async () => {
@@ -106,7 +116,7 @@ describe('AI settings in the cache', () => {
 
   it('a declined confirmation for another service resolves null and stores nothing', async () => {
     const { result, shell, cached } = await renderAi({ confirm: 'cancel' });
-    await act(() => result.current.update.mutateAsync({ ...KEEP, endpoint: OTHER_ENDPOINT }));
+    await act(() => result.current.update.mutateAsync({ endpoint: OTHER_ENDPOINT }));
     const answer = await act(() => result.current.key.set(FAKE_KEY));
     expect(answer).toBeNull();
     expect(cached()).toMatchObject({ endpoint: OTHER_ENDPOINT, hasKey: false });
@@ -115,7 +125,7 @@ describe('AI settings in the cache', () => {
 
   it('stores a key for another service once allowed', async () => {
     const { result, cached } = await renderAi({ confirm: 'allow' });
-    await act(() => result.current.update.mutateAsync({ ...KEEP, endpoint: OTHER_ENDPOINT }));
+    await act(() => result.current.update.mutateAsync({ endpoint: OTHER_ENDPOINT }));
     const answer = await act(() => result.current.key.set(FAKE_KEY));
     expect(answer).toMatchObject({ endpoint: OTHER_ENDPOINT, hasKey: true });
     // The update's AiSettingsChanged may arrive after this answer; the key's own event follows it.
@@ -196,7 +206,7 @@ describe('AI settings in the cache', () => {
   it('keeps the key out of every cache', async () => {
     const { result, client } = await renderAi({ confirm: 'cancel' });
     await act(() => result.current.key.set(FAKE_KEY));
-    await act(() => result.current.update.mutateAsync({ ...KEEP, endpoint: OTHER_ENDPOINT }));
+    await act(() => result.current.update.mutateAsync({ endpoint: OTHER_ENDPOINT }));
     await act(() => result.current.key.set(FAKE_KEY));
     await act(() => failureOf(result.current.key.set(`${FAKE_KEY} x`)));
     const mutations = client.getMutationCache().getAll();

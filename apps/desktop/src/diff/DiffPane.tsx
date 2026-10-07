@@ -14,6 +14,7 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { PREVIEW_FILE, type PreviewFileSource, previewShowsVersion } from '../app/previewFile';
+import { useFocusKeeper } from '../components/collections/useFocusKeeper';
 import { Skeleton } from '../components/Skeleton/Skeleton';
 import { settledOf, useDiffWindows, useLocatedVersion, windowId } from '../data/diff';
 import type { IpcFailure } from '../data/errors';
@@ -40,7 +41,6 @@ import { checkWindows } from './model/rows';
 import { type DiffTarget, sourceOf, targetId, versionOf } from './model/target';
 import type { DiffActions, DiffPaneProps } from './types';
 import { type PinnedWindows, useChangeNavigation } from './useChangeNavigation';
-import { useFocusKeeper } from './useFocusKeeper';
 import { useRetry } from './useRetry';
 
 /** The windows past the first one: none until the lines ask for theirs. */

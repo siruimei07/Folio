@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { courseBadgeText, courseColor, courseLabel } from './courses';
 import { extensionOf, FILE_TYPE_COLOR, fileTypeOf } from './file-types';
-import { formatDateTime, formatMoment, formatNumber, percentOf, sizeParts } from './format';
+import { formatDateTime, formatMoment, formatNumber, percentOf, sizeParts, sizeProgressParts } from './format';
 import { isPaletteColor, PALETTE } from './palette';
 import { isActiveJob } from './jobs';
 import { isBelow, isInside, movePath, nameOf, parentOf, windowsPath } from './paths';
@@ -90,6 +90,15 @@ describe('format', () => {
     expect(sizeParts(12 * 1024 + 300, 'en')).toEqual({ value: '12', unit: 'kilobytes' });
     expect(sizeParts(48.2 * 1024 * 1024, 'en')).toEqual({ value: '48.2', unit: 'megabytes' });
     expect(sizeParts(3 * 1024 ** 3, 'en')).toEqual({ value: '3.0', unit: 'gigabytes' });
+  });
+
+  it('shows bytes done in the unit of the total', () => {
+    const MB = 1024 * 1024;
+    expect(sizeProgressParts(12.4 * MB, 48 * MB, 'en')).toEqual({ done: '12.4', total: '48.0', unit: 'megabytes' });
+    expect(sizeProgressParts(0, 3.4 * 1024 * MB, 'en')).toEqual({ done: '0.0', total: '3.4', unit: 'gigabytes' });
+    expect(sizeProgressParts(300 * 1024, 2 * MB, 'en')).toEqual({ done: '0.3', total: '2.0', unit: 'megabytes' });
+    expect(sizeProgressParts(2048, 9000, 'en')).toEqual({ done: '2', total: '9', unit: 'kilobytes' });
+    expect(sizeProgressParts(10, 700, 'en')).toEqual({ done: '10', total: '700', unit: 'bytes' });
   });
 
   it('shows the time for today and the date before', () => {

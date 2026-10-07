@@ -16,6 +16,8 @@ export interface ActivityJob {
   target?: string;
   /** The files an import the UI started set out to add (`check_import`), for "7 of 12". */
   files?: number;
+  /** The changes a commit the UI started commits, for "Committing 9 changes". */
+  changes?: number;
   /** When the UI saw the job end; `Job` has no time, so older jobs show none. */
   finishedAt?: number;
 }

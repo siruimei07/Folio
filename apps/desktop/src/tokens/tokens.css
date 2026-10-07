@@ -162,6 +162,14 @@
   --size-diff-compact-pane: 600px;
   --size-composer-summary: 36px;
   --size-commit-bar-field: 32px;
+  --size-changes-group-header: 28px;
+  --size-changes-tag: 18px;
+  --size-commit-box-footer: 38px;
+  --size-commit-bar-overlay: 400px;
+  --size-changes-narrow-breakpoint: 1000px;
+  --size-card-tile: 24px;
+  --size-lane-node: 7px;
+  --size-first-commit-progress: 260px;
   --size-folder-card: 48px;
   --size-folder-card-min: 180px;
   --size-grid-group-label: 18px;
@@ -203,6 +211,9 @@
   --z-index-menu: 30;
   --z-index-toast: 40;
   --z-index-tooltip: 50;
+  --opacity-disabled: 0.45;
+  --opacity-busy: 0.55;
+  --opacity-shortcut-hint: 0.8;
   --color-surface-app: #f3f2f0;
   --color-surface-panel: #ffffff;
   --color-surface-sunken: #f7f6f4;

@@ -7,6 +7,7 @@ import { Heading, type Key, Tab, TabList, TabPanel, Tabs } from 'react-aria-comp
 import { useLayout } from '../../app/layout';
 import { Modal } from '../../components/Dialog/Dialog';
 import { IconButton } from '../../components/IconButton/IconButton';
+import { SelectionIndicator } from '../../components/SelectionIndicator/SelectionIndicator';
 import { SIZE } from '../../tokens/tokens';
 
 export interface SettingsPage<Id extends string> {
@@ -97,9 +98,13 @@ export function SettingsFrame<Id extends string>({
             <TabList className="settings__tabs" aria-label={t('nav', { title })}>
               {pages.map(({ id, label, icon: Icon }) => (
                 <Tab key={id} id={id} className="settings__tab">
-                  <span className="settings__tab-indicator" aria-hidden />
-                  <Icon aria-hidden size={SIZE.icon} className="settings__tab-icon" />
-                  <span className="settings__tab-label">{label}</span>
+                  {({ isSelected }) => (
+                    <>
+                      {isSelected && <SelectionIndicator placement="tab" />}
+                      <Icon aria-hidden size={SIZE.icon} className="settings__tab-icon" />
+                      <span className="settings__tab-label">{label}</span>
+                    </>
+                  )}
                 </Tab>
               ))}
             </TabList>

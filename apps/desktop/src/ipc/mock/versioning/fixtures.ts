@@ -25,6 +25,7 @@ import {
   type VersioningSeed,
   wordVersion,
 } from './model';
+import { largeWorkspace } from './workspaceLarge';
 
 /** What a scenario gives the fake shell for M2: the library's history, and AI on this computer. */
 export interface VersioningFixture {
@@ -453,7 +454,7 @@ function diffsHistory(library: FakeLibrary, now: number): VersioningSeed {
 // ---- before the first commit
 
 
-export type VersioningScenario = 'small' | 'none' | 'long' | 'diffs' | 'readOnly' | 'damaged' | 'aiOff';
+export type VersioningScenario = 'small' | 'none' | 'long' | 'diffs' | 'readOnly' | 'damaged' | 'aiOff' | 'workspaceLarge';
 
 export function versioningFixture(scenario: VersioningScenario): VersioningFixture {
   const ai: AiSeed = { enabled: scenario !== 'aiOff', hasKey: scenario !== 'aiOff' };
@@ -471,5 +472,7 @@ export function versioningFixture(scenario: VersioningScenario): VersioningFixtu
       return { history: longHistory, ai };
     case 'diffs':
       return { history: diffsHistory, ai };
+    case 'workspaceLarge':
+      return { history: largeWorkspace, ai };
   }
 }

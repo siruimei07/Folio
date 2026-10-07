@@ -60,6 +60,17 @@ export function useCanOpenDialog(kind: DialogKind): boolean {
   return useContext(HostedDialogs).has(kind);
 }
 
+/**
+ * The rail views the shell hosts (`registry.ts`). A view offers an action that shows another view
+ * ("Show in Changes", "Go to Changes") only while that view is registered.
+ */
+export const HostedViews = createContext<ReadonlySet<ViewId>>(new Set());
+
+/** Whether `view` is on the rail, so the button or menu item that shows it can show. */
+export function useCanShowView(view: ViewId): boolean {
+  return useContext(HostedViews).has(view);
+}
+
 export function showView(view: ViewId): void {
   useNavigation.setState({ view });
 }

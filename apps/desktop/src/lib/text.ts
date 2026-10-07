@@ -6,3 +6,11 @@
 export function charCount(text: string): number {
   return Array.from(text).length;
 }
+
+/**
+ * Well-formed text (lone surrogates become U+FFFD, as `toWellFormed` does) of at most `limit`
+ * characters, never cut inside a surrogate pair: what fits a field the shell limits.
+ */
+export function wellFormedPrefix(text: string, limit: number): string {
+  return Array.from(text.toWellFormed()).slice(0, limit).join('');
+}

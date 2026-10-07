@@ -214,6 +214,18 @@ export function rejection(page: Page, command: string, args: Record<string, unkn
 }
 
 /**
+ * Counts the page's calls of a command. Tauri's invoke cannot be wrapped (the shell makes it
+ * read-only), so this counts the IPC requests WebView2 sends (`http://ipc.localhost/<command>`).
+ */
+export function countCalls(page: Page, command: string): () => number {
+  let count = 0;
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname === `/${command}`) count += 1;
+  });
+  return () => count;
+}
+
+/**
  * Makes the isolated library folder (`libraryFolder: true`) this machine's library through IPC,
  * with the preset tags the first run names, and resolves once it has opened. The window then
  * shows the Library instead of the first run.

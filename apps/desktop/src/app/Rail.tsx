@@ -2,16 +2,19 @@ import { Laptop, Settings } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from 'react-aria-components';
 
+import { SelectionIndicator } from '../components/SelectionIndicator/SelectionIndicator';
 import { Tooltip } from '../components/Tooltip/Tooltip';
 import { SIZE } from '../tokens/tokens';
 import type { Layout } from './layout';
 import { openDialog, showView, useNavigation } from './navigation';
-import type { DialogRegistry, ViewDefinition } from './registry';
+import type { DialogRegistry, RailBadge, RailBadges, ViewDefinition } from './registry';
 import { LIBRARY_SETTINGS_KEYS, useShortcutLabel, viewKeys } from './shortcuts';
 
 export interface RailProps {
   views: readonly ViewDefinition[];
   dialogs: DialogRegistry;
+  /** The views' badges (`ShellRegistry.badges`). */
+  badges?: RailBadges;
   layout: Layout;
   /** This computer's name, for the avatar; `null` until the app settings know it. */
   deviceName: string | null;
@@ -20,9 +23,10 @@ export interface RailProps {
 /**
  * The rail (app-shell handoff §4, 6A): outlined square buttons for the views, the gear (Library
  * settings) and the avatar (App settings) at the bottom. The active view has `aria-current="page"`
- * and a bar at the window's left edge.
+ * and a bar at the window's left edge. A view's badge draws its count at the button's top right,
+ * and the button's name says it.
  */
-export function Rail({ views, dialogs, layout, deviceName }: RailProps) {
+export function Rail({ views, dialogs, badges, layout, deviceName }: RailProps) {
   const { t } = useTranslation('shell');
   const shortcut = useShortcutLabel();
   const active = useNavigation((state) => state.view);
@@ -32,13 +36,12 @@ export function Rail({ views, dialogs, layout, deviceName }: RailProps) {
 
   return (
     <nav className="rail" aria-label={t('rail.label')}>
-      {views.map(({ id, icon: Icon, label, key }) => (
-        <div key={id} className="rail__slot">
-          {id === active && <span className="rail__indicator" aria-hidden />}
+      {views.map(({ id, icon: Icon, label, key }) => {
+        const button = (badge: RailBadge | null) => (
           <Tooltip content={t(label)} shortcut={shortcut(viewKeys(key))} placement="end">
             <Button
               className="rail__button"
-              aria-label={t(label)}
+              aria-label={badge?.label ?? t(label)}
               aria-current={id === active ? 'page' : undefined}
               data-active={id === active || undefined}
               onPress={() => {
@@ -46,10 +49,22 @@ export function Rail({ views, dialogs, layout, deviceName }: RailProps) {
               }}
             >
               <Icon aria-hidden size={iconSize} />
+              {badge !== null && (
+                <span className="rail__badge" aria-hidden>
+                  {badge.text}
+                </span>
+              )}
             </Button>
           </Tooltip>
-        </div>
-      ))}
+        );
+        const Badge = badges?.[id];
+        return (
+          <div key={id} className="rail__slot">
+            {id === active && <SelectionIndicator placement="edge" />}
+            {Badge === undefined ? button(null) : <Badge>{button}</Badge>}
+          </div>
+        );
+      })}
       <div className="rail__spacer" />
       {dialogs.librarySettings && (
         <Tooltip content={t('rail.librarySettings')} shortcut={shortcut(LIBRARY_SETTINGS_KEYS)} placement="end">

@@ -2,7 +2,7 @@ import './collections.css';
 
 import { type KeyboardEvent, type ReactNode, type Ref, useRef } from 'react';
 
-import { acrossItems, handleCollectionKey, ignoreRepeat } from './keys';
+import { acrossItems, handleCollectionKey, ignoreRepeat, nextFocusable } from './keys';
 import { delegateRowEvents, eventIndex, type RowPointerHandlers } from './rows';
 import type { Move } from './selection';
 import { findByName, useNameMatcher, useTypeahead } from './useTypeahead';
@@ -71,14 +71,6 @@ export interface VirtualTreeProps extends RowPointerHandlers {
   ref?: Ref<CollectionHandle>;
 }
 
-/** The next focusable row from `from` going `step`, or `null`. */
-function nextFocusable(rowAt: (index: number) => TreeRow, count: number, from: number, step: 1 | -1) {
-  for (let index = from; index >= 0 && index < count; index += step) {
-    if (rowAt(index).focusable) return index;
-  }
-  return null;
-}
-
 
 /**
  * A virtualised tree (WAI-ARIA tree pattern, UI architecture §7.2): one flat list of the visible
@@ -111,10 +103,11 @@ export function VirtualTree({
 }: VirtualTreeProps) {
   // The tab stop is always a focusable row: after a delete, the focused index may point past the
   // end or at a separator, and the nearest focusable row above takes it.
+  const focusable = (index: number) => rowAt(index).focusable;
   const tabStop =
-    focusedIndex !== null && focusedIndex < count && rowAt(focusedIndex).focusable
+    focusedIndex !== null && focusedIndex < count && focusable(focusedIndex)
       ? focusedIndex
-      : (nextFocusable(rowAt, count, Math.min(focusedIndex ?? 0, count - 1), -1) ?? nextFocusable(rowAt, count, 0, 1));
+      : (nextFocusable(focusable, count, Math.min(focusedIndex ?? 0, count - 1), -1) ?? nextFocusable(focusable, count, 0, 1));
   const scrollRef = useRef<HTMLDivElement>(null);
   const { virtualizer, items, requestFocus } = useVirtualRows({
     scrollRef,
@@ -155,7 +148,7 @@ export function VirtualTree({
     onKeyDown?.(event, index);
     if (event.defaultPrevented || index === null) return;
     const row = rowAt(index);
-    const next = (from: number, step: 1 | -1) => nextFocusable(rowAt, count, from, step);
+    const next = (from: number, step: 1 | -1) => nextFocusable(focusable, count, from, step);
     const plain = !event.ctrlKey && !event.shiftKey && !event.altKey && !event.metaKey;
     let handled = true;
     if (event.key === 'ArrowRight' && plain) {

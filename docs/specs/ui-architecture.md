@@ -399,7 +399,10 @@ and a drop opens `import` through the navigation store with the tag filter's tag
   (the breakpoint, `size.row`, tile sizes) as TypeScript constants (app-shell lane).
   `app/layout.ts` watches `matchMedia` and sets `data-layout="narrow"` or `"wide"` on the root;
   CSS selects on that attribute. The narrow "preview covers the list" state lives in the Library
-  view store.
+  view store. A view whose fixed columns need more room may switch earlier on its own: the
+  Changes view lays out narrow below `size.changes-narrow-breakpoint` (1,000 px;
+  `changes/windowQuery.ts`, `data-narrow` on the view) while the shell stays wide
+  (workspace-history handoff §2.1 as built).
 - **Theme and reduce motion**: `data-theme` and `data-reduce-motion` on the root, set before the
   first render from the shell's settings (app-shell lane, roadmap §3.4). Components read durations
   only from tokens; the reduce-motion tokens set them to 0.
@@ -469,7 +472,7 @@ through the wrapper:
 | Checkboxes with a 24 × 24 hit area | `Checkbox` | |
 | History resize handle (handoff §7, M2) | own `role="separator"` with `aria-valuenow/min/max` | a few lines; not worth a component |
 | Landmarks, focus scopes | `useLandmark`, `FocusScope` | |
-| Polite live region (handoff §3, §11) | own `Announcer` in `app/` | two `aria-live` regions; RAC's announcer is internal |
+| Polite live region (handoff §3, §11) | own `Announcer` in `app/` | two `aria-live` regions; RAC's announcer is internal; a result announced with `{ hold: true }` (a commit's) keeps the polite one for a second, and a later polite message waits for it |
 
 `I18nProvider` gets the UI language, so RAC's own hidden labels follow it. RAC's drag and drop is
 not used: it builds on HTML5 drag events, which Tauri's native file drop turns off (§2).
@@ -679,6 +682,74 @@ reach through `DIFF_PANE` in `app/panes.ts` like the preview pane. It differs fr
 - **The pane's own width** decides its compact header (below `size.diff-compact-pane`, a
   `ResizeObserver` on the pane), not the window's layout of §6.3; a width of 0 (hidden) keeps the
   last answer.
+
+### 8.4 The Changes list (M2)
+
+As built (`feat/ui-changes-view`, 2026-10-06): the Changes view of workspace-history handoff §2–§5
+and §10 is the `changes` feature (`src/changes/`), on the rail with `Ctrl+2` and a count badge
+(`ShellRegistry.badges`). Its list is a `VirtualList` (§7.2) over the paged workspace, and differs
+from §8.1 in these ways:
+
+- **Data.** `data/workspace.ts` adds one `workspace` query kind (`['lib', id, 'workspace', part,
+  …]`): the summary, item pages keyed by the item's `key` (`usePagedRows` in `data/paged.ts`, which
+  `usePagedList` now calls keyed by `id`), metadata pages, selection summaries keyed by the
+  workspace's fingerprint and the catalog revision, and the newest commits keyed by HEAD.
+  CatalogChanged touches none; WorkspaceChanged refreshes the summary and the pages, and a new
+  fingerprint or HEAD makes new keys for the rest instead of refetches.
+- **Checked, not selected.** A row's check box is `aria-checked` (what the commit includes); the
+  selection is the one row whose diff shows (`aria-selected`) and follows the focus. Inclusion is
+  the contract's `allExcept(keys)` by default, so select-all and `Ctrl+A` never load pages; "leave
+  all out" turns it into `only(keys)` (`changes/inclusion.ts`, pure). Items the list showed
+  blocked (not local, unreadable) stay out once ready (in `only` mode their keys leave the
+  selection, so the row, the summary and the commit agree); required items are on and disabled; keys of
+  items that went are found by bisection with `summarize_selection` when the shell answers
+  `InvalidArgument`, and dropped.
+- **Rows that are not changes.** `header` rows (the "Tags and settings" header) are `aria-hidden`
+  and passed by the keys, clicks and type-ahead; `aria-posinset` / `aria-setsize` count options
+  only; rows have their own heights (`sizesKey`). Grouped by course, a header goes wherever the
+  place changes between loaded items (items come in path order), remembered while the list stays
+  the same; course headers are options that count every item of their place (`SummaryGroup.items`)
+  and whose `aria-checked` (on, `mixed`, off) is the group's `selected - required` of `available -
+  required` (ipc-m2 §6.4), as the select-all's is summed over the groups; they take the focus but
+  never the selection. A `RowAnchor` (`useVirtualRows`)
+  keeps the first visible row in place when rows above it come or go, in both layouts.
+- **Focus when a whole part goes.** The rows, the commit box or bar and the diff pane each keep
+  their own focus (`useFocusKeeper`); the view's root keeps one more for a part that goes as a
+  whole (`useViewFocus` in `changes/ChangesView.tsx`). Crossing the view's breakpoint moves the
+  focus to the same control in the bar or the box (`data-commit-focus`), and from the diff beside
+  the list into the diff over it, or back; a commit that empties the list moves it to the commit
+  button (handoff §4.4); the first commit's block hands it to the list, and so does the "Not
+  synced" card, which a narrow window takes away. The list's load failure and the card's keep
+  their failure on screen, and "Try again" its focus, while the retry reads, a later page too
+  (TanStack puts it back to `pending` with its error cleared; `usePagedRows` reports it as
+  `loading`) (`changes/useRetriedFailure.ts`, like the diff's `useRetry`), and read it out again when it fails
+  again; when it works, the list's selected row or the card's heading takes the focus. Widening
+  forgets a diff opened over the list, so narrowing again covers the list only when the focus was
+  in the diff.
+- **Shared pieces it made.** `components/collections/useFocusKeeper.ts` (the diff pane's, now also
+  `useVirtualRows`'s), `components/SelectionIndicator` (every selection bar), `app/fileActions.ts`
+  (open, show in File Explorer, copy path, also the Library's), `app/changeTarget.ts`
+  (`showChange(path)`: the view reads item pages from the top, four at a time, until the path's row
+  is found), `app/firstCommit.ts` with `app/FirstCommitBlock.tsx` (the first commit's state and
+  block, which History shows too), `HostedViews` / `useCanShowView` (`app/navigation.ts`), and
+  `FRESH_COMMIT_MS` (`lib/timing.ts`).
+- **The first commit** is started by the always-on rail badge (versioning §19 item 4), once per
+  library session, while the shell is mounted and whichever view shows.
+- **50,000 rows.** The fake shell's `workspace-large` scenario has exactly 50,000 items; tests
+  check that only pages near the visible range are asked for and that `Ctrl+A` asks for none.
+- **At most `LIMITS.batch` kept keys** (ipc-m2 §5.1). A check box change (Space, a box, a Shift
+  range, a course header) that would make the selection name more keys is refused as a whole, with
+  a toast that says how else to get there (`fitsSelection` in `changes/inclusion.ts`); a range or a
+  course stops reading pages once it would not fit. Blocked items the list has shown are noted
+  without that check. A range or course that had to read pages asks `get_workspace` again before
+  it applies anything: when the fingerprint or HEAD moved since the click, or a WorkspaceChanged
+  cancelled the read, nothing changes and a toast says the list changed meanwhile.
+- **Known limits, for `feat/core-workspace`.** After "leave all out", new items arrive left out
+  (the shell cannot name new items without every page). A semester's or the library's own files
+  split by another place show its header again over each run. Two contract refinements would
+  remove work from the UI: `allExcept` ignoring keys the workspace does not have (no bisection),
+  and items listed in summary-group order when grouped (an exact grouped layout up front). On the real shell the workspace commands are planned stubs,
+  so `e2e/tests/changes.spec.ts` checks the view's load failure; the core lanes extend it.
 
 ## 9. Search palette
 

@@ -36,13 +36,15 @@ export function cancelWithFeedback(mutate: (id: string) => Promise<unknown>, job
 /**
  * The activity button wired to the library's jobs and problems (library-actions handoff §10):
  * `list_jobs` and JobChanged through the data layer, the problem count once a scan has finished,
- * the destinations of the imports the UI started, and "Details" for an import's result.
+ * the destinations of the imports and the changes of the commits the UI started, and "Details"
+ * for an import's result.
  */
 export function ActivityControl({ compact }: ToolbarControlProps) {
   const jobs = useJobs().data;
   const problemsTotal = useProblemsTotal().data;
   const libraryId = useLibraryId();
   const imports = useJobNotes((state) => state.imports);
+  const commits = useJobNotes((state) => state.commits);
   const finishedAt = useJobNotes((state) => state.finishedAt);
   const seenScan = useJobNotes((state) => libraryId !== null && state.scanned.has(libraryId));
   const cancelJob = useCancelJob();
@@ -54,9 +56,9 @@ export function ActivityControl({ compact }: ToolbarControlProps) {
     () =>
       list.map((job): ActivityJob => {
         const note = imports[job.id];
-        return { job, target: note?.label, files: note?.files, finishedAt: finishedAt[job.id] };
+        return { job, target: note?.label, files: note?.files, changes: commits[job.id], finishedAt: finishedAt[job.id] };
       }),
-    [list, imports, finishedAt],
+    [list, imports, commits, finishedAt],
   );
   // The problems of the last scan: none to show before a scan has finished. A finished scan is
   // remembered, since `list_jobs` keeps only the last 20 finished jobs.

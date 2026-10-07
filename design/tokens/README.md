@@ -18,7 +18,7 @@ durations.
 
 | File | Contents |
 |---|---|
-| `base.tokens.json` | Mode-independent tokens: font, space, size, radius, border, focus ring, title bar, caption buttons, motion, z-index |
+| `base.tokens.json` | Mode-independent tokens: font, space, size, radius, border, focus ring, title bar, caption buttons, motion, z-index, opacity |
 | `color.light.tokens.json` | Light mode: semantic colours, course and tag palette, caption colours, overlay shadow |
 | `color.dark.tokens.json` | Dark mode: the same token paths with dark values |
 
@@ -98,6 +98,17 @@ Round 8 (2026-10-01, lane `feat/ui-first-run`) added the first run's sizes (firs
 `welcome-gap`, `welcome-column`, `welcome-illustration-width` and `-height`, `app-icon-large`,
 `folder-tile`, `first-run-field`, `course-code-field`, `colour-button`, `colour-dot`, `icon-tiny`,
 `swatch`, `swatch-dot`, `map-role-column` and `unavailable-offset`.
+
+Round 13 (2026-10-06, lane `feat/ui-changes-view`) added the `opacity` group: `opacity.disabled`
+for a check box that cannot change now (workspace-history handoff §3.4), `opacity.busy` for the
+check boxes while a commit runs, not the rows, whose text keeps AA contrast (§3.8 as built), and
+`opacity.shortcut-hint` for "Ctrl+Enter" on the commit button (decision 36); the changes list's
+`size.changes-group-header` (the "Tags and settings" header row) and `changes-tag` (the "Tags" tag
+of a tag change, §3.3); the commit box's `size.commit-box-footer` and the narrow commit bar's
+`commit-bar-overlay` (§4.1, §4.7); `size.changes-narrow-breakpoint` (1,000 px), the window width
+below which the Changes view alone takes its narrow layout (§2.1 as built); the "Not synced" card's
+`size.card-tile` and `lane-node` (§5); and the first commit's progress bar width,
+`size.first-commit-progress` (§10).
 
 Round 9 (2026-10-02, lane `feat/ui-settings`) added the settings dialogs' sizes (app-shell §9):
 `size.switch-width`, `switch-height` and `switch-knob`, `checkbox`, `settings-nav-item`,

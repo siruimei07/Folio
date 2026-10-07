@@ -159,19 +159,8 @@
   flex: 1;
 }
 
-/* The active view's bar at the window's left edge. */
-.rail__indicator {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  width: var(--size-selection-bar-width);
-  height: var(--size-rail-indicator);
-  border-radius: 0 var(--radius-indicator) var(--radius-indicator) 0;
-  background: var(--color-selection-indicator);
-  transform: translateY(-50%);
-}
-
 .rail__button {
+  position: relative;
   display: flex;
   flex: none;
   align-items: center;
@@ -203,6 +192,29 @@
   border-color: var(--color-border-strong);
   background: var(--color-surface-panel);
   color: var(--color-accent-default);
+}
+
+/* A view's count badge (app-shell §4): an 18 px pill over the button's top-right corner, ringed
+   in the rail's colour. The outline only shows in Windows' contrast themes. */
+.rail__badge {
+  position: absolute;
+  top: calc(-1 * var(--space-6));
+  right: calc(-1 * var(--space-6));
+  box-sizing: border-box;
+  min-width: var(--size-count-pill);
+  height: var(--size-count-pill);
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-pill);
+  outline: var(--border-width) solid transparent;
+  background: var(--color-text-primary);
+  box-shadow: 0 0 0 var(--space-2) var(--color-surface-app);
+  color: var(--color-surface-panel);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-strong);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--size-count-pill);
+  text-align: center;
+  pointer-events: none;
 }
 
 .rail__avatar {

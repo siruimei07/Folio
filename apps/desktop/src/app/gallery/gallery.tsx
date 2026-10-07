@@ -4,6 +4,7 @@
 //   /gallery.html                      the shell with sample toolbar controls and dialogs
 //   /gallery.html?view=components      every shared component and state
 //   /gallery.html?view=diff            the diff pane on the fake shell (diffGallery.tsx)
+//   /gallery.html?view=changes         the Changes view on the fake shell (changesGallery.tsx)
 //   &theme=light|dark  &motion=on|off  &activity=running|several|done|problems|hidden
 //   &fail=minimize|maximize|close|drag|background   the window command fails
 
@@ -17,6 +18,7 @@ import { App } from '../../App';
 import { initI18n } from '../../i18n';
 import { applyAppearance } from '../appearance';
 import { watchLayout } from '../layout';
+import { changesGallery } from './changesGallery';
 import { ComponentsGallery } from './ComponentsGallery';
 import { diffGallery } from './diffGallery';
 import { galleryRegistry } from './registry';
@@ -59,6 +61,7 @@ function galleryView(view: string | null) {
   if (view === 'components') return <ComponentsGallery />;
   // Replaces the stand-in IPC above with the fake shell.
   if (view === 'diff') return diffGallery(window.location.search);
+  if (view === 'changes') return changesGallery(window.location.search);
   return <App registry={galleryRegistry(params.get('activity'))} deviceName="G16" />;
 }
 

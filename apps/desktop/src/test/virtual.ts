@@ -4,6 +4,8 @@
 // mounts and replaces the initial size with 0 × 0. So tests give elements a box instead. Real
 // scrolling is covered in e2e.
 
+import { onTestFinished } from 'vitest';
+
 export interface Size {
   width: number;
   height: number;
@@ -40,4 +42,49 @@ export function mockLayout(size: Size = TEST_VIEWPORT): () => void {
       if (descriptor) Object.defineProperty(prototype, property, descriptor);
     });
   };
+}
+
+/** The farthest an element scrolls, as a browser has it: its content's height less its own. */
+export function maxScroll(element: HTMLElement): number {
+  return Math.max(0, element.scrollHeight - element.clientHeight);
+}
+
+/**
+ * jsdom has no Element.scrollTo and no scroll sizes, so the virtualiser cannot move the view: until
+ * the test ends, the content is as tall as the virtualiser's sizer, the box as tall as the 600 px
+ * every element reports (`mockLayout`), and scrollTo moves the view within it and sends the scroll
+ * event a task later, as a browser does. The diff's region and the virtualised lists use it.
+ */
+export function mockScrolling() {
+  const prototype = HTMLElement.prototype;
+  Object.defineProperties(prototype, {
+    clientHeight: {
+      configurable: true,
+      get(this: HTMLElement) {
+        return this.offsetHeight;
+      },
+    },
+    scrollHeight: {
+      configurable: true,
+      get(this: HTMLElement) {
+        const sizer = this.firstElementChild;
+        const content = sizer instanceof HTMLElement ? Number.parseFloat(sizer.style.height) : Number.NaN;
+        return Math.max(this.offsetHeight, Number.isNaN(content) ? 0 : content);
+      },
+    },
+    scrollTo: {
+      configurable: true,
+      writable: true,
+      value(this: HTMLElement, options?: ScrollToOptions) {
+        if (options?.top === undefined) return;
+        this.scrollTop = Math.min(Math.max(0, options.top), maxScroll(this));
+        setTimeout(() => {
+          this.dispatchEvent(new Event('scroll'));
+        }, 0);
+      },
+    },
+  });
+  onTestFinished(() => {
+    for (const property of ['clientHeight', 'scrollHeight', 'scrollTo']) Reflect.deleteProperty(prototype, property);
+  });
 }

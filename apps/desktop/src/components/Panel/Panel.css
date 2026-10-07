@@ -22,6 +22,11 @@
   border-bottom: var(--border-width) solid var(--color-border-default);
 }
 
+.panel__header[data-leading] {
+  gap: var(--space-6);
+  padding-left: var(--space-6);
+}
+
 .panel__title {
   margin: 0;
   font-size: var(--font-size-heading);

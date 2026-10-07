@@ -1,0 +1,340 @@
+/* The commit box (workspace-history handoff §4.1) and the narrow window's commit bar (§4.7). */
+
+.commit-box {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--space-10);
+  padding: var(--space-12);
+}
+
+/* Notes in the box: the block banner in the small text (§4.3). */
+.commit-box .banner,
+.commit-bar .banner {
+  font-size: var(--font-size-small);
+}
+
+/* The field group: one input frame around the summary, the description and the footer. */
+.commit-box__group {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: var(--border-width) solid var(--color-input-border);
+  border-bottom-color: var(--color-input-border-bottom);
+  border-radius: var(--radius-control);
+  background: var(--color-input-background);
+}
+
+/* A field and, while Generate runs, the skeleton bars over it (§4.2). */
+.commit-field {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.commit-field[data-writing] input,
+.commit-field[data-writing] textarea,
+.commit-field[data-writing] input::placeholder,
+.commit-field[data-writing] textarea::placeholder {
+  color: transparent;
+}
+
+.commit-field__skeleton {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-8);
+  padding: 0 var(--space-10);
+  pointer-events: none;
+}
+
+.commit-field__skeleton[data-bars='3'] {
+  justify-content: flex-start;
+  padding-block: var(--space-12);
+}
+
+.commit-field__skeleton .skeleton__bar {
+  height: var(--space-10);
+}
+
+.commit-box__summary,
+.commit-box__description,
+.commit-bar__summary,
+.commit-bar__description-field {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
+  outline: none;
+}
+
+.commit-box__summary,
+.commit-bar__summary {
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-strong);
+}
+
+.commit-box__summary {
+  height: var(--size-composer-summary);
+  padding: 0 var(--space-10);
+  border-bottom: var(--border-width) solid var(--color-border-default);
+}
+
+/* Three rows that grow to six, then scroll. */
+.commit-box__description,
+.commit-bar__description-field {
+  width: 100%;
+  min-height: calc(3lh + 2 * var(--space-8));
+  max-height: calc(6lh + 2 * var(--space-8));
+  padding: var(--space-8) var(--space-10);
+  font-size: var(--font-size-label);
+  line-height: var(--font-line-height-body);
+  resize: none;
+  field-sizing: content;
+}
+
+.commit-box__summary::placeholder,
+.commit-box__description::placeholder,
+.commit-bar__summary::placeholder,
+.commit-bar__description-field::placeholder {
+  color: var(--color-text-tertiary);
+  opacity: 1;
+}
+
+.commit-box__summary:focus-visible,
+.commit-box__description:focus-visible,
+.commit-bar__description-field:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: calc(-1 * var(--focus-ring-width));
+}
+
+.commit-box__summary[readonly],
+.commit-box__description[readonly],
+.commit-bar__summary[readonly],
+.commit-bar__description-field[readonly] {
+  background: var(--color-input-background-readonly);
+}
+
+.commit-box__footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  box-sizing: border-box;
+  height: var(--size-commit-box-footer);
+  padding: 0 var(--space-6) 0 var(--space-10);
+  border-top: var(--border-width) solid var(--color-border-guide);
+}
+
+.commit-box__status {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+}
+
+/* "DeepSeek is writing…" with its spinner, and "Use template" while a commit waits (§4.2). */
+.commit-status {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-6);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-small);
+  white-space: nowrap;
+}
+
+.commit-status .spinner {
+  flex: none;
+}
+
+.commit-status__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.commit-status .button {
+  flex: none;
+}
+
+.commit-bar__status {
+  display: flex;
+}
+
+/* "Written by DeepSeek. Change anything you like." (§4.2). */
+.commit-written {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-6);
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-small);
+}
+
+.commit-written__icon {
+  flex: none;
+  margin-top: var(--space-2);
+}
+
+/* The split button: the message and its options chevron, joined. */
+.commit-message {
+  display: flex;
+  flex: none;
+}
+
+.commit-message .button {
+  border-color: var(--color-border-control);
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+
+.commit-message .icon-button {
+  margin-inline-start: calc(-1 * var(--border-width));
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+}
+
+/* The commit button: full width, 34 px, the shortcut at 80 % (decision 36). */
+.commit-button {
+  display: flex;
+}
+
+.commit-button .button {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--font-size-small);
+}
+
+.commit-button__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.commit-button__keys {
+  opacity: var(--opacity-shortcut-hint);
+  font-weight: var(--font-weight-regular);
+}
+
+/* A button that cannot act now is pending, not disabled, so it keeps the focus and its place in
+   the tab order (§4.2): it looks disabled. */
+.commit-box .button[data-pending],
+.commit-bar .button[data-pending] {
+  border-color: var(--color-border-default);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-tertiary);
+}
+
+.commit-box .icon-button[data-pending],
+.commit-bar .icon-button[data-pending] {
+  color: var(--color-text-tertiary);
+}
+
+.commit-block {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-6);
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-small);
+}
+
+.commit-block__icon {
+  flex: none;
+  margin-top: var(--space-2);
+}
+
+/* The narrow window's bar (§4.7): pinned under the list, the whole panel width. */
+.commit-bar {
+  position: relative;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding: var(--space-10);
+  overflow: visible;
+}
+
+.commit-bar__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.commit-bar__row > .commit-field {
+  flex: 1;
+}
+
+.commit-bar__summary {
+  height: var(--size-commit-bar-field);
+  padding: 0 var(--space-10);
+  border: var(--border-width) solid var(--color-input-border);
+  border-bottom-color: var(--color-input-border-bottom);
+  border-radius: var(--radius-control);
+  background: var(--color-input-background);
+}
+
+.commit-bar__summary:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.commit-bar__row .icon-button {
+  width: var(--size-commit-bar-field);
+  height: var(--size-commit-bar-field);
+}
+
+/* The description opens under the summary and the list above gives it room: its height follows
+   and it fades, at once with reduced motion (§14). Closed, it takes no room and no focus. */
+.commit-bar__description {
+  display: grid;
+  grid-template-rows: 0fr;
+  margin-top: calc(-1 * var(--space-8));
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    grid-template-rows var(--motion-duration-fast) var(--motion-easing-standard),
+    margin-top var(--motion-duration-fast) var(--motion-easing-standard),
+    opacity var(--motion-duration-fast) var(--motion-easing-standard),
+    visibility 0s linear var(--motion-duration-fast);
+}
+
+.commit-bar__description[data-open] {
+  grid-template-rows: 1fr;
+  margin-top: 0;
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+.commit-bar__description-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.commit-bar__description-field {
+  display: block;
+  border: var(--border-width) solid var(--color-input-border);
+  border-bottom-color: var(--color-input-border-bottom);
+  border-radius: var(--radius-control);
+  background: var(--color-input-background);
+}
+
+/* A short window (500 × 320): the description opens over the list's lower half instead of
+   squeezing the list below two rows. */
+.commit-bar__description[data-over] {
+  position: absolute;
+  right: var(--space-10);
+  bottom: calc(100% + var(--space-panel-gap));
+  left: var(--space-10);
+  margin-top: 0;
+}
+
+.commit-bar__description[data-over] .commit-bar__description-inner {
+  border-radius: var(--radius-control);
+  box-shadow: var(--shadow-menu);
+}

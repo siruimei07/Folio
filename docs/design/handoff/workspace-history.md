@@ -87,6 +87,15 @@ app-shell §2–§4.
   the workspace's items plus its tag and settings changes, formatted "1"…"999", then "999+"; hidden
   at zero and while the first commit runs. Its accessible name is "Changes, 10 changes".
 
+**As built (2026-10-06, lane `feat/ui-changes-view`, Sirui's decision A):** the Changes view keeps
+its three columns only in a window at least `size.changes-narrow-breakpoint` (1,000 px) wide. Below
+that it uses its narrow layout of 2.2 (the list over the full width, the commit bar pinned under it,
+the diff over the list with "Back"), while the title bar, toolbar, rail and the other views stay wide
+down to `size.narrow-breakpoint` (760 px). Reason: the list (290) and the commit lane (320) do not
+shrink, so the diff got about 66 px at 760, 106 px at 800 and 206 px at 900; it gets 306 px at
+1,000 and 406 px at 1,100 (measured in the browser pane). The view reads the window width with a media query from the token
+constant (`changes/windowQuery.ts`) and marks itself `data-narrow` for its stylesheets.
+
 ### 2.2 Narrow (window < 760 px)
 
 Boards `m2-11`–`m2-17` (680 × 720 and the 500 × 320 minimum). The 40 px bar and the 48 px rail are
@@ -94,7 +103,8 @@ app-shell §2; panels start 6 px below the bar.
 
 - **Changes (30B):** the changes list takes the full width; under it, `space.panel-gap` apart, the
   commit bar (section 4.7) is pinned to the bottom edge. The "Not synced" card is not shown; its
-  commits and their actions are in History.
+  commits and their actions are in History. As built, the Changes view takes this layout below
+  1,000 px already (2.1).
 - **Opening a change or a version:** the diff covers the list (app-shell 16A) with "Back" first in
   its header ("Back to changes" / "Back to history" as the accessible name). Esc and Alt+Left also go
   back. The list keeps its scroll position and selection.
@@ -235,7 +245,17 @@ Each state replaces the list body (library-actions §2.5 state block, in the lis
 | History read-only (`historyState: readOnly`) | Warning banner, `lock`: "History is read-only." "A newer version of Folio changed it. Update Folio to commit." | Disabled |
 | History damaged (`historyState: damaged`) | Danger banner: "Folio can't read this library's history." "Your files are fine, but you can't commit until it's fixed." | Disabled |
 | First commit running or failed | Section 10 | Hidden |
-| Committing | Rows and the header check box at 55 % opacity, inert; the selection still moves and the diff still shows | 4.4 |
+| Committing | The check boxes (each row's, each course header's and the header's select-all) at 55 % opacity (`opacity.busy`), inert; the rows keep full contrast, the selection still moves and the diff still shows (as built, below) | 4.4 |
+
+**As built (2026-10-06, lane `feat/ui-changes-view`, Sirui's decision A):** while a commit runs, only
+the check boxes fade, not the rows. Fading whole rows to 55 % dropped their text to about 2.1–3.9:1
+contrast and dimmed the focus ring and the selection bar, on rows that stay operable (the selection
+moves, the diff shows, the context menu opens): below WCAG 2.1 AA (1.4.3 text 4.5:1, 1.4.11 focus
+indicator 3:1), which CLAUDE.md §5 sets as the baseline. The boxes are the only part that does
+nothing during the commit, so they alone show it: a row's and a course header's box from 150 ms
+into the commit (the "Committing…" delay), the header's select-all from the start (it is disabled,
+3.1). A box that cannot change anyway (3.4) keeps its 45 %. Row text, icons, status, selection and
+focus ring stay at full contrast.
 
 ### 3.9 Long lists
 
@@ -372,6 +392,13 @@ Board `m2-11`, `m2-12`: a panel card pinned to the bottom (padding 10, gap 8, fu
 - Row 2: the commit button as in 4.1.
 - States and notes are those of 4.2–4.5; notes appear between the rows. At 500 × 320 the description
   opens over the list's lower half rather than squeezing it below two rows.
+- As built (`feat/ui-changes-view`): the description also opens when Generate starts (its skeleton
+  bars) and when a fill writes text into it (Generate's message, Ctrl+Z), so a commit never carries
+  a description the person did not see; closed with text in it, its toggle reads "Show the
+  description". Over the list (a short window) it opens by itself only while the focus is in the
+  bar (or, when the window turns short, comes from the commit box's description), and closes once
+  the focus moves to another part of the view, so it never hides the focused row or the diff
+  (WCAG 2.4.7); its text stays.
 
 ## 5. "Not synced" (31A)
 
@@ -779,6 +806,8 @@ Toasts follow library-actions §2.4 (`m2-09`).
 | Commit with template after an AI failure | Information: "Committed with a template message" (4.3), "Edit message" | — |
 | Commit failed | — (note in the commit box, `role="alert"`) | — |
 | Generate failed | — (note, `role="status"`) | — |
+| Generate done | — (note "Written by DeepSeek…") | "Written by DeepSeek. Change anything you like." (polite; added at build, WCAG 4.1.3) |
+| Template written ("Use template" in the commit box) | — | "Added the template message." (polite; added at build) |
 | Restore done / unchanged / failed | Success / information / — (8.3) | — |
 | Message saved | Success: "Saved the new message" | — |
 | Undo commit done / failed | Information / error (9.2) | — |

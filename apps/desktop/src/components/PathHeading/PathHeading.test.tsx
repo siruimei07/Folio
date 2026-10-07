@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { Course } from '../../ipc';
 import { headingPrefix } from '../../lib/places';
-import { PathHeading } from './PathHeading';
+import { PathHeading, PathText } from './PathHeading';
 
 function course(path: string, code: string | null, name: string): Course {
   return { folder: { id: path, path }, name, abbr: null, code, color: null, archived: false, files: 0 };
@@ -49,5 +49,17 @@ describe('PathHeading', () => {
     render(<PathHeading icon={null} prefix="" name="Library settings" />);
     const heading = screen.getByRole('heading', { level: 2, name: 'Library settings' });
     expect(heading.querySelector('.path-heading__label, .path-heading__path')).toBeNull();
+  });
+});
+
+describe('PathText', () => {
+  it("cuts a row's path as the heading does, with no heading, and the whole path in its tooltip", () => {
+    const { container } = render(<PathText label="MAT232/" prefix="Problem sets/" name="ps2 solutions.md" />);
+    expect(screen.queryByRole('heading')).toBeNull();
+    const path = container.querySelector('.path-text');
+    expect(path).toHaveAttribute('title', 'MAT232/Problem sets/ps2 solutions.md');
+    expect(path?.querySelector('.path-heading__label')).toHaveTextContent(/^MAT232\/$/);
+    expect(path?.querySelector('.path-heading__path')).toHaveTextContent(/^Problem sets\/$/);
+    expect(path?.querySelector('.path-heading__name')).toHaveTextContent('ps2 solutions.md');
   });
 });

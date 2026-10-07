@@ -1065,6 +1065,12 @@ For later lanes:
    `ipc/ai.rs` until then) and opens the confirmation of §12.3 with the shell's dialog module.
 3. `feat/ui-changes-view`: a `required` item's check box (§6.2) has no design yet: on and
    disabled is the suggestion, with the bound item's banner as its reason.
+   - 2026-10-06, `feat/ui-changes-view`: built that way: on and disabled, its reason the row's
+     description ("Always in the commit…"); select-all and a place header count
+     `selected - required` of `available - required` (§6.4); a check box change that would make a
+     selection name more than `LIMITS.batch` keys (§5.1) is refused as a whole with a toast. The
+     view runs on the fake shell; the real shell's commands come with `feat/core-workspace` and
+     `feat/core-commit-history` (ui-architecture §8.4).
 
 ## 20. Next lanes
 

@@ -183,6 +183,59 @@ describe('activity words', () => {
     expect(describeJob(t, { job: cancelled('scan') }, now, 'en').title).toBe('Scan cancelled');
     expect(describeJob(t, { job: failed('hash') }, now, 'en').title).toBe("Couldn't check files");
   });
+
+  it('words commits by their changes and the bytes they have read (handoff §4.4, §10)', () => {
+    const now = Date.now();
+    const row = (item: ActivityJob) => describeJob(t, item, now, 'en');
+    const MB = 1024 * 1024;
+    /** A commit 3 files of 8 in, `done` of `total` bytes read. */
+    const reading = (kind: 'commit' | 'firstCommit', done: number, total: number): Job => ({
+      id: `${kind}-reading`,
+      kind,
+      cancellable: true,
+      status: {
+        state: 'running',
+        progress: {
+          done: 3,
+          total: 8,
+          permille: Math.floor((done / total) * 1000),
+          bytes: { done: String(Math.round(done)), total: String(Math.round(total)) },
+          current: 'MAT232/Midterm review.md',
+        },
+      },
+    });
+
+    expect(row({ job: reading('commit', 12.4 * MB, 48 * MB), changes: 9 })).toMatchObject({
+      look: 'running',
+      title: 'Committing 9 changes',
+      meta: '12.4 of 48.0 MB',
+      percent: 25,
+      current: 'MAT232/Midterm review.md',
+      cancelLabel: 'Cancel commit',
+    });
+    expect(row({ job: reading('commit', 300, 900), changes: 1 })).toMatchObject({ title: 'Committing 1 change', meta: '300 of 900 B' });
+    expect(row({ job: queued('commit'), changes: 9 })).toMatchObject({ look: 'queued', title: 'Committing 9 changes', meta: 'Waiting' });
+    // A commit started before a reload: the UI did not note its changes.
+    expect(row({ job: reading('commit', 2 * MB, 4 * MB) }).title).toBe('Committing changes');
+    // No bytes yet: the files it has read.
+    expect(row({ job: running('commit', 3, 8), changes: 9 }).meta).toBe('3 of 8 files');
+
+    expect(row({ job: reading('firstCommit', 1.2 * 1024 * MB, 3.4 * 1024 * MB) })).toMatchObject({
+      title: 'Starting history',
+      meta: '1.2 of 3.4 GB',
+      percent: 35,
+      cancelLabel: 'Cancel starting history',
+    });
+
+    const committed: Job = {
+      ...queued('commit'),
+      cancellable: false,
+      status: { state: 'done', result: { kind: 'commit', commit: `b3:${'a'.repeat(64)}`, summary: 'MAT232: add lecture 6', changes: 9 } },
+    };
+    expect(row({ job: committed, changes: 9 })).toMatchObject({ look: 'success', title: 'Committed 9 changes', meta: 'MAT232: add lecture 6' });
+    expect(row({ job: failed('commit') })).toMatchObject({ look: 'danger', title: "Couldn't commit", meta: errors.AccessDenied });
+    expect(row({ job: cancelled('commit'), changes: 9 })).toMatchObject({ look: 'cancelled', title: 'Commit cancelled', meta: null });
+  });
 });
 
 describe('Activity', () => {

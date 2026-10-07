@@ -8,29 +8,38 @@ import { SIZE } from '../tokens/tokens';
 
 export type Layout = 'wide' | 'narrow';
 
-let narrowQuery: MediaQueryList | undefined;
-
-/** One query list for the whole app, narrow below `size.narrow-breakpoint` (760 px). */
-function narrow(): MediaQueryList {
-  narrowQuery ??= window.matchMedia(`(width < ${String(SIZE.narrowBreakpoint)}px)`);
-  return narrowQuery;
+/** A media query for `useSyncExternalStore`: whether it matches, and its changes. */
+export interface WindowQuery {
+  subscribe: (onChange: () => void) => () => void;
+  matches: () => boolean;
 }
+
+/** One query list for `query`, made on first use, then kept. */
+export function windowQuery(query: string): WindowQuery {
+  let list: MediaQueryList | undefined;
+  const listOf = () => (list ??= window.matchMedia(query));
+  return {
+    subscribe: (onChange) => {
+      const current = listOf();
+      current.addEventListener('change', onChange);
+      return () => {
+        current.removeEventListener('change', onChange);
+      };
+    },
+    matches: () => listOf().matches,
+  };
+}
+
+/** The whole app's layout: narrow below `size.narrow-breakpoint` (760 px). */
+const narrow = windowQuery(`(width < ${String(SIZE.narrowBreakpoint)}px)`);
 
 export function currentLayout(): Layout {
-  return narrow().matches ? 'narrow' : 'wide';
-}
-
-function subscribe(onChange: () => void): () => void {
-  const list = narrow();
-  list.addEventListener('change', onChange);
-  return () => {
-    list.removeEventListener('change', onChange);
-  };
+  return narrow.matches() ? 'narrow' : 'wide';
 }
 
 /** The layout now, re-rendering when the window crosses the breakpoint. */
 export function useLayout(): Layout {
-  return useSyncExternalStore(subscribe, currentLayout);
+  return useSyncExternalStore(narrow.subscribe, currentLayout);
 }
 
 /**
@@ -42,5 +51,5 @@ export function watchLayout(root: HTMLElement = document.documentElement): () =>
     root.dataset.layout = currentLayout();
   };
   apply();
-  return subscribe(apply);
+  return narrow.subscribe(apply);
 }

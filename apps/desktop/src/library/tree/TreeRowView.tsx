@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { CourseBadge } from '../../components/CourseBadge/CourseBadge';
 import { CourseLabel } from '../../components/CourseLabel/CourseLabel';
 import { FileTypeIcon } from '../../components/FileTypeIcon/FileTypeIcon';
+import { SelectionIndicator } from '../../components/SelectionIndicator/SelectionIndicator';
 import { courseTitle } from '../../lib/courses';
 import { formatNumber } from '../../lib/format';
 import { nameOf } from '../../lib/paths';
@@ -165,7 +166,7 @@ export const TreeRowView = memo(function TreeRowView({ item, selected, count, ta
       style={{ '--depth': depth } as CSSProperties}
     >
       {guides}
-      {selected && drop === null && <span className="tree-row__bar" aria-hidden />}
+      {selected && drop === null && <SelectionIndicator />}
       {body}
     </div>
   );

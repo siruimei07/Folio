@@ -43,6 +43,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useFocusKeeper } from '../../components/collections/useFocusKeeper';
 import { OVERSCAN } from '../../components/collections/useVirtualRows';
 import { DIFF_WINDOW_ROWS, type DiffWindows, uniqueWindows, windowId } from '../../data/diff';
 import { useSettled } from '../../data/paged';
@@ -50,7 +51,6 @@ import type { DiffWindow, TagChange } from '../../ipc';
 import { SIZE, SPACE } from '../../tokens/tokens';
 import { InfoNote } from '../EventNote';
 import { TagsBlock } from '../MetadataDetail';
-import { useFocusKeeper } from '../useFocusKeeper';
 import { useRetry, useRetryAnnouncement } from '../useRetry';
 import {
   buildLayout,

@@ -23,6 +23,17 @@ export function eventIndex(target: EventTarget, container: Element): number | nu
   return Number.isInteger(index) ? index : null;
 }
 
+/**
+ * Where a menu opened from the keyboard (Shift+F10, the Menu key) goes: under the name of the row
+ * the key was pressed in, which the row marks `data-menu-anchor`, else under the row
+ * (library-actions §2.7).
+ */
+export function keyboardMenuAnchor(target: EventTarget | null): { x: number; y: number } {
+  const row = target instanceof Element ? target.closest('[data-index]') : null;
+  const box = (row?.querySelector('[data-menu-anchor]') ?? row)?.getBoundingClientRect();
+  return box === undefined ? { x: 0, y: 0 } : { x: box.left, y: box.bottom };
+}
+
 /** The collection element's handlers that pass pointer events on to `handlers` by item. */
 export function delegateRowEvents(isItem: (index: number) => boolean, handlers: RowPointerHandlers) {
   const itemOf = (event: MouseEvent | PointerEvent): number | null => {
