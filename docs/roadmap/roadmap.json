@@ -5,7 +5,7 @@
     "owner": "Sirui",
     "repo": "https://github.com/siruimei07/Folio",
     "explorer": "https://claude.ai/artifact/Mv1f9eXfrkYTbAs7fqQVDC",
-    "updated": "2026-10-06T19:00-04:00",
+    "updated": "2026-10-06T20:50-04:00",
     "updatedBy": "Claude Code",
     "models": {
       "fable": "Fable 5.1",
@@ -17,12 +17,13 @@
     ]
   },
   "now": {
-    "stage": "M2 实现：对象库已合并，下一步工作区核心；工作区视图和历史视图在做",
+    "stage": "M2 实现：已暂停（10-07，算力让给模型训练），等 Sirui 说继续",
     "focus": "M2",
     "summary": [
-      "10-06 已合并：对象库 `feat/core-object-store`（d5f9e628：folio-core 的 store 模块，历史格式 1 的对象、pack、本机存储和 catalog 索引，golden vectors 20 个全过；6 轮审计加 1 轮专项复查，M2 规模下 5 万个文件的检查峰值 34 MB 以内）；iCloud 启动后拒绝回收的修复（28de0ac1）；差异组件、AI 设置页。",
-      "接下来：`feat/core-workspace`（关键路径第二步，开工）；`feat/core-text-extract`（用第 4 号迁移接着做）。子代理进行中：`feat/ui-changes-view`（L）、`feat/ui-history-view`（前 7 步做完，等工作区视图合并后做第 8 步，GitButler 已把它叠在工作区视图上）。之后：`feat/ipc-recycle-cloud-trash`（等两个界面 lane 合并）。",
-      "你 10-06 授权：之后的判断由路线图会话自己定、自己合并，事后汇报（决策 m2-subagents）。和模型训练会话共用内存：它跑大任务时路线图会话暂停或只跑轻量任务。要你做的：打开 iCloud for Windows，之后重跑回收站的真实 iCloud 测试。Codex：`test/core-sync-simulation` 还在改。",
+      "10-07 暂停：Sirui 把算力调给模型训练，路线图会话在 00:40 UTC 停了所有子代理。恢复说明（每条 lane 的准确恢复参数、合并顺序、下一批 lane）在 folio-agent-work/roadmap-session/m2-resume.md。暂停时：`feat/core-text-extract` 停在第 2 轮修复；`feat/core-workspace` 停在第 6/6 步（3 个文件未提交）；`feat/ui-changes-view` 停在收尾检查；`feat/ui-history-view` 前 7 步完成，等工作区视图合并后做第 8 步。",
+      "已合并（M2）：M2 合约、AI 设置页、差异组件、对象库（d5f9e628）、选择汇总加两个计数（eeca7697），以及回收站两个修复、标签丢失修复、问题列表两个偶发测试的修复。main eeca7697，CI 37543999060 绿。",
+      "恢复后的顺序：正文抽取 → 工作区视图 → 历史视图；工作区核心（叠在正文抽取上）合并后开 `feat/core-commit-history`（关键路径）；正文抽取合并后加 `feat/ipc-extract-followups`（搜索结果随正文刷新、损坏文档的文案）；两个界面 lane 合并后开 `feat/ipc-recycle-cloud-trash`。预计恢复后约 3 天写完 M2 代码，再加 Sirui 试用 v0.2 一两周。",
+      "你 10-06 授权：之后的判断由路线图会话自己定、自己合并，事后汇报（决策 m2-subagents）。和模型训练会话共用内存：它跑大任务时路线图会话暂停或只跑轻量任务。要你做的：说继续即可；重启后 20 分钟内提醒路线图会话跑一次回收站的真实 iCloud 测试。",
       "按你批准的 versioning.md §19：差异和恢复也等正文抽取；AI 提交说明等差异做完再开；M3 新增 `feat/core-retention`（Word 旧版本稀疏保留）；M1 的三处资料库细节由新的 `feat/ui-library-m1-notes` 做。关键路径：工作区 → 提交和历史 → 差异和恢复 → AI 提交说明 → M2 验收。",
       "模型：Fable 5.1 暂停（你 10-03 的决定）：推荐给它的 lane（关卡、规格、IPC 合约、推理强度 max）都由 Opus 5.5 用同样的推理强度代替；界面、核心、测试、设计用 Opus 5.5，只改文档和只合并的用 Sonnet 5.5。恢复时删掉 meta.pausedModels 里的 fable 即可。",
       "Codex 的项目级 skills（`AGENTS.md`、`.agents/skills/`、`.codex/`、`.claude/skills/`）和 CLAUDE.md 里的两处改动不进仓库，由 Codex 管理：任何 lane 都不提交、不丢弃。"
@@ -2013,6 +2014,34 @@
         "feat/ipc-m2-contract"
       ],
       "summary": "工作区视图审计提出课程标题计数和必须提交条目的问题：记下决策 m2-summary-counts，加合约 lane feat/ipc-workspace-summary-counts",
+      "status": "done",
+      "updated": "2026-10-06",
+      "landed": "2026-10-06",
+      "gates": {
+        "check": "pass",
+        "e2e": "na",
+        "codeReview": "na",
+        "securityReview": "na",
+        "simplify": "na",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "docs/roadmap/roadmap.json"
+      ]
+    },
+    {
+      "id": "docs/docs-roadmap-m2-paused",
+      "title": "M2 暂停时的路线图刷新",
+      "milestone": "M2",
+      "phase": "m2-impl",
+      "track": "flow",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "feat/ipc-workspace-summary-counts"
+      ],
+      "summary": "Sirui 把算力调给模型训练：记下暂停时各 lane 的状态和恢复说明的位置，标记 iCloud 回收站 NFD 文件那条待办已解决",
       "status": "done",
       "updated": "2026-10-06",
       "landed": "2026-10-06",
@@ -4434,8 +4463,8 @@
       "lane": "feat/ui-changes-view"
     },
     {
-      "state": "open",
-      "item": "iCloud for Windows 从 10-06 起每 30 秒重试删除 iCloud Drive 回收站里的 .Trash\\FolioFieldTest\\t04-names（里面是实测留下的 NFD 名字文件 t04-twin-é.txt），一直删不掉：Sirui 可以在 iPad 或 iCloud.com 的「最近删除」里把它彻底删掉（Folio 不做永久删除）",
+      "state": "done",
+      "item": "iCloud for Windows 从 10-06 起每 30 秒重试删除 iCloud Drive 回收站里的 .Trash\\FolioFieldTest\\t04-names（里面是实测留下的 NFD 名字文件 t04-twin-é.txt），一直删不掉：Sirui 可以在 iPad 或 iCloud.com 的「最近删除」里把它彻底删掉（Folio 不做永久删除）（10-06 解决：路线图会话把那个 NFD 名字的测试文件送进 Windows 回收站，iCloud 随后删掉了文件夹，不再重试）",
       "lane": "docs/specs-sync"
     },
     {
@@ -4874,6 +4903,11 @@
       "at": "2026-10-06",
       "by": "Claude Code",
       "text": "合并：fix/ui-problems-race-flake（eb5032a6：问题列表每页只渲染新行，竞态测试有实测等待）。决策 m2-summary-counts，新增 feat/ipc-workspace-summary-counts"
+    },
+    {
+      "at": "2026-10-07",
+      "by": "Claude Code",
+      "text": "暂停 M2 子代理（算力给模型训练）；恢复说明在 folio-agent-work/roadmap-session/m2-resume.md。iCloud 本机回收站里的 NFD 测试文件已送进回收站，iCloud 不再重试"
     }
   ]
 }
