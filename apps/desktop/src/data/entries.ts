@@ -1,7 +1,8 @@
 // Entries (docs/specs/ipc-m1.md §9): folder children and filtered files as paged lists, single
-// entries, and the changes the Library view makes. A change answers before its CatalogChanged
-// arrives; the event refreshes the lists it touched and moves the references the UI holds
-// (`events.ts`), so a row keeps its place until the catalog reports the change.
+// entries, a folder found by its path, and the changes the Library view makes. A change answers
+// before its CatalogChanged arrives; the event refreshes the lists it touched and moves the
+// references the UI holds (`events.ts`), so a row keeps its place until the catalog reports the
+// change.
 import { useQueries, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import { useCallback, useRef } from 'react';
 
@@ -13,11 +14,12 @@ import {
   type EntryRow,
   type EntrySort,
   ipc,
+  LIMITS,
   type MoveEntries,
   type Page,
   type RenameEntry,
 } from '../ipc';
-import { unwrap } from './errors';
+import { IpcFailure, unwrap } from './errors';
 import { keys, libraryQuery, NO_ENTRY } from './keys';
 import { useBatchMutation, useCommandMutation } from './mutations';
 import {
@@ -145,6 +147,50 @@ export function useFiles(
     range,
     options,
   );
+}
+
+/** The order `findFolder` reads a level in; any key would do, since folders come first. */
+const FIND_SORT: EntrySort = { key: 'name', descending: false };
+
+/**
+ * The folder `path` names among the children of `parent` (`null`: the library root), read in pages
+ * until it, the first file row (folders come first, ipc-m1 §5.3) or the end; `null` if none.
+ */
+async function childFolder(parent: EntryRef | null, path: string): Promise<EntryRef | null> {
+  let offset = 0;
+  for (;;) {
+    const page = await unwrap(
+      ipc.listChildren({ folder: parent, sort: FIND_SORT, page: { offset, limit: LIMITS.pageSize } }),
+    );
+    for (const row of page.items) {
+      if (row.kind === 'file') return null;
+      if (row.path === path) return { id: row.id, path: row.path };
+    }
+    offset += page.items.length;
+    if (page.items.length === 0 || offset >= page.total) return null;
+  }
+}
+
+/**
+ * The folder at `path` (below the library root, `/` between names), for a command that needs its
+ * `EntryRef` when only its path is known, such as the folder too large for history
+ * (ipc-m2 §19 item 5). It walks `list_children` from the root one name at a time; the path must
+ * match exactly, case included, as references do (ipc-m1 §5.1). Fails as an `IpcFailure`:
+ * `NotFound` for a path that names no folder (a file, nothing, or the root), otherwise what a read
+ * failed with. It asks the shell directly, without the cache: it runs once per press. A change
+ * between two pages of a level can hide the folder, which then reads as moved (`NotFound`).
+ */
+export async function findFolder(path: string): Promise<EntryRef> {
+  const names = path.split('/');
+  let folder: EntryRef | null = null;
+  if (!names.includes('')) {
+    for (let depth = 1; depth <= names.length; depth++) {
+      folder = await childFolder(folder, names.slice(0, depth).join('/'));
+      if (folder === null) break;
+    }
+  }
+  if (folder === null) throw new IpcFailure({ code: 'NotFound', detail: 'no folder at that path' });
+  return folder;
 }
 
 /** One entry's row, such as the previewed file's; `null` asks for nothing. */

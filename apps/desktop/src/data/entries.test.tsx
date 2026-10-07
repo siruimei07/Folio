@@ -1,13 +1,15 @@
 // The entry mutations against the fake shell (ipc-m1 §9.2): their answers, the CatalogChanged that
 // refreshes the lists and moves held references, batches that keep every failed item, and stale
-// references, whose lists are refreshed at once.
+// references, whose lists are refreshed at once. Also a folder found by its path.
 import { waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { type EntryRef, ipc } from '../ipc';
+import { type EntryRef, ipc, LIMITS, type ListChildren } from '../ipc';
+import type { FakeShell } from '../ipc/mock/shell';
 import { BY_NAME, FIRST_ROWS, followUntilTestEnds, NOW, smallRef } from '../test/data';
 import { renderAppHook } from '../test/render';
 import {
+  findFolder,
   useChildren,
   useCreateFolder,
   useDeleteEntries,
@@ -58,6 +60,91 @@ describe('useFolderChildren', () => {
 
     const page = await result.current[0]?.loadPage(0);
     expect(page?.items.map((row) => row.name)).toContain('hw1.py');
+  });
+});
+
+/** One `list_children` call as `findFolder` asked it: the folder (`null`: the root) and the window. */
+interface Asked {
+  folder: string | null;
+  offset: number;
+  limit: number;
+}
+
+/**
+ * Makes the shell answer `list_children` with at most `rows` rows a page, as if the levels were
+ * long, and records each call as asked; `rows` undefined only records.
+ */
+function listChildrenCalls(shell: FakeShell, rows?: number): Asked[] {
+  const asked: Asked[] = [];
+  const invoke = shell.invoke.bind(shell);
+  vi.spyOn(shell, 'invoke').mockImplementation((command, payload) => {
+    if (command !== 'list_children') return invoke(command, payload);
+    const { request } = payload as { request: ListChildren };
+    asked.push({ folder: request.folder?.path ?? null, offset: request.page.offset, limit: request.page.limit });
+    const page = { ...request.page, limit: rows ?? request.page.limit };
+    return invoke(command, { request: { ...request, page } });
+  });
+  return asked;
+}
+
+describe('findFolder', () => {
+  it('walks from the root to a folder, name by name, and answers its reference', async () => {
+    const { shell } = renderAppHook(() => null, { now: NOW });
+    const asked = listChildrenCalls(shell);
+
+    await expect(findFolder('Personal/Photos')).resolves.toEqual(smallRef('Personal/Photos'));
+    expect(asked).toEqual([
+      { folder: null, offset: 0, limit: LIMITS.pageSize },
+      { folder: 'Personal', offset: 0, limit: LIMITS.pageSize },
+    ]);
+
+    await expect(findFolder(CSC)).resolves.toEqual(csc);
+    await expect(findFolder(`${CSC}/labs/lab2`)).resolves.toEqual(smallRef(`${CSC}/labs/lab2`));
+    await expect(findFolder('Fall 2026/ECO101 微观经济学')).resolves.toEqual(smallRef(ECO));
+  });
+
+  it('reads a long level page by page, from where the last page ended', async () => {
+    const { shell } = renderAppHook(() => null, { now: NOW });
+    const asked = listChildrenCalls(shell, 1);
+
+    await expect(findFolder('Personal/Photos')).resolves.toEqual(smallRef('Personal/Photos'));
+    // The root: Fall 2025, Fall 2026, Personal; Personal: Archive, Photos.
+    expect(asked).toEqual([
+      { folder: null, offset: 0, limit: LIMITS.pageSize },
+      { folder: null, offset: 1, limit: LIMITS.pageSize },
+      { folder: null, offset: 2, limit: LIMITS.pageSize },
+      { folder: 'Personal', offset: 0, limit: LIMITS.pageSize },
+      { folder: 'Personal', offset: 1, limit: LIMITS.pageSize },
+    ]);
+  });
+
+  it('stops at the first file of a level, since folders come first', async () => {
+    const { shell } = renderAppHook(() => null, { now: NOW });
+    const asked = listChildrenCalls(shell, 2);
+
+    // Personal: Archive, Photos | empty.txt, Old backup.zip | Todo.txt, todo.txt.
+    await expect(findFolder('Personal/Zz')).rejects.toMatchObject({ error: { code: 'NotFound' } });
+    expect(asked.filter(({ folder }) => folder === 'Personal').map(({ offset }) => offset)).toEqual([0, 2]);
+  });
+
+  it('answers NotFound for nothing there, a file, another case, an empty name or the root', async () => {
+    const { shell } = renderAppHook(() => null, { now: NOW });
+    const asked = listChildrenCalls(shell);
+    const missing = ['Personal/Videos', 'Nowhere/Photos', 'README.txt', 'Personal/Todo.txt'];
+    for (const path of [...missing, 'personal/Photos', 'Personal/photos']) {
+      await expect(findFolder(path), path).rejects.toMatchObject({ error: { code: 'NotFound' } });
+    }
+    asked.length = 0;
+    for (const path of ['', 'Personal/', '/Personal', 'Personal//Photos']) {
+      await expect(findFolder(path), path).rejects.toMatchObject({ error: { code: 'NotFound' } });
+    }
+    expect(asked).toEqual([]);
+  });
+
+  it('fails with the error a read answers', async () => {
+    const { shell } = renderAppHook(() => null, { now: NOW });
+    shell.setFailure('list_children', 'Internal');
+    await expect(findFolder('Personal/Photos')).rejects.toMatchObject({ error: { code: 'Internal' } });
   });
 });
 

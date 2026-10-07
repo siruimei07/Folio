@@ -161,7 +161,11 @@
       "DiskFull": "The disk is full. Free up some space, then commit again.",
       "ReadOnly": "A newer version of Folio changed this library. Update Folio to commit.",
       "HistoryDamaged": "Folio can't read this library's history. Your files are fine.",
-      "Busy": "Folio is rebuilding its search index. Commit again when it's done."
+      "Busy": "Folio is rebuilding its search index. Commit again when it's done.",
+      "HistoryTooLarge": {
+        "folder": "The folder {{folder}} holds more files than Folio's history can keep. Move some files out of the folder, then commit again.",
+        "library": "This library holds more files than Folio's history can keep. Move some files out of the library, then commit again."
+      }
     },
     "block": {
       "busy": "Folio is rebuilding its search index. You can commit when it's done.",

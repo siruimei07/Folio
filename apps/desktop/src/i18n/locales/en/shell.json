@@ -263,6 +263,14 @@
       "title": "Couldn't start your history",
       "text": "{{reason}} Folio also tries again the next time you open the library."
     },
-    "started": "Your history has started."
+    "started": "Your history has started.",
+    "tooLarge": {
+      "title": "History is off for this library",
+      "folder": "The folder {{folder}} holds more files than Folio's history can keep. Your files are fine. Folio tries again when the library changes, for example after you move some files out of the folder.",
+      "library": "This library holds more files than Folio's history can keep. Your files are fine. Folio tries again when the library changes, for example after you move some files out of it.",
+      "headFolder": "In this library's history, the folder {{folder}} holds more files than Folio can show. Your files are fine.",
+      "head": "This library's history is larger than Folio can show. Your files are fine.",
+      "said": "{{title}}. {{text}}"
+    }
   }
 }

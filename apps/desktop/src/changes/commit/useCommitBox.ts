@@ -10,6 +10,7 @@ import type { TFunction } from 'i18next';
 import { noteCommit } from '../../app/activity/notes';
 import { announce } from '../../app/announcer';
 import { DETAILED, showFailure } from '../../app/feedback';
+import { historyListsNothing } from '../../app/firstCommit';
 import { reportUiError } from '../../app/log';
 import { useCanOpenDialog } from '../../app/navigation';
 import type { KeyCombo } from '../../app/shortcuts';
@@ -271,12 +272,12 @@ export function useCommitBox(listFailed: boolean): CommitBoxModel {
           : null;
   const total = summary === undefined ? null : summary.items + summary.metadata;
   const count = pruned === undefined ? null : pruned.summary.items + pruned.summary.metadata;
-  const starting = historyState === 'none' || historyState === 'starting';
-  const known = summary !== undefined && !workspace.isError && !listFailed && !starting;
+  const listsNothing = historyListsNothing(historyState);
+  const known = summary !== undefined && !workspace.isError && !listFailed && !listsNothing;
   const idle = run.kind === 'idle';
 
   const ready: CommitLabel =
-    starting || total === 0
+    listsNothing || total === 0
       ? { kind: 'nothingToCommit' }
       : count === 0
         ? { kind: 'nothingSelected' }

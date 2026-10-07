@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { showChange } from '../app/changeTarget';
 import { DETAILED, LoadFailure } from '../app/feedback';
 import { COPY_PATH_KEYS, useFileActions } from '../app/fileActions';
-import { isHistoryStarting } from '../app/firstCommit';
+import { historyListsNothing } from '../app/firstCommit';
 import { FirstCommitBlock } from '../app/FirstCommitBlock';
 import { takeHistoryTarget, takeHistoryTimeline, usePendingHistoryTarget, usePendingHistoryTimeline } from '../app/historyTarget';
 import { useLayout } from '../app/layout';
@@ -371,17 +371,17 @@ function takeFocusOnShow(): boolean {
 }
 
 /**
- * Before the history has started, the first commit's block takes the focus asked of the timeline
- * (WCAG 2.4.3): "View history of this file" or "N more in History" from another view hid the control
- * that had it, and no timeline shows to take it. Once the history starts, the view's keeper hands
- * it on to the timeline.
+ * Before the history has started, or while it is too large, the first commit's block takes the
+ * focus asked of the timeline (WCAG 2.4.3): "View history of this file" or "N more in History" from
+ * another view hid the control that had it, and no timeline shows to take it. Once the history
+ * starts, the view's keeper hands it on to the timeline.
  */
-function useFirstCommitFocus(starting: boolean, section: RefObject<HTMLElement | null>): void {
+function useFirstCommitFocus(listsNothing: boolean, section: RefObject<HTMLElement | null>): void {
   const asked = useHistoryView((state) => state.focusNext);
   useLayoutEffect(() => {
     const block = section.current?.querySelector<HTMLElement>('.first-commit') ?? null;
-    if (starting && asked && block !== null && takeFocusOnShow()) block.focus({ preventScroll: true });
-  }, [starting, asked, section]);
+    if (listsNothing && asked && block !== null && takeFocusOnShow()) block.focus({ preventScroll: true });
+  }, [listsNothing, asked, section]);
 }
 
 interface TimelineAreaProps {
@@ -646,9 +646,9 @@ function HistoryScreen() {
   const filter = useHistoryPreferences((state) => state.types);
   const requested = useHistoryView((state) => state.file);
   useHistoryTarget();
-  const starting = isHistoryStarting(historyState);
+  const listsNothing = historyListsNothing(historyState);
   const firstCommitRef = useRef<HTMLElement>(null);
-  useFirstCommitFocus(starting, firstCommitRef);
+  useFirstCommitFocus(listsNothing, firstCommitRef);
   const whole = useWholeTimeline(filter);
   const oneFile = useFileTimeline(requested, filter);
   const shown = requested === null ? whole : oneFile;
@@ -669,9 +669,10 @@ function HistoryScreen() {
   return (
     <CardHostContext value={host}>
       <div ref={view} className="history-view" data-covered={covered || undefined}>
-        {starting ? (
-          // Before the history has started, the view is one panel with the first commit's block
-          // (§10), as the Changes view is, named "History" by a heading above the block's.
+        {listsNothing ? (
+          // Before the history has started, or while it is too large, the view is one panel with
+          // the first commit's block (§10), as the Changes view is, named "History" by a heading
+          // above the block's.
           <section ref={firstCommitRef} className="panel history-view__first-commit" aria-labelledby={headingId}>
             <h2 id={headingId} className="visually-hidden">
               {t('title')}
@@ -740,8 +741,9 @@ function HistoryScreen() {
  * highlighted for a while (§8, `restore/`). A commit's entry offers Edit message and Undo commit
  * (§7.3, §9; app/CommitActions.tsx). The history's own state (`get_workspace`) shows too (§7.5,
  * §10): read-only under a banner with those actions disabled, damaged as a block with Copy details,
- * and before the first commit the first commit's block in one panel. In a narrow window the panel
- * takes the width, the handle goes, and a selected row's diff covers the list until "Back" (§2.2).
+ * and before the first commit, or while the history is too large to keep, the first commit's block
+ * in one panel. In a narrow window the panel takes the width, the handle goes, and a selected row's
+ * diff covers the list until "Back" (§2.2).
  * The window shows it only while a library is open; another library gets a fresh screen.
  */
 export function HistoryView() {

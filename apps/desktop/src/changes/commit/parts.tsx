@@ -8,6 +8,7 @@ import { type KeyboardEvent, useCallback, useId, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 
+import { tooLargeFolderOf } from '../../app/firstCommit';
 import { openDialog, useCanOpenDialog } from '../../app/navigation';
 import { useShortcutLabel } from '../../app/shortcuts';
 import { copyErrorDetails } from '../../app/windowErrors';
@@ -17,7 +18,10 @@ import { PendingButton } from '../../components/Button/PendingButton';
 import { useFocusKeeper } from '../../components/collections/useFocusKeeper';
 import { Spinner } from '../../components/Progress/Progress';
 import { skeletonWidth } from '../../components/Skeleton/Skeleton';
+import { useCourses } from '../../data/groups';
+import type { Course } from '../../ipc';
 import { nameOf } from '../../lib/paths';
+import { placeOf } from '../../lib/places';
 import { SIZE } from '../../tokens/tokens';
 import type { CommitFailure } from '../state';
 import { COMMIT_KEYS, type CommitBlock, type CommitBoxModel, type CommitLabel, fallbackCode, hasDetails } from './useCommitBox';
@@ -350,8 +354,13 @@ export function CommitButton({ model, ids }: { model: CommitBoxModel; ids: Commi
   );
 }
 
-/** The danger note's words for a failed commit (§4.5), naming the file it failed on. */
-function failureText(failure: CommitFailure, t: ChangesT): string {
+/**
+ * The danger note's words for a failed commit (§4.5), naming the file it failed on, or for
+ * `HistoryTooLarge` the folder too large to keep as a place ("MAT232 / Problem sets", app-shell
+ * 27B, as the too-large block names it); without one (or with the root), the library as a whole
+ * (ipc-m2 §13). Both end in "commit again", as the notes do that reword an errors.json message.
+ */
+function failureText(failure: CommitFailure, courses: readonly Course[], t: ChangesT): string {
   const { code } = failure.error;
   switch (code) {
     case 'FileChanged':
@@ -359,6 +368,12 @@ function failureText(failure: CommitFailure, t: ChangesT): string {
     case 'InUse':
     case 'AccessDenied':
       return failure.file === null ? t(`errors:${code}`) : t(`commit.failed.${code}`, { name: nameOf(failure.file) });
+    case 'HistoryTooLarge': {
+      const folder = tooLargeFolderOf(failure.file);
+      return folder === null
+        ? t('commit.failed.HistoryTooLarge.library')
+        : t('commit.failed.HistoryTooLarge.folder', { folder: placeOf(folder, courses) });
+    }
     case 'WorkspaceChanged':
     case 'NothingToCommit':
     case 'DiskFull':
@@ -379,6 +394,7 @@ function failureText(failure: CommitFailure, t: ChangesT): string {
  */
 export function FailureNote({ failure }: { failure: CommitFailure }) {
   const { t } = useTranslation(['changes', 'errors', 'shell']);
+  const courses = useCourses().data ?? [];
   const title = t('commit.failed.title');
   const details = hasDetails(failure.error);
   return (
@@ -387,7 +403,7 @@ export function FailureNote({ failure }: { failure: CommitFailure }) {
       size="block"
       announce
       title={title}
-      text={failureText(failure, t)}
+      text={failureText(failure, courses, t)}
       actions={
         details ? (
           <Button

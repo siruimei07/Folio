@@ -132,6 +132,71 @@ describe('show in File Explorer', () => {
   });
 });
 
+describe('show a folder in File Explorer by its path', () => {
+  it('finds the folder and asks the shell to show it', async () => {
+    const { result, invoke } = await renderActions();
+    act(() => {
+      result.current.showFolderInExplorer('Personal/Photos');
+    });
+    await waitFor(() => {
+      expect(sent(invoke, 'reveal_entry')).toEqual([{ request: { entry: smallRef('Personal/Photos') } }]);
+    });
+
+    act(() => {
+      result.current.showFolderInExplorer(`${MAT}/Exams/Midterm`);
+    });
+    await waitFor(() => {
+      expect(sent(invoke, 'reveal_entry')).toHaveLength(2);
+    });
+    expect(sent(invoke, 'reveal_entry')[1]).toEqual({ request: { entry: smallRef(`${MAT}/Exams/Midterm`) } });
+    expect(toastTexts()).toEqual([]);
+  });
+
+  it('says the folder is not there for a missing path, a file or another case, and shows nothing', async () => {
+    const { result, invoke } = await renderActions();
+    for (const path of ['Personal/Videos', 'Personal/Todo.txt', 'personal/photos']) {
+      useToasts.setState({ toasts: [] });
+      act(() => {
+        result.current.showFolderInExplorer(path);
+      });
+      await waitFor(() => {
+        expect(toastTexts()).toEqual(["This item isn't here anymore. It may have just been moved, renamed or deleted."]);
+      });
+      expect(useToasts.getState().toasts[0]?.tone).toBe('info');
+    }
+    expect(sent(invoke, 'reveal_entry')).toEqual([]);
+  });
+
+  it('names the folder as a place when a read fails, with Copy details for an internal error', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { result, shell, invoke } = await renderActions();
+    shell.setFailure('list_children', 'Internal');
+    act(() => {
+      result.current.showFolderInExplorer(`${MAT}/Problem sets`);
+    });
+    await waitFor(() => {
+      expect(toastTexts()).toEqual([expect.stringMatching(/^Couldn't show MAT232 \/ Problem sets in File Explorer — /)]);
+    });
+    expect(useToasts.getState().toasts[0]?.tone).toBe('danger');
+    expect(toastActions()).toEqual(['Copy details']);
+    expect(sent(invoke, 'reveal_entry')).toEqual([]);
+    expect(error).toHaveBeenCalledWith('[command] file.reveal', expect.objectContaining({ code: 'Internal' }));
+  });
+
+  it('names the folder when File Explorer cannot show it, a course by its label', async () => {
+    const { result, shell } = await renderActions();
+    shell.setFailure('reveal_entry', 'AccessDenied');
+    act(() => {
+      // A folder in a semester is a course; Photos has no code.
+      result.current.showFolderInExplorer('Personal/Photos');
+    });
+    await waitFor(() => {
+      expect(toastTexts()).toEqual([expect.stringMatching(/^Couldn't show Photos in File Explorer — /)]);
+    });
+    expect(toastActions()).toEqual([]);
+  });
+});
+
 describe('copy path', () => {
   it('copies absolute Windows paths, one per line, and says so', async () => {
     userEvent.setup();

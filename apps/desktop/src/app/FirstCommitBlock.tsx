@@ -1,15 +1,18 @@
 import './FirstCommitBlock.css';
 
-import { CircleX, History, RefreshCw } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { CircleX, FolderSearch, FolderX, History, RefreshCw } from 'lucide-react';
+import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '../components/Button/Button';
+import { useFocusKeeper } from '../components/collections/useFocusKeeper';
 import { ProgressBar } from '../components/Progress/Progress';
 import { StateBlock } from '../components/StateBlock/StateBlock';
+import { useCourses } from '../data/groups';
 import { sizeProgressParts } from '../lib/format';
 import { DETAILED } from './feedback';
-import { type FirstCommitState, useFirstCommit, useStartFirstCommit } from './firstCommit';
+import { useFileActions } from './fileActions';
+import { type FirstCommitState, tooLargeText, useFirstCommit, useStartFirstCommit } from './firstCommit';
 import { copyErrorDetails } from './windowErrors';
 
 type Running = NonNullable<Extract<FirstCommitState, { kind: 'running' }>['progress']>;
@@ -42,14 +45,34 @@ export interface FirstCommitBlockProps {
  * finish" until the job reads files, then "1.2 GB of 3.4 GB"; "Your history hasn't started" with
  * "Start history" after a cancel; "Couldn't start your history" with the reason and "Try again"
  * after a failure. Nothing once the history has started. A start moves the focus to the block,
- * since its button goes.
+ * since its button goes. A history too large to keep (ipc-m2 §6.1, §19 item 5) shows here too, as
+ * "History is off for this library", a warning: the folder that holds too many files named as a
+ * place, with "Show in File Explorer", or the library as a whole without a button; no "Try again"
+ * or "Start history", since Folio tries again by itself when the library changes, and no promise
+ * of that for a `HEAD` too large to show. A button that goes while it has the focus without being
+ * pressed (Show in File Explorer once a change ends `tooLarge`) leaves it to the block (WCAG 2.4.3,
+ * `useFocusKeeper`), not to the page.
  */
 export function FirstCommitBlock({ text }: FirstCommitBlockProps) {
   const { t, i18n } = useTranslation(['shell', 'errors']);
   const state = useFirstCommit();
   const start = useStartFirstCommit();
+  const files = useFileActions();
+  const courses = useCourses().data ?? [];
   const progress = useShownProgress(state);
-  const root = useRef<HTMLDivElement>(null);
+  const root = useRef<HTMLDivElement | null>(null);
+  const keepFocus = useFocusKeeper(() => root.current?.focus());
+  const rootRef = useCallback(
+    (element: HTMLDivElement | null) => {
+      root.current = element;
+      const stop = keepFocus(element);
+      return () => {
+        root.current = null;
+        stop?.();
+      };
+    },
+    [keepFocus],
+  );
   if (state === null) return null;
 
   const restart = () => {
@@ -123,11 +146,34 @@ export function FirstCommitBlock({ text }: FirstCommitBlockProps) {
           />
         );
       }
+      case 'tooLarge': {
+        const { folder } = state;
+        return (
+          <StateBlock
+            tone="warning"
+            icon={FolderX}
+            title={t('firstCommit.tooLarge.title')}
+            text={tooLargeText(state, courses, t)}
+            actions={
+              folder === null ? undefined : (
+                <Button
+                  icon={FolderSearch}
+                  onPress={() => {
+                    files.showFolderInExplorer(folder);
+                  }}
+                >
+                  {t('fileActions.reveal')}
+                </Button>
+              )
+            }
+          />
+        );
+      }
     }
   };
 
   return (
-    <div ref={root} className="first-commit" tabIndex={-1}>
+    <div ref={rootRef} className="first-commit" tabIndex={-1}>
       {block()}
     </div>
   );

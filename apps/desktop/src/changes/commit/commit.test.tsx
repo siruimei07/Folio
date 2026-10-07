@@ -622,6 +622,49 @@ describe('commit failures', JOB_TEST, () => {
     });
   });
 
+  // A regular commit too large to keep (ipc-m2 §19 item 5): the job's file names the folder, and
+  // the history stays as it was (the too-large block is a first commit's or a HEAD's, §6.1).
+  const TOO_LARGE = "holds more files than Folio's history can keep. Move some files out of the folder, then commit again.";
+
+  it('names the folder too large to keep, offers no details and keeps the message, selection and list', async () => {
+    const { user, invoke } = await ready({ commitFailure: { code: 'HistoryTooLarge', file: 'Personal/Photos' } });
+    await user.click(boxOf(getRow('CSC148/a1/run.bat')));
+    await user.type(summaryField(), 'Kept');
+    await waitFor(() => {
+      expect(commitButton()).toHaveAccessibleName('Commit 13 changes');
+    });
+    const rows = within(changesList()).getAllByRole('option').length;
+    await user.click(commitButton());
+    const note = await findCommitNote();
+    // Personal is a semester, so Personal/Photos is a course without a code: "Photos".
+    expect(note).toHaveTextContent(`Couldn't commitThe folder Photos ${TOO_LARGE}`);
+    expect(within(note).queryByRole('button')).toBeNull();
+    expect(summaryField()).toHaveValue('Kept');
+    expect(getRow('CSC148/a1/run.bat')).toHaveAttribute('aria-checked', 'false');
+    expect(within(changesList()).getAllByRole('option')).toHaveLength(rows);
+    expect(commitButton()).toHaveAccessibleName('Commit 13 changes');
+    expect(commitButton()).not.toHaveAttribute('aria-disabled');
+    // The history is still ready: no too-large block, and Folio starts nothing by itself.
+    expect(screen.queryByRole('heading', { name: 'History is off for this library' })).toBeNull();
+    expect(callsOf(invoke, 'start_history')).toBe(0);
+  });
+
+  it('names a folder in a course by its course label', async () => {
+    const { user } = await ready({ commitFailure: { code: 'HistoryTooLarge', file: `${MAT}/Problem sets` } });
+    await user.click(commitButton());
+    expect(await findCommitNote()).toHaveTextContent(`Couldn't commitThe folder MAT232 / Problem sets ${TOO_LARGE}`);
+  });
+
+  it.each([null, ''])('says the library as a whole is too large when the job names no folder (%j)', async (file) => {
+    const { user } = await ready({ commitFailure: { code: 'HistoryTooLarge', file } });
+    await user.click(commitButton());
+    const note = await findCommitNote();
+    expect(note).toHaveTextContent(
+      "Couldn't commitThis library holds more files than Folio's history can keep. Move some files out of the library, then commit again.",
+    );
+    expect(within(note).queryByRole('button')).toBeNull();
+  });
+
   it('takes the note away when the next commit starts', async () => {
     const { user, shell } = await ready({ commitFailure: { code: 'DiskFull', file: null } });
     await user.click(commitButton());

@@ -8,8 +8,8 @@
   overflow: auto;
 }
 
-/* After Start history or Try again the block holds the focus; it fills its panel, which clips
-   what lies outside it, so the ring goes inside its edge. */
+/* After Start history or Try again, or once Show in File Explorer has gone, the block holds the
+   focus; it fills its panel, which clips what lies outside it, so the ring goes inside its edge. */
 .first-commit:focus-visible {
   outline-offset: calc(-1 * var(--focus-ring-width));
 }
@@ -18,6 +18,13 @@
 .first-commit > .state-block {
   align-self: center;
   max-width: var(--size-state-block-width);
+}
+
+/* A folder too large for history is named in the text, and a long name with no break point
+   breaks anywhere: wider than the panel, the centred block would spill past its left edge,
+   where the panel cannot scroll to it. */
+.first-commit > .state-block .state-block__text {
+  overflow-wrap: anywhere;
 }
 
 .first-commit__progress {

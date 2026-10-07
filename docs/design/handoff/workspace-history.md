@@ -245,6 +245,7 @@ Each state replaces the list body (library-actions §2.5 state block, in the lis
 | History read-only (`historyState: readOnly`) | Warning banner, `lock`: "History is read-only." "A newer version of Folio changed it. Update Folio to commit." | Disabled |
 | History damaged (`historyState: damaged`) | Danger banner: "Folio can't read this library's history." "Your files are fine, but you can't commit until it's fixed." | Disabled |
 | First commit running or failed | Section 10 | Hidden |
+| History too large (`historyState: tooLarge`; as built, lane `feat/ui-history-too-large`) | Section 10's warning block "History is off for this library", in the same one panel as the first commit; no list, no diff, and the rail badge hidden | Hidden; Ctrl+Enter commits nothing |
 | Committing | The check boxes (each row's, each course header's and the header's select-all) at 55 % opacity (`opacity.busy`), inert; the rows keep full contrast, the selection still moves and the diff still shows (as built, below) | 4.4 |
 
 **As built (2026-10-06, lane `feat/ui-changes-view`, Sirui's decision A):** while a commit runs, only
@@ -366,6 +367,7 @@ stay. Title "Couldn't commit"; text by code:
 | `DiskFull` | The disk is full. Free up some space, then commit again. |
 | `ReadOnly`, `HistoryReadOnly` | A newer version of Folio changed this library. Update Folio to commit. |
 | `HistoryDamaged` | Folio can't read this library's history. Your files are fine. (Plus "Copy details") |
+| `HistoryTooLarge` (as built, lane `feat/ui-history-too-large`; ipc-m2 §19 item 5) | With the job's `file` (a folder; the root `''` counts as none): "The folder MAT232 / Problem sets holds more files than Folio's history can keep. Move some files out of the folder, then commit again." (`commit.failed.HistoryTooLarge.folder`, the folder named as a place, app-shell 27B, as section 10's block names it); with none (`null`: the library as a whole, ipc-m2 §13): "This library holds more files than Folio's history can keep. Move some files out of the library, then commit again." (`commit.failed.HistoryTooLarge.library`; through design:ux-copy in place of `errors.HistoryTooLarge`, which ipc-m2 §19 item 5 suggested: its "A folder, or the library as a whole", its "so nothing was saved", which the title says, and its "Your files are fine." are not needed here, and the commit notes end in "commit again"; the activity popover's failed row keeps `errors.HistoryTooLarge`). No "Copy details" (not a bug) and no "Your files are fine." (the history keeps working, as with `DiskFull`). The state stays `ready`: selection, message and list stay, and section 10's block does not show. A long name with no break point breaks anywhere, as in every note of the box and the bar (`overflow-wrap: anywhere` on their banners) |
 | `Busy` | Folio is rebuilding its search index. Commit again when it's done. (Rare: the commit box is disabled while a rebuild runs, 4.2) |
 | `Cancelled` | No note: the commit box returns to idle; the activity popover lists "Commit cancelled" |
 | `Internal`, `Transport` | `errors.<code>` and "Copy details" |
@@ -644,6 +646,7 @@ Changes and History context menus, and the diff's "More".
 | Loading earlier entries | A 40 px row at the end: spinner, "Loading earlier entries…" (`role="status"`) |
 | The start | After the first commit: "That's the start of your history." (`font.size.small` tertiary, aligned with the content column) |
 | No history (`historyState: none` before the first commit) | Section 10 |
+| Too large (`historyState: tooLarge`; as built, lane `feat/ui-history-too-large`) | Section 10's warning block, word for word as in Changes (History's own "first entry" sentence is not used), in one panel named "History"; no feed, type filter or diff |
 | Empty (no entries, e.g. the first commit was undone by a damaged store) | Neutral tile `history`: "No history yet" / "Commit your changes and each commit shows up here, newest first." + "Go to Changes" (accent) |
 | Filter matches nothing | Neutral tile `funnel-x`: "Nothing of these types yet" / "No restores or undone commits so far." + "Show all types" |
 | Load failed | Danger tile: "Couldn't load the history" / `errors.<code>` + "Try again", "Copy details" |
@@ -795,6 +798,60 @@ Boards `m2-18`, `m2-19`, `m2-07` (failure).
 - Failed: danger tile "Couldn't start your history" with the reason ("The disk is full. Free up some
   space, then try again.") and "Folio also tries again the next time you open the library." +
   "Try again".
+- **Too large to keep (as built 2026-10-07, lane `feat/ui-history-too-large`; ipc-m2 §6.1, §19
+  item 5; no board, so the design follows that item and the shared state block).** While
+  `historyState` is `tooLarge`, both views show the one panel above with this block in place of the
+  first commit's; it wins over any job or start of the session.
+  - Look: the state block (library-actions §2.5) in tone warning (`color.feedback.warning`, `-soft`,
+    `-border` on the tile), icon `folder-x`: the files are fine, so not danger, but the person may
+    act, so not information. No progress bar and no hint. The block's measure, centring and focus
+    ring are the first commit's. Its text breaks a long folder name with no break point anywhere
+    (`overflow-wrap: anywhere`), so the centred block never runs past the panel's edges.
+  - Copy (`shell` `firstCommit.tooLarge.*`, through design:ux-copy from `errors.HistoryTooLarge`):
+    title "History is off for this library". With `tooLargeFolder` (`''`, the root, counts as none),
+    named as a place (app-shell 27B): "The folder MAT232 / Problem sets holds more files than
+    Folio's history can keep. Your files are fine. Folio tries again when the library changes, for
+    example after you move some files out of the folder." ("The folder" leads because a place can
+    be a plain or lower-case word, such as "labs".) Without one: "This library holds more files
+    than Folio's history can keep. Your files are fine. Folio tries again when the library changes,
+    for example after you move some files out of it." A `HEAD` too large to show (`head` set) ends
+    only when `HEAD` changes, so it promises nothing: "This library's history is larger than Folio
+    can show. Your files are fine.", or with a folder "In this library's history, the folder MAT232
+    / Problem sets holds more files than Folio can show. Your files are fine."
+  - Action: only with a folder, "Show in File Explorer" (the outline `Button` with `folder-search`,
+    the file menus' command and string `shell:fileActions.reveal`): the UI finds the folder's entry
+    by `list_children` from the root, one exact name at a time, then calls `reveal_entry`, so File
+    Explorer opens its parent with the folder selected. Failures use the file actions' toasts: the
+    information toast for a folder moved or gone (`NotFound`), and "Couldn't show MAT232 / Problem
+    sets in File Explorer" otherwise (library-actions §9.3, §9.4). No "Try again" and no "Start
+    history": Folio tries again by itself.
+  - Folio tries again: when the state goes from `tooLarge` to `none` in the same library (what the
+    shell counts as a change, ipc-m2 §6.1: the catalog's entries, and tags or settings only when
+    `.folio/`'s metadata was the cause), Folio calls `start_history` once more and the block turns
+    to "Starting your history". A first commit that failed with `HistoryTooLarge` never shows
+    "Couldn't start your history" with "Try again": outside `tooLarge` its block shows as waiting,
+    so neither order of the job's failure and the `WorkspaceChanged` flashes a danger block. Folio
+    also tries again when it never read the `tooLarge` (each `WorkspaceChanged` cancels the summary's
+    fetch under way, so a failure and a change at once can read as `starting` → `none`): at `none`,
+    with no start on its way, when the session's first commit failed with `HistoryTooLarge` and the
+    summary was read at a later catalog revision than when that job began (the summary it started
+    from does not count). A start's answer can come after its job's events (ui-architecture §5.4):
+    Folio checks again when it arrives, and takes only the latest start's answer, so an earlier
+    start's late one never replaces the block of a later start.
+  - Focus: commands that open a view with the focus ("Go to Changes", "View history") put it on the
+    block (`tabindex="-1"`, ring inside its edge). When "Show in File Explorer" goes while it has
+    the focus (the state ended), the block keeps the focus (`useFocusKeeper`), never the page. When
+    the state turns `tooLarge` while a view shows its content (a `HEAD` too large to show, found by
+    a head sync), the block takes the focus from wherever it was in the view (in Changes a row, the
+    diff, the commit box or bar, or the list's header; History's view keeper does the same), never
+    the page.
+  - Announcement: a first commit that turns out too large (`none` or `starting` → `tooLarge` in the
+    same library) says "History is off for this library." and the block's text once, politely
+    (section 11, WCAG 4.1.3); a library that opens at `tooLarge` says nothing, as the block shows
+    it. Folio's own retry that ends with the block this session showed last (the same folder, the
+    same promise) says nothing either, wherever the person is: only a new folder is said, or any
+    result of a start the person made ("Start history", "Try again"). The rail badge is hidden and there is no commit box (3.8, 7.5); a regular commit that fails
+    with `HistoryTooLarge` leaves the history `ready` and names the folder in its note (4.5).
 
 ## 11. Announcements and toasts
 
@@ -812,6 +869,7 @@ Toasts follow library-actions §2.4 (`m2-09`).
 | Message saved | Success: "Saved the new message" | — |
 | Undo commit done / failed | Information / error (9.2) | — |
 | First commit done | — | "Your history has started." (polite) |
+| First commit too large | — (the block of section 10) | "History is off for this library. " + the block's text (`firstCommit.tooLarge.said`; polite, once per block: nothing for a library that opens too large, nor for Folio's own retry that ends with the block shown last; added at build, lane `feat/ui-history-too-large`) |
 | Change navigation | — | "Change 2 of 5, lines 12 to 14" (polite) |
 
 ## 12. Library follow-ups (M1 gate notes)
@@ -907,6 +965,7 @@ win where this table differs:
 | Commit box | `summarize_selection` (template, counts), `generate_commit_message` (AI), `get_ai_settings` (`enabled`, `hasKey`, endpoint for the service's name), `commit` → job |
 | Activity | `JobChanged` kind `commit` (progress in bytes, cancellable, result: commit id and summary) |
 | First commit | `historyState`, `start_history`, its job |
+| First commit too large (as built, lane `feat/ui-history-too-large`) | `get_workspace`: `historyState` `tooLarge`, `tooLargeFolder`, `head` (no retry promised when set) and `revision` (the retry, section 10); the `firstCommit` job's `HistoryTooLarge`; Show in File Explorer: `list_children` from the root, then `reveal_entry` |
 | Diff | `get_workspace_diff { key, page }`, `get_version_diff { commit, path, page }`: kind (text, word, metadata, none), the reason when none, sizes, compared commit and time, counts (lines or paragraphs), approximate, pages of lines with inline ranges, line-ending change, metadata details |
 | This version | `folio-file` version route (versioning §9.4) |
 | Not synced card | `list_history { filter: commits }` first page of three, and its total |

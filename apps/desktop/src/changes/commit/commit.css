@@ -8,10 +8,12 @@
   padding: var(--space-12);
 }
 
-/* Notes in the box: the block banner in the small text (§4.3). */
+/* Notes in the box: the block banner in the small text (§4.3). A failed commit's note names a file
+   or a folder, and a long name with no break point breaks anywhere rather than run past the box. */
 .commit-box .banner,
 .commit-bar .banner {
   font-size: var(--font-size-small);
+  overflow-wrap: anywhere;
 }
 
 /* The field group, one input frame around the summary, the description and the footer, and the

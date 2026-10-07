@@ -3014,8 +3014,21 @@
         "feat/ui-history-view"
       ],
       "summary": "在改动视图的首次提交区块和历史视图的状态区块里显示「这个资料库的历史已关闭：文件夹 X 里的文件太多」，没有「重试」（资料库有变化时 Folio 自己再试）",
-      "status": "planned",
+      "status": "done",
       "updated": "2026-10-07",
+      "landed": "2026-10-07",
+      "gates": {
+        "check": "pass",
+        "e2e": "pass",
+        "codeReview": "pass",
+        "simplify": "pass",
+        "designCritique": "pass",
+        "a11y": "pass",
+        "securityReview": "na"
+      },
+      "notes": [
+        "e2e：组合工作区 64 个里 7 个失败，都在 feat/core-commit-history 未提交的 shell 改动范围（start_history/commit 不再在 handler 前被拒）；本 lane 的隔离副本 e2e 64 通过、4 跳过。真实 shell 还不会给出 tooLarge，所以本 lane 不加 e2e，留给 feat/core-commit-history"
+      ],
       "links": [
         "docs/design/handoff/workspace-history.md",
         "docs/specs/ipc-m2.md"

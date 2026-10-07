@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import { takeChangesFocus, usePendingChangesFocus } from '../app/changeTarget';
 import { COPY_PATH_KEYS, useFileActions } from '../app/fileActions';
-import { isHistoryStarting } from '../app/firstCommit';
+import { historyListsNothing } from '../app/firstCommit';
 import { FirstCommitBlock } from '../app/FirstCommitBlock';
 import { DIFF_PANE, type DiffPaneHandle, type DiffTarget } from '../app/panes';
 import { handleShortcut, useShortcut } from '../app/shortcuts';
@@ -61,11 +61,12 @@ const KEEPS_FOCUS = '.changes-list__rows, .commit-box, .commit-bar, .changes-vie
  * The part of the view that had the focus last, and its element: the commit box or bar (with the
  * control, `data-commit-focus`), the diff pane (beside the list or over it), the list's rows, the
  * list's state block (its load failure, whose "Try again" goes when the rows come), the "Not synced"
- * card (gone in a narrow window), or the first commit's block.
+ * card (gone in a narrow window), or the first commit's block; else the element itself (the list's
+ * header), which only the view's turn into one panel takes away.
  */
 type FocusPart =
   | { kind: 'commit'; element: Element; target: CommitFocusTarget | null }
-  | { kind: 'diff' | 'list' | 'listState' | 'notSynced' | 'firstCommit'; element: Element };
+  | { kind: 'diff' | 'list' | 'listState' | 'notSynced' | 'firstCommit' | 'other'; element: Element };
 
 const PARTS = [
   ['diff', '.diff'],
@@ -83,7 +84,7 @@ function focusPartOf(target: EventTarget | null): FocusPart | null {
     const element = target.closest(selector);
     if (element !== null) return { kind, element };
   }
-  return null;
+  return { kind: 'other', element: target };
 }
 
 /**
@@ -92,7 +93,8 @@ function focusPartOf(target: EventTarget | null): FocusPart | null {
  * swaps the commit box for the bar and the diff beside the list for the one over it, and takes the
  * "Not synced" card away; the list empties after a commit, taking its rows and the diff with it; the
  * list's load failure gives way to its rows after "Try again"; the history starts and the first
- * commit's block goes. `restore` gets the part that had it; a callback ref for the view's element.
+ * commit's block goes, or turns too large and the block comes in place of the rest. `restore` gets
+ * the part that had it; a callback ref for the view's element.
  */
 function useViewFocus(restore: (part: FocusPart, view: HTMLElement) => void): (view: HTMLElement | null) => (() => void) | undefined {
   const last = useRef<FocusPart | null>(null);
@@ -151,7 +153,7 @@ function commitFirst(event: KeyboardEvent<HTMLElement>): void {
  * what had it (`useViewFocus`). Ctrl+Enter commits from anywhere in the view,
  * Ctrl+Shift+C copies the selected change's path from the list or the diff, and "Show in Changes"
  * from another view selects a change, or without one gives the view the focus (`app/changeTarget.ts`).
- * Before the history has started (§10)
+ * Before the history has started (§10), and while it is too large to keep (ipc-m2 §6.1),
  * the view is one panel with the first commit's block, and no commit box.
  */
 export function ChangesView() {
@@ -219,16 +221,16 @@ export function ChangesView() {
   // it (app/changeTarget.ts): once the list has its rows or its state, the diff over the list when
   // a narrow window still has it open (the list under it is hidden), else the list's focused row
   // (once its rows are rendered, `focusFocused`), else the commit button; before the history has
-  // started, the first commit's block.
+  // started or while it is too large, the first commit's block.
   const viewRef = useRef<HTMLElement | null>(null);
   const focusAsked = usePendingChangesFocus();
-  const starting = isHistoryStarting(summary?.historyState);
-  const settled = starting || failed || (summary !== undefined && rows.status === 'success');
+  const listsNothing = historyListsNothing(summary?.historyState);
+  const settled = listsNothing || failed || (summary !== undefined && rows.status === 'success');
   const takeFocus = useEffectEvent(() => {
     if (!takeChangesFocus()) return;
     if (covered && diffRef.current !== null) diffRef.current.focus();
-    else if (!starting && listRef.current !== null) listRef.current.focusFocused();
-    else viewRef.current?.querySelector<HTMLElement>(starting ? '.first-commit' : '[data-commit-focus="commit"]')?.focus();
+    else if (!listsNothing && listRef.current !== null) listRef.current.focusFocused();
+    else viewRef.current?.querySelector<HTMLElement>(listsNothing ? '.first-commit' : '[data-commit-focus="commit"]')?.focus();
   });
   useEffect(() => {
     if (focusAsked && settled) takeFocus();
@@ -263,9 +265,16 @@ export function ChangesView() {
    * in the bar, or the bar's in the box; the diff in its new place, over the list when narrow (the
    * person was reading it); with no diff to show, or from the list, its load failure, "Not synced"
    * or the first commit's block, the focused row, or the commit button when no row is left (§4.4).
+   * When the view turns into one panel (a `HEAD` too large to show, ipc-m2 §6.1), the first commit's
+   * block takes it from wherever it was, as in History, and a focus still on its way is dropped.
    */
   const restoreFocus = (part: FocusPart, view: HTMLElement) => {
-    if (pendingFocus.current !== null) return;
+    if (listsNothing) {
+      pendingFocus.current = null;
+      view.querySelector<HTMLElement>('.first-commit')?.focus();
+      return;
+    }
+    if (pendingFocus.current !== null || part.kind === 'other') return;
     const listOrCommit = () => {
       if (listRef.current === null) view.querySelector<HTMLElement>('[data-commit-focus="commit"]')?.focus();
       else listRef.current.focusFocused();
@@ -320,9 +329,9 @@ export function ChangesView() {
     setDiffOpen(false);
   };
 
-  // Before the history has started, the view is one panel with the first commit's block (§10),
-  // named "Changes" like the list's panel, with a heading above the block's.
-  if (starting) {
+  // Before the history has started, or while it is too large, the view is one panel with the first
+  // commit's block (§10), named "Changes" like the list's panel, with a heading above the block's.
+  if (listsNothing) {
     return (
       <div ref={view} className="changes-view">
         <section className="panel changes-view__first-commit" aria-labelledby={headingId}>

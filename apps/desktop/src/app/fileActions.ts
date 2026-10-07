@@ -4,12 +4,14 @@
 // "More" use them, and so can History's file rows. A course is named by its label in messages.
 import i18n from 'i18next';
 
+import { findFolder } from '../data/entries';
 import { useOpenEntry, useRevealEntry } from '../data/files';
 import { useCourses } from '../data/groups';
 import { useLibrary } from '../data/library';
 import type { EntryRef } from '../ipc';
 import { displayName } from '../lib/courses';
 import { windowsPath } from '../lib/paths';
+import { placeOf } from '../lib/places';
 import { copyText } from './clipboard';
 import { showFailure, whenSettled } from './feedback';
 import type { KeyCombo } from './shortcuts';
@@ -28,6 +30,11 @@ export interface FileActions {
   /** "Show in File Explorer": File Explorer with the entry selected. */
   showInExplorer: (entry: EntryRef) => void;
   /**
+   * "Show in File Explorer" for a folder known by its path only (`findFolder`), such as the one too
+   * large for history; it is named as a place ("MAT232 / Problem sets") when that fails.
+   */
+  showFolderInExplorer: (path: string) => void;
+  /**
    * "Copy path": the absolute Windows paths of `paths` (below the library root), one per line, and
    * an information toast; a deleted file has a path but no entry.
    */
@@ -41,14 +48,26 @@ export function useFileActions(): FileActions {
   const revealEntry = useRevealEntry();
   const name = (entry: EntryRef) => displayName(entry, courses);
 
-  const showInExplorer = (entry: EntryRef) => {
+  /** The feedback of "Show in File Explorer": nothing once it opens, else a toast naming `what`. */
+  const revealing = (command: Promise<unknown>, what: string) => {
     whenSettled(
-      revealEntry.mutateAsync({ entry }),
+      command,
       'file.reveal',
       () => undefined,
       (failure) => {
-        showFailure(i18n.t('shell:fileActions.revealFailed', { name: name(entry) }), failure.error, 'file.reveal');
+        showFailure(i18n.t('shell:fileActions.revealFailed', { name: what }), failure.error, 'file.reveal');
       },
+    );
+  };
+
+  const showInExplorer = (entry: EntryRef) => {
+    revealing(revealEntry.mutateAsync({ entry }), name(entry));
+  };
+
+  const showFolderInExplorer = (path: string) => {
+    revealing(
+      findFolder(path).then((entry) => revealEntry.mutateAsync({ entry })),
+      placeOf(path, courses),
     );
   };
 
@@ -98,5 +117,5 @@ export function useFileActions(): FileActions {
     });
   };
 
-  return { open, showInExplorer, copyPaths };
+  return { open, showInExplorer, showFolderInExplorer, copyPaths };
 }
