@@ -2841,7 +2841,8 @@
           "versioning.md §19 item 4: this lane also records the first commit automatically (\"Start history\", §7.7, design decision 32A) and adds settings.json's device id (§4.6).",
           "Catalog migrations are appended in landing order (§19 item 6): renumber yours when you rebase onto a lane that added one.",
           "From feat/core-object-store and decision m2-too-large-folder: StoreError::TooLarge never means damage. The write case is reachable in M2: one folder of about 450,000 files makes the automatic first commit's Tree::encode return TooLarge { NewObject(Tree), Bytes(64 MiB) }, and versioning.md §7.7 retries the first commit at every opening. Show a distinct non-damage history state that names the folder (\"history is off for this library: folder X holds too many files\"), keep the library usable, and retry only after the library changes; never HistoryDamaged. That needs an IPC state or code ipc-m2 does not have yet: plan it as a small contract change first (roadmap rule 2) and bring it to the roadmap session if it is more than one variant.",
-          "Also from feat/core-object-store: map a StoreError::Io whose source downcasts to catalog::CatalogError as Internal (ipc-m1 §16.2), not FileSystem. Run §13.2's rebuild and the first-read checks through the store's walks with DEFAULT_PATH_BUDGET or lower (never unbounded), off the UI thread and cancellable: .folio/local/ is untrusted input and their time is bounded only by the trees the store holds. Crash injection: reuse crate::crash (crash::point, crash::fault) for the commit journal."
+          "Also from feat/core-object-store: map a StoreError::Io whose source downcasts to catalog::CatalogError as Internal (ipc-m1 §16.2), not FileSystem. Run §13.2's rebuild and the first-read checks through the store's walks with DEFAULT_PATH_BUDGET or lower (never unbounded), off the UI thread and cancellable: .folio/local/ is untrusted input and their time is bounded only by the trees the store holds. Crash injection: reuse crate::crash (crash::point, crash::fault) for the commit journal.",
+          "From feat/core-text-extract (versioning.md §13.3): the first commit needs only the hashes. Queue start_history behind hashing only, not behind text extraction (or add it to the work extraction makes way for), so a large first extraction never delays 'Start history'."
         ]
       }
     },
@@ -2877,6 +2878,36 @@
         "extra": [
           "Extract text from md, code, txt and docx into the full-text index (ADR-0002 and its Chinese FTS5 tokenizer) so search finds file contents. Detect encodings (UTF-8 with or without BOM, UTF-16, GBK); cap the text and the time per file; never run macros or external programs; a file that fails goes to the problems list and never stops the scan.",
           "Re-extract only when the content hash changes; measure the extra scan time on the 50,000-file fixture."
+        ]
+      }
+    },
+    {
+      "id": "feat/ipc-extract-followups",
+      "title": "正文抽取的后续：搜索刷新、损坏文档、进度数字",
+      "milestone": "M2",
+      "phase": "m2-impl",
+      "track": "core",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [
+        "feat/core-text-extract"
+      ],
+      "summary": "正文抽取合并后留下的三件事：正文变了，屏幕上的搜索结果跟着刷新（CatalogChanged 加正文 / 搜索标志）；损坏的 Word 文档有自己的读取失败和文案；「检查文件」的进度总数现在把每个文本和 Word 文件算两遍",
+      "status": "planned",
+      "updated": "2026-10-07",
+      "links": [
+        "docs/specs/ipc-m1.md",
+        "docs/specs/ipc-m2.md",
+        "docs/specs/versioning.md",
+        "docs/design/handoff/library-actions.md",
+        "docs/adr/ADR-0004-ipc-contract.md"
+      ],
+      "prompt": {
+        "extra": [
+          "feat/core-text-extract (landed 2026-10-07, 320862db) indexes the text of text and Word files in the hash job; its lane file is archived at folio-agent-work/roadmap-session/landed-feat--core-text-extract.md and versioning.md §13.3 lists these follow-ups.",
+          "1. Search results that are on screen do not refetch when extracted text changes: add a bodies/search flag to CatalogChanged (or the narrowest signal the contract allows) so the search palette's open results refresh when a body is written or cleared; update ipc-m1/ipc-m2, regenerate the bindings, update the fake shell and REVIEWED_BINDINGS in the same commit, and the data layer's touch rules.",
+          "2. A damaged Word document is listed in Problems as Unreadable with reason Other (the reader's invalid outcome). Give it its own read failure (for example ReadFailure::Damaged) and copy through design:ux-copy (library-actions handoff §10 has no row for it: bring the copy as a short choice before building, or decide under the roadmap session's authorization).",
+          "3. The hash job's progress total counts each text or Word file twice (hashing, then extraction; worker.rs ~858): a 5-file library shows '7 of 10 files' then 'Checked 5 files'; the 50,000-file fixture drops from 49,920/49,920 to 49,921/71,520. There is no engineering-only fix: either change what Progress.total means (ipc-m1 §13, a contract change) or the hash row's copy 'N of M files' (library-actions §10.2). Propose the smaller change and record the decision."
         ]
       }
     },
@@ -4327,6 +4358,14 @@
       "type": "decide",
       "state": "done",
       "result": "Sirui：先改回 private，等有空档再重写历史（清除这些文件和邮箱、删旧分支、重打 v0.1.0），之后再决定是否公开"
+    },
+    {
+      "id": "search-generated-by-name",
+      "when": "2026-10-07",
+      "item": "正文搜索要不要收录自动生成的文件（压缩过的脚本、依赖锁文件）；ADR-0002 说跳过「生成或压缩的文件」，但按内容判断会误伤带输出的 Jupyter 笔记本",
+      "type": "decide",
+      "state": "done",
+      "result": "路线图会话按授权决定：只按文件名跳过（文件名主干以 .min 结尾、常见的依赖锁文件），不按内容判断；改了普通名字的压缩包会被收录，最多 1 MiB。文件名照样能搜到（library-core §9 第七条）"
     }
   ],
   "looseEnds": [
@@ -4524,6 +4563,11 @@
       "state": "open",
       "item": "工作区视图复审留下的小问题：data/paged.ts 在 combine 里读 isFetching，每个分页列表在抓取状态变化时多渲染一次（数据没变也会）；data/entries.ts 的树缓存会让 loading 过时（目前没人读）；CommitBar.tsx:60（窗口变矮、焦点在别处时收起说明）没有测试；范围 / 课程读取的 get_workspace 失败和卸载路径没有测试，卸载后失败仍弹提示；CommitBar 记录的焦点状态在少见情况下会过时",
       "lane": "feat/ui-sync-toolbar"
+    },
+    {
+      "state": "open",
+      "item": "正文抽取复审留下的小问题：Word 包里同一个属性重复出现时（例如 .rels 里两个 Target），读取器取第一个值，而 XML 要求拒绝、Word 会拒绝或修复（extract/word/xml.rs:183-215）：可以只拒绝想要的名字的第二份；versioning.md §13.3 里「脚注 q:type 洪水 1.0 s」实测最慢 1.35 s（结论「2 秒内」不变）",
+      "lane": "feat/core-diff-restore"
     }
   ],
   "risks": [
@@ -4961,6 +5005,11 @@
       "at": "2026-10-07",
       "by": "Claude Code",
       "text": "仓库公开后补了中文 README、截图和 Description，并把课程资料截图、交接快照、学校邮箱移出当前文件（2380f693）；历史里还有，按 Sirui 的决定先改回 private，等空档重写历史。iCloud：现在不做删除策略，所有删除在 Mac 上进行（决策 icloud-no-delete），feat/ipc-recycle-cloud-trash 暂缓"
+    },
+    {
+      "at": "2026-10-07",
+      "by": "Claude Code",
+      "text": "正文抽取合并（320862db，第 3 轮修复复审通过）；按文件名跳过自动生成的文件（决策 search-generated-by-name）；新增 feat/ipc-extract-followups（搜索刷新、损坏文档、进度数字）"
     }
   ]
 }
