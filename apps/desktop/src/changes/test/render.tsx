@@ -1,16 +1,16 @@
 // Changes view tests against the fake shell: the view with the toasts and the live regions, App
 // settings as a dialog it can open, its stores reset, and the small workspace at a fixed time
 // (twelve items, then four tag and settings changes).
-import { act, screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { expect, vi } from 'vitest';
 
 import { Announcer, clearAnnouncements } from '../../app/announcer';
-import { HostedDialogs } from '../../app/navigation';
+import { type DialogKind, HostedDialogs, HostedViews, type ViewId } from '../../app/navigation';
 import { ToastRegion } from '../../app/ToastRegion';
 import { useToasts } from '../../app/toasts';
 import type { CommitChanges, Selection } from '../../ipc';
 import { NOW } from '../../test/data';
-import { renderApp, type RenderAppOptions } from '../../test/render';
+import { politeText, renderApp, type RenderAppOptions } from '../../test/render';
 import { ChangesView } from '../ChangesView';
 import { useChangesPreferences } from '../preferences';
 import { resetChangesView } from '../state';
@@ -34,19 +34,33 @@ export function longJob(kind: 'scan' | 'rebuild') {
 }
 
 /** The dialogs the view may open: App settings, from "AI settings…". */
-const HOSTED = new Set(['appSettings'] as const);
+const HOSTED = new Set<DialogKind>(['appSettings']);
+/** With History on the rail: its Edit message dialog too. */
+const HOSTED_WITH_HISTORY = new Set<DialogKind>(['appSettings', 'editMessage']);
+const NO_VIEWS = new Set<ViewId>();
+const HISTORY_VIEW = new Set<ViewId>(['history']);
 
-export function renderChanges(options: RenderAppOptions = {}) {
+export interface RenderChangesOptions extends RenderAppOptions {
+  /**
+   * History on the rail with its Edit message dialog, as the app hosts them: "View history of this
+   * file", "N more in History" and the commits' Edit message show.
+   */
+  withHistory?: boolean;
+}
+
+export function renderChanges({ withHistory = false, ...options }: RenderChangesOptions = {}) {
   resetChangesView();
   useChangesPreferences.setState({ layout: 'flat' });
   useToasts.setState({ toasts: [] });
   // The live regions keep their last words from test to test.
   clearAnnouncements();
   return renderApp(
-    <HostedDialogs value={HOSTED}>
-      <ChangesView />
-      <ToastRegion />
-      <Announcer />
+    <HostedDialogs value={withHistory ? HOSTED_WITH_HISTORY : HOSTED}>
+      <HostedViews value={withHistory ? HISTORY_VIEW : NO_VIEWS}>
+        <ChangesView />
+        <ToastRegion />
+        <Announcer />
+      </HostedViews>
     </HostedDialogs>,
     { now: NOW, ...options },
   );
@@ -76,15 +90,8 @@ export function resizeTo(width: number): void {
   window.dispatchEvent(new Event('resize'));
 }
 
-/** Lets the focus keepers, which act once the DOM has changed, have their turn. */
-export async function settle(): Promise<void> {
-  await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
-}
-
-/** What the app's polite live region says now. */
-export function politeText(): string {
-  return document.querySelector('[aria-live="polite"][aria-atomic="true"]')?.textContent ?? '';
-}
+export { politeText };
+export { settle } from '../../test/render';
 
 /**
  * How long a wait for what a job or a first render brings may take: the commit job runs in timed

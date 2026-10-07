@@ -1,9 +1,13 @@
 import './NotSynced.css';
 
-import { CloudUpload } from 'lucide-react';
+import { ChevronRight, CloudUpload } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { COMMIT_ACTIONS_HOST, COMMIT_ATTRIBUTE, CommitActionButtons, useCommitContextMenu } from '../app/CommitActions';
+import { showHistoryTimeline } from '../app/historyTarget';
+import { useCanShowView } from '../app/navigation';
+import { useRetriedFailure } from '../app/useRetriedFailure';
 import { Button } from '../components/Button/Button';
 import { useFocusKeeper } from '../components/collections/useFocusKeeper';
 import { CountPill } from '../components/CountPill/CountPill';
@@ -12,7 +16,6 @@ import { type CommitInfo, shortId } from '../ipc';
 import { formatDateTime, formatTime, isSameDay } from '../lib/format';
 import { FRESH_COMMIT_MS } from '../lib/timing';
 import { SIZE } from '../tokens/tokens';
-import { useRetriedFailure } from './useRetriedFailure';
 
 /**
  * The commit that has just arrived at the top of the card (workspace-history handoff §14): one
@@ -80,15 +83,19 @@ function useMetaOf(): (commit: CommitInfo) => string {
  * "Not synced" (workspace-history handoff §5, decision 31A): the card under the commit box. Cloud
  * sync comes in M3, so every commit counts as not synced: the header counts them, a sentence says
  * why, and the lane shows where the next commit goes and the newest three, a commit that has just
- * arrived on a soft background for a moment. With no commits it shows only its sentence. The
- * commits' Edit message and Undo commit and "N more in History" need History's API, which is not
- * there yet: they go in this card, in the commit rows and under the lane (Sirui's decisions of
- * 2026-10-06; `feat/ui-history-view` wires them). Not shown in a narrow window (§2.2).
+ * arrived on a soft background for a moment. With no commits it shows only its sentence. A commit
+ * with the pointer over it or the focus in it (each is a tab stop) shows Edit message and Undo
+ * commit, which its context menu offers too (`app/CommitActions.tsx`); "9 more in History" under
+ * the lane shows History when it lists more than three. Not shown in a narrow window (§2.2).
  */
 export function NotSynced() {
   const { t } = useTranslation(['changes', 'shell']);
   const titleId = useId();
+  const commitId = useId();
   const workspace = useWorkspace();
+  const historyState = workspace.data?.historyState;
+  const commitMenu = useCommitContextMenu(historyState);
+  const historyShown = useCanShowView('history');
   const notSynced = useNotSynced(workspace.data?.head);
   const data = notSynced.data;
   const fresh = useFreshCommit(data === undefined ? undefined : (data.commits[0] ?? null));
@@ -136,14 +143,31 @@ export function NotSynced() {
               <span className="not-synced__pill">{t('notSynced.next')}</span>
             </p>
             <ol className="not-synced__commits" aria-label={t('notSynced.commits')}>
-              {data.commits.map((commit) => {
+              {data.commits.map((commit, index) => {
                 const summary = commit.summary ?? t('notSynced.noMessage');
+                // A tab stop, so named by its summary and described by its short id and time, as
+                // History's entries are (§7.6).
+                const ids = `${commitId}-${String(index)}`;
                 return (
-                  <li key={commit.id} className="not-synced__commit" data-fresh={commit.id === fresh || undefined}>
-                    <span className="not-synced__summary" title={summary}>
-                      {summary}
+                  <li
+                    key={commit.id}
+                    className={`not-synced__commit ${COMMIT_ACTIONS_HOST}`}
+                    {...{ [COMMIT_ATTRIBUTE]: commit.id }}
+                    data-fresh={commit.id === fresh || undefined}
+                    tabIndex={0}
+                    aria-labelledby={`${ids}-summary`}
+                    aria-describedby={`${ids}-meta`}
+                    {...commitMenu.handlersFor(commit)}
+                  >
+                    <span className="not-synced__commit-text">
+                      <span id={`${ids}-summary`} className="not-synced__summary" title={summary}>
+                        {summary}
+                      </span>
+                      <span id={`${ids}-meta`} className="not-synced__meta">
+                        {metaOf(commit)}
+                      </span>
                     </span>
-                    <span className="not-synced__meta">{metaOf(commit)}</span>
+                    <CommitActionButtons commit={commit} historyState={historyState} />
                   </li>
                 );
               })}
@@ -151,6 +175,20 @@ export function NotSynced() {
           </div>
         )
       )}
+      {failure.shown === null && historyShown && data !== undefined && data.total > data.commits.length && (
+        <p className="not-synced__more">
+          <Button
+            variant="link"
+            onPress={() => {
+              showHistoryTimeline();
+            }}
+          >
+            {t('notSynced.more', { count: data.total - data.commits.length })}
+            <ChevronRight aria-hidden size={SIZE.iconSmall} />
+          </Button>
+        </p>
+      )}
+      {commitMenu.menu}
     </section>
   );
 }

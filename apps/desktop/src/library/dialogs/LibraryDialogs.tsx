@@ -51,6 +51,7 @@ function MoveDialog() {
   return (
     <DialogFrame
       isOpen={isOpen}
+      placement="form"
       onOpenChange={(open) => {
         if (!open) setChosen(null);
         close(open);

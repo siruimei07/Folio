@@ -178,14 +178,16 @@ export function useVirtualRows({
   }, [scrollRef]);
 
   // Keyboard navigation asks for focus, scrolled into view; it moves once the focused item is
-  // rendered. A reveal has scrolled the item to the centre already, and asks for focus alone.
+  // rendered. A reveal has scrolled the item to the centre already, and asks for focus alone. A
+  // collection shown for the first time renders no rows until the virtualiser has measured its
+  // scroller: a request then waits for the render that has them (another view's "Go to Changes").
   const pendingFocus = useRef<'scroll' | 'focus' | null>(null);
   const findFocused = useRef(focusedElement);
   useEffect(() => {
     findFocused.current = focusedElement;
   });
   useLayoutEffect(() => {
-    if (pendingFocus.current === null || focusedRow === null) return;
+    if (pendingFocus.current === null || focusedRow === null || (items.length === 0 && count > 0)) return;
     if (pendingFocus.current === 'scroll') virtualizer.scrollToIndex(focusedRow, { align: 'auto' });
     pendingFocus.current = null;
     const scroller = scrollRef.current;

@@ -151,13 +151,13 @@ describe('discard an unfinished move', () => {
       expect(missing).toHaveFocus();
     });
     expect(screen.queryByRole('alertdialog')).toBeNull();
-    expect(document.querySelector('[aria-live="polite"]')).toHaveTextContent(copy.unavailable.missing.title);
+    expect(document.querySelector('[aria-live="polite"][aria-atomic="true"]')).toHaveTextContent(copy.unavailable.missing.title);
   });
 
   it('stays when the shell answers the same status, a stale screen or a second press', async () => {
     const { user, shell } = renderMove();
     vi.spyOn(shell, 'discardUnfinishedMove').mockImplementation(() => undefined);
-    const announced = document.querySelector('[aria-live="polite"] span');
+    const announced = document.querySelector('[aria-live="polite"][aria-atomic="true"] span');
     await user.click(discardButton());
     await user.click(within(dialog()).getByRole('button', { name: discard.confirm }));
 
@@ -170,7 +170,7 @@ describe('discard an unfinished move', () => {
     expect(pageHeading()).toHaveTextContent(title);
     expect(screen.queryByRole('alert')).toBeNull();
     // The title is read again: a new announcement, not the page's first one.
-    const again = document.querySelector('[aria-live="polite"] span');
+    const again = document.querySelector('[aria-live="polite"][aria-atomic="true"] span');
     expect(again).toHaveTextContent(title);
     expect(again).not.toBe(announced);
   });

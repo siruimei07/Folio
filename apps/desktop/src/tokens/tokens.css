@@ -79,6 +79,11 @@
   --size-history-panel-max: 640px;
   --size-history-time-column: 64px;
   --size-resize-handle: 8px;
+  --size-resize-grip-width: 4px;
+  --size-resize-grip-height: 36px;
+  --size-history-icon-column: 20px;
+  --size-history-loading-row: 40px;
+  --size-icon-button-medium: 26px;
   --size-search-dialog: 640px;
   --size-search-dialog-top: 84px;
   --size-search-input-row: 52px;
@@ -100,6 +105,8 @@
   --size-import-dialog: 560px;
   --size-problems-dialog-width: 720px;
   --size-problems-dialog-height: 560px;
+  --size-dialog-top-form: 96px;
+  --size-dialog-top-confirmation: 220px;
   --size-first-run-content: 560px;
   --size-first-run-top: 64px;
   --size-first-run-inset: 40px;
@@ -246,6 +253,9 @@
   --color-button-accent-hover: #0b615b;
   --color-button-danger: #b4382e;
   --color-button-danger-hover: #9c2f26;
+  --color-button-disabled-background: var(--color-surface-sunken);
+  --color-button-disabled-border: var(--color-border-default);
+  --color-button-disabled-text: var(--color-text-tertiary);
   --color-input-background: #ffffff;
   --color-input-background-readonly: #f7f6f4;
   --color-input-border: #d2ccc6;
@@ -379,6 +389,9 @@
   --color-button-accent-hover: #4fc4bd;
   --color-button-danger: #f28b82;
   --color-button-danger-hover: #f4a39b;
+  --color-button-disabled-background: var(--color-surface-app);
+  --color-button-disabled-border: var(--color-border-guide);
+  --color-button-disabled-text: var(--color-text-tertiary);
   --color-input-background: #191716;
   --color-input-background-readonly: #221f1d;
   --color-input-border: #403b37;
@@ -512,6 +525,9 @@
     --color-button-accent-hover: #4fc4bd;
     --color-button-danger: #f28b82;
     --color-button-danger-hover: #f4a39b;
+    --color-button-disabled-background: var(--color-surface-app);
+    --color-button-disabled-border: var(--color-border-guide);
+    --color-button-disabled-text: var(--color-text-tertiary);
     --color-input-background: #191716;
     --color-input-background-readonly: #221f1d;
     --color-input-border: #403b37;

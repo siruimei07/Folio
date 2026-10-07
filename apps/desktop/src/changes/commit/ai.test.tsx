@@ -6,6 +6,7 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { closeDialog, useNavigation } from '../../app/navigation';
+import { useToasts } from '../../app/toasts';
 import { toastTexts } from '../../test/render';
 import {
   callsOf,
@@ -325,6 +326,28 @@ describe('a commit with both fields empty', JOB_TEST, () => {
     expect(commitRequests(invoke)[0]).toMatchObject({ summary: TEMPLATE });
     // No warning note: the commit went on.
     expect(within(commitBox()).queryByText("DeepSeek didn't answer")).toBeNull();
+    // Without History's Edit message dialog, the toast offers nothing.
+    expect(useToasts.getState().toasts.flatMap((toast) => toast.actions ?? [])).toEqual([]);
+  });
+
+  it("offers the new commit's Edit message on that toast when History hosts it", async () => {
+    const { user, shell } = await ready({ aiMode: 'network', withHistory: true });
+    await user.click(commitButton());
+    await committed(`Committed 14 changes: ${TEMPLATE}`);
+    const [action] = useToasts.getState().toasts.flatMap((toast) => toast.actions ?? []);
+    expect(action?.label).toBe('Edit message');
+    act(() => {
+      action?.onPress();
+    });
+    // The commit is read, then the dialog opens on it.
+    await waitFor(() => {
+      expect(useNavigation.getState().dialog?.kind).toBe('editMessage');
+    });
+    const dialog = useNavigation.getState().dialog;
+    expect(dialog?.kind === 'editMessage' ? dialog.params.commit : null).toMatchObject({
+      id: shell.versioning.summary().head,
+      summary: TEMPLATE,
+    });
   });
 
   it('says why the commit failed when the workspace changed while the AI wrote', async () => {

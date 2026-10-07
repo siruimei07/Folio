@@ -1,13 +1,15 @@
-// "Try again" on a part of the Changes view whose read failed: the list's load failure and the
-// "Not synced" card's. TanStack sends a failed read that never had data back to `pending` while it
-// reads again, which would take the failure, and the focused "Try again" with it, off the screen and
-// drop the focus to the page (WCAG 2.4.3). So the failure stays shown while the retry runs, as the
-// diff's "Try again" does (`diff/useRetry.ts`, UI architecture §8.3); when the read fails again,
-// nothing on screen changes and the failure is read out again (WCAG 4.1.3); when it succeeds, the
-// failure goes and the part that held it moves the focus on (`useViewFocus`, NotSynced's keeper).
+// "Try again" on a part of a view whose read failed: the Changes list's load failure and the "Not
+// synced" card's; History's load failure, refresh banner and failed earlier entries. TanStack sends
+// a failed read that never had data back to `pending` while it reads again, which would take the
+// failure, and the focused "Try again" with it, off the screen and drop the focus to the page (WCAG
+// 2.4.3). So the failure stays shown while the retry runs, as the diff's "Try again" does
+// (`diff/useRetry.ts`, UI architecture §8.3); when the read fails again, nothing on screen changes
+// and the failure is read out again (WCAG 4.1.3); when it succeeds, the failure goes and the part
+// that held it moves the focus on (Changes' `useViewFocus`, NotSynced's keeper, History's view
+// keeper).
 import { useEffect, useRef, useState } from 'react';
 
-import { announce } from '../app/announcer';
+import { announce } from './announcer';
 
 export interface RetriedFailure<E> {
   /** The failure to show: the reads', or the one "Try again" answers while the retry runs. */

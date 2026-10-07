@@ -3,7 +3,7 @@
 // (UI architecture §6.2). A view or dialog that is not registered does not exist yet: its rail
 // button, toolbar button and shortcut stay hidden, not disabled (ADR-0005, product decision 3).
 
-import { FileDiff, LibraryBig, type LucideIcon } from 'lucide-react';
+import { FileDiff, History, LibraryBig, type LucideIcon } from 'lucide-react';
 import type { ComponentType, ReactNode } from 'react';
 
 import { importDialog, ImportResultDialog } from '../import';
@@ -16,6 +16,7 @@ import { AddCoursesDialog, AppSettings, LibrarySettings, NewSemesterDialog } fro
 import { ActivityControl } from './activity/ActivityControl';
 import type { DialogKind, DialogParams, ViewId } from './navigation';
 import { ChangesRailBadge, ChangesView } from '../changes';
+import { EditMessageDialog, HistoryView } from '../history';
 
 export interface ViewDefinition {
   id: ViewId;
@@ -31,6 +32,7 @@ export interface ViewDefinition {
 export const VIEWS: readonly ViewDefinition[] = [
   { id: 'library', icon: LibraryBig, label: 'rail.library', key: '1', component: LibraryView },
   { id: 'changes', icon: FileDiff, label: 'rail.changes', key: '2', component: ChangesView },
+  { id: 'history', icon: History, label: 'rail.history', key: '3', component: HistoryView },
 ];
 
 export interface DialogComponentProps<K extends DialogKind> {
@@ -57,6 +59,7 @@ export const DIALOGS: DialogRegistry = {
   import: importDialog(FolderPicker),
   importResult: ImportResultDialog,
   problems: ProblemsDialog,
+  editMessage: EditMessageDialog,
 };
 
 /** Toolbar controls a lane provides; `compact` in the narrow window's 40 px bar. */

@@ -6,11 +6,12 @@ import { useTranslation } from 'react-i18next';
 
 import { LoadFailure, showFailure, whenSettled } from '../../app/feedback';
 import { showToast } from '../../app/toasts';
+import type { RetriedFailure } from '../../app/useRetriedFailure';
 import { Checkbox } from '../../components/Checkbox/Checkbox';
 import { keyboardMenuAnchor } from '../../components/collections/rows';
 import type { CollectionHandle, IndexRange } from '../../components/collections/useVirtualRows';
 import { type CollectionItem, VirtualList } from '../../components/collections/VirtualList';
-import { ContextMenu, type MenuAnchor } from '../../components/Menu/Menu';
+import { ContextMenu, isContextMenuKey, type MenuAnchor } from '../../components/Menu/Menu';
 import { Panel } from '../../components/Panel/Panel';
 import { SegmentedControl } from '../../components/SegmentedControl/SegmentedControl';
 import { Skeleton } from '../../components/Skeleton/Skeleton';
@@ -43,7 +44,6 @@ import {
   setOffset,
   useChangesView,
 } from '../state';
-import type { RetriedFailure } from '../useRetriedFailure';
 import { ChangeRowView, MetadataHeaderRow, PlaceHeaderRow, PlaceholderRow, type RowBox } from './ChangeRowView';
 import { type DescribeContext, describeItem, describeMetadata, describePlace, type RowText } from './describe';
 import {
@@ -522,8 +522,7 @@ function RowsList({
         onSelectAll={onSelectAll}
         onKeyDown={(event, index) => {
           if (index === null || event.nativeEvent.isComposing) return;
-          const { key, shiftKey, ctrlKey, altKey, metaKey } = event;
-          if ((key === 'F10' && shiftKey && !ctrlKey && !altKey && !metaKey) || key === 'ContextMenu') {
+          if (isContextMenuKey(event)) {
             event.preventDefault();
             openMenu(index, keyboardMenuAnchor(event.target), true);
           }

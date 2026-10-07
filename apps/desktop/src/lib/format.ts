@@ -107,6 +107,12 @@ export function formatDateTime(ms: number, language: string, now = Date.now()): 
   return dateFormat(language, sameYear ? DATE_TIME : DATE_TIME_YEAR).format(ms);
 }
 
+/** A date, the year only when it is not this year: "Oct 13", "Oct 13, 2025". */
+export function formatDate(ms: number, language: string, now = Date.now()): string {
+  if (new Date(ms).getFullYear() === new Date(now).getFullYear()) return formatShortDate(ms, language);
+  return dateFormat(language, { month: 'short', day: 'numeric', year: 'numeric' }).format(ms);
+}
+
 /** Whether two moments fall on the same calendar day here. */
 export function isSameDay(a: number, b: number): boolean {
   if (Math.abs(a - b) >= DAY_MS) return false;

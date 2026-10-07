@@ -23,6 +23,12 @@
   color: var(--color-text-tertiary);
 }
 
+/* The hover actions of History entries and Not synced commits (workspace-history §5, §7.3). */
+.icon-button[data-size='medium'] {
+  width: var(--size-icon-button-medium);
+  height: var(--size-icon-button-medium);
+}
+
 .icon-button[data-variant='outline'] {
   border-color: var(--color-border-control);
 }
@@ -39,4 +45,18 @@
 .icon-button[data-disabled] {
   color: var(--color-text-tertiary);
   background: transparent;
+}
+
+/* A disabled outline button takes the buttons' disabled look (workspace-history §8.5), so it does
+   not read as an enabled one: a read-only or damaged history's hover actions (§7.3, §7.5). */
+.icon-button[data-variant='outline'][data-disabled] {
+  border-color: var(--color-button-disabled-border);
+  background: var(--color-button-disabled-background);
+  color: var(--color-button-disabled-text);
+}
+
+/* A focusable disabled button's tooltip: the reason under the label (`disabledReason`). */
+.icon-button__reason {
+  display: block;
+  color: var(--color-text-secondary);
 }

@@ -228,10 +228,3 @@
   color: var(--color-text-tertiary);
   font-size: var(--font-size-small);
 }
-
-/* A button that waits for the check looks like a disabled one, but keeps focus. */
-.import-dialog .button[data-pending] {
-  border-color: var(--color-border-default);
-  background: var(--color-surface-sunken);
-  color: var(--color-text-tertiary);
-}

@@ -92,13 +92,20 @@
   background: var(--color-surface-hover);
 }
 
-.button[data-disabled] {
-  border-color: var(--color-border-default);
-  background: var(--color-surface-sunken);
-  color: var(--color-text-tertiary);
+/*
+ * Disabled, and pending (workspace-history §8.5): a pending button looks disabled but keeps focus,
+ * and React Aria drops its presses and hover. Dark mode recesses it below the panel with a nearly
+ * invisible border, so a disabled outline button does not read as an enabled one.
+ */
+.button[data-disabled],
+.button[data-pending] {
+  border-color: var(--color-button-disabled-border);
+  background: var(--color-button-disabled-background);
+  color: var(--color-button-disabled-text);
 }
 
-.button[data-variant='link'][data-disabled] {
+.button[data-variant='link'][data-disabled],
+.button[data-variant='link'][data-pending] {
   background: transparent;
 }
 

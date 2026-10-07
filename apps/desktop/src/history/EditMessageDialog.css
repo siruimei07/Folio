@@ -1,0 +1,18 @@
+/* Edit message (workspace-history handoff §9.1): the commit box's field group (§4.1,
+   components/messageFields.css) without its footer, then the field errors and the details line. */
+.edit-message__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+/* Four rows (§9.1), then it scrolls. */
+.edit-message__description {
+  height: calc(4lh + 2 * var(--space-8));
+}
+
+.edit-message__details {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-label);
+}

@@ -1,0 +1,67 @@
+/*
+ * A commit message's fields (workspace-history handoff §4.1, §4.7, §9.1): the summary and the
+ * description (`message-field`, with `--summary` or `--description`) wherever they are drawn. In
+ * the field group, one input frame around both, as the commit box draws it and Edit message repeats
+ * it without the box's footer; apart, each in a frame of its own, in the narrow window's commit bar
+ * (changes/commit/commit.css). The fields' own rules weigh nothing (`:where`), so the frames drawn
+ * around them win wherever their rules load.
+ */
+.message-group {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: var(--border-width) solid var(--color-input-border);
+  border-bottom-color: var(--color-input-border-bottom);
+  border-radius: var(--radius-control);
+  background: var(--color-input-background);
+}
+
+.message-group[data-invalid] {
+  border-bottom-color: var(--color-feedback-danger);
+}
+
+:where(.message-field) {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
+  outline: none;
+}
+
+:where(.message-field--summary) {
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-strong);
+}
+
+/* Its height is the box's, the bar's or the dialog's. */
+:where(.message-field--description) {
+  padding: var(--space-8) var(--space-10);
+  font-size: var(--font-size-label);
+  line-height: var(--font-line-height-body);
+  resize: none;
+}
+
+:where(.message-field)::placeholder {
+  color: var(--color-text-tertiary);
+  opacity: 1;
+}
+
+/* The ring inside the field, whose frame (the group's, or the bar description's own) is around it. */
+:where(.message-field):focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: calc(-1 * var(--focus-ring-width));
+}
+
+.message-field[readonly] {
+  background: var(--color-input-background-readonly);
+}
+
+/* In the group, the summary is a row above the description. */
+.message-group__summary {
+  height: var(--size-composer-summary);
+  padding: 0 var(--space-10);
+  border-bottom: var(--border-width) solid var(--color-border-default);
+}

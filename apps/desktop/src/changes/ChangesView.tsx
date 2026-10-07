@@ -1,14 +1,16 @@
 import './ChangesView.css';
 
-import { type KeyboardEvent, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { type KeyboardEvent, useCallback, useEffect, useEffectEvent, useId, useLayoutEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 
+import { takeChangesFocus, usePendingChangesFocus } from '../app/changeTarget';
 import { COPY_PATH_KEYS, useFileActions } from '../app/fileActions';
 import { isHistoryStarting } from '../app/firstCommit';
 import { FirstCommitBlock } from '../app/FirstCommitBlock';
 import { DIFF_PANE, type DiffPaneHandle, type DiffTarget } from '../app/panes';
 import { handleShortcut, useShortcut } from '../app/shortcuts';
+import { useRetriedFailure } from '../app/useRetriedFailure';
 import { useFocusKeeper } from '../components/collections/useFocusKeeper';
 import type { CollectionHandle, IndexRange } from '../components/collections/useVirtualRows';
 import { DeskIllustration } from '../components/DeskIllustration/DeskIllustration';
@@ -24,7 +26,6 @@ import { copyablePath, useDiffMoreItems } from './menus/ChangeMenu';
 import { useChangesPreferences } from './preferences';
 import { setDiffOpen, setFocus, useChangesView } from './state';
 import { useChangeTarget } from './useChangeTarget';
-import { useRetriedFailure } from './useRetriedFailure';
 import { useChangesNarrow } from './windowQuery';
 
 /**
@@ -149,7 +150,8 @@ function commitFirst(event: KeyboardEvent<HTMLElement>): void {
  * `data-narrow` for its stylesheets. Crossing the breakpoint moves the focus to the counterpart of
  * what had it (`useViewFocus`). Ctrl+Enter commits from anywhere in the view,
  * Ctrl+Shift+C copies the selected change's path from the list or the diff, and "Show in Changes"
- * from another view selects a change (`app/changeTarget.ts`). Before the history has started (§10)
+ * from another view selects a change, or without one gives the view the focus (`app/changeTarget.ts`).
+ * Before the history has started (§10)
  * the view is one panel with the first commit's block, and no commit box.
  */
 export function ChangesView() {
@@ -213,6 +215,25 @@ export function ChangesView() {
     listRef.current?.focusFocused();
   });
 
+  // "Go to Changes" or "Show in Changes" without a path, from another view whose control went with
+  // it (app/changeTarget.ts): once the list has its rows or its state, the diff over the list when
+  // a narrow window still has it open (the list under it is hidden), else the list's focused row
+  // (once its rows are rendered, `focusFocused`), else the commit button; before the history has
+  // started, the first commit's block.
+  const viewRef = useRef<HTMLElement | null>(null);
+  const focusAsked = usePendingChangesFocus();
+  const starting = isHistoryStarting(summary?.historyState);
+  const settled = starting || failed || (summary !== undefined && rows.status === 'success');
+  const takeFocus = useEffectEvent(() => {
+    if (!takeChangesFocus()) return;
+    if (covered && diffRef.current !== null) diffRef.current.focus();
+    else if (!starting && listRef.current !== null) listRef.current.focusFocused();
+    else viewRef.current?.querySelector<HTMLElement>(starting ? '.first-commit' : '[data-commit-focus="commit"]')?.focus();
+  });
+  useEffect(() => {
+    if (focusAsked && settled) takeFocus();
+  }, [focusAsked, settled]);
+
   // A list that empties or fails to load has nothing to cover it with: its state shows, and the
   // diff does not come back over it by itself later.
   const nothing = failed || (rows.status === 'success' && rows.count === 0);
@@ -263,6 +284,17 @@ export function ChangesView() {
     } else listOrCommit();
   };
   const keepViewFocus = useViewFocus(restoreFocus);
+  const view = useCallback(
+    (element: HTMLElement | null) => {
+      viewRef.current = element;
+      const stop = keepViewFocus(element);
+      return () => {
+        viewRef.current = null;
+        stop?.();
+      };
+    },
+    [keepViewFocus],
+  );
 
   /**
    * Enter on the row at `index`, and in a narrow window a click on it: that change's diff, over the
@@ -290,9 +322,9 @@ export function ChangesView() {
 
   // Before the history has started, the view is one panel with the first commit's block (§10),
   // named "Changes" like the list's panel, with a heading above the block's.
-  if (isHistoryStarting(summary?.historyState)) {
+  if (starting) {
     return (
-      <div ref={keepViewFocus} className="changes-view">
+      <div ref={view} className="changes-view">
         <section className="panel changes-view__first-commit" aria-labelledby={headingId}>
           <h2 id={headingId} className="visually-hidden">
             {t('list.title')}
@@ -307,7 +339,7 @@ export function ChangesView() {
   const target = shown === null ? null : targetOf(shown);
   return (
     <div
-      ref={keepViewFocus}
+      ref={view}
       className="changes-view"
       data-narrow={narrow || undefined}
       data-covered={covered || undefined}

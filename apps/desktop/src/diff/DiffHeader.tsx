@@ -13,12 +13,13 @@ import {
   Tag,
   Tags,
 } from 'lucide-react';
-import type { ReactElement, ReactNode, Ref } from 'react';
+import { type ReactElement, type ReactNode, type Ref, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button as AriaButton, Focusable } from 'react-aria-components';
 
 import { Button } from '../components/Button/Button';
 import { ChangeStatusIcon, type ChangeStatus } from '../components/ChangeStatusIcon/ChangeStatusIcon';
+import { useFocusKeeper } from '../components/collections/useFocusKeeper';
 import { FileTypeIcon } from '../components/FileTypeIcon/FileTypeIcon';
 import { IconButton } from '../components/IconButton/IconButton';
 import { Menu, MenuButton, MenuItem, MenuSeparator } from '../components/Menu/Menu';
@@ -56,6 +57,21 @@ function placeOfHeading(path: string, courses: readonly Course[]): { label: stri
 /** What the body shows: the diff, or the file at this version through the preview (§6.7). */
 export type DiffView = 'changes' | 'version';
 
+/** On "Restore", enabled or disabled, and on "More", where a compact pane puts "Restore…". */
+const RESTORE_ATTRIBUTE = 'data-diff-restore';
+const MORE_ATTRIBUTE = 'data-diff-more';
+
+/**
+ * Focuses "Restore" in `header` (enabled or disabled), else "More", where a compact pane lists
+ * "Restore…"; whether either was there.
+ */
+export function focusRestoreIn(header: Element | null): boolean {
+  const control =
+    header?.querySelector<HTMLElement>(`[${RESTORE_ATTRIBUTE}]`) ?? header?.querySelector<HTMLElement>(`[${MORE_ATTRIBUTE}]`) ?? null;
+  control?.focus();
+  return control !== null;
+}
+
 /** "Changes | This version": the view shown and how to change it. */
 export interface DiffToggle {
   view: DiffView;
@@ -73,7 +89,7 @@ function RestoreButton({ restore }: { restore: DiffRestore }) {
   const { onRestore, disabledReason } = restore;
   if (disabledReason === undefined) {
     return (
-      <Button size="compact" icon={RotateCcw} onPress={onRestore}>
+      <Button size="compact" icon={RotateCcw} onPress={onRestore} {...{ [RESTORE_ATTRIBUTE]: '' }}>
         {t('header.restore')}
       </Button>
     );
@@ -81,7 +97,15 @@ function RestoreButton({ restore }: { restore: DiffRestore }) {
   return (
     <Tooltip content={disabledReason}>
       <Focusable>
-        <button type="button" className="button" data-variant="outline" data-size="compact" data-disabled aria-disabled="true">
+        <button
+          type="button"
+          className="button"
+          data-variant="outline"
+          data-size="compact"
+          data-disabled
+          aria-disabled="true"
+          {...{ [RESTORE_ATTRIBUTE]: '' }}
+        >
           <RotateCcw aria-hidden size={SIZE.iconSmall} className="button__icon" />
           {t('header.restore')}
         </button>
@@ -113,7 +137,8 @@ function paneMenuItems(
     );
   }
   if (restore !== undefined) {
-    // A disabled item gets no tooltip, and the arrow keys skip it: its reason is its note (§17).
+    // A disabled item gets no tooltip: its reason is its note, which the shared Menu also makes its
+    // description, and the item stays in reach of the arrow keys (library-actions §2.7).
     items.push(
       <MenuItem
         key="diff-restore"
@@ -145,13 +170,17 @@ export interface DiffHeaderProps {
   /** The heading's id, which names the pane. */
   headingId: string;
   headingRef?: Ref<HTMLHeadingElement>;
+  /** The header, where the pane finds "Restore" for its host (`DiffPaneHandle.focusRestore`). */
+  ref?: Ref<HTMLElement>;
 }
 
 /**
  * The diff header (handoff §6.1), known from the row before the diff loads: "Back" in a narrow
  * window, the path heading, the change status, and on the right "Changes | This version",
  * History's "Restore" and "More" (the host's items, and in a compact pane the toggle and
- * "Restore…" after them).
+ * "Restore…" after them). A control there that goes while it has the focus (Restore turning
+ * disabled as its version becomes the current one, the toggle and Restore moving into "More" as
+ * the pane narrows) leaves the focus on Restore, else "More".
  */
 export function DiffHeader({
   icon,
@@ -165,8 +194,20 @@ export function DiffHeader({
   compact,
   headingId,
   headingRef,
+  ref,
 }: DiffHeaderProps) {
   const { t } = useTranslation(['diff', 'common']);
+  const actions = useRef<HTMLDivElement | null>(null);
+  const keepFocus = useFocusKeeper(() => {
+    if (!focusRestoreIn(actions.current)) document.getElementById(headingId)?.focus();
+  });
+  const actionsRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      actions.current = node;
+      return keepFocus(node);
+    },
+    [keepFocus],
+  );
   const title =
     heading.kind === 'path'
       ? {
@@ -180,7 +221,7 @@ export function DiffHeader({
   const segmented = !compact && toggle !== null;
   const restoreButton = !compact && restore !== undefined;
   return (
-    <header className="diff-header">
+    <header ref={ref} className="diff-header">
       {back !== undefined && (
         <AriaButton className="diff-header__back" aria-label={back.label} onPress={back.onBack}>
           <ArrowLeft aria-hidden size={SIZE.icon} />
@@ -190,7 +231,7 @@ export function DiffHeader({
       <PathHeading icon={<HeadingIconView icon={icon} />} id={headingId} ref={headingRef} {...title} />
       <ChangeStatusIcon status={status} />
       {(segmented || restoreButton || more) && (
-        <div className="diff-header__actions">
+        <div ref={actionsRef} className="diff-header__actions">
           {segmented && (
             <SegmentedControl<DiffView>
               label={t('header.show')}
@@ -204,7 +245,7 @@ export function DiffHeader({
           )}
           {restoreButton && <RestoreButton restore={restore} />}
           {more && (
-            <MenuButton placement="bottom end" trigger={<IconButton icon={Ellipsis} label={t('header.more')} />}>
+            <MenuButton placement="bottom end" trigger={<IconButton icon={Ellipsis} label={t('header.more')} {...{ [MORE_ATTRIBUTE]: '' }} />}>
               <Menu>
                 {moreItems}
                 {moreItems !== undefined && paneItems.length > 0 && <MenuSeparator />}

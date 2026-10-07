@@ -565,6 +565,46 @@
       },
       "$description": "Hit area of the history resize handle, centred on the gap between panels."
     },
+    "resize-grip-width": {
+      "$type": "dimension",
+      "$value": {
+        "value": 4,
+        "unit": "px"
+      },
+      "$description": "Width of the grip drawn in the middle of the history resize handle (app-shell handoff §7)."
+    },
+    "resize-grip-height": {
+      "$type": "dimension",
+      "$value": {
+        "value": 36,
+        "unit": "px"
+      },
+      "$description": "Height of the grip drawn in the middle of the history resize handle (app-shell handoff §7)."
+    },
+    "history-icon-column": {
+      "$type": "dimension",
+      "$value": {
+        "value": 20,
+        "unit": "px"
+      },
+      "$description": "Icon column of history entries, with the line joining them; also the line height of an entry's title, so its first line centres on the icon (workspace-history handoff §7.2)."
+    },
+    "history-loading-row": {
+      "$type": "dimension",
+      "$value": {
+        "value": 40,
+        "unit": "px"
+      },
+      "$description": "The row at the end of the timeline while earlier entries load (workspace-history handoff §7.5)."
+    },
+    "icon-button-medium": {
+      "$type": "dimension",
+      "$value": {
+        "value": 26,
+        "unit": "px"
+      },
+      "$description": "Outline icon buttons that appear on hover and focus: Edit message and Undo commit on History entries and Not synced commits (workspace-history handoff §5, §7.3)."
+    },
     "search-dialog": {
       "$type": "dimension",
       "$value": {
@@ -732,6 +772,22 @@
         "unit": "px"
       },
       "$description": "Problems dialog height; its list scrolls."
+    },
+    "dialog-top-form": {
+      "$type": "dimension",
+      "$value": {
+        "value": 96,
+        "unit": "px"
+      },
+      "$description": "Top edge of a form dialog (import, move, edit message) from the window's top; shorter windows pull it up (workspace-history §8.5)."
+    },
+    "dialog-top-confirmation": {
+      "$type": "dimension",
+      "$value": {
+        "value": 220,
+        "unit": "px"
+      },
+      "$description": "Top edge of a confirmation dialog (size.dialog-small) from the window's top; shorter windows pull it up (workspace-history §8.5)."
     },
     "first-run-content": {
       "$type": "dimension",

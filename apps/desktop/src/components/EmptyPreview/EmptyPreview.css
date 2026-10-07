@@ -1,0 +1,34 @@
+/* The empty preview (app-shell handoff §5, 9C): the desk illustration and what to do, centred on
+   the app surface with a 14 px dot grid. */
+.empty-preview {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-18);
+  padding: var(--space-16);
+  background-color: var(--color-surface-app);
+  background-image: radial-gradient(var(--color-pattern-dots) var(--border-width), transparent var(--border-width));
+  background-size: var(--space-14) var(--space-14);
+  text-align: center;
+}
+
+.empty-preview__words {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.empty-preview__title {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-body);
+}
+
+.empty-preview__text {
+  margin: 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-small);
+}

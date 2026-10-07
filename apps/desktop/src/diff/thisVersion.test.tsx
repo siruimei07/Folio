@@ -3,6 +3,7 @@
 // "Changes" for another row, the compact pane's "More", History's Restore and its disabled reason,
 // and the preview of event-only files and moves without edits in Changes and History.
 import { act, screen, waitFor, within } from '@testing-library/react';
+import { createRef } from 'react';
 import { describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { installShortcuts } from '../app/shortcuts';
@@ -31,6 +32,7 @@ import {
   stubDiff,
   version,
 } from './test/pane';
+import type { DiffPaneHandle } from './types';
 
 const NARROW = { width: 500, height: 600 };
 const REASON = 'This is the version you have now.';
@@ -263,8 +265,14 @@ describe('the compact pane', () => {
     expect(menuEntries()).toEqual(['Show this version', 'Restore…']);
     const restore = screen.getByRole('menuitem', { name: 'Restore…' });
     expect(restore).toHaveAttribute('aria-disabled', 'true');
-    // A disabled item has no tooltip: the reason shows on it.
+    // A disabled item has no tooltip: the reason shows on it and is its description, heard when
+    // the keyboard reaches it; Enter does nothing there.
     expect(restore.querySelector('.menu-item__note')).toHaveTextContent(REASON);
+    expect(restore).toHaveAccessibleDescription(REASON);
+    await user.keyboard('{End}');
+    expect(restore).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(screen.getByRole('menu')).toBeInTheDocument();
     await user.keyboard('{Escape}');
     await waitFor(() => {
       expect(screen.queryByRole('menu')).toBeNull();
@@ -345,6 +353,45 @@ describe('Restore', () => {
     await user.keyboard('{Enter}');
     await user.click(button);
     expect(onRestore).not.toHaveBeenCalled();
+  });
+
+  it('keeps the focus on Restore when it turns disabled (its version became the current one)', async () => {
+    const onRestore = vi.fn();
+    const { pane, render, target } = showDiff(() => version(REVIEW), { props: { restore: { onRestore } } });
+    const enabled = within(pane).getByRole('button', { name: 'Restore' });
+    act(() => {
+      enabled.focus();
+    });
+    render(target, { restore: { onRestore, disabledReason: REASON } });
+    const disabled = within(pane).getByRole('button', { name: 'Restore' });
+    expect(disabled).not.toBe(enabled);
+    await waitFor(() => {
+      expect(disabled).toHaveFocus();
+    });
+  });
+
+  it('takes the focus through its ref: Restore, More in a compact pane, else the heading', () => {
+    const ref = createRef<DiffPaneHandle>();
+    const onRestore = vi.fn();
+    const { pane, render, target } = showDiff(() => version(REVIEW), { props: { ref, restore: { onRestore, disabledReason: REASON } } });
+    act(() => {
+      ref.current?.focusRestore();
+    });
+    expect(within(pane).getByRole('button', { name: 'Restore' })).toHaveFocus();
+    render(target, { ref });
+    act(() => {
+      ref.current?.focusRestore();
+    });
+    expect(within(pane).getByRole('heading', { level: 2 })).toHaveFocus();
+  });
+
+  it('takes the focus to More through its ref in a compact pane', () => {
+    const ref = createRef<DiffPaneHandle>();
+    const { pane } = showDiff(() => version(REVIEW), { layout: NARROW, props: { ref, restore: { onRestore: vi.fn() } } });
+    act(() => {
+      ref.current?.focusRestore();
+    });
+    expect(within(pane).getByRole('button', { name: 'More' })).toHaveFocus();
   });
 });
 

@@ -1,0 +1,25 @@
+/* The restore confirmation (handoff workspace-history §8.2): where the version goes, then "stays in
+ * History" in the secondary colour or the warning block. */
+.restore-dialog__message {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  font-size: var(--font-size-label);
+}
+
+.restore-dialog__text,
+.restore-dialog__kept {
+  margin: 0;
+}
+
+.restore-dialog__kept {
+  color: var(--color-text-secondary);
+}
+
+/* Placeholder lines while the plan loads, as tall as the sentence they stand for. */
+.restore-dialog__skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding: var(--space-4) 0;
+}

@@ -1,6 +1,8 @@
 // The parts the commit box (wide) and the commit bar (narrow) share (workspace-history handoff
 // §4.1–§4.7): the fields, the AI's status and notes, the commit button with its shortcut, the
 // failure note and the line that says why committing waits.
+import '../../components/messageFields.css';
+
 import { Info, Lock, Sparkles } from 'lucide-react';
 import { type KeyboardEvent, useCallback, useId, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -47,7 +49,10 @@ function FieldSkeleton({ bars }: { bars: number }) {
   );
 }
 
-/** The summary field: one line, at most 256 characters, 600 (§4.1, §4.7). */
+/**
+ * The summary field: one line, at most 256 characters, 600 (§4.1, §4.7). Both fields are
+ * components/messageFields.css's, in the frame `className` draws.
+ */
 export function SummaryField({ model, className }: { model: CommitBoxModel; className: string }) {
   const { t } = useTranslation('changes');
   const generating = model.writing === 'generating';
@@ -55,7 +60,7 @@ export function SummaryField({ model, className }: { model: CommitBoxModel; clas
     <span className="commit-field" data-writing={generating || undefined}>
       <input
         type="text"
-        className={className}
+        className={`message-field message-field--summary ${className}`}
         aria-label={t('commit.summary')}
         aria-busy={generating || undefined}
         placeholder={t('commit.summaryPlaceholder')}
@@ -84,7 +89,7 @@ export function DescriptionField({ model, className }: { model: CommitBoxModel; 
   return (
     <span className="commit-field" data-writing={generating || undefined}>
       <textarea
-        className={className}
+        className={`message-field message-field--description ${className}`}
         aria-label={t('commit.description')}
         aria-busy={generating || undefined}
         placeholder={placeholder}

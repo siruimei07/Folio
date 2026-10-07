@@ -14,17 +14,39 @@ interface ChangeTarget {
   libraryId: string;
 }
 
-const useChangeTargetStore = create<{ target: ChangeTarget | null }>()(() => ({ target: null }));
+interface ChangeTargets {
+  target: ChangeTarget | null;
+  /** The library in which Changes was asked to take the focus without a path (`takeChangesFocus`). */
+  focus: string | null;
+}
+
+const useChangeTargetStore = create<ChangeTargets>()(() => ({ target: null, focus: null }));
 
 /**
  * Shows the Changes view; with `path`, the view then selects the change at that path, scrolls to it
- * and gives it the focus (`takeChangeTarget`). Without a library open there is nothing to show.
+ * and gives it the focus (`takeChangeTarget`); without, the view takes the focus as it shows
+ * (`takeChangesFocus`), since the control that had it went with the view that hid. Without a
+ * library open there is nothing to show.
  */
 export function showChange(path?: string): void {
   const libraryId = useSession.getState().libraryId;
   if (libraryId === null) return;
-  if (path !== undefined) useChangeTargetStore.setState({ target: { path, libraryId } });
+  // A path asked for earlier and not taken yet stays: it still selects its change.
+  useChangeTargetStore.setState(path === undefined ? { focus: libraryId } : { target: { path, libraryId }, focus: null });
   showView('changes');
+}
+
+/** Whether Changes was asked to take the focus and has not yet. */
+export function usePendingChangesFocus(): boolean {
+  return useChangeTargetStore((state) => state.focus !== null);
+}
+
+/** Whether Changes was asked to take the focus in the open library, cleared so it is handled once. */
+export function takeChangesFocus(): boolean {
+  const { focus } = useChangeTargetStore.getState();
+  if (focus === null) return false;
+  useChangeTargetStore.setState({ focus: null });
+  return focus === useSession.getState().libraryId;
 }
 
 /** The path Changes was asked to show and has not taken yet, for the effect that takes it. */

@@ -14,55 +14,22 @@
   background: var(--color-surface-panel);
 }
 
-/* The empty preview and empty states sit on the app surface with a 14 px dot grid. */
-.empty-preview,
-.pane-state {
-  background-color: var(--color-surface-app);
-  background-image: radial-gradient(var(--color-pattern-dots) var(--border-width), transparent var(--border-width));
-  background-size: var(--space-14) var(--space-14);
-}
-
+/* Empty states sit on the app surface with a 14 px dot grid, like the empty preview
+   (components/EmptyPreview). */
 .pane-state {
   display: flex;
   flex: 1;
   min-height: 0;
   overflow: auto;
+  background-color: var(--color-surface-app);
+  background-image: radial-gradient(var(--color-pattern-dots) var(--border-width), transparent var(--border-width));
+  background-size: var(--space-14) var(--space-14);
 }
 
 /* Errors sit on the sunken surface without dots (library-actions §2.5). */
 .pane-state[data-tone='danger'] {
   background-color: var(--color-surface-sunken);
   background-image: none;
-}
-
-.empty-preview {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-18);
-  padding: var(--space-16);
-  text-align: center;
-}
-
-.empty-preview__words {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-4);
-}
-
-.empty-preview__title {
-  margin: 0;
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-body);
-}
-
-.empty-preview__text {
-  margin: 0;
-  color: var(--color-text-tertiary);
-  font-size: var(--font-size-small);
 }
 
 .pane-header {

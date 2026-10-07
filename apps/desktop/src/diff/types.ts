@@ -15,6 +15,12 @@ export interface DiffPaneHandle {
    * region when they show, else to the heading.
    */
   focus: () => void;
+  /**
+   * Moves the focus to "Restore" (handoff §8.3: where it goes back when the host's confirmation
+   * closes): the header's button, enabled or disabled, or "More" in a compact pane, which lists
+   * "Restore…"; the heading when the row offers no Restore.
+   */
+  focusRestore: () => void;
 }
 
 /** What the pane asks its host to do, with the host's own feedback and toasts. */
@@ -41,7 +47,11 @@ export interface DiffBack {
  * the confirmation (§8.2).
  */
 export interface DiffRestore {
-  /** Opens the host's confirmation. Focus goes back to the button (or "More") when it closes. */
+  /**
+   * Opens the host's confirmation. Focus goes back to the button (or "More") when it closes; when
+   * that control was replaced meanwhile (Restore turning disabled), the host calls
+   * `DiffPaneHandle.focusRestore`.
+   */
   onRestore: () => void;
   /**
    * Why it cannot be done now ("This is the version you have now.", a read-only history): the

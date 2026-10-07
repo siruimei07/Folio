@@ -6,7 +6,7 @@
 import { createContext, useContext } from 'react';
 import { create } from 'zustand';
 
-import type { EntryRef, ImportSource, Job } from '../ipc';
+import type { CommitInfo, EntryRef, ImportSource, Job } from '../ipc';
 
 /** The rail views. Until M2 only the Library is registered (ADR-0005, product decision 3). */
 export type ViewId = 'library' | 'changes' | 'history';
@@ -20,6 +20,8 @@ export interface DialogParams {
   librarySettings: { page?: string } | undefined;
   appSettings: { page?: string } | undefined;
   problems: undefined;
+  /** A commit's message (`feat/ui-history-view`, handoff workspace-history §9.1). */
+  editMessage: { commit: CommitInfo };
   /**
    * Adding files from "Add files" or a drop (`feat/ui-import`), to `target` or a place it asks
    * for; `tags` start selected (the Library's tag filter).

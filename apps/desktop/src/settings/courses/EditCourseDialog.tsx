@@ -118,6 +118,7 @@ export function EditCourseDialog({ course, semester, onClose }: EditCourseDialog
   return (
     <DialogFrame
       isOpen
+      placement="form"
       onOpenChange={(open) => {
         if (!open && !saving) onClose();
       }}

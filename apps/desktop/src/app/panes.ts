@@ -20,6 +20,8 @@ export interface PreviewActions {
   showInExplorer: (entry: EntryRef) => void;
   /** Removes a tag from the tag row's chip ("Remove tag Notes"). */
   setTags: (entries: readonly EntryRef[], add: readonly string[], remove: readonly string[]) => void;
+  /** "View history of this file" (workspace-history §7.4, §12.4): the header offers it when given. */
+  viewHistory?: (entry: EntryRef) => void;
 }
 
 export interface PreviewPaneProps {

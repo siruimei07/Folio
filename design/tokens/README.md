@@ -129,6 +129,20 @@ bar), `diff-mark-offset` (the changed words' underline below the baseline), `dif
 tags block's label column) and `diff-compact-pane` (the pane width below which the toggle and
 Restore move into More); and `radius.diff-emphasis` for the changed words' emphasis.
 
+Round 12 (2026-10-06, lane `feat/ui-history-view`) added `size.dialog-top-form` and
+`dialog-top-confirmation`, where a dialog's top edge sits (workspace-history handoff §8.5), and
+`color.button.disabled-background`, `-border` and `-text` for a disabled or pending button. They
+alias existing colours: in light mode the handoff's `color.surface.sunken`, `color.border.default`
+and `color.text.tertiary`; in dark mode `color.surface.app`, `color.border.guide` and
+`color.text.tertiary`, recessed below the panel and nearly borderless, because the light pairing
+left a disabled outline button looking close to an enabled one there. The Design canvas and the
+Design System artifact still draw the old dark look until they are synced. For the History view it
+added `size.history-icon-column` (the entries' icon column and their titles' line height),
+`history-loading-row` (the timeline's last row while earlier entries load) and
+`resize-grip-width` and `resize-grip-height` (the grip of the panel's resize handle, app-shell §7),
+and `size.icon-button-medium` (26 px: the outline Edit message and Undo commit buttons that show on
+a History entry or a Not synced commit, workspace-history §5, §7.3).
+
 ## Modes
 
 App settings → Appearance → Theme offers Light, Dark and System (default System). The app sets
@@ -239,6 +253,7 @@ Checked against the values in these files. Text needs 4.5:1; UI parts and graphi
 | Success text, lowest surface (selected row) | 4.5:1 | 4.75 | 6.97 |
 | Success text on success-soft | 4.5:1 | 4.86 | 6.71 |
 | Text on danger button | 4.5:1 | 5.92 | 7.32 |
+| Text on a disabled or pending button (inactive controls are exempt; kept above 4.5:1) | 4.5:1 | 5.15 | 6.36 |
 | Progress fill on track | 3.0:1 | 4.01 | 6.29 |
 | Drop outline on drop.wash, lowest | 3.0:1 | 4.53 | 7.14 |
 | Drop outline on drop.row | 3.0:1 | 4.59 | 6.34 |

@@ -4,6 +4,7 @@ import {
   FolderOutput,
   FolderPlus,
   FolderSearch,
+  History,
   Pencil,
   Plus,
   Settings,
@@ -14,7 +15,8 @@ import { type ReactElement, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Key, Selection } from 'react-aria-components';
 
-import { openDialog, useCanOpenDialog } from '../../app/navigation';
+import { showHistory } from '../../app/historyTarget';
+import { openDialog, useCanOpenDialog, useCanShowView } from '../../app/navigation';
 import { useShortcutLabel } from '../../app/shortcuts';
 import { Menu, MenuItem, MenuSection, MenuSeparator, Submenu } from '../../components/Menu/Menu';
 import { TagDot } from '../../components/TagDot/TagDot';
@@ -187,6 +189,7 @@ export function EntryMenu({
   const commands = useLibraryCommands();
   const addFiles = useAddFiles();
   const canSettings = useCanOpenDialog('librarySettings');
+  const canHistory = useCanShowView('history');
   const library = useLibrary();
   const menuLabel = useMenuLabel();
   const readOnly = library?.readOnly === true;
@@ -226,6 +229,10 @@ export function EntryMenu({
     },
     courseSettings: openCourses,
     newCourse: openCourses,
+    // A file's history in the History view (workspace-history §7.4, §12.4).
+    viewHistory: () => {
+      if (single?.kind === 'file') showHistory({ kind: 'entry', entry: { id: single.id, path: single.path } });
+    },
   };
   const onAction = (key: Key) => actions[String(key)]?.();
 
@@ -358,6 +365,11 @@ export function EntryMenu({
       <MenuItem id="reveal" icon={FolderSearch}>
         {t('menu.reveal')}
       </MenuItem>
+      {canHistory && (
+        <MenuItem id="viewHistory" icon={History}>
+          {t('menu.viewHistory')}
+        </MenuItem>
+      )}
       <MenuSeparator />
       {tagsItem}
       {tail}

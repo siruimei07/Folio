@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { useSession } from '../data/session';
-import { showChange, takeChangeTarget, usePendingChangeTarget } from './changeTarget';
+import { showChange, takeChangesFocus, takeChangeTarget, usePendingChangesFocus, usePendingChangeTarget } from './changeTarget';
 import { useNavigation } from './navigation';
 
 const REVIEW = 'Fall 2026/MAT232/Exams/Midterm/Midterm review.md';
@@ -14,6 +14,7 @@ beforeEach(() => {
 
 afterEach(() => {
   takeChangeTarget();
+  takeChangesFocus();
   useSession.setState({ libraryId: null });
 });
 
@@ -41,6 +42,33 @@ describe('showChange', () => {
     showChange();
     expect(useNavigation.getState().view).toBe('changes');
     expect(takeChangeTarget()).toBe(REVIEW);
+  });
+
+  it('asks Changes to take the focus, once, when shown without a path', () => {
+    const { result } = renderHook(() => usePendingChangesFocus());
+    expect(result.current).toBe(false);
+    act(() => {
+      showChange();
+    });
+    expect(result.current).toBe(true);
+    let taken = false;
+    act(() => {
+      taken = takeChangesFocus();
+    });
+    expect(taken).toBe(true);
+    expect(result.current).toBe(false);
+    expect(takeChangesFocus()).toBe(false);
+
+    // A path selects its change, which takes the focus itself.
+    showChange();
+    showChange(REVIEW);
+    expect(takeChangesFocus()).toBe(false);
+  });
+
+  it('drops a focus asked for in a library that is no longer open', () => {
+    showChange();
+    useSession.setState({ libraryId: 'library-b' });
+    expect(takeChangesFocus()).toBe(false);
   });
 
   it('drops a path asked for in a library that is no longer open', () => {

@@ -3,20 +3,22 @@
 // deleted file or folder, a folder that moved or was added, or a tag or settings change. They act
 // through the app's file actions (`app/fileActions.ts`) and the row's check box.
 //
-// "View history of this file" belongs to feat/ui-history-view (`showHistory` in
-// app/historyTarget.ts), which adds it in `fileItems` below: after "Show in File Explorer" for a
-// file, first for a deleted file and for a file's tags, never for folders; in both menus; disabled
-// with its reason for an added file that no commit holds yet (§3.7). Until then neither menu
-// offers it.
-import { Copy, ExternalLink, FolderSearch, Square, SquareCheck } from 'lucide-react';
+// "View history of this file" (History's, `showHistory` in app/historyTarget.ts) comes after "Show
+// in File Explorer" for a file, first for a deleted file and for a file's tags, never for folders;
+// in both menus, while History is on the rail; disabled with its reason for an added file that no
+// commit holds yet (§3.7).
+import { Copy, ExternalLink, FolderSearch, History, Square, SquareCheck } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 
 import { COPY_PATH_KEYS, type FileActions, useFileActions } from '../../app/fileActions';
+import { showHistory } from '../../app/historyTarget';
+import { useCanShowView } from '../../app/navigation';
 import { type KeyCombo, useShortcutLabel } from '../../app/shortcuts';
 import { Menu, MenuItem, MenuSeparator } from '../../components/Menu/Menu';
-import type { WorkspaceItem } from '../../ipc';
+import { useWorkspace } from '../../data/workspace';
+import type { FileRef, WorkspaceItem } from '../../ipc';
 import { includabilityOf } from '../inclusion';
 import type { ChangeRowOf } from '../list/rows';
 
@@ -80,6 +82,53 @@ function fileItems(item: WorkspaceItem, files: FileActions, t: ChangesT): ReactE
       {t('menu.reveal')}
     </MenuItem>,
   ];
+}
+
+/**
+ * The file whose history "View history of this file" shows (§3.7): a file's entry; a deleted file's
+ * version in HEAD (its old path); a file's tags, its entry. `notCommitted` for an added file, which
+ * no commit holds yet; `null` for folders and settings, which have none.
+ */
+export function historyFileOf(row: ChangeRowOf, head: string | null): FileRef | 'notCommitted' | null {
+  if (row.kind === 'metadata') {
+    const { subject } = row.change;
+    if (subject.kind !== 'tags' || subject.entryKind !== 'file') return null;
+    if (subject.entry !== null) return { kind: 'entry', entry: subject.entry };
+    return head === null ? null : { kind: 'version', commit: head, path: subject.path };
+  }
+  const { item } = row;
+  if (item.kind !== 'file') return null;
+  if (item.change === 'added') return 'notCommitted';
+  if (item.change === 'deleted' || item.entry === null) return head === null ? null : { kind: 'version', commit: head, path: item.path };
+  return { kind: 'entry', entry: item.entry };
+}
+
+/** "View history of this file", while History is on the rail (`shown`). */
+function historyItems(row: ChangeRowOf, head: string | null, shown: boolean, t: ChangesT): ReactElement[] {
+  const file = shown ? historyFileOf(row, head) : null;
+  if (file === null) return [];
+  const notCommitted = file === 'notCommitted';
+  return [
+    <MenuItem
+      key="viewHistory"
+      id="viewHistory"
+      icon={History}
+      isDisabled={notCommitted}
+      note={notCommitted ? t('menu.notCommitted') : undefined}
+      onAction={() => {
+        if (!notCommitted) showHistory(file);
+      }}
+    >
+      {t('menu.viewHistory')}
+    </MenuItem>,
+  ];
+}
+
+/** What "View history of this file" needs: HEAD (a deleted file's version) and whether History is on the rail. */
+function useHistoryItems(): (row: ChangeRowOf, t: ChangesT) => ReactElement[] {
+  const head = useWorkspace().data?.head ?? null;
+  const shown = useCanShowView('history');
+  return (row, t) => historyItems(row, head, shown, t);
 }
 
 function copyItems(row: ChangeRowOf, files: FileActions, t: ChangesT, shortcut: ShortcutLabel): ReactElement[] {
@@ -160,10 +209,12 @@ export function ChangeMenu({ row, inclusion, label, focusFirst }: ChangeMenuProp
   const { t } = useTranslation('changes');
   const files = useFileActions();
   const shortcut = useShortcutLabel();
+  const history = useHistoryItems();
   const items = separated([
-    row.kind === 'item' ? fileItems(row.item, files, t) : [],
+    row.kind === 'item' ? [...fileItems(row.item, files, t), ...history(row, t)] : [],
     row.kind === 'item' && inclusion !== null ? [inclusionItem(row.item, inclusion, t, shortcut)] : [],
-    copyItems(row, files, t, shortcut),
+    // A tag row's "View history of this file" goes with its "Copy path" (§3.7).
+    [...(row.kind === 'metadata' ? history(row, t) : []), ...copyItems(row, files, t, shortcut)],
   ]);
   return (
     <Menu aria-label={label} autoFocus={focusFirst ? 'first' : true}>
@@ -180,7 +231,8 @@ export function useDiffMoreItems(row: ChangeRowOf | null): ReactElement[] | unde
   const { t } = useTranslation('changes');
   const files = useFileActions();
   const shortcut = useShortcutLabel();
+  const history = useHistoryItems();
   if (row === null) return undefined;
-  const items = [...(row.kind === 'item' ? fileItems(row.item, files, t) : []), ...copyItems(row, files, t, shortcut)];
+  const items = [...(row.kind === 'item' ? fileItems(row.item, files, t) : []), ...history(row, t), ...copyItems(row, files, t, shortcut)];
   return items.length === 0 ? undefined : items;
 }

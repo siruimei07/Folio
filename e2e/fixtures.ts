@@ -1,6 +1,6 @@
 import { type ChildProcess, spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { access, mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -10,6 +10,7 @@ import { type Browser, type Locator, type Page, test as base, chromium, expect }
 
 import firstRun from '../apps/desktop/src/i18n/locales/en/first-run.json' with { type: 'json' };
 import library from '../apps/desktop/src/i18n/locales/en/library.json' with { type: 'json' };
+import shell from '../apps/desktop/src/i18n/locales/en/shell.json' with { type: 'json' };
 import type { AppError, FolderChoice, Job, LibraryOpened } from '../apps/desktop/src/ipc/bindings';
 
 export { expect };
@@ -251,6 +252,22 @@ export async function openLibrary(
   await expect
     .poll(async () => (await invoke<Job[]>(page, 'list_jobs')).find((job) => job.id === opened.scan)?.status.state, poll)
     .toBe('done');
+  return opened;
+}
+
+/** The course `openLibraryWithAFile` puts its file in. */
+export const FILE_COURSE = 'MAT232 Calculus';
+
+/**
+ * `openLibrary` over one course file, `Fall 2026/MAT232 Calculus/notes.md`, written to the isolated
+ * library folder (`libraryFolder: true`) first; resolves once the window shows the rail.
+ */
+export async function openLibraryWithAFile(page: Page, libraryDir: string | undefined): Promise<LibraryOpened> {
+  if (!libraryDir) throw new Error('This test requires the isolated library-folder fixture');
+  await mkdir(path.join(libraryDir, 'Fall 2026', FILE_COURSE), { recursive: true });
+  await writeFile(path.join(libraryDir, 'Fall 2026', FILE_COURSE, 'notes.md'), '# Notes\n');
+  const opened = await openLibrary(page);
+  await expect(page.getByRole('navigation', { name: shell.rail.label })).toBeVisible();
   return opened;
 }
 

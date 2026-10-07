@@ -1,1 +1,251 @@
-{}
+{
+  "title": "History",
+  "feed": "History, newest first",
+  "fileFeed": "History of {{name}}, newest first",
+  "filter": {
+    "all": "All types",
+    "some_one": "{{count}} type",
+    "some_other": "{{count}} types",
+    "name": "Filter by type: {{label}}",
+    "menu": "Types to show",
+    "types": {
+      "commit": "Commits",
+      "reword": "Message edits",
+      "uncommit": "Undone commits",
+      "restore": "Restores"
+    },
+    "showAll": "Show all types"
+  },
+  "day": {
+    "today": "Today, {{date}}",
+    "yesterday": "Yesterday, {{date}}",
+    "when": "{{day}}, {{time}}"
+  },
+  "entry": {
+    "first": "Start history",
+    "noMessage": "No message",
+    "firstFiles_one": "{{count, number}} file was in your library when Folio started keeping history.",
+    "firstFiles_other": "{{count, number}} files were in your library when Folio started keeping history.",
+    "pruned_one": "Thinned out {{count, number}} old Word version",
+    "pruned_other": "Thinned out {{count, number}} old Word versions",
+    "reword": "Edited commit message",
+    "uncommit": "Undid commit “{{summary}}”",
+    "restore": "Restored {{name}} to the version from {{date}}",
+    "icloud": "iCloud",
+    "madeOn": "Made on {{device}}",
+    "fromICloud": "From iCloud",
+    "describe": {
+      "device": "{{when}}, made on {{device}}",
+      "icloud": "{{when}}, from iCloud",
+      "plain": "{{when}}"
+    }
+  },
+  "loadingEarlier": "Loading earlier entries…",
+  "start": "That's the start of your history.",
+  "states": {
+    "loading": "Loading the history",
+    "empty": {
+      "title": "No history yet",
+      "text": "Commit your changes and each commit shows up here, newest first."
+    },
+    "filtered": {
+      "title": "Nothing of these types yet",
+      "text": "No {{types}} so far.",
+      "action": "Show all types"
+    },
+    "failed": "Couldn't load the history",
+    "earlierFailed": "Couldn't load earlier entries.",
+    "refreshFailed": "Couldn't update the history.",
+    "goToChanges": "Go to Changes",
+    "starting": "Your first entry shows up here when Folio has saved the first version of your library.",
+    "readOnly": {
+      "title": "History is read-only.",
+      "text": "A newer version of Folio changed it. Update Folio to edit messages or restore versions."
+    },
+    "damaged": {
+      "title": "Folio can't read this library's history",
+      "text": "Your files are fine. Copy the details and send them to the developer."
+    }
+  },
+  "nothingOf": {
+    "commit": "commits",
+    "reword": "message edits",
+    "uncommit": "undone commits",
+    "restore": "restores"
+  },
+  "diff": {
+    "label": "Selected version",
+    "empty": "Select a file to see this version and what changed",
+    "back": "Back to history"
+  },
+  "resize": "Resize the history panel",
+  "cards": {
+    "label": "Changes in this commit",
+    "restored": "Restored file",
+    "showAllFiles_one": "Show {{count, number}} file",
+    "showAllFiles_other": "Show all {{count, number}} files",
+    "showAllChanges_one": "Show {{count, number}} change",
+    "showAllChanges_other": "Show all {{count, number}} changes",
+    "showMore": "Show more",
+    "loading": "Loading…",
+    "failed": "Couldn't load the rest of the changes.",
+    "restoreFailed": "Couldn't find the restored version.",
+    "version": "This file in this commit",
+    "others_one": "and {{count, number}} other file in this commit",
+    "others_other": "and {{count, number}} other files in this commit",
+    "movedFrom": "Moved from {{path}}",
+    "tags": "Tags",
+    "semesterSettings": "{{name}} semester settings",
+    "courseSettings": "{{name}} course settings",
+    "tagDefinitions": "Tag definitions",
+    "librarySettings": "Library settings",
+    "ignoreRules": "Ignore rules"
+  },
+  "files": {
+    "menu": "Actions for {{name}}",
+    "open": "Open with default app",
+    "reveal": "Show in File Explorer",
+    "viewHistory": "View history of this file",
+    "copyPath": "Copy path",
+    "locating": "Looking it up…",
+    "deleted": "Deleted",
+    "deletedSince": "Deleted since",
+    "lookupFailed": "Lookup failed",
+    "restore": "Restore this version…"
+  },
+  "file": {
+    "showWhole": "Show the whole history",
+    "current": "Current version",
+    "currentRestore": "This is the version you have now.",
+    "notYet": "{{name}} wasn't in the library yet.",
+    "none": {
+      "title": "{{name}} has no history yet",
+      "text": "Commit it from Changes to start its history."
+    }
+  },
+  "restore": {
+    "title": "Restore {{name}} to {{date}}?",
+    "where": {
+      "replace": "Folio puts the version from {{when}} back in {{place}}. It shows up in Changes, so you can check it before you commit.",
+      "recreate": "{{name}} isn't in the library anymore. Folio puts the version from {{when}} back in {{place}}. It shows up in Changes, so you can check it before you commit.",
+      "beside": "Another file now has this name, so Folio puts the version from {{when}} beside it as “{{target}}”. It shows up in Changes, so you can check it before you commit.",
+      "library": "your library"
+    },
+    "kept": "The version you have now stays in History, so nothing is lost.",
+    "recycle": {
+      "title": "This file has changes you haven't committed",
+      "text": "Folio moves the file as it is now to the Recycle Bin first, so you can still get those changes back."
+    },
+    "cancel": "Cancel",
+    "confirm": "Restore version",
+    "restoring": "Restoring…",
+    "tryAgain": "Try again",
+    "failed": "Couldn't restore {{name}}",
+    "failedText": "{{reason}} Nothing was changed.",
+    "reasons": {
+      "InUse": "Another app is using it. Close it there, then try again.",
+      "NotLocal": "It isn't downloaded yet. Open it so it downloads, then try again.",
+      "NotRecyclable": "Folio couldn't move the current file to the Recycle Bin, so it didn't replace it.",
+      "AccessDenied": "Windows didn't allow it.",
+      "DiskFull": "The disk is full.",
+      "NotStored": "Folio doesn't keep this version any more.",
+      "Pruned": "Folio doesn't keep this version any more.",
+      "FileChanged": "It was saved again just now, so Folio left it as it is. Check it, then try again."
+    },
+    "done": {
+      "title": "Restored {{name}}",
+      "body": "The version from {{date}} is back. Check it in Changes, then commit it.",
+      "show": "Show in Changes"
+    },
+    "readOnly": "History is read-only.",
+    "readOnlyNote": "Read-only",
+    "damaged": "Folio can't read the history.",
+    "damagedNote": "History unreadable",
+    "unchanged": {
+      "title": "Nothing to restore",
+      "body": "{{name}} already has the content of this version."
+    }
+  },
+  "actions": {
+    "editMessage": "Edit message",
+    "undoCommit": "Undo commit",
+    "copyId": "Copy commit ID",
+    "copiedId": "Copied the commit ID {{id}}",
+    "copyIdFailed": "Couldn't copy the commit ID",
+    "menu": "Actions for “{{summary}}”",
+    "refused": {
+      "reword": {
+        "prune": "This entry has no message.",
+        "synced": "Synced commits keep their message.",
+        "readOnly": "History is read-only.",
+        "damaged": "Folio can't read the history."
+      },
+      "uncommit": {
+        "prune": "This entry can't be undone.",
+        "synced": "Synced commits can't be undone.",
+        "first": "The first commit can't be undone.",
+        "notHead": "Only the newest commit can be undone.",
+        "readOnly": "History is read-only.",
+        "damaged": "Folio can't read the history."
+      }
+    },
+    "notes": {
+      "reword": {
+        "prune": "No message",
+        "synced": "Synced",
+        "readOnly": "Read-only",
+        "damaged": "History unreadable"
+      },
+      "uncommit": {
+        "prune": "Can't be undone",
+        "synced": "Synced",
+        "first": "First commit",
+        "notHead": "Not the newest",
+        "readOnly": "Read-only",
+        "damaged": "History unreadable"
+      }
+    }
+  },
+  "undo": {
+    "done": "Undid “{{summary}}”",
+    "doneText_one": "Its {{count, number}} change is back in Changes.",
+    "doneText_other": "Its {{count, number}} changes are back in Changes.",
+    "showInChanges": "Show in Changes",
+    "failed": "Couldn't undo the commit",
+    "reasons": {
+      "NotHead": "Only the newest commit can be undone. Something changed; the list is refreshed.",
+      "CannotUncommit": "This commit can't be undone."
+    }
+  },
+  "editMessage": {
+    "title": "Edit message",
+    "summary": "Summary",
+    "summaryPlaceholder": "Summary",
+    "description": "Description",
+    "descriptionPlaceholder": "Description (optional)",
+    "today": "Today {{time}}",
+    "details_one": "{{id}} · {{when}} · {{count, number}} file. You can edit a message until the commit is synced.",
+    "details_other": "{{id}} · {{when}} · {{count, number}} files. You can edit a message until the commit is synced.",
+    "detailsNoFiles": "{{id}} · {{when}}. You can edit a message until the commit is synced.",
+    "cancel": "Cancel",
+    "save": "Save message",
+    "saving": "Saving…",
+    "problems": {
+      "SummaryEmpty": "Enter a summary.",
+      "SummaryTooLong": "A summary can be up to {{limit, number}} characters.",
+      "SummaryInvalid": "A summary can't contain line breaks or control characters.",
+      "BodyTooLong": "A description can be up to {{limit, number}} characters.",
+      "BodyInvalid": "A description can't contain control characters other than tabs and line breaks."
+    },
+    "failed": "Couldn't save the message",
+    "openFailed": "Couldn't open the commit's message",
+    "reasons": {
+      "CannotReword": "This commit's message can't be changed.",
+      "HistoryReadOnly": "A newer version of Folio changed this library."
+    },
+    "done": {
+      "title": "Saved the new message",
+      "body": "{{id}} is now “{{summary}}”."
+    }
+  }
+}

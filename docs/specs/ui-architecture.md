@@ -508,9 +508,18 @@ Deviations:
   place, works from the keyboard.
 - RAC composes a tag's remove button name from its own label and the tag's: the label is
   "Remove tag", the name "Remove tag Notes".
-- A disabled menu item is skipped by the arrow keys (RAC's behaviour), where library-actions §2.7
-  asks for it to stay focusable; RAC 1.21 has no option for that. The item keeps
-  `aria-disabled` and the tertiary colour.
+- A disabled menu item stays focusable, as library-actions §2.7 asks, where RAC's `isDisabled`
+  alone takes it out of the arrow keys' reach (as built by `feat/ui-history-view`). The `MenuItem`
+  wrapper disables an item for its `isDisabled` or a key in its `Menu`'s `disabledKeys` (the
+  wrapper applies them to its items instead of handing them to RAC), and gives RAC's `MenuItem`
+  `isDisabled` together with the collection-node prop `disabledBehavior: 'selection'`, which
+  react-stately's `SelectionManager` and react-aria's `ListKeyboardDelegate` read per item. The
+  arrow keys, Home, End and type-ahead reach the item, while `isDisabled` keeps it inert: no press,
+  hover, action, selection toggle or closing, with `aria-disabled` and `data-disabled` (the tertiary
+  colour). RAC 1.21 does not type that prop on `MenuItem`; `components/Menu/Menu.test.tsx` holds
+  the behaviour, so an upgrade that drops it fails there. A disabled item gets no tooltip, so an
+  item's `note` (the reason, "From folder") is also its description (`slot="description"`,
+  `aria-describedby`).
 - RAC's `DialogTrigger` does not set `aria-haspopup="dialog"`; the activity button and the rail's
   gear and avatar set it themselves.
 
@@ -722,7 +731,7 @@ from §8.1 in these ways:
   synced" card, which a narrow window takes away. The list's load failure and the card's keep
   their failure on screen, and "Try again" its focus, while the retry reads, a later page too
   (TanStack puts it back to `pending` with its error cleared; `usePagedRows` reports it as
-  `loading`) (`changes/useRetriedFailure.ts`, like the diff's `useRetry`), and read it out again when it fails
+  `loading`) (`app/useRetriedFailure.ts`, like the diff's `useRetry`), and read it out again when it fails
   again; when it works, the list's selected row or the card's heading takes the focus. Widening
   forgets a diff opened over the list, so narrowing again covers the list only when the focus was
   in the diff.

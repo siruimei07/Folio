@@ -66,7 +66,9 @@
     "unreadable": "Couldn't read it",
     "required": "Always in the commit",
     "committing": "Wait until the commit is done",
-    "copyPath": "Copy path"
+    "copyPath": "Copy path",
+    "viewHistory": "View history of this file",
+    "notCommitted": "Not committed yet"
   },
   "commit": {
     "label": "Commit",
@@ -134,7 +136,8 @@
     },
     "fallback": {
       "title": "Committed with a template message",
-      "text": "{{reason}}, so the message is “{{summary}}”. You can edit it until you sync."
+      "text": "{{reason}}, so the message is “{{summary}}”. You can edit it until you sync.",
+      "editMessage": "Edit message"
     },
     "showDescription": "Add a description",
     "showWrittenDescription": "Show the description",
@@ -237,7 +240,9 @@
     "noMessage": "No message",
     "meta": "{{id}} · {{when}}",
     "today": "Today {{time}}",
-    "failed": "Couldn't load your commits."
+    "failed": "Couldn't load your commits.",
+    "more_one": "{{count, number}} more in History",
+    "more_other": "{{count, number}} more in History"
   },
   "firstCommit": {
     "text": "Folio is saving the first version of your library: every text and Word file, and a record of everything else. You can keep working; changes show up here when it's done."

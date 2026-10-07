@@ -1,3 +1,4 @@
+import '../../components/messageFields.css';
 import './commit.css';
 
 import { useTranslation } from 'react-i18next';
@@ -29,8 +30,8 @@ export function CommitBox({ model }: { model: CommitBoxModel }) {
   return (
     <section ref={keepFocus} className="panel commit-box" aria-label={t('commit.label')} onKeyDown={onCommitBoxKey(model)}>
       {model.failure !== null && <FailureNote failure={model.failure} />}
-      <div className="commit-box__group">
-        <SummaryField model={model} className="commit-box__summary" />
+      <div className="commit-box__group message-group">
+        <SummaryField model={model} className="commit-box__summary message-group__summary" />
         <DescriptionField model={model} className="commit-box__description" />
         <div className="commit-box__footer">
           <div className="commit-box__status">

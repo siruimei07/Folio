@@ -122,12 +122,42 @@
 .not-synced__commit {
   display: flex;
   min-width: 0;
-  flex-direction: column;
-  gap: var(--space-2);
+  align-items: center;
+  gap: var(--space-8);
   margin-left: calc(-1 * var(--space-6));
   padding: var(--space-4) var(--space-6);
   border-radius: var(--radius-row);
   transition: background-color var(--motion-duration-base) var(--motion-easing-standard);
+}
+
+/* The summary and its meta line, beside the hover actions (§5). */
+.not-synced__commit-text {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* The narrow card keeps the summaries' width until the buttons show: each is one truncated line,
+   so only its ellipsis moves (History's entries keep the space, since their titles wrap). */
+.not-synced__commit .commit-actions {
+  display: none;
+}
+
+.not-synced__commit:hover .commit-actions,
+.not-synced__commit:focus-within .commit-actions {
+  display: inline-flex;
+}
+
+.not-synced__commit:focus-visible {
+  outline-offset: calc(-1 * var(--focus-ring-width));
+}
+
+/* "9 more in History" (§5), in line with the commits. */
+.not-synced__more {
+  margin: 0;
+  padding-left: calc(var(--size-card-tile) + var(--space-8));
 }
 
 .not-synced__commit::before {

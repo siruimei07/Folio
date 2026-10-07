@@ -4,10 +4,13 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 
+import { takeHistoryTimeline } from '../app/historyTarget';
+import { useNavigation } from '../app/navigation';
+import { useToasts } from '../app/toasts';
 import { formatDateTime, formatTime } from '../lib/format';
 import { FRESH_COMMIT_MS } from '../lib/timing';
 import { NOW } from '../test/data';
-import { renderApp } from '../test/render';
+import { renderApp, toastTexts } from '../test/render';
 import { NotSynced } from './NotSynced';
 import { findRow, holdRequests, politeText, renderChanges, resizeTo } from './test/render';
 
@@ -192,5 +195,87 @@ describe('Not synced', () => {
     renderChanges();
     await findRow('CSC148/a1/run.bat');
     expect(screen.queryByRole('region', { name: 'Not synced' })).toBeNull();
+  });
+});
+
+describe('Not synced, with History on the rail', () => {
+  /** The hover actions of a listed commit. */
+  function actionsOf(item: HTMLElement): string[] {
+    return within(item)
+      .queryAllByRole('button')
+      .map((button) => button.getAttribute('aria-label') ?? '');
+  }
+
+  it('shows Edit message on every listed commit and Undo commit on the newest, each commit a tab stop', async () => {
+    const { shell, user } = renderChanges({ withHistory: true });
+    const list = await newestCommits();
+    const items = within(list).getAllByRole('listitem');
+    expect(items.map(actionsOf)).toEqual([['Edit message', 'Undo commit'], ['Edit message'], ['Edit message']]);
+    for (const item of items) expect(item).toHaveAttribute('tabindex', '0');
+    expect(items[0]).toHaveClass('commit-actions-host');
+    // Each tab stop is named by its summary and described by its short id and time (WCAG 4.1.2).
+    const top = newest(shell);
+    const named = within(list).getByRole('listitem', { name: 'MAT232: rewrite the midterm review' });
+    expect(named).toBe(items[0]);
+    expect(named).toHaveAccessibleDescription(`${top.id.slice(3, 10)} · ${formatDateTime(Number(top.timeMs), 'en', NOW)}`);
+    expect(within(list).getByRole('listitem', { name: 'MAT223: update exercise 1; MAT232: update the midterm review' })).toBe(items[2]);
+
+    await user.click(within(named).getByRole('button', { name: 'Edit message' }));
+    const dialog = useNavigation.getState().dialog;
+    expect(dialog?.kind).toBe('editMessage');
+    expect(dialog?.kind === 'editMessage' ? dialog.params.commit.id : null).toBe(top.id);
+  });
+
+  it('undoes the newest commit from its button and says so, without Show in Changes there', async () => {
+    const { user } = renderChanges({ withHistory: true });
+    useNavigation.setState({ view: 'changes' });
+    const list = await newestCommits();
+    const [top] = within(list).getAllByRole('listitem');
+    if (top === undefined) throw new Error('a commit');
+    await user.click(within(top).getByRole('button', { name: 'Undo commit' }));
+    await waitFor(() => {
+      expect(toastTexts()).toContain('Undid “MAT232: rewrite the midterm review” — Its 1 change is back in Changes.');
+    });
+    expect(useToasts.getState().toasts.flatMap((toast) => toast.actions ?? [])).toEqual([]);
+    await waitFor(() => {
+      expect(within(card()).getByRole('img', { name: '5 commits not synced' })).toBeInTheDocument();
+    });
+  });
+
+  it('opens the commit’s menu from Shift+F10, with the reasons of what it refuses', async () => {
+    const { user } = renderChanges({ withHistory: true });
+    const list = await newestCommits();
+    const [, second] = within(list).getAllByRole('listitem');
+    if (second === undefined) throw new Error('two commits');
+    act(() => {
+      second.focus();
+    });
+    await user.keyboard('{Shift>}{F10}{/Shift}');
+    const menu = await screen.findByRole('menu', { name: 'Actions for “MAT232: add lecture 12; MAT223: update notes”' });
+    expect([...menu.querySelectorAll('[role^="menuitem"]')].map((item) => item.textContent)).toEqual([
+      'Edit message',
+      'Undo commitNot the newest',
+      'Copy commit ID',
+    ]);
+    await user.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(second).toHaveFocus();
+    });
+  });
+
+  it('shows History from “3 more in History”, and has no such link without History', async () => {
+    const { user } = renderChanges({ withHistory: true });
+    await newestCommits();
+    await user.click(within(card()).getByRole('button', { name: '3 more in History' }));
+    expect(useNavigation.getState().view).toBe('history');
+    // History shows its whole timeline, which takes the focus the hidden link had.
+    expect(takeHistoryTimeline()).toBe(true);
+  });
+
+  it('offers neither the link nor Edit message while History is not on the rail', async () => {
+    renderChanges();
+    const list = await newestCommits();
+    expect(within(card()).queryByRole('button', { name: /more in History/ })).toBeNull();
+    expect(within(list).getAllByRole('listitem').map(actionsOf)).toEqual([['Undo commit'], [], []]);
   });
 });

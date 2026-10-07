@@ -1,0 +1,107 @@
+/* A file card (handoff workspace-history §7.2, app-shell §7): bordered rows as in the changes list,
+   without the check box, then "Show all N files" or "Show more" under them. */
+
+.file-card {
+  margin-top: var(--space-8);
+}
+
+.file-card__rows {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: var(--border-width) solid var(--color-border-default);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-panel);
+}
+
+/* A row (§3.2 without the check box): icon, path, the "Tags" tag of a tag change, the status. */
+.card-row {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-6);
+  box-sizing: border-box;
+  height: var(--size-row);
+  padding: 0 var(--space-10) 0 var(--space-8);
+  border-bottom: var(--border-width) solid var(--color-border-guide);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-body);
+  white-space: nowrap;
+  cursor: default;
+  transition: background-color var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.card-row:last-child {
+  border-bottom: none;
+}
+
+.card-row[role='option']:hover {
+  background: var(--color-surface-hover);
+}
+
+.card-row[aria-selected='true'] {
+  background: var(--color-surface-selected);
+}
+
+.card-row:focus-visible {
+  outline-offset: calc(-1 * var(--focus-ring-width));
+}
+
+.card-row__icon {
+  display: flex;
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+.card-row[data-deleted] .path-text {
+  text-decoration: line-through;
+}
+
+.card-row__tag {
+  flex: none;
+  box-sizing: border-box;
+  height: var(--size-changes-tag);
+  padding: 0 var(--space-4);
+  border: var(--border-width) solid var(--color-border-default);
+  border-radius: var(--radius-row);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+  line-height: calc(var(--size-changes-tag) - 2 * var(--border-width));
+}
+
+.card-row__status {
+  display: flex;
+  flex: none;
+  margin-left: auto;
+}
+
+/* A row whose change is on its way. */
+.card-row__placeholder {
+  width: 60%;
+  height: var(--space-8);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-sunken);
+}
+
+/* "Show all N files", "Show more", or a page that failed with Try again; the link's own padding
+   lines its text up with the rows' icons. */
+.file-card__more {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  margin-top: var(--space-4);
+}
+
+.file-card__failed {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-small);
+}
+
+/* One file's history (§7.4): "and 2 other files in this commit" under the file's row. */
+.file-card__others {
+  margin: var(--space-4) 0 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-caption);
+  line-height: var(--font-line-height-body);
+}

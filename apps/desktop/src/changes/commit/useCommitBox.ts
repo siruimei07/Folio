@@ -11,8 +11,10 @@ import { noteCommit } from '../../app/activity/notes';
 import { announce } from '../../app/announcer';
 import { DETAILED, showFailure } from '../../app/feedback';
 import { reportUiError } from '../../app/log';
+import { useCanOpenDialog } from '../../app/navigation';
 import type { KeyCombo } from '../../app/shortcuts';
 import { showToast } from '../../app/toasts';
+import type { ToastAction } from '../../components/Toast/Toast';
 import { type AiService, aiService, useAiSettings } from '../../data/ai';
 import { IpcFailure } from '../../data/errors';
 import { useJob, useJobActive } from '../../data/jobs';
@@ -173,6 +175,7 @@ function cancelQuietly(requestId: string): void {
  */
 function useJobEnd(run: CommitRun, job: Job | undefined, service: AiService): void {
   const { t } = useTranslation('changes');
+  const canEdit = useCanOpenDialog('editMessage');
   useEffect(() => {
     if (run.kind !== 'committing' || job === undefined) return;
     const { status } = job;
@@ -184,7 +187,7 @@ function useJobEnd(run: CommitRun, job: Job | undefined, service: AiService): vo
         // Held: the selection moves on to the row now in the committed one's place, and that
         // row's diff may fail and say so at once (§4.4: this is the commit's only confirmation).
         announce(t('commit.done', { count: result.changes, summary: result.summary }), 'polite', { hold: true });
-        if (run.fallback !== null) showFallbackToast(t, run.fallback, service);
+        if (run.fallback !== null) showFallbackToast(t, run.fallback, service, fallbackToastActions(result.commit, canEdit));
         return;
       }
       case 'failed':
@@ -197,19 +200,19 @@ function useJobEnd(run: CommitRun, job: Job | undefined, service: AiService): vo
         return;
       default:
     }
-  }, [run, job, service, t]);
+  }, [run, job, service, t, canEdit]);
 }
 
 type ChangesT = TFunction<'changes'>;
 
-/** "Committed with a template message" (§4.3): why, and the message Folio wrote. */
-function showFallbackToast(t: ChangesT, fallback: CommitFallback, service: AiService): void {
+/** "Committed with a template message" (§4.3): why, the message Folio wrote, and "Edit message". */
+function showFallbackToast(t: ChangesT, fallback: CommitFallback, service: AiService, actions: readonly ToastAction[]): void {
   const reason = t(`commit.aiFailed.${fallbackCode(fallback.code)}.title`, { service: t(`commit.serviceStart.${service}`) });
   showToast({
     tone: 'info',
     title: t('commit.fallback.title'),
     body: t('commit.fallback.text', { reason, summary: fallback.summary }),
-    actions: fallbackToastActions(),
+    actions,
   });
 }
 

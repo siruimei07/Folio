@@ -7,7 +7,15 @@
 // `readKey`, and its rule to `touch.ts`. Until then an unknown kind is touched by every change.
 import { type QueryKey, queryOptions, skipToken } from '@tanstack/react-query';
 
-import type { DiffWindow, EntryFilter, EntryRef, EntrySort, VersionRef } from '../ipc';
+import type {
+  DiffWindow,
+  EntryFilter,
+  EntryRef,
+  EntrySort,
+  FileRef,
+  HistoryType,
+  VersionRef,
+} from '../ipc';
 
 /** One folder's children: `list_children` (`null`: the library root). */
 export interface ChildrenList {
@@ -107,7 +115,37 @@ export const keys = {
   ignoreRules: (libraryId: string) => ['lib', libraryId, 'ignoreRules'] as const,
   /** `get_ai_settings`: this computer's, like the App settings (ipc-m2 §12.1). Never the key. */
   aiSettings: () => ['app', 'aiSettings'] as const,
+  /** The timeline (`list_history`), an infinite query of pages (`history.ts`). */
+  history: (libraryId: string, list: HistoryList) => ['lib', libraryId, 'history', list] as const,
+  /** A commit's changed files and folders (`list_commit_changes`), an infinite query of pages. */
+  commitChanges: (libraryId: string, commit: string) =>
+    ['lib', libraryId, 'commitChanges', commit] as const,
+  /** A commit's tag and settings changes (`list_commit_metadata`), an infinite query of pages. */
+  commitMetadata: (libraryId: string, commit: string) =>
+    ['lib', libraryId, 'commitMetadata', commit] as const,
+  /** One file's history (`list_file_history`), an infinite query of pages. */
+  fileHistory: (libraryId: string, list: FileHistoryList) =>
+    ['lib', libraryId, 'fileHistory', list] as const,
+  /** The library's first commit, the oldest of `list_history`'s commits. */
+  firstCommit: (libraryId: string) => ['lib', libraryId, 'firstCommit'] as const,
+  /** What restoring a version would do now: `plan_restore` (ipc-m2 §10). */
+  restorePlan: (libraryId: string, version: VersionRef) =>
+    ['lib', libraryId, 'restorePlan', version] as const,
+  /** A version's own row: its commit's entry in the file's history (`history.ts`, a restore's card). */
+  versionChange: (libraryId: string, version: VersionRef) =>
+    ['lib', libraryId, 'versionChange', version] as const,
 };
+
+/** Which entries of the timeline: `types` `null` shows every type (ipc-m2 §8.1). */
+export interface HistoryList {
+  types: HistoryType[] | null;
+}
+
+/** One file's history, filtered like the timeline (ipc-m2 §8.3). */
+export interface FileHistoryList {
+  file: FileRef;
+  types: HistoryType[] | null;
+}
 
 /** The reference in the key of a query that asks for nothing (it has no entry yet). */
 export const NO_ENTRY: EntryRef = { id: '', path: '' };
@@ -146,6 +184,13 @@ export type LibraryQuery =
   | { kind: 'ignoreRules' }
   | { kind: 'diff'; of: DiffSource }
   | { kind: 'located' }
+  | { kind: 'history' }
+  | { kind: 'commitChanges' }
+  | { kind: 'commitMetadata' }
+  | { kind: 'fileHistory'; file: FileRef }
+  | { kind: 'firstCommit' }
+  | { kind: 'restorePlan' }
+  | { kind: 'versionChange' }
   | { kind: 'unknown' };
 
 /** The query a library key names. Keys come only from `keys`, so their shapes are known. */
@@ -171,6 +216,15 @@ export function readKey(queryKey: QueryKey): LibraryQuery {
       return { kind, target: (detail as ImportCheckRequest).target };
     case 'diff':
       return { kind, of: detail as DiffSource };
+    case 'fileHistory':
+      return { kind, file: (detail as FileHistoryList).file };
+    case 'history':
+    case 'commitChanges':
+    case 'commitMetadata':
+    case 'firstCommit':
+    case 'restorePlan':
+    case 'versionChange':
+      return { kind };
     case 'semesters':
     case 'courses':
     case 'tags':

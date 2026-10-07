@@ -36,6 +36,7 @@ describe('context menus', () => {
     expect(menuItems()).toEqual([
       'Open with default app',
       'Show in File Explorer',
+      'View history',
       'Tags',
       'RenameF2',
       'Move to…',
@@ -131,7 +132,7 @@ describe('Tags ▸', () => {
     await user.click(await findRow('week 2 notes.md'));
     await user.keyboard('{Shift>}{F10}{/Shift}');
     await screen.findByRole('menu');
-    await user.keyboard('{ArrowDown}{ArrowDown}{Enter}');
+    await user.keyboard('{ArrowDown}{ArrowDown}{ArrowDown}{Enter}');
     await screen.findByRole('menuitemcheckbox', { name: 'Notes' });
     await user.keyboard('{ArrowDown}{Enter}');
     await waitFor(() => {

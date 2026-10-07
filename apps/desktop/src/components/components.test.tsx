@@ -54,6 +54,22 @@ describe('Button and IconButton', () => {
     expect(tooltip).toHaveTextContent('Add files');
     expect(tooltip).toHaveTextContent('Ctrl+O');
   });
+
+  it('keeps an icon button that cannot act now in the tab order, with the reason under its label, doing nothing', async () => {
+    const onPress = vi.fn();
+    render(<IconButton icon={Plus} label="Edit message" size="medium" variant="outline" disabledReason="History is read-only." onPress={onPress} />);
+    const button = screen.getByRole('button', { name: 'Edit message' });
+    expect(button).toHaveAttribute('aria-disabled', 'true');
+    expect(button).toHaveAttribute('data-size', 'medium');
+    await userEvent.tab();
+    expect(button).toHaveFocus();
+    const tooltip = await screen.findByRole('tooltip');
+    expect(tooltip).toHaveTextContent('Edit messageHistory is read-only.');
+    expect(tooltip.querySelector('.icon-button__reason')).toHaveTextContent('History is read-only.');
+    await userEvent.click(button);
+    await userEvent.keyboard('{Enter} ');
+    expect(onPress).not.toHaveBeenCalled();
+  });
 });
 
 describe('course and tag parts', () => {

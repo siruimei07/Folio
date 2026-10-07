@@ -4,6 +4,8 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { takeHistoryTarget } from '../../app/historyTarget';
+import { useNavigation } from '../../app/navigation';
 import { toastTexts } from '../../test/render';
 import { useChangesView } from '../state';
 import { CSC, entryPaths, findRow, getRow, MAT, menuItems, renderChanges, smallWorkspace } from '../test/render';
@@ -146,5 +148,61 @@ describe('the context menu', () => {
     await waitFor(() => {
       expect(entryPaths(invoke, 'open_entry')).toContain('Fall 2026/线性代数/习题');
     });
+  });
+});
+
+describe('View history of this file, with History on the rail', () => {
+  it('follows Show in File Explorer for a file and shows its history', async () => {
+    const { user, shell } = renderChanges({ withHistory: true });
+    await openMenuOn(user, await findRow('CSC148/labs/lab1/report.docx'));
+    expect(menuItems()).toEqual([
+      'Open with default app',
+      'Show in File Explorer',
+      'View history of this file',
+      'Leave out of this commitSpace',
+      'Copy pathCtrl+Shift+C',
+    ]);
+    await user.click(screen.getByRole('menuitem', { name: 'View history of this file' }));
+    expect(useNavigation.getState().view).toBe('history');
+    const node = shell.library.at(`${CSC}/labs/lab1/report.docx`);
+    if (node === undefined) throw new Error('no report.docx');
+    expect(takeHistoryTarget()).toEqual({ kind: 'entry', entry: shell.library.ref(node) });
+  });
+
+  it("comes first for a deleted file, as HEAD's version, and for a file's tags; never for a folder", async () => {
+    const { user, shell } = renderChanges({ withHistory: true });
+    await openMenuOn(user, await findRow('MAT232/Old slides L2.pdf'));
+    expect(menuItems()).toEqual(['View history of this file', 'Leave out of this commitSpace', 'Copy pathCtrl+Shift+C']);
+    await user.click(screen.getByRole('menuitem', { name: 'View history of this file' }));
+    const head = shell.versioning.summary().head;
+    expect(takeHistoryTarget()).toEqual({ kind: 'version', commit: head, path: `${MAT}/Old slides L2.pdf` });
+
+    useNavigation.setState({ view: 'changes' });
+    await openMenuOn(user, await findRow('MAT232/Exams/Midterm/Midterm 2025.pdf'));
+    expect(menuItems()).toEqual(['View history of this file', 'Copy pathCtrl+Shift+C']);
+    await user.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(screen.queryByRole('menu')).toBeNull();
+    });
+
+    await openMenuOn(user, getRow('MAT223/习题'));
+    expect(menuItems()).not.toContain('View history of this file');
+  });
+
+  it('is disabled with the reason for an added file, and in the diff’s More too', async () => {
+    const { user } = renderChanges({ withHistory: true });
+    await openMenuOn(user, await findRow('CSC148/a1/starter/tree.py'));
+    const item = screen.getByRole('menuitem', { name: 'View history of this file' });
+    expect(item).toHaveAttribute('aria-disabled', 'true');
+    expect(item).toHaveAccessibleDescription('Not committed yet');
+    await user.click(item);
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+    expect(takeHistoryTarget()).toBeNull();
+    await user.keyboard('{Escape}');
+
+    await user.click(getRow('CSC148/labs/lab1/report.docx'));
+    const pane = await screen.findByRole('group', { name: /report\.docx$/ });
+    await user.click(within(pane).getByRole('button', { name: 'More' }));
+    expect(menuItems()).toEqual(['Open with default app', 'Show in File Explorer', 'View history of this file', 'Copy pathCtrl+Shift+C']);
   });
 });

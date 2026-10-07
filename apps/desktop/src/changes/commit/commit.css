@@ -14,16 +14,9 @@
   font-size: var(--font-size-small);
 }
 
-/* The field group: one input frame around the summary, the description and the footer. */
-.commit-box__group {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border: var(--border-width) solid var(--color-input-border);
-  border-bottom-color: var(--color-input-border-bottom);
-  border-radius: var(--radius-control);
-  background: var(--color-input-background);
-}
+/* The field group, one input frame around the summary, the description and the footer, and the
+   fields themselves, in the box and in the bar, are components/messageFields.css's (Edit message
+   draws them too); the bar's own frames are below. */
 
 /* A field and, while Generate runs, the skeleton bars over it (§4.2). */
 .commit-field {
@@ -60,65 +53,12 @@
   height: var(--space-10);
 }
 
-.commit-box__summary,
-.commit-box__description,
-.commit-bar__summary,
-.commit-bar__description-field {
-  box-sizing: border-box;
-  width: 100%;
-  margin: 0;
-  border: none;
-  background: transparent;
-  color: var(--color-text-primary);
-  font: inherit;
-  outline: none;
-}
-
-.commit-box__summary,
-.commit-bar__summary {
-  font-size: var(--font-size-body);
-  font-weight: var(--font-weight-strong);
-}
-
-.commit-box__summary {
-  height: var(--size-composer-summary);
-  padding: 0 var(--space-10);
-  border-bottom: var(--border-width) solid var(--color-border-default);
-}
-
 /* Three rows that grow to six, then scroll. */
 .commit-box__description,
 .commit-bar__description-field {
-  width: 100%;
   min-height: calc(3lh + 2 * var(--space-8));
   max-height: calc(6lh + 2 * var(--space-8));
-  padding: var(--space-8) var(--space-10);
-  font-size: var(--font-size-label);
-  line-height: var(--font-line-height-body);
-  resize: none;
   field-sizing: content;
-}
-
-.commit-box__summary::placeholder,
-.commit-box__description::placeholder,
-.commit-bar__summary::placeholder,
-.commit-bar__description-field::placeholder {
-  color: var(--color-text-tertiary);
-  opacity: 1;
-}
-
-.commit-box__summary:focus-visible,
-.commit-box__description:focus-visible,
-.commit-bar__description-field:focus-visible {
-  outline: var(--focus-ring-width) solid var(--color-focus-ring);
-  outline-offset: calc(-1 * var(--focus-ring-width));
-}
-
-.commit-box__summary[readonly],
-.commit-box__description[readonly],
-.commit-bar__summary[readonly],
-.commit-bar__description-field[readonly] {
-  background: var(--color-input-background-readonly);
 }
 
 .commit-box__footer {

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { CatalogChanged, EntryChange, EntryRef } from '../ipc';
 import type { LibraryQuery } from './keys';
-import { isTouched, touches, touchesGone } from './touch';
+import { comparesWithFiles, isHistoryQuery, isTouched, touches, touchesGone } from './touch';
 
 const ref = (id: string, path: string): EntryRef => ({ id, path });
 const noTags = { tags: null, addedAfterMs: null };
@@ -195,6 +195,70 @@ describe('touches: diffs and located versions', () => {
   it('every change touches a located version: its file may have moved, gone or come back', () => {
     for (const change of everyChange) expect(touches({ kind: 'located' }, change)).toBe(true);
     expect(touchesGone({ kind: 'located' }, lecture)).toBe(true);
+  });
+});
+
+describe('touches: the history', () => {
+  const ofEntry = (target: EntryRef): LibraryQuery => ({ kind: 'fileHistory', file: { kind: 'entry', entry: target } });
+  const ofVersion: LibraryQuery = { kind: 'fileHistory', file: { kind: 'version', commit: 'b3:01', path: lecture.path } };
+  const plan: LibraryQuery = { kind: 'restorePlan' };
+  const commits: LibraryQuery[] = [
+    { kind: 'history' },
+    { kind: 'commitChanges' },
+    { kind: 'commitMetadata' },
+    { kind: 'firstCommit' },
+    { kind: 'versionChange' },
+  ];
+  const everyChange = [
+    added(lecture),
+    modified(lecture),
+    removed(lecture),
+    tagged(lecture),
+    moved(ref('12', 'Fall 2026/CSC148/Lecture 01.pdf'), lecture.path),
+  ];
+
+  it('no change touches the timeline, a commit’s rows or the first commit: HistoryChanged refreshes them', () => {
+    for (const query of commits) {
+      for (const change of everyChange) expect(touches(query, change)).toBe(false);
+      expect(isTouched(query, { revision: 5, entries: everyChange, complete: true, tags: true, groups: true })).toBe(false);
+      // Not even a rebuilt catalog's.
+      expect(isTouched(query, { revision: 6, entries: [], complete: false, tags: false, groups: false })).toBe(false);
+    }
+    // File histories and restore plans compare versions with the files: a rebuild refreshes them.
+    for (const query of [ofEntry(lecture), ofVersion, plan]) {
+      expect(isTouched(query, { revision: 6, entries: [], complete: false, tags: false, groups: false })).toBe(true);
+    }
+  });
+
+  it('an entry’s history follows the entry’s own changes and folders above it, not its tags or other files', () => {
+    expect(touches(ofEntry(lecture), modified(lecture))).toBe(true);
+    expect(touches(ofEntry(lecture), removed(lecture))).toBe(true);
+    expect(touches(ofEntry(lecture), moved(ref('12', 'Fall 2026/CSC148/Lecture 01.pdf'), lecture.path))).toBe(true);
+    expect(touches(ofEntry(lecture), moved(ref('10', 'Fall 2026/MAT237'), course.path))).toBe(true);
+    expect(touches(ofEntry(lecture), tagged(lecture))).toBe(false);
+    expect(touches(ofEntry(lecture), tagged(course))).toBe(false);
+    expect(touches(ofEntry(lecture), modified(ref('13', 'Fall 2026/MAT232/Lectures/Lecture 02.pdf')))).toBe(false);
+  });
+
+  it('a version’s history and a restore plan follow every change but tags: the file may have moved, gone or come back', () => {
+    for (const query of [ofVersion, plan]) {
+      for (const change of everyChange) expect(touches(query, change)).toBe(change.kind !== 'tagged');
+    }
+  });
+
+  it('touchesGone leaves out the history of the entry that is gone: it would answer NotFound', () => {
+    expect(touchesGone(ofEntry(lecture), lecture)).toBe(false);
+    expect(touchesGone(ofEntry(lecture), lectures)).toBe(false);
+    expect(touchesGone(ofEntry(lecture), other)).toBe(false);
+    expect(touchesGone(ofVersion, lecture)).toBe(true);
+  });
+
+  it('HistoryChanged refreshes every query of the history; WorkspaceChanged file histories and restore plans', () => {
+    const others: LibraryQuery[] = [{ kind: 'located' }, { kind: 'diff', of: { source: 'version', commit: 'b3:01', key: 'k1' } }, entry(lecture)];
+    for (const query of [...commits, ofEntry(lecture), ofVersion, plan]) expect(isHistoryQuery(query)).toBe(true);
+    for (const query of others) expect(isHistoryQuery(query)).toBe(false);
+    for (const query of [ofEntry(lecture), ofVersion, plan]) expect(comparesWithFiles(query)).toBe(true);
+    for (const query of [...commits, ...others]) expect(comparesWithFiles(query)).toBe(false);
   });
 });
 

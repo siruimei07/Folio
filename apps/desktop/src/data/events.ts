@@ -12,7 +12,7 @@ import { receiveLibraryState } from './library';
 import { publishReferences } from './references';
 import { sawRevision, useSession } from './session';
 import { receiveAppSettings, receiveIgnoreRules } from './settings';
-import { isTouched } from './touch';
+import { comparesWithFiles, isHistoryQuery, isTouched } from './touch';
 
 /**
  * The oldest catalog revision a query's data was read at: a page's, or the oldest page of an
@@ -131,6 +131,19 @@ export function connectShellEvents(client: QueryClient): () => void {
     }),
     shellEvents.onAiSettingsChanged(({ settings }) => {
       receiveAiSettings(client, settings);
+    }),
+    // The history (`history.ts`): the timeline, commits' rows, file histories, the first commit and
+    // restore plans. Not by revision: the history is not in the catalog.
+    shellEvents.onHistoryChanged(() => {
+      const libraryId = useSession.getState().libraryId;
+      if (libraryId === null) return;
+      refresh(client, libraryId, (query) => isHistoryQuery(readKey(query.queryKey)));
+    }),
+    // File histories and restore plans compare versions with the files, whose hashes come with it.
+    shellEvents.onWorkspaceChanged(() => {
+      const libraryId = useSession.getState().libraryId;
+      if (libraryId === null) return;
+      refresh(client, libraryId, (query) => comparesWithFiles(readKey(query.queryKey)));
     }),
   ];
   return () => {

@@ -25,7 +25,7 @@
 //   ring drawn by the region itself.
 import './DiffLines.css';
 
-import { defaultRangeExtractor, type Range, useVirtualizer, type Virtualizer } from '@tanstack/react-virtual';
+import { defaultRangeExtractor, type Range, useVirtualizer } from '@tanstack/react-virtual';
 import { Info } from 'lucide-react';
 import {
   type FocusEvent,
@@ -43,6 +43,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { measureItem } from '../../components/collections/measure';
 import { useFocusKeeper } from '../../components/collections/useFocusKeeper';
 import { OVERSCAN } from '../../components/collections/useVirtualRows';
 import { DIFF_WINDOW_ROWS, type DiffWindows, uniqueWindows, windowId } from '../../data/diff';
@@ -130,16 +131,6 @@ function anchorItem(layout: DiffLayout, anchor: Anchor): number {
 
 function estimateRow(row: DisplayRow): number {
   return row.kind === 'failed' || (row.kind === 'row' && row.row.kind === 'fold') ? BAR_ESTIMATE : LINE_ESTIMATE;
-}
-
-/** The item's border box; the estimate when it has none (jsdom, or not laid out yet). */
-function measureItem(
-  element: Element,
-  entry: ResizeObserverEntry | undefined,
-  instance: Virtualizer<HTMLDivElement, Element>,
-): number {
-  const size = entry?.borderBoxSize[0]?.blockSize ?? element.getBoundingClientRect().height;
-  return size > 0 ? size : instance.options.estimateSize(instance.indexFromElement(element));
 }
 
 /** What the pane asks of the region. */

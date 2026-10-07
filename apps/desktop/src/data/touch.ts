@@ -110,9 +110,60 @@ export function touches(query: LibraryQuery, change: EntryChange): boolean {
       // Any change can move or remove the file a version belongs to, or put one at its last
       // committed path, which pairs with it (versioning §6.1).
       return true;
+    case 'history':
+    case 'commitChanges':
+    case 'commitMetadata':
+    case 'firstCommit':
+    case 'versionChange':
+      // Entries change no commit; HistoryChanged keeps these current (`isHistoryQuery`).
+      return false;
+    case 'fileHistory':
+      // An entry's history starts at the row its file pairs with, and a version's ends at the file
+      // it belongs to now, which any change can move, remove or replace (as for `located`); both
+      // mark the version with the file's content ("Current version", ipc-m2 §8.3). Tags are none
+      // of these.
+      return (
+        change.kind !== 'tagged' &&
+        (query.file.kind === 'version' ||
+          isStale(query.file.entry, change) ||
+          query.file.entry.id === change.entry.id)
+      );
+    case 'restorePlan':
+      // Where the version goes, and whether the file there goes to the Recycle Bin first, follow
+      // the files (ipc-m2 §10); tags change neither.
+      return change.kind !== 'tagged';
     case 'unknown':
       return true;
   }
+}
+
+/**
+ * Whether HistoryChanged refreshes a query (ipc-m2 §14): every query of the history. A commit,
+ * an uncommit or a restore adds an entry, a reword gives commits new ids, and a prune commit (M3)
+ * thins out versions of older commits, whose rows say so.
+ */
+export function isHistoryQuery(query: LibraryQuery): boolean {
+  switch (query.kind) {
+    case 'history':
+    case 'commitChanges':
+    case 'commitMetadata':
+    case 'fileHistory':
+    case 'firstCommit':
+    case 'restorePlan':
+    case 'versionChange':
+      return true;
+    default:
+      return false;
+  }
+}
+
+/**
+ * Whether WorkspaceChanged refreshes a query of the history: those that compare versions with the
+ * files on the disk, whose hashes arrive with it after CatalogChanged ("Current version", and
+ * whether a restore recycles uncommitted changes first).
+ */
+export function comparesWithFiles(query: LibraryQuery): boolean {
+  return query.kind === 'fileHistory' || query.kind === 'restorePlan';
 }
 
 /** The reference a query's key holds, if any. */
@@ -135,6 +186,8 @@ function keyRef(query: LibraryQuery): EntryRef | null {
       return query.base;
     case 'importCheck':
       return query.target;
+    case 'fileHistory':
+      return query.file.kind === 'entry' ? query.file.entry : null;
     default:
       return null;
   }
@@ -155,8 +208,10 @@ export function touchesGone(query: LibraryQuery, entry: EntryRef): boolean {
  * workspace (the event lists only part of what changed, or the catalog was rebuilt).
  */
 export function isTouched(query: LibraryQuery, event: CatalogChanged): boolean {
-  // Not even after a rebuild: WorkspaceChanged follows that too.
-  if (query.kind === 'diff' || query.kind === 'workspace') return false;
+  // Not even after a rebuild: WorkspaceChanged follows that too, and HistoryChanged keeps the
+  // timeline, commit rows and the first commit current (only file histories and restore plans
+  // compare versions with the files).
+  if (query.kind === 'diff' || query.kind === 'workspace' || (isHistoryQuery(query) && !comparesWithFiles(query))) return false;
   if (!event.complete) return true;
   // Search ranks by tag names too (library core §5.2), so a renamed tag changes its results.
   if (event.tags && (query.kind === 'tags' || query.kind === 'search')) return true;

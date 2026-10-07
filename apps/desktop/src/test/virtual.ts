@@ -4,7 +4,7 @@
 // mounts and replaces the initial size with 0 × 0. So tests give elements a box instead. Real
 // scrolling is covered in e2e.
 
-import { onTestFinished } from 'vitest';
+import { onTestFinished, vi } from 'vitest';
 
 export interface Size {
   width: number;
@@ -87,4 +87,46 @@ export function mockScrolling() {
   onTestFinished(() => {
     for (const property of ['clientHeight', 'scrollHeight', 'scrollTo']) Reflect.deleteProperty(prototype, property);
   });
+}
+
+/**
+ * The setup's `ResizeObserver` does nothing. Until the test ends, this one remembers what each
+ * observer watches, and the function it returns tells every observer that its elements now have
+ * the size they report (`mockLayout`; give it a `Size` the test changes): a window resized, or a
+ * view shown for the first time, whose scrollers measured 0 × 0 until then. Each entry has the
+ * size as its `contentRect` and no `borderBoxSize`, so the virtualiser reads the scroller's offset
+ * size and measures items as jsdom does (`measureItem`).
+ */
+export function captureResizeObservers(): () => void {
+  const observers: { callback: ResizeObserverCallback; observer: ResizeObserver; targets: Set<Element> }[] = [];
+  const original = globalThis.ResizeObserver;
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      private readonly targets = new Set<Element>();
+      constructor(callback: ResizeObserverCallback) {
+        observers.push({ callback, observer: this, targets: this.targets });
+      }
+      observe(target: Element) {
+        this.targets.add(target);
+      }
+      unobserve(target: Element) {
+        this.targets.delete(target);
+      }
+      disconnect() {
+        this.targets.clear();
+      }
+    },
+  );
+  onTestFinished(() => {
+    vi.stubGlobal('ResizeObserver', original);
+  });
+  return () => {
+    for (const { callback, observer, targets } of observers) {
+      const entries = [...targets]
+        .filter((target): target is HTMLElement => target instanceof HTMLElement && target.isConnected)
+        .map((target) => ({ target, contentRect: { width: target.offsetWidth, height: target.offsetHeight }, borderBoxSize: [] }));
+      if (entries.length > 0) callback(entries as unknown as ResizeObserverEntry[], observer);
+    }
+  };
 }

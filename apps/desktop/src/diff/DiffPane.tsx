@@ -22,7 +22,7 @@ import { useCourses } from '../data/groups';
 import type { DiffWindow, EntryRef } from '../ipc';
 import { nameOf } from '../lib/paths';
 import { SIZE } from '../tokens/tokens';
-import { DiffHeader, type DiffView } from './DiffHeader';
+import { DiffHeader, type DiffView, focusRestoreIn } from './DiffHeader';
 import {
   DiffDeletedSince,
   DiffFailed,
@@ -389,8 +389,13 @@ export function DiffPane({ target, actions, moreItems, back, restore, ref }: Dif
     pins,
   });
 
-  // Enter in the host's list moves the focus here (handoff §3.6).
-  useImperativeHandle(ref, () => ({ focus: focusDiff }), [focusDiff]);
+  // Enter in the host's list moves the focus here (handoff §3.6); a closed restore confirmation
+  // puts it back on Restore (§8.3).
+  const headerRef = useRef<HTMLElement>(null);
+  const focusRestore = useCallback(() => {
+    if (!focusRestoreIn(headerRef.current)) headingRef.current?.focus();
+  }, []);
+  useImperativeHandle(ref, () => ({ focus: focusDiff, focusRestore }), [focusDiff, focusRestore]);
   // Esc and Alt+Left go back in a narrow window; a menu or tooltip that Esc closes keeps it.
   const onKeyDown =
     back === undefined
@@ -404,6 +409,7 @@ export function DiffPane({ target, actions, moreItems, back, restore, ref }: Dif
   return (
     <div ref={paneRef} className="diff" role="group" aria-labelledby={headingId} onKeyDown={onKeyDown}>
       <DiffHeader
+        ref={headerRef}
         icon={description.icon}
         heading={description.heading}
         status={description.status}

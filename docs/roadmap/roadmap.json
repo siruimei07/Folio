@@ -3123,8 +3123,18 @@
         "feat/ui-diff-viewer"
       ],
       "summary": "历史时间线、文件卡片、单文件历史、恢复",
-      "status": "planned",
-      "updated": "2026-10-03",
+      "status": "done",
+      "updated": "2026-10-07",
+      "landed": "2026-10-07",
+      "gates": {
+        "check": "pass",
+        "e2e": "pass",
+        "codeReview": "pass",
+        "simplify": "pass",
+        "designCritique": "pass",
+        "a11y": "pass",
+        "securityReview": "na"
+      },
       "links": [
         "docs/design/handoff/workspace-history.md",
         "docs/specs/ipc-m2.md"

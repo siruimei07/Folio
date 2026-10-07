@@ -5,6 +5,8 @@ import { type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ErrorBoundary } from '../../app/ErrorBoundary';
+import { showHistory } from '../../app/historyTarget';
+import { useCanShowView } from '../../app/navigation';
 import { useLayout } from '../../app/layout';
 import { PREVIEW_PANE } from '../../app/panes';
 import { Button } from '../../components/Button/Button';
@@ -28,7 +30,7 @@ import { useOpenQuickFilter } from '../quick';
 import { type QuickView, setCovered, useLibraryView } from '../state';
 import { LoadFailure } from '../LoadFailure';
 import { DropPanel } from '../drop/DropPanel';
-import { EmptyPreview } from './EmptyPreview';
+import { EmptyPreview } from '../../components/EmptyPreview/EmptyPreview';
 import { EntriesView } from './EntriesView';
 import { PaneHeader } from './PaneHeader';
 
@@ -186,6 +188,8 @@ function FilePane({ entry, onBack }: { entry: EntryRef; onBack?: () => void }) {
   const { t } = useTranslation('library');
   const row = useEntry(entry).data;
   const commands = useLibraryCommands();
+  // "View history of this file" while History is on the rail (workspace-history §12.4).
+  const canHistory = useCanShowView('history');
   if (PREVIEW_PANE === null) return <EmptyPreview title={t('pane.empty.title')} text={t('pane.empty.text')} />;
   const Preview = PREVIEW_PANE;
   const targets = row === undefined ? null : [targetOf(row)];
@@ -196,7 +200,7 @@ function FilePane({ entry, onBack }: { entry: EntryRef; onBack?: () => void }) {
         onBack={onBack}
         moreMenu={targets === null ? undefined : <EntryMenu targets={targets} region="pane" more />}
         tagMenu={targets === null ? undefined : <TagsSubmenu targets={targets} />}
-        actions={commands}
+        actions={canHistory ? { ...commands, viewHistory: viewHistoryOf } : commands}
       />
     </ErrorBoundary>
   );
@@ -204,6 +208,11 @@ function FilePane({ entry, onBack }: { entry: EntryRef; onBack?: () => void }) {
 
 function targetOf(row: EntryRow) {
   return { id: row.id, path: row.path, kind: row.kind, tags: row.tags, folderTags: row.folderTags };
+}
+
+/** The preview header's "View history of this file" (workspace-history §12.4): History shows the file's. */
+function viewHistoryOf(entry: EntryRef): void {
+  showHistory({ kind: 'entry', entry: { id: entry.id, path: entry.path } });
 }
 
 export interface LibraryPaneProps {

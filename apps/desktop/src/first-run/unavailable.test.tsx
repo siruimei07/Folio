@@ -48,7 +48,7 @@ describe('library unavailable', () => {
     await waitFor(() => {
       expect(pageHeading()).toHaveFocus();
     });
-    expect(document.querySelector('[aria-live="polite"]')).toHaveTextContent(title);
+    expect(document.querySelector('[aria-live="polite"][aria-atomic="true"]')).toHaveTextContent(title);
     expect(document.title).toBe(`${title} — Folio`);
   });
 
@@ -141,7 +141,7 @@ describe('library unavailable', () => {
     });
     expect(await screen.findByRole('heading', { level: 1, name: copy.unavailable.missing.title })).toBeInTheDocument();
     expect(useNavigation.getState().dialog).toBeNull();
-    expect(document.querySelector('[aria-live="polite"]')).toHaveTextContent(copy.unavailable.missing.title);
+    expect(document.querySelector('[aria-live="polite"][aria-atomic="true"]')).toHaveTextContent(copy.unavailable.missing.title);
   });
 });
 

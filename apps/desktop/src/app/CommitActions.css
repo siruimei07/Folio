@@ -1,0 +1,16 @@
+/* A commit's hover actions (workspace-history handoff §5, §7.3): unseen until the pointer is over
+   the commit or the focus is in it, and still in the tab order, so Tab reaches them in their place
+   whichever way it goes (§7.6) and a dialog they opened can give the focus back to them. */
+.commit-actions {
+  display: inline-flex;
+  flex: none;
+  gap: var(--space-4);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.commit-actions-host:hover .commit-actions,
+.commit-actions-host:focus-within .commit-actions {
+  opacity: 1;
+  pointer-events: auto;
+}

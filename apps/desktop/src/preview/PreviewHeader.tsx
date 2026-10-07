@@ -1,4 +1,4 @@
-import { ArrowLeft, Ellipsis, ExternalLink, FolderSearch } from 'lucide-react';
+import { ArrowLeft, Ellipsis, ExternalLink, FolderSearch, History } from 'lucide-react';
 import type { ReactElement, Ref } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -26,8 +26,8 @@ export interface PreviewHeaderProps {
 /**
  * The file header (app-shell §5): type icon, the course and folders above the file, its name (the
  * shared `PathHeading`, which keeps the course code and cuts the folders from the left so the
- * name stays whole), then "Open with default app", "Show in File Explorer" and "More". "View
- * history of this file" comes with the History view in M2.
+ * name stays whole), then "Open with default app", "Show in File Explorer", "View history of this
+ * file" (when the host offers it, workspace-history §12.4) and "More".
  */
 export function PreviewHeader({ entry, actions, onBack, moreMenu, headingRef }: PreviewHeaderProps) {
   const { t } = useTranslation('preview');
@@ -36,6 +36,7 @@ export function PreviewHeader({ entry, actions, onBack, moreMenu, headingRef }: 
   const courses = useCourses().data ?? [];
   const name = nameOf(entry.path);
   const { label, folders } = headingPrefix(parentOf(entry.path), courses);
+  const { viewHistory } = actions;
   return (
     <header className="preview-header">
       {onBack !== undefined && <IconButton icon={ArrowLeft} label={t('header.back')} onPress={onBack} />}
@@ -54,6 +55,15 @@ export function PreviewHeader({ entry, actions, onBack, moreMenu, headingRef }: 
             label={t('header.reveal')}
             onPress={() => {
               actions.showInExplorer(entry);
+            }}
+          />
+        )}
+        {!narrow && viewHistory !== undefined && (
+          <IconButton
+            icon={History}
+            label={t('header.history')}
+            onPress={() => {
+              viewHistory(entry);
             }}
           />
         )}

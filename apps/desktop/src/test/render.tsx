@@ -8,7 +8,7 @@
 //     initialProps: { start: 0, end: 20 },
 //   });
 import { mockIPC } from '@tauri-apps/api/mocks';
-import { render, renderHook } from '@testing-library/react';
+import { act, render, renderHook } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import type { ReactElement, ReactNode } from 'react';
 import { I18nProvider } from 'react-aria-components';
@@ -126,4 +126,18 @@ export function renderAppHook<Result, Props = undefined>(
 /** The texts of the toasts on screen. */
 export function toastTexts(): string[] {
   return useToasts.getState().toasts.filter((toast) => !toast.leaving).map((toast) => [toast.title, toast.body].filter(Boolean).join(' — '));
+}
+
+/** Lets the focus keepers, which act once the DOM has changed, have their turn. */
+export async function settle(): Promise<void> {
+  await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
+}
+
+/**
+ * What the app's polite live region (`app/announcer.tsx`, mounted by the test) says now. React Aria's
+ * own announcer, which its first announcement puts first in the page and leaves there for the rest
+ * of the file, also has `[data-live-announcer]` and a polite log, but no `aria-atomic`.
+ */
+export function politeText(): string {
+  return document.querySelector('[data-live-announcer] > [aria-live="polite"][aria-atomic="true"]')?.textContent ?? '';
 }

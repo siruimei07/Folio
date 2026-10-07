@@ -1,23 +1,77 @@
 /* Modal dialogs (library-actions handoff §2.8, §13, §14; app-shell §9). */
 
-/* The scrim starts below the window's bar (--window-bar-height, from the title bar). */
+/*
+ * The scrim starts below the window's bar (--window-bar-height, from the title bar); the dialog is
+ * centred across it and placed down it by its top edge.
+ */
 .modal-overlay {
+  --modal-bar: var(--window-bar-height, calc(var(--title-bar-height) + var(--border-width)));
   position: fixed;
-  inset: var(--window-bar-height, calc(var(--title-bar-height) + var(--border-width))) 0 0;
+  inset: var(--modal-bar) 0 0;
   z-index: var(--z-index-dialog);
   display: flex;
+  box-sizing: border-box;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
   background: var(--color-overlay-modal-scrim);
+}
+
+/*
+ * Placement (workspace-history §8.5): the top edge at the anchor (96 px for a form, 220 px for a
+ * confirmation, from the window's top), so a dialog does not move when its content grows. Two
+ * spacers around the dialog do it without measuring: the top one grows up to the anchor; the
+ * bottom one starts at bar + gap-top − gap-bottom, so while both grow the dialog is centred in the
+ * window, and when the window is too short it shrinks first, leaving the dialog gap-top below the
+ * bar. So top = min(anchor, max(bar + gap-top, (window − dialog) / 2)): 49 px at the least in a
+ * wide window, where a dialog taller than the window minus 81 px scrolls its body. A narrow window
+ * keeps 4 px margins.
+ */
+.modal-overlay[data-placement] {
+  --modal-gap-top: var(--space-16);
+  --modal-gap-bottom: var(--space-32);
+  padding: var(--modal-gap-top) 0 var(--modal-gap-bottom);
+}
+
+:root[data-layout='narrow'] .modal-overlay[data-placement] {
+  --modal-gap-top: var(--space-4);
+  --modal-gap-bottom: var(--space-4);
+}
+
+.modal-overlay[data-placement='form'] {
+  --modal-anchor: var(--size-dialog-top-form);
+}
+
+.modal-overlay[data-placement='confirmation'] {
+  --modal-anchor: var(--size-dialog-top-confirmation);
+}
+
+.modal-overlay[data-placement]::before,
+.modal-overlay[data-placement]::after {
+  content: '';
+}
+
+.modal-overlay[data-placement]::before {
+  flex: 1 1 0;
+  max-height: calc(var(--modal-anchor) - var(--modal-bar) - var(--modal-gap-top));
+}
+
+/* A frame of a fixed size (settings, app-shell §9): no anchor, centred in the window. */
+.modal-overlay[data-placement='center']::before {
+  max-height: none;
+}
+
+.modal-overlay[data-placement]::after {
+  flex: 1 1 calc(var(--modal-bar) + var(--modal-gap-top) - var(--modal-gap-bottom));
 }
 
 /* Search (app-shell §8): a darker scrim, the dialog 84 px from the top of the window. */
 .modal-overlay[data-scrim='search'] {
-  align-items: flex-start;
-  padding-top: calc(
-    var(--size-search-dialog-top) - var(--window-bar-height, calc(var(--title-bar-height) + var(--border-width)))
-  );
+  padding: calc(var(--size-search-dialog-top) - var(--modal-bar)) 0 calc(2 * var(--space-24));
   background: var(--color-overlay-scrim);
+}
+
+:root[data-layout='narrow'] .modal-overlay[data-scrim='search'] {
+  padding-bottom: calc(2 * var(--space-4));
 }
 
 .modal-overlay[data-entering] {
@@ -28,15 +82,13 @@
   animation: fade-in var(--motion-duration-base) var(--motion-easing-exit) reverse;
 }
 
+/* At most the space between the overlay's margins; a taller frame scrolls its body. */
 .modal {
   display: flex;
+  flex: none;
   max-width: calc(100% - 2 * var(--space-8));
-  max-height: calc(100% - 2 * var(--space-24));
+  max-height: 100%;
   outline: none;
-}
-
-:root[data-layout='narrow'] .modal {
-  max-height: calc(100% - 2 * var(--space-4));
 }
 
 .modal[data-entering] {

@@ -13,7 +13,7 @@ import { type IpcResult, unwrap } from './errors';
 import { refresh } from './events';
 import { readKey } from './keys';
 import { useSession } from './session';
-import { touchesGone } from './touch';
+import { isHistoryQuery, touchesGone } from './touch';
 
 /** What a request names, refreshed when the shell answers `NotFound` for it. */
 interface Named<Variables> {
@@ -21,6 +21,18 @@ interface Named<Variables> {
   entries?: (variables: Variables) => readonly EntryRef[];
   /** The request names a tag: `NotFound` means it is gone, so the tag list is refreshed. */
   tags?: boolean;
+  /**
+   * The request names a commit or a version: `NotFound` or `NotHead` means the history changed
+   * since the UI read it (handoff workspace-history §9.2), so every query of the history is
+   * refreshed.
+   */
+  history?: boolean;
+}
+
+/** Refreshes every query of the history, in the library the request was sent for. */
+function refreshHistory(client: QueryClient, libraryId: string | null): void {
+  if (libraryId === null) return;
+  refresh(client, libraryId, (query) => isHistoryQuery(readKey(query.queryKey)));
 }
 
 /**
@@ -55,8 +67,13 @@ export function useCommandMutation<Variables = void, Result = unknown>(
     onMutate: () => ({ libraryId: useSession.getState().libraryId }),
     onSuccess: (result, _variables, sent) => onSuccess?.(client, result, sent.libraryId),
     onError: (error, variables, sent) => {
-      if (error.error.code !== 'NotFound') return;
-      refreshGone(client, sent?.libraryId ?? null, named.entries?.(variables) ?? [], named.tags);
+      const code = error.error.code;
+      const libraryId = sent?.libraryId ?? null;
+      if (named.history === true && (code === 'NotFound' || code === 'NotHead')) {
+        refreshHistory(client, libraryId);
+      }
+      if (code !== 'NotFound') return;
+      refreshGone(client, libraryId, named.entries?.(variables) ?? [], named.tags);
     },
   });
 }

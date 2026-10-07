@@ -26,6 +26,15 @@ export function isModalOpen(): boolean {
   return document.querySelector(`[${MODAL_ATTRIBUTE}]`) !== null;
 }
 
+/**
+ * Where a dialog's top edge sits (workspace-history handoff §8.5), so it stays put when its
+ * content grows: a form dialog `size.dialog-top-form` (96 px) from the window's top, a
+ * confirmation `size.dialog-top-confirmation` (220 px). A window too short for that centres the
+ * dialog, but never closer to the bar than the overlay's top margin. A frame of a fixed size
+ * (settings, app-shell §9) is centred: `center`.
+ */
+export type DialogPlacement = 'form' | 'confirmation' | 'center';
+
 export interface ModalProps {
   isOpen: boolean;
   /** Called with `false` for Esc, the close button and, when `isDismissable`, the scrim. */
@@ -34,6 +43,8 @@ export interface ModalProps {
   isDismissable?: boolean;
   /** modal: settings, import, confirmations; search: the darker scrim of the search dialog. */
   scrim?: 'modal' | 'search';
+  /** Where its top edge sits; centred unless said. The search scrim places its dialog itself. */
+  placement?: DialogPlacement;
   /** Positions and sizes the frame, like `import-dialog`. */
   className?: string;
   /** Names the dialog when it has no `Heading slot="title"`. */
@@ -47,14 +58,16 @@ export interface ModalProps {
 
 /**
  * A modal dialog over a scrim that starts below the window's bar, so the caption buttons stay
- * usable and never close it (UI architecture §7.1). Focus is trapped inside and returns to where
- * it was when the dialog closes. Fades and rises 4 px (library-actions handoff §13).
+ * usable and never close it (UI architecture §7.1), its top edge placed by `placement`. Focus is
+ * trapped inside and returns to where it was when the dialog closes. Fades and rises 4 px
+ * (library-actions handoff §13).
  */
 export function Modal({
   isOpen,
   onOpenChange,
   isDismissable = false,
   scrim = 'modal',
+  placement = 'center',
   className,
   children,
   ...labelling
@@ -64,6 +77,7 @@ export function Modal({
       className="modal-overlay"
       {...{ [MODAL_ATTRIBUTE]: '' }}
       data-scrim={scrim}
+      data-placement={scrim === 'search' ? undefined : placement}
       isOpen={isOpen}
       onOpenChange={onOpenChange}
       isDismissable={isDismissable}
@@ -78,7 +92,11 @@ export function Modal({
   );
 }
 
-export interface DialogFrameProps extends Omit<ModalProps, 'children' | 'aria-label' | 'aria-describedby'> {
+/**
+ * `aria-describedby` names an element of the body that describes the dialog (a confirmation's
+ * message there, read with an alert dialog's name); `description` takes its place when given.
+ */
+export interface DialogFrameProps extends Omit<ModalProps, 'children' | 'aria-label'> {
   title: string;
   /** After the title, like the problems list's count pill. */
   titleAside?: ReactNode;
@@ -91,6 +109,8 @@ export interface DialogFrameProps extends Omit<ModalProps, 'children' | 'aria-la
   description?: ReactNode;
   /** small 440 px (confirmations), medium 560 px (import, results), large 720 × 560 (problems). */
   size?: 'small' | 'medium' | 'large';
+  /** `confirmation` for a small dialog, else `form`; a small form (Move, a tag) says `form`. */
+  placement?: DialogPlacement;
   /** A body without padding, for content that runs to the frame's edges (the problems list). */
   flush?: boolean;
   /** Under the header, before the body: a block banner for an error. */
@@ -110,6 +130,7 @@ export function DialogFrame({
   focusTitle = false,
   description,
   size = 'small',
+  placement = size === 'small' ? 'confirmation' : 'form',
   flush = false,
   banner,
   footer,
@@ -134,7 +155,8 @@ export function DialogFrame({
   return (
     <Modal
       {...modal}
-      aria-describedby={description === undefined ? undefined : descriptionId}
+      placement={placement}
+      aria-describedby={description === undefined ? modal['aria-describedby'] : descriptionId}
       className={`dialog-frame${className === undefined ? '' : ` ${className}`}`}
     >
       <div className="dialog-frame__frame" data-size={size}>

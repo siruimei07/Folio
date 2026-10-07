@@ -1,0 +1,461 @@
+/* The History view (handoff workspace-history §7, app-shell §7; the canvas's HistoryPanel): the
+   panel at its remembered width, the 8 px resize handle in the gap, and the diff column. In a narrow
+   window the panel takes the width (§2.2). */
+
+.history-view {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Narrow window: the diff covers the list (§2.2). The list stays laid out under it, hidden, so it
+   keeps its scroll position, its measured entries and its selection for "Back". The diff fades in
+   and rises 4 px, and so does the list when it comes back; at once with reduced motion (§14). */
+.history-view[data-covered] > .history-view__panel {
+  visibility: hidden;
+}
+
+/* Before the history has started: one panel with the first commit's block (§10). */
+.history-view__first-commit {
+  flex: 1;
+}
+
+.history-view__cover {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  animation: rise-in var(--motion-duration-base) var(--motion-easing-standard);
+}
+
+.history-view__panel[data-returned] {
+  animation: rise-in var(--motion-duration-base) var(--motion-easing-standard);
+}
+
+.history-view__panel {
+  display: flex;
+  flex: none;
+  min-width: 0;
+}
+
+.history-view__panel > .history-panel {
+  flex: 1;
+}
+
+:root[data-layout='narrow'] .history-view__panel {
+  flex: 1;
+}
+
+/* The diff column: the empty preview until a file row is selected, then the diff pane. */
+.history-diff {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  box-sizing: border-box;
+  overflow: hidden;
+  border: var(--border-width) solid var(--color-border-default);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface-panel);
+}
+
+/* The resize handle (app-shell §7): centred in the gap, a 4 × 36 px grip. */
+.resize-handle {
+  position: relative;
+  z-index: var(--z-index-resize-handle);
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-resize-handle);
+  border-radius: var(--radius-pill);
+  cursor: col-resize;
+  touch-action: none;
+  transition: background-color var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.resize-handle:hover {
+  background: var(--color-overlay-rail-hover);
+}
+
+.resize-handle:focus-visible {
+  outline-offset: calc(-1 * var(--focus-ring-width));
+}
+
+.resize-handle__grip {
+  width: var(--size-resize-grip-width);
+  height: var(--size-resize-grip-height);
+  border-radius: var(--radius-pill);
+  background: var(--color-border-strong);
+}
+
+/* The type filter (§7.1): a 28 px outline button in the caption size; the selected look while it
+   filters, the strong border while its menu is open. */
+.history-filter {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-6);
+  box-sizing: border-box;
+  height: var(--size-control-compact);
+  padding: 0 var(--space-8);
+  border: var(--border-width) solid var(--color-border-control);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-panel);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: var(--font-size-caption);
+  white-space: nowrap;
+  cursor: default;
+  transition: background-color var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.history-filter[data-filtering] {
+  border-color: var(--color-accent-default);
+  background: var(--color-surface-selected);
+}
+
+.history-filter[data-hovered] {
+  background: var(--color-surface-hover);
+}
+
+.history-filter[aria-expanded='true'] {
+  border-color: var(--color-border-strong);
+}
+
+.history-filter__chevron {
+  color: var(--color-text-tertiary);
+}
+
+/* The header (§7.1): "History", then in one file's history its chip, the type filter on the right.
+   The actions take the header's width after the title, so the chip follows the title and shrinks
+   first. */
+.history-panel .panel__actions {
+  flex: 1;
+  min-width: 0;
+}
+
+.history-panel .history-filter {
+  margin-left: auto;
+}
+
+/* The file filter chip (§7.4): the file's icon, its path and name, and the remove button. */
+.file-chip {
+  display: inline-flex;
+  flex: 0 1 auto;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-6);
+  box-sizing: border-box;
+  height: var(--size-chip);
+  padding: 0 var(--space-2) 0 var(--space-8);
+  border: var(--border-width) solid var(--color-border-control);
+  border-radius: var(--radius-chip);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-small);
+}
+
+.file-chip__icon {
+  display: flex;
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+/* A refresh that failed, above the entries it kept. */
+.history-banner {
+  flex: none;
+  padding: var(--space-8) var(--space-8) 0;
+}
+
+/* The timeline: the scrolling element, the feed sized by the virtualiser, then the end row. */
+.timeline {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.timeline__feed {
+  position: relative;
+  width: 100%;
+}
+
+.timeline__item {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+}
+
+/* Day headers (§7.2): visual only, their text aligned with the icon column. */
+.day-header {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: var(--size-row);
+  padding: 0 var(--space-12) 0 calc(var(--space-8) + var(--size-history-time-column) + var(--space-10));
+  border-bottom: var(--border-width) solid var(--color-border-default);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-small);
+}
+
+.timeline__item:not([data-index='0']) .day-header {
+  border-top: var(--border-width) solid var(--color-border-default);
+}
+
+/* An entry: the time column, the icon column with the joining line, the content. */
+.entry {
+  display: grid;
+  grid-template-columns: var(--size-history-time-column) var(--size-history-icon-column) minmax(0, 1fr);
+  column-gap: var(--space-10);
+  padding: 0 var(--space-12) 0 var(--space-8);
+  font-size: var(--font-size-label);
+  /* A fresh restore's soft background fades out when it ends (§14); at once under reduced motion. */
+  transition: background-color var(--motion-duration-base) var(--motion-easing-standard);
+}
+
+/*
+ * A restore entry that just arrived (§7.2, §14): it fades and rises 4 px in, and keeps the soft
+ * accent background for FRESH_COMMIT_MS, a UI constant that reduced motion does not shorten.
+ */
+.entry[data-fresh] {
+  background: var(--color-accent-soft);
+  animation: rise-in var(--motion-duration-base) var(--motion-easing-standard);
+}
+
+.entry:focus-visible {
+  outline-offset: calc(-1 * var(--focus-ring-width));
+}
+
+.entry__time {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding-top: var(--space-12);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-caption);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--size-history-icon-column);
+  white-space: nowrap;
+}
+
+.entry__date {
+  line-height: var(--font-line-height-body);
+}
+
+.entry__rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.entry__line {
+  flex: none;
+  width: var(--border-width);
+  height: var(--space-12);
+  background: var(--color-border-default);
+}
+
+.entry__line--below {
+  flex: 1;
+  min-height: var(--space-6);
+}
+
+.entry__line[data-hidden] {
+  background: transparent;
+}
+
+.entry__icon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-history-icon-column);
+  height: var(--size-history-icon-column);
+  color: var(--color-text-primary);
+}
+
+.entry__content {
+  min-width: 0;
+  padding: var(--space-12) 0;
+}
+
+.entry__head {
+  margin: 0;
+  line-height: var(--size-history-icon-column);
+  overflow-wrap: anywhere;
+}
+
+/* The title line and, at its right, a commit's hover actions (§7.3), centred on its first line. */
+.entry__top {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+}
+
+.entry__top > .entry__head {
+  flex: 1;
+  min-width: 0;
+}
+
+.entry__top > .commit-actions {
+  margin-block: calc((var(--size-history-icon-column) - var(--size-icon-button-medium)) / 2);
+}
+
+.entry__id,
+.entry__source {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-small);
+  white-space: nowrap;
+}
+
+/* The gaps on the title's line (`Gap` in timeline/Entry.tsx): a space whose own width is nothing
+   (its font size) and whose word spacing is the gap, at no height (its line height), so a line that
+   wraps there drops it and the next one starts at the content's edge. */
+.entry__gap {
+  font-size: 0;
+  line-height: 0;
+  word-spacing: var(--space-8);
+}
+
+.entry__gap[data-size='small'] {
+  word-spacing: var(--space-6);
+}
+
+/* The bullet before the short id, which screen readers leave out. */
+.entry__id::before {
+  content: '•' / '';
+  margin-right: var(--space-4);
+}
+
+.entry__source {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  vertical-align: top;
+}
+
+/* "Current version" in one file's history (§7.2): a neutral pill after the source. */
+.entry__pill {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: var(--size-count-pill);
+  /* Centred in the title's first line. */
+  margin-top: calc((var(--size-history-icon-column) - var(--size-count-pill)) / 2);
+  padding: 0 var(--space-6);
+  border: var(--border-width) solid var(--color-border-default);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-strong);
+  white-space: nowrap;
+  vertical-align: top;
+}
+
+.entry__body,
+.entry__note {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-small);
+  line-height: var(--font-line-height-body);
+}
+
+/* Line breaks kept, at most three lines with an ellipsis; the tooltip and description have it all. */
+.entry__body {
+  display: -webkit-box;
+  overflow: hidden;
+  white-space: pre-line;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
+
+/* After the last entry (§7.5). */
+.timeline-end {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-small);
+}
+
+.timeline-end[data-kind='loading'],
+.timeline-end[data-kind='failed'] {
+  justify-content: center;
+  gap: var(--space-8);
+  height: var(--size-history-loading-row);
+}
+
+.timeline-end[data-kind='start'] {
+  padding: var(--space-10) var(--space-12) var(--space-16) calc(var(--space-8) + var(--size-history-time-column) + var(--space-10) + var(--size-history-icon-column) + var(--space-10));
+  color: var(--color-text-tertiary);
+}
+
+/* The skeleton (§7.5): a day header stub, then entries of sunken stubs; nothing moves. */
+.timeline-skeleton {
+  display: flex;
+  flex-direction: column;
+}
+
+.timeline-skeleton__day {
+  height: var(--size-row);
+  border-bottom: var(--border-width) solid var(--color-border-default);
+  background: var(--color-surface-sunken);
+}
+
+.timeline-skeleton__entry {
+  display: grid;
+  grid-template-columns: var(--size-history-time-column) var(--size-history-icon-column) minmax(0, 1fr);
+  column-gap: var(--space-10);
+  padding: var(--space-14) var(--space-12) var(--space-10) var(--space-8);
+}
+
+.timeline-skeleton__time {
+  justify-self: end;
+  width: calc(var(--size-history-time-column) - var(--space-24));
+  height: var(--space-8);
+  margin-top: var(--space-6);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-sunken);
+}
+
+.timeline-skeleton__dot {
+  width: var(--size-icon-small);
+  height: var(--size-icon-small);
+  margin: var(--space-2) auto 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-sunken);
+}
+
+.timeline-skeleton__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-10);
+}
+
+.timeline-skeleton__title {
+  height: var(--space-10);
+  margin-top: var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-sunken);
+}
+
+.timeline-skeleton__card {
+  height: var(--size-row);
+  border: var(--border-width) solid var(--color-border-default);
+  border-radius: var(--radius-control);
+}
+
+.timeline-skeleton__card[data-size='tall'] {
+  height: calc(2 * var(--size-row));
+}
+
+.timeline-skeleton__card[data-size='taller'] {
+  height: calc(3 * var(--size-row));
+}

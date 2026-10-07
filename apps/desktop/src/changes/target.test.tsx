@@ -1,6 +1,6 @@
 // "Show in Changes" in the Changes view (app/changeTarget.ts): the view finds the change at a path,
 // on whatever page it is, then selects, scrolls to and focuses its row; or says why it cannot, on
-// the fake shell.
+// the fake shell. Asked for without a path, the view takes the focus.
 import { act, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -8,9 +8,9 @@ import { showChange } from '../app/changeTarget';
 import { useNavigation } from '../app/navigation';
 import { useToasts } from '../app/toasts';
 import { toastTexts } from '../test/render';
-import { mockScrolling } from '../test/virtual';
+import { captureResizeObservers, mockScrolling } from '../test/virtual';
 import { setDiffOpen, useChangesView } from './state';
-import { findRow, holdRequests, itemPageOffset, renderChanges, resizeTo } from './test/render';
+import { commitButton, findRow, holdRequests, itemPageOffset, renderChanges, resizeTo, settle, smallWorkspace } from './test/render';
 
 /** The offsets of the pages of items the fake shell was asked for, oldest first. */
 function itemPages(invoke: { mock: { calls: readonly (readonly unknown[])[] } }): number[] {
@@ -125,5 +125,84 @@ describe('Show in Changes', () => {
       expect(toastTexts()).toEqual([expect.stringMatching(/^Couldn't find that change — /)]);
     });
     expect(useToasts.getState().toasts[0]?.actions?.map((action) => action.label)).toEqual(['Copy details']);
+  });
+});
+
+describe('Changes asked for without a path ("Go to Changes")', () => {
+  it('gives the focus to the list’s focused row', async () => {
+    renderChanges();
+    const list = await screen.findByRole('listbox', { name: 'Changes' });
+    await within(list).findAllByRole('option');
+    useNavigation.setState({ view: 'history' });
+
+    act(() => {
+      showChange();
+    });
+
+    expect(useNavigation.getState().view).toBe('changes');
+    await waitFor(() => {
+      expect(list.contains(document.activeElement)).toBe(true);
+    });
+    expect(document.activeElement).toHaveAttribute('role', 'option');
+  });
+
+  it('waits for the rows of a list whose scroller has no size yet, as when Changes first shows', async () => {
+    // The scroller measures 0 × 0 until the test resizes it, as a view shown for the first time
+    // does before its first layout: the virtualiser renders no rows until then.
+    const size = { width: 0, height: 0 };
+    const resized = captureResizeObservers();
+    renderChanges({ layout: size });
+    const list = await screen.findByRole('listbox', { name: 'Changes' });
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /^Commit \d+ changes$/ })).toBeInTheDocument();
+    });
+
+    act(() => {
+      showChange();
+    });
+    await settle();
+    expect(within(list).queryAllByRole('option')).toHaveLength(0);
+
+    act(() => {
+      size.width = 800;
+      size.height = 600;
+      resized();
+    });
+    await waitFor(() => {
+      expect(document.activeElement).toHaveAttribute('role', 'option');
+    });
+    expect(list.contains(document.activeElement)).toBe(true);
+  });
+
+  it('gives it to the diff over the list in a narrow window, where the list is hidden under it', async () => {
+    resizeTo(600);
+    renderChanges();
+    await findRow('CSC148/a1/run.bat');
+    act(() => {
+      setDiffOpen(true);
+    });
+    expect(screen.getByRole('button', { name: 'Back to changes' })).toBeInTheDocument();
+
+    act(() => {
+      showChange();
+    });
+
+    await waitFor(() => {
+      expect(document.activeElement?.closest('.changes-view__cover')).not.toBeNull();
+    });
+    expect(useChangesView.getState().diffOpen).toBe(true);
+  });
+
+  it('gives it to the commit button when there is nothing to list', async () => {
+    renderChanges({ fixture: smallWorkspace([], { metadata: false }) });
+    expect(await screen.findByRole('heading', { name: 'No changes' })).toBeInTheDocument();
+
+    act(() => {
+      showChange();
+    });
+
+    await waitFor(() => {
+      expect(commitButton()).toHaveFocus();
+    });
   });
 });

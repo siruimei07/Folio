@@ -3,7 +3,7 @@
 // semester is Fall 2026, which holds the most recently modified file).
 import { screen, within } from '@testing-library/react';
 
-import { type DialogKind, HostedDialogs } from '../../app/navigation';
+import { type DialogKind, HostedDialogs, HostedViews, type ViewId } from '../../app/navigation';
 import { ToastRegion } from '../../app/ToastRegion';
 import { useToasts } from '../../app/toasts';
 import { NOW } from '../../test/data';
@@ -21,19 +21,23 @@ export const LINEAR = 'Fall 2026/线性代数';
 export interface RenderLibraryOptions extends RenderAppOptions {
   /** Dialogs another lane registers, whose buttons and menu items then show. */
   dialogs?: readonly DialogKind[];
+  /** The other views on the rail, whose actions then show ("View history"); History by default. */
+  views?: readonly ViewId[];
   /** Also the toolbar's semester switcher. */
   toolbar?: boolean;
 }
 
-export function renderLibrary({ dialogs = [], toolbar = false, ...options }: RenderLibraryOptions = {}) {
+export function renderLibrary({ dialogs = [], views = ['history'], toolbar = false, ...options }: RenderLibraryOptions = {}) {
   resetLibraryView();
   usePreferences.setState({ panel: 'tree', pane: 'grid', sort: DEFAULT_SORT });
   useToasts.setState({ toasts: [] });
   return renderApp(
     <HostedDialogs value={new Set(dialogs)}>
-      {toolbar && <SemesterControl compact={false} />}
-      <LibraryView />
-      <ToastRegion />
+      <HostedViews value={new Set(views)}>
+        {toolbar && <SemesterControl compact={false} />}
+        <LibraryView />
+        <ToastRegion />
+      </HostedViews>
     </HostedDialogs>,
     { now: NOW, ...options },
   );

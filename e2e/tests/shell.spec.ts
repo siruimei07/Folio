@@ -29,9 +29,10 @@ test('shows the Library on the rail and in the content region, and passes axe', 
   await expect(library).toHaveAttribute('aria-current', 'page');
   await expect(page.getByRole('main').getByRole('region', { name: libraryStrings.panel.title })).toBeVisible();
   await expect(page.getByRole('banner').getByRole('button', { name: titlebar.close })).toBeVisible();
-  // The rail shows the registered views only (ADR-0005, product decision 3): the Library and
-  // Changes (changes.spec.ts), then the gear and the avatar of the settings dialogs.
-  await expect(rail.getByRole('button')).toHaveCount(4);
+  // The rail shows the registered views only (ADR-0005, product decision 3): the Library, Changes
+  // (changes.spec.ts) and History (history.spec.ts), then the gear and the avatar of the settings
+  // dialogs.
+  await expect(rail.getByRole('button')).toHaveCount(5);
   await expect(rail.getByRole('button', { name: 'Library settings' })).toHaveAttribute('aria-haspopup', 'dialog');
 
   // Focus opens the rail button's tooltip. Check it before any key: React Aria closes it on every

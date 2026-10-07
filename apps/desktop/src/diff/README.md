@@ -21,7 +21,7 @@ import { DIFF_PANE, type DiffPaneHandle, type DiffTarget } from '../app/panes';
 | `moreItems` | `ReactNode` | The host's `MenuItem`s for "More": Open with default app · Show in File Explorer · View history of this file · Copy path (§6.1). The pane wraps them in its own `Menu`. |
 | `back` | `{ label, onBack }` | Narrow window (§2.2): "Back" first in the header, named by `label` ("Back to changes", "Back to history"). Esc and Alt+Left in the pane call `onBack` too, unless a menu or tooltip took the Esc. |
 | `restore` | `{ onRestore, disabledReason? }` | History only (§8.1): "Restore". The host decides which rows offer it (stored text and Word versions; not event-only files, thinned-out versions or `.folio` paths) and runs the confirmation (§8.2). With `disabledReason` ("This is the version you have now.", a read-only history) the button stays, disabled, in the tab order, with the reason in its tooltip. |
-| `ref` | `Ref<DiffPaneHandle>` | `ref.current.focus()` moves the focus into the diff: the lines' region, else the heading. Call it on Enter in the list (§3.6); selecting a row does not move the focus. |
+| `ref` | `Ref<DiffPaneHandle>` | `ref.current.focus()` moves the focus into the diff: the lines' region, else the heading. Call it on Enter in the list (§3.6); selecting a row does not move the focus. `ref.current.focusRestore()` moves it to "Restore", enabled or disabled, or to "More" in a compact pane (the heading without Restore): for a confirmation that closes after the button it opened from was replaced (§8.3; React Aria gives the focus back to the element it came from only while that is in the page). |
 
 ## Targets
 
@@ -122,7 +122,10 @@ always has a target.
 - **Compact pane**: below `size.diff-compact-pane` (600 px) of the pane's own width (a
   `ResizeObserver`, not the window's), the toggle and Restore move into "More" after the host's
   items, as "Show this version" / "Show the changes" and "Restore…" (§6.1, §8.4). "More" shows
-  whenever it has an item.
+  whenever it has an item. A disabled "Restore…" has no tooltip: `restore.disabledReason` is the
+  item's note on the right and its description, and the item stays in reach of the arrow keys and
+  does nothing (the shared `Menu`, library-actions §2.7). Keep the reason a short sentence, such as
+  "This is the version you have now."
 - **States** (§6.8): loading after 150 ms, load failed with Try again and Open, and every block for
   content that is not lines; the banners for moves, bound parts and event-only files. The failed
   block and the refresh banner add "Copy details" for `Internal`, `FileSystem`, `InvalidArgument`
@@ -133,7 +136,10 @@ always has a target.
   DOM): a fold that opens, a failed row that loads again or whose window answered for other content
   leave it on the region; a block or banner whose "Try again" read succeeded or started over, and
   the lines when a refresh turns them into a state block (unreadable, binary, not local, too large),
-  leave it on the lines, else the heading. Focus the person puts elsewhere stays there. Each "Try
+  leave it on the lines, else the heading. In the header, a control that goes while it has the
+  focus (Restore turning disabled as its version becomes the current one, the toggle and Restore
+  moving into "More" as the pane narrows) leaves it on Restore, else "More". Focus the person puts
+  elsewhere stays there. Each "Try
   again" keeps the focus while its read runs, and when the read settles with the failure still
   showing (a refresh banner, a file still in use, a lookup or window that fails again), the failure's
   title is read again (`useRetry`, WCAG 4.1.3): only as that count grows, so the diff shown again
@@ -180,12 +186,6 @@ The dev gallery shows the pane on the fake shell: `/gallery.html?view=diff&scena
 
 ## Known limitations
 
-- In the compact pane's "More", a disabled "Restore…" shows its reason as the item's note on the
-  right (React Aria gives a disabled menu item no tooltip, and the arrow keys skip it, UI
-  architecture §7.1): keep `restore.disabledReason` a short sentence, such as "This is the version
-  you have now." Keyboard and screen-reader users therefore neither reach the item nor hear the
-  note, as with every disabled menu item in the app; the fix belongs to the shared `Menu` (disabled
-  items that stay focusable, the note as their description, library-actions §2.7).
 - When every window past the first fails, the rows of more windows come into view as the failed
   ones shrink to a row each, and those are asked for in turn, once each, until the view shows only
   failed rows.

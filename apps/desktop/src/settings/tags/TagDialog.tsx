@@ -78,6 +78,7 @@ export function TagDialog({ tag, tags, onClose }: TagDialogProps) {
   return (
     <DialogFrame
       isOpen
+      placement="form"
       onOpenChange={(open) => {
         if (!open && !saving) onClose();
       }}

@@ -1,9 +1,10 @@
 import './Menu.css';
 
 import { Check, ChevronRight, type LucideIcon, Minus } from 'lucide-react';
-import { createContext, isValidElement, type ReactElement, type ReactNode, useContext, useRef } from 'react';
+import { createContext, isValidElement, type ReactElement, type ReactNode, useContext, useMemo, useRef } from 'react';
 import { useContextMenu } from 'react-aria';
 import {
+  type Key,
   Keyboard,
   Menu as AriaMenu,
   MenuItem as AriaMenuItem,
@@ -30,11 +31,34 @@ export type MenuProps<T extends object> = Omit<AriaMenuProps<T>, 'className' | '
  */
 const CloseContextMenu = createContext<(() => void) | undefined>(undefined);
 
-/** The list of a menu (library-actions handoff §2.7). Put it inside `MenuButton` or `ContextMenu`. */
-export function Menu<T extends object>(props: MenuProps<T>) {
+/** The `disabledKeys` of the menu an item is in. The items apply them, not React Aria (`MenuItem`). */
+const DisabledKeys = createContext<ReadonlySet<Key>>(new Set());
+
+/**
+ * The list of a menu (library-actions handoff §2.7). Put it inside `MenuButton` or `ContextMenu`.
+ * The items its `disabledKeys` names are disabled as an item's `isDisabled` makes them: still
+ * focusable, but inert.
+ */
+export function Menu<T extends object>({ disabledKeys, ...props }: MenuProps<T>) {
   const close = useContext(CloseContextMenu);
-  return <AriaMenu onClose={close} {...props} className="menu" />;
+  const disabled = useMemo(() => new Set(disabledKeys), [disabledKeys]);
+  return (
+    <DisabledKeys value={disabled}>
+      <AriaMenu onClose={close} {...props} className="menu" />
+    </DisabledKeys>
+  );
 }
+
+/**
+ * A disabled item (library-actions §2.7: `aria-disabled`, still focusable so it is announced).
+ * React Aria's `isDisabled` makes it inert: no press, hover, action, selection toggle or closing,
+ * with `aria-disabled` and `data-disabled` (the tertiary look). Alone it also takes the item out of
+ * the focus, the arrow keys and type-ahead. A collection node whose props say
+ * `disabledBehavior: 'selection'` keeps those: react-stately's `SelectionManager.isDisabled` and
+ * react-aria's `ListKeyboardDelegate.isDisabled` leave it in, while `canSelectItem` still refuses
+ * it. RAC 1.21 types no `disabledBehavior` on `MenuItem`; Menu.test.tsx holds the behaviour.
+ */
+const FOCUSABLE_DISABLED = { isDisabled: true, disabledBehavior: 'selection' } as const;
 
 export interface MenuItemProps extends Omit<AriaMenuItemProps, 'className' | 'style' | 'children'> {
   /** A 16 px icon in the secondary colour; a tag dot for checkable tag items. */
@@ -42,7 +66,10 @@ export interface MenuItemProps extends Omit<AriaMenuItemProps, 'className' | 'st
   children: string;
   /** Shown on the right, like "F2" or "Ctrl+Shift+C". */
   shortcut?: string;
-  /** A note on the right in place of the shortcut, like "From folder". */
+  /**
+   * A note on the right in place of the shortcut, like "From folder", which is also the item's
+   * description (`aria-describedby`): a disabled item's reason.
+   */
   note?: string;
   /** Label and icon in the danger colour (Delete). */
   destructive?: boolean;
@@ -51,13 +78,19 @@ export interface MenuItemProps extends Omit<AriaMenuItemProps, 'className' | 'st
 }
 
 /**
- * One item: icon, label (one line, truncated), then the shortcut, or a chevron when it opens a
- * submenu. In a menu with `selectionMode`, a check column comes first (`menuitemcheckbox`).
+ * One item: icon, label (one line, truncated), then the note or the shortcut, or a chevron when
+ * it opens a submenu. In a menu with `selectionMode`, a check column comes first
+ * (`menuitemcheckbox`). A disabled item (`isDisabled`, or a key in the menu's `disabledKeys`)
+ * stays in reach of the arrow keys and type-ahead, so it is announced with its note, and does
+ * nothing: Enter, Space and clicks neither run it, toggle it nor close the menu.
  */
-export function MenuItem({ icon, children, shortcut, note, destructive, mixed, ...props }: MenuItemProps) {
+export function MenuItem({ icon, children, shortcut, note, destructive, mixed, isDisabled, ...props }: MenuItemProps) {
+  const disabledKeys = useContext(DisabledKeys);
+  const disabled = isDisabled === true || (props.id !== undefined && disabledKeys.has(props.id));
   return (
     <AriaMenuItem
       {...props}
+      {...(disabled ? FOCUSABLE_DISABLED : undefined)}
       textValue={props.textValue ?? children}
       className="menu-item"
       data-destructive={destructive === true || undefined}
@@ -77,7 +110,11 @@ export function MenuItem({ icon, children, shortcut, note, destructive, mixed, .
           <Text slot="label" className="menu-item__label">
             {children}
           </Text>
-          {note !== undefined && <span className="menu-item__note">{note}</span>}
+          {note !== undefined && (
+            <Text slot="description" className="menu-item__note">
+              {note}
+            </Text>
+          )}
           {shortcut !== undefined && <Keyboard className="menu-item__shortcut">{shortcut}</Keyboard>}
           {hasSubmenu && <ChevronRight aria-hidden size={SIZE.iconSmall} className="menu-item__chevron" />}
         </>
@@ -143,6 +180,12 @@ export function MenuButton({ trigger, children, placement = 'bottom start' }: Me
 export interface MenuAnchor {
   x: number;
   y: number;
+}
+
+/** Shift+F10 alone or the Menu key: the keys that open a context menu from the keyboard (library-actions §2.7). */
+export function isContextMenuKey(event: Pick<KeyboardEvent, 'key' | 'shiftKey' | 'ctrlKey' | 'altKey' | 'metaKey'>): boolean {
+  const { key, shiftKey, ctrlKey, altKey, metaKey } = event;
+  return (key === 'F10' && shiftKey && !ctrlKey && !altKey && !metaKey) || key === 'ContextMenu';
 }
 
 /**

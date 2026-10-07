@@ -297,6 +297,21 @@
           "hex": "#f4a39b"
         },
         "$description": "Hover background of danger buttons."
+      },
+      "disabled-background": {
+        "$type": "color",
+        "$value": "{color.surface.app}",
+        "$description": "Background of a disabled or pending button: recessed below the panel, so it does not read as an outline button (workspace-history §8.5)."
+      },
+      "disabled-border": {
+        "$type": "color",
+        "$value": "{color.border.guide}",
+        "$description": "Border of a disabled or pending button: nearly invisible in dark mode."
+      },
+      "disabled-text": {
+        "$type": "color",
+        "$value": "{color.text.tertiary}",
+        "$description": "Label and spinner of a disabled or pending button."
       }
     },
     "input": {

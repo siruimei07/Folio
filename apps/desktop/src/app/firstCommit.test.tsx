@@ -1,9 +1,9 @@
 // The first commit (workspace-history handoff §10) and the Changes rail badge (§2.1), on the fake
-// shell: the shell with the Changes view and its badge as app/registry.ts hosts them, without the
-// toolbar and dialogs. The badge is mounted with the shell and starts the history by itself, once per library
+// shell: the shell with the Changes view and its badge as app/registry.ts hosts them (History too,
+// where a test says so), without the toolbar and dialogs. The badge is mounted with the shell and starts the history by itself, once per library
 // session; the view shows the first commit's block in every state until the history has started.
 import { act, screen, waitFor, within } from '@testing-library/react';
-import { FileDiff, LibraryBig } from 'lucide-react';
+import { FileDiff, History, LibraryBig } from 'lucide-react';
 import { StrictMode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -11,6 +11,7 @@ import { ChangesView } from '../changes';
 import { ChangesRailBadge } from '../changes/RailBadge';
 import { politeText, settle } from '../changes/test/render';
 import { useWorkspace } from '../data/workspace';
+import { HistoryView } from '../history';
 import { NOW } from '../test/data';
 import { smallWorkspace } from '../test/fixtures';
 import { renderApp, type RenderAppOptions } from '../test/render';
@@ -38,11 +39,17 @@ beforeEach(() => {
   clearAnnouncements();
 });
 
+/** The shell with History too, which shows the first commit's block as well (handoff §10). */
+const WITH_HISTORY: ShellRegistry = {
+  ...REGISTRY,
+  views: [...REGISTRY.views, { id: 'history', icon: History, label: 'rail.history', key: '3', component: HistoryView }],
+};
+
 /** The shell on the Changes view, with the app's live regions; `invoke` records the commands. */
-function renderShell(options: RenderAppOptions = {}) {
+function renderShell({ registry = REGISTRY, ...options }: RenderAppOptions & { registry?: ShellRegistry } = {}) {
   const rendered = renderApp(
     <>
-      <Shell registry={REGISTRY} />
+      <Shell registry={registry} />
       <Announcer />
     </>,
     { now: NOW, ...options },
@@ -243,6 +250,32 @@ describe('the first commit', () => {
     await settle();
     expect(starts(invoke)).toHaveLength(0);
     expect(screen.queryByRole('heading', { name: STARTING })).toBeNull();
+  });
+
+  it('hands the focus from History’s block to its timeline once the history has started', async () => {
+    useNavigation.setState({ view: 'history' });
+    const { shell, user } = renderShell({ scenario: 'history-none', jobStepMs: 60_000, registry: WITH_HISTORY });
+    await screen.findByRole('heading', { name: STARTING });
+    await waitFor(() => {
+      expect(shell.jobs().some((job) => job.kind === 'firstCommit')).toBe(true);
+    });
+    const job = shell.jobs().find((candidate) => candidate.kind === 'firstCommit');
+    act(() => {
+      if (job !== undefined) shell.cancelJob(job.id);
+    });
+    await user.click(await screen.findByRole('button', { name: 'Start history' }));
+    expect(await screen.findByRole('heading', { name: STARTING })).toBeInTheDocument();
+    expect(document.activeElement).toHaveClass('first-commit');
+
+    act(() => {
+      shell.finishJobs();
+    });
+
+    // The block that had the focus went: the timeline's tab stop takes it, not the page.
+    const feed = await screen.findByRole('feed', { name: 'History, newest first' });
+    await waitFor(() => {
+      expect(feed.querySelector('article[tabindex="0"]')).toHaveFocus();
+    });
   });
 });
 
