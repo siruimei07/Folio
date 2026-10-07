@@ -3430,7 +3430,8 @@
       ],
       "summary": "删除和导入的结果报告「已进 iCloud 最近删除」（Recycled::CloudTrash）；装着只在云端的文件的文件夹给出自己的错误码和文案（RecycleFailure::CloudOnly，现在映射成 NotRecyclable）；顺带定 shell 按名字找不到的条目（名字末尾是点或空格）报哪种失败",
       "status": "planned",
-      "updated": "2026-10-05",
+      "hold": "Sirui 10-07：现在不做 iCloud 里的删除策略，所有删除在 Mac 上进行；以后需要时再开（CloudBusy/CloudOnly 先照旧映射成 InUse/NotRecyclable）",
+      "updated": "2026-10-07",
       "links": [
         "docs/specs/ipc-m1.md",
         "docs/specs/windows-adapter.md",
@@ -3489,7 +3490,10 @@
       ],
       "summary": "同步的 spec",
       "status": "planned",
-      "updated": "2026-10-01",
+      "updated": "2026-10-07",
+      "notes": [
+        "Sirui 10-07（决策 icloud-no-delete）：现在不做 iCloud 里的删除策略，所有删除在 Mac 上进行。写同步规格时据此定 Windows 端推送遇到删除怎么办（例如只在云端仓库里记下、不删文件），定之前问 Sirui"
+      ],
       "links": [
         "docs/adr/ADR-0003-versioning-and-sync.md",
         "docs/research/icloud-field-test.md",
@@ -4289,6 +4293,22 @@
       "type": "decide",
       "state": "done",
       "result": "路线图会话按授权决定：标题显示这个位置的全部改动（SummaryGroup.items），说明里写能提交几个；勾选状态不算必须提交的条目（(selected - required) of (available - required)，和全选一致），避免先显示未选、汇总回来又变成部分选中。由新合约 lane feat/ipc-workspace-summary-counts 加这两个字段"
+    },
+    {
+      "id": "icloud-no-delete",
+      "when": "2026-10-07",
+      "item": "iCloud 里的删除策略：Windows 上的 Folio 要不要处理 iCloud Drive 里的删除（回收进「最近删除」、iCloud 启动后约 20 分钟拒绝回收、只在云端的文件）",
+      "type": "decide",
+      "state": "done",
+      "result": "Sirui：现在不做删除策略，所有删除在 Mac 上进行。feat/ipc-recycle-cloud-trash 暂缓；已合并的回收修复照旧（CloudBusy 映射成 InUse）；M3 的同步规格据此处理推送里的删除。10-07 那次真实测试里 iCloud 连续拒绝了 23 分钟以上（比之前看到的约 20 分钟长），测试已停"
+    },
+    {
+      "id": "public-history",
+      "when": "2026-10-07",
+      "item": "仓库改成公开后，Git 历史里还有课程讲义截图、旧的设备交接快照和学校邮箱（当前文件里已移出），GitHub 上还有 10 个旧分支",
+      "type": "decide",
+      "state": "done",
+      "result": "Sirui：先改回 private，等有空档再重写历史（清除这些文件和邮箱、删旧分支、重打 v0.1.0），之后再决定是否公开"
     }
   ],
   "looseEnds": [
@@ -4423,8 +4443,8 @@
       "lane": "fix/ui-problems-short-list-flake"
     },
     {
-      "state": "open",
-      "item": "iCloud for Windows 在 10-05 重启后没在运行：打开后重跑回收站的真实 iCloud 测试（FOLIO_TEST_ICLOUD_DIR 指向 iCloud Drive 里任意文件夹；cargo test -p folio-core --lib -- --ignored win::recycle::tests::in_icloud_drive）",
+      "state": "done",
+      "item": "iCloud for Windows 在 10-05 重启后没在运行：打开后重跑回收站的真实 iCloud 测试（FOLIO_TEST_ICLOUD_DIR 指向 iCloud Drive 里任意文件夹；cargo test -p folio-core --lib -- --ignored win::recycle::tests::in_icloud_drive）（10-07 不再需要：Sirui 决定现在不做 iCloud 里的删除策略，决策 icloud-no-delete）",
       "lane": "feat/ipc-recycle-cloud-trash"
     },
     {
@@ -4476,6 +4496,11 @@
       "state": "open",
       "item": "remote-format.md §9.3 没写 RFC 8878 的块大小上限（Block_Maximum_Size），generate.mjs 接受 folio-core 拒绝的帧；testing-strategy「Gaps today」还写着 folio-core 的 vector 测试随对象库到来（那一行挨着 test/core-sync-simulation 的改动，后合并的一方改）",
       "lane": "docs/specs-sync"
+    },
+    {
+      "state": "open",
+      "item": "M2 的 lane 都合并后的空档：重写 Git 历史，清除 docs/agents/device-handoff-2026-10-01*、office-preview-spike 的 7 张课程截图、gitbutler-operations-history.png 和学校邮箱（备份在 folio-agent-work/public-repo-backup/），删除 GitHub 上 10 个旧分支、重打 v0.1.0；之后 Sirui 决定是否再公开（决策 public-history）",
+      "lane": "gate/m2-acceptance"
     }
   ],
   "risks": [
@@ -4908,6 +4933,11 @@
       "at": "2026-10-07",
       "by": "Claude Code",
       "text": "暂停 M2 子代理（算力给模型训练）；恢复说明在 folio-agent-work/roadmap-session/m2-resume.md。iCloud 本机回收站里的 NFD 测试文件已送进回收站，iCloud 不再重试"
+    },
+    {
+      "at": "2026-10-07",
+      "by": "Claude Code",
+      "text": "仓库公开后补了中文 README、截图和 Description，并把课程资料截图、交接快照、学校邮箱移出当前文件（2380f693）；历史里还有，按 Sirui 的决定先改回 private，等空档重写历史。iCloud：现在不做删除策略，所有删除在 Mac 上进行（决策 icloud-no-delete），feat/ipc-recycle-cloud-trash 暂缓"
     }
   ]
 }
