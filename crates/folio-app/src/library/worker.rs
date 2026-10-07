@@ -1,13 +1,15 @@
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Condvar, Mutex, PoisonError};
+use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant, SystemTime};
 
 use folio_core::catalog::{self, Catalog};
 use folio_core::library::operations::import as import_core;
 use folio_core::library::operations::{OperationError, Outcome};
-use folio_core::library::{self as core, CommittedScan, EntryChangeKind, Library, ScanCoverage};
+use folio_core::library::{
+    self as core, CommittedScan, EntryChangeKind, ExtractReport, Library, ScanCoverage,
+};
 use folio_core::meta::MetaTree;
 use folio_core::watch::{Rescan, WatchOptions};
 use folio_core::win::{WatchEvent, Watcher, WindowsFileSystem};
@@ -95,6 +97,10 @@ struct Pending {
     rebuild: Option<Ticket>,
     imports: std::collections::VecDeque<(Ticket, import_core::Request)>,
     hash: Option<(Instant, Ticket)>,
+    /// The running hash job has hashed and is extracting text, without the operation lock, so
+    /// changes can commit meanwhile; each sets `rehash`, and the job queues another when it ends.
+    extracting: bool,
+    rehash: bool,
     failure: Option<Failure>,
 }
 
@@ -510,8 +516,9 @@ impl Session {
                 return Ok(());
             };
             // Hold through walking and committing: otherwise a pre-operation snapshot could
-            // commit afterwards and undo the operation's catalog result.
-            let _operation = lock(&self.operation);
+            // commit afterwards and undo the operation's catalog result. The hash job lets go
+            // of it to extract text, whose writes are guarded instead (`hash`).
+            let operation = lock(&self.operation);
             if !matches!(&work, Work::Failed(_)) {
                 self.recover()?;
             }
@@ -537,7 +544,7 @@ impl Session {
                 }
                 Work::Hash(ticket) => {
                     if self.jobs.start(&ticket).map_err(Failure::own)? {
-                        self.hash(&ticket)?;
+                        self.hash(&ticket, operation)?;
                     }
                 }
                 Work::Rebuild(ticket) => {
@@ -748,16 +755,22 @@ impl Session {
         Ok(())
     }
 
-    /// Hashes the pending files for a started job, and retries files that were too fresh.
-    fn hash(&self, ticket: &Ticket) -> Result<(), Failure> {
+    /// Hashes the pending files for a started job under the operation lock, then lets go of it
+    /// and extracts the text of the text and Word files for search (versioning.md §10.2–§10.3),
+    /// so that a long first pass never holds up the user's operations: every write extraction
+    /// makes is guarded by the entry's id, hash and class instead. Retries files that were too
+    /// fresh, and runs again for changes committed while it extracted, or when it stopped early
+    /// to make way for a scan, an import or a rebuild.
+    fn hash(&self, ticket: &Ticket, operation: MutexGuard<'_, ()>) -> Result<(), Failure> {
+        // The job's bar goes on through extraction, after the files hashing counted.
+        let mut hashing = 0;
         let report = self.library.hash_pending_with_commits(
             &self.catalog,
             now_ns(),
             &ticket.cancel,
             &mut |done, total| {
-                if let Err(error) = self.jobs.progress(ticket, done, Some(total)) {
-                    self.send(Event::Error(error.to_string()));
-                }
+                hashing = total;
+                self.progress(ticket, done, total);
             },
             // Hashes are not in the entry rows the UI shows; the revision still counts them.
             &mut || self.bump(true, false, false),
@@ -775,18 +788,95 @@ impl Session {
         {
             self.problems_changed();
         }
-        let cancelled = report.cancelled || ticket.cancel.load(Ordering::Acquire);
-        self.finish(
+        let extracted = if report.cancelled {
+            None
+        } else {
+            // Before the lock goes, so a change committed from now on sets `rehash`.
+            lock(&self.pending).extracting = true;
+            drop(operation);
+            Some(self.extract(ticket, hashing))
+        };
+        // Whether extraction stopped early to make way for other work.
+        let mut stopped = false;
+        let mut cancelled = report.cancelled;
+        match extracted {
+            Some(Err(failure)) => {
+                let finished = self.finish(ticket, Err(&failure));
+                let mut pending = lock(&self.pending);
+                (pending.extracting, pending.rehash) = (false, false);
+                drop(pending);
+                finished?;
+                return Err(failure);
+            }
+            Some(Ok(extracted)) => {
+                stopped = !extracted.complete && !extracted.cancelled;
+                cancelled |= extracted.cancelled;
+                if lock(&self.snapshot)
+                    .problems
+                    .extract(extracted.problems, extracted.complete)
+                {
+                    self.problems_changed();
+                }
+            }
+            None => {}
+        }
+        cancelled |= ticket.cancel.load(Ordering::Acquire);
+        let finished = self.finish(
             ticket,
             Ok((!cancelled).then_some(JobResult::Hash {
                 hashed: count(report.hashed),
                 deferred: count(report.deferred),
             })),
-        )?;
-        if !cancelled && report.deferred > 0 {
-            self.queue_hash(HASH_DELAY)?;
+        );
+        // Only now that the job has finished: a change committed before this point set
+        // `rehash`, and one committed after it finds no hash job and queues its own.
+        let mut pending = lock(&self.pending);
+        pending.extracting = false;
+        let again = std::mem::take(&mut pending.rehash) || (stopped && !cancelled);
+        finished?;
+        if again {
+            self.queue_hash_in(&mut pending, Duration::ZERO)?;
+        } else if !cancelled && report.deferred > 0 {
+            self.queue_hash_in(&mut pending, HASH_DELAY)?;
         }
         Ok(())
+    }
+
+    /// Extracts the text of the files that have none for their content yet, for a started job
+    /// whose bar already counts `offset` files. Stops early, incomplete, when work it makes way
+    /// for is waiting (`waiting`).
+    fn extract(&self, ticket: &Ticket, offset: u64) -> Result<ExtractReport, Failure> {
+        self.library
+            .extract_pending_with_commits(
+                &self.catalog,
+                &ticket.cancel,
+                &mut || self.waiting(),
+                &mut |done, total| {
+                    self.progress(
+                        ticket,
+                        offset.saturating_add(done),
+                        offset.saturating_add(total),
+                    )
+                },
+                // Search bodies are not in the entry rows either; the revision counts them.
+                &mut || self.bump(true, false, false),
+            )
+            .map_err(errors::library)
+    }
+
+    /// Whether a scan, an import, a rebuild or a failure is waiting for the worker.
+    fn waiting(&self) -> bool {
+        let pending = lock(&self.pending);
+        pending.rescan.is_some()
+            || !pending.imports.is_empty()
+            || pending.rebuild.is_some()
+            || pending.failure.is_some()
+    }
+
+    fn progress(&self, ticket: &Ticket, done: u64, total: u64) {
+        if let Err(error) = self.jobs.progress(ticket, done, Some(total)) {
+            self.send(Event::Error(error.to_string()));
+        }
     }
 
     fn rebuild_catalog(&self, ticket: &Ticket) -> Result<Option<JobResult>, Failure> {
@@ -821,7 +911,7 @@ impl Session {
         let changed = report.changed();
         let (problems_changed, status) = {
             let mut snapshot = lock(&self.snapshot);
-            let invalidated = snapshot.problems.invalidate_hash(&report.entries);
+            let invalidated = snapshot.problems.invalidate_reads(&report.entries);
             let problems_changed = snapshot
                 .problems
                 .scan(&report.coverage, report.report.problems)
@@ -885,8 +975,18 @@ impl Session {
 
     fn queue_hash(&self, delay: Duration) -> Result<(), Failure> {
         let mut pending = lock(&self.pending);
+        self.queue_hash_in(&mut pending, delay)
+    }
+
+    /// `queue_hash` with `pending` held.
+    fn queue_hash_in(&self, pending: &mut Pending, delay: Duration) -> Result<(), Failure> {
         // A queued rebuild scans and hashes afterwards; a stopped session does nothing more.
         if self.stopped.load(Ordering::Acquire) || self.jobs.busy(JobKind::Rebuild) {
+            return Ok(());
+        }
+        // A job extracting text has hashed without this change: it queues another as it ends.
+        if pending.extracting {
+            pending.rehash = true;
             return Ok(());
         }
         // A queued hash job sees this change too, also one the worker already took but has not
@@ -1702,5 +1802,401 @@ mod tests {
             !active_while_locked,
             "changing active outside pending can lose the activation notification"
         );
+    }
+
+    /// The library's adapter, holding up the extraction of the Word document named `name` once:
+    /// `open_seekable`, which only extraction calls, says it was reached and waits to be let go.
+    /// Listings come sorted by name, so scans give entries their ids, and extraction its order,
+    /// by name.
+    struct Gate {
+        base: WindowsFileSystem,
+        name: &'static str,
+        armed: AtomicBool,
+        reached: Mutex<mpsc::Sender<()>>,
+        release: Mutex<mpsc::Receiver<()>>,
+    }
+
+    impl folio_core::fs::FileSystem for Gate {
+        fn read_dir(&self, folder: &Path) -> std::io::Result<Vec<folio_core::fs::DirEntry>> {
+            let mut entries = self.base.read_dir(folder)?;
+            entries.sort_by(|a, b| a.name.cmp(&b.name));
+            Ok(entries)
+        }
+
+        fn metadata(&self, path: &Path) -> std::io::Result<folio_core::fs::Metadata> {
+            self.base.metadata(path)
+        }
+
+        fn open(&self, path: &Path) -> std::io::Result<Box<dyn std::io::Read + '_>> {
+            self.base.open(path)
+        }
+
+        fn open_seekable(
+            &self,
+            path: &Path,
+        ) -> std::io::Result<Box<dyn folio_core::fs::ReadSeek + '_>> {
+            if path.file_name() == Some(std::ffi::OsStr::new(self.name))
+                && self.armed.swap(false, Ordering::AcqRel)
+            {
+                lock(&self.reached).send(()).unwrap();
+                lock(&self.release)
+                    .recv_timeout(Duration::from_secs(10))
+                    .unwrap();
+            }
+            self.base.open_seekable(path)
+        }
+    }
+
+    /// An inactive session whose library holds `Fall/Course/` with `files`, settled, and the
+    /// adapter `Gate` holding up `gate`; the worker is drained, so the test drives the scheduler
+    /// itself. Returns the session, the "reached" receiver and the "release" sender.
+    fn gated_session(
+        files: &[(&str, &[u8])],
+        gate: &'static str,
+    ) -> (TempDir, Arc<Session>, mpsc::Receiver<()>, mpsc::Sender<()>) {
+        let (dir, mut session) = inactive_session();
+        session.shutdown().unwrap();
+        let root = session.root().to_owned();
+        let course = root.join("Fall").join("Course");
+        std::fs::create_dir_all(&course).unwrap();
+        for (name, bytes) in files {
+            super::super::tests::settled(&course.join(name), bytes);
+        }
+        let (reached, on_reach) = mpsc::channel();
+        let (on_release, release) = mpsc::channel();
+        let adapter = Gate {
+            base: WindowsFileSystem::open(&root).unwrap(),
+            name: gate,
+            armed: AtomicBool::new(true),
+            reached: Mutex::new(reached),
+            release: Mutex::new(release),
+        };
+        Arc::get_mut(&mut session).unwrap().library = Library::new(&root, Arc::new(adapter));
+        session.stopped.store(false, Ordering::Release);
+        session.active.store(true, Ordering::Release);
+        session
+            .scan(&Rescan::Full, &AtomicBool::new(false), None)
+            .unwrap()
+            .unwrap();
+        (dir, session, on_reach, on_release)
+    }
+
+    /// The hash job the scheduler gives next, which must be due: `next` waits for work.
+    fn next_hash(session: &Session) -> Ticket {
+        assert!(
+            lock(&session.pending)
+                .hash
+                .as_ref()
+                .is_some_and(|(due, _)| *due <= Instant::now()),
+            "no hash job is due"
+        );
+        match session.next().unwrap() {
+            Some(Work::Hash(ticket)) => ticket,
+            _ => panic!("the next work is not a hash job"),
+        }
+    }
+
+    /// Runs a hash job as the worker does: started, under the operation lock.
+    fn run_hash(session: &Session, ticket: &Ticket) -> Result<(), Failure> {
+        assert!(session.jobs.start(ticket).unwrap());
+        session.hash(ticket, lock(&session.operation))
+    }
+
+    fn status(session: &Session, ticket: &Ticket) -> crate::ipc::jobs::JobStatus {
+        session
+            .jobs
+            .list()
+            .into_iter()
+            .find(|job| job.id == ticket.id)
+            .unwrap()
+            .status
+    }
+
+    fn pending_extracts(session: &Session) -> u64 {
+        session
+            .catalog
+            .read(|tx| catalog::count_pending_extracts(tx, folio_core::extract::VERSION))
+            .unwrap()
+    }
+
+    #[test]
+    fn a_change_committed_during_extraction_gets_its_own_hash_job() {
+        let (_dir, session, reached, release) = gated_session(
+            &[
+                ("a.docx", b"not really a document"),
+                ("b.md", b"The spectral theorem, again."),
+            ],
+            "a.docx",
+        );
+        session.queue_hash(Duration::ZERO).unwrap();
+        let first = next_hash(&session);
+        let b = session
+            .catalog
+            .read(|tx| {
+                catalog::entry(
+                    tx,
+                    &folio_core::paths::RelPath::parse("Fall/Course/b.md").unwrap(),
+                )
+            })
+            .unwrap()
+            .unwrap();
+        let (done, renamed) = mpsc::channel();
+        thread::scope(|scope| {
+            let job = scope.spawn(|| run_hash(&session, &first));
+            reached.recv_timeout(Duration::from_secs(10)).unwrap();
+            // Extracting, the job holds no operation lock: a rename does not wait for it.
+            scope.spawn(|| {
+                let reference = folio_core::library::operations::EntryRef::from(&b);
+                done.send(session.mutate(|library, catalog| {
+                    library.rename_entry(catalog, &reference, "c.md", now_ns())
+                }))
+                .unwrap();
+            });
+            renamed
+                .recv_timeout(Duration::from_secs(5))
+                .expect("a rename waited for extraction")
+                .unwrap();
+            {
+                let pending = lock(&session.pending);
+                assert!(pending.extracting && pending.rehash);
+                // The running job counts as busy, but it has hashed already.
+                assert!(pending.hash.is_none());
+            }
+            release.send(()).unwrap();
+            job.join().unwrap().unwrap();
+        });
+        assert!(matches!(
+            status(&session, &first),
+            crate::ipc::jobs::JobStatus::Done {
+                result: JobResult::Hash { .. }
+            }
+        ));
+        {
+            let pending = lock(&session.pending);
+            assert!(!pending.extracting && !pending.rehash);
+        }
+        // b.md moved while it waited its turn: the job passed it over, and the next job reads it.
+        assert_eq!(pending_extracts(&session), 1);
+        let second = next_hash(&session);
+        assert_ne!(second.id, first.id);
+        run_hash(&session, &second).unwrap();
+        assert_eq!(pending_extracts(&session), 0);
+        let query = folio_core::search::SearchQuery::parse("spectral")
+            .unwrap()
+            .unwrap();
+        let hits = session
+            .catalog
+            .read(|tx| catalog::search(tx, &query, 10, 0))
+            .unwrap();
+        assert_eq!(
+            hits.iter()
+                .map(|hit| hit.entry.record.path.as_str())
+                .collect::<Vec<_>>(),
+            ["Fall/Course/c.md"]
+        );
+        // No third job: nothing changed while the second extracted.
+        assert!(lock(&session.pending).hash.is_none());
+        assert!(!session.jobs.busy(JobKind::Hash));
+    }
+
+    #[test]
+    fn a_failed_extraction_write_fails_the_job_and_keeps_what_hashing_committed() {
+        let (_dir, session, _reached, _release) =
+            gated_session(&[("a.md", b"The spectral theorem.")], "none.docx");
+        session
+            .catalog
+            .write(|tx| -> Result<(), catalog::CatalogError> {
+                tx.execute_batch(
+                    "CREATE TRIGGER stop_extract BEFORE INSERT ON extracts
+                     BEGIN SELECT RAISE(ABORT, 'injected extraction failure'); END;",
+                )?;
+                Ok(())
+            })
+            .unwrap();
+        session.queue_hash(Duration::ZERO).unwrap();
+        let ticket = next_hash(&session);
+        let failure = run_hash(&session, &ticket).unwrap_err();
+        assert!(
+            failure
+                .error
+                .to_string()
+                .contains("injected extraction failure"),
+            "{:?}",
+            failure.error
+        );
+        assert!(matches!(
+            status(&session, &ticket),
+            crate::ipc::jobs::JobStatus::Failed { .. }
+        ));
+        let a = session
+            .catalog
+            .read(|tx| {
+                catalog::entry(
+                    tx,
+                    &folio_core::paths::RelPath::parse("Fall/Course/a.md").unwrap(),
+                )
+            })
+            .unwrap()
+            .unwrap();
+        assert!(a.record.hash.is_some());
+        assert_eq!(pending_extracts(&session), 1);
+        let pending = lock(&session.pending);
+        assert!(!pending.extracting && !pending.rehash && pending.hash.is_none());
+    }
+
+    #[test]
+    fn a_waiting_rescan_stops_extraction_and_the_next_hash_job_resumes_it() {
+        let files: Vec<(String, Vec<u8>)> =
+            std::iter::once(("a.docx".to_owned(), b"not really a document".to_vec()))
+                .chain((0..5).map(|index| {
+                    (
+                        format!("b{index}.md"),
+                        format!("Lecture {index} on eigenvalues").into_bytes(),
+                    )
+                }))
+                .collect();
+        let files: Vec<(&str, &[u8])> = files
+            .iter()
+            .map(|(name, bytes)| (name.as_str(), bytes.as_slice()))
+            .collect();
+        let (_dir, session, reached, release) = gated_session(&files, "a.docx");
+        // Extraction goes by entry id: the document comes first, so files remain when it is done.
+        let ids: Vec<_> = files
+            .iter()
+            .map(|(name, _)| {
+                let path = folio_core::paths::RelPath::parse(&format!("Fall/Course/{name}"));
+                session
+                    .catalog
+                    .read(|tx| catalog::entry(tx, &path.unwrap()))
+                    .unwrap()
+                    .unwrap()
+                    .id
+            })
+            .collect();
+        assert!(ids[1..].iter().all(|id| *id > ids[0]), "{ids:?}");
+        session.queue_hash(Duration::ZERO).unwrap();
+        let first = next_hash(&session);
+        thread::scope(|scope| {
+            let job = scope.spawn(|| run_hash(&session, &first));
+            reached.recv_timeout(Duration::from_secs(10)).unwrap();
+            session.watch(WatchEvent::Rescan(Rescan::Full));
+            // Past the pass's write interval, so it writes, and asks, after the document.
+            thread::sleep(Duration::from_millis(400));
+            release.send(()).unwrap();
+            job.join().unwrap().unwrap();
+        });
+        // It made way: the job is done, the document's failure was recorded and listed, and the
+        // Markdown files wait for the next job, queued behind the scan.
+        assert!(matches!(
+            status(&session, &first),
+            crate::ipc::jobs::JobStatus::Done { .. }
+        ));
+        assert_eq!(pending_extracts(&session), 5);
+        use crate::ipc::problems::{Problem, ReadFailure};
+        let damaged = Problem::Unreadable {
+            path: "Fall/Course/a.docx".to_owned(),
+            failure: ReadFailure::Other,
+        };
+        let listed = || -> Vec<Problem> {
+            lock(&session.snapshot)
+                .problems
+                .items()
+                .into_iter()
+                .map(|item| item.problem)
+                .collect()
+        };
+        assert_eq!(listed(), std::slice::from_ref(&damaged));
+        assert!(lock(&session.pending).hash.is_some());
+        let Some(Work::Scan(rescan, _)) = session.next().unwrap() else {
+            panic!("the hash job went before the scan it made way for");
+        };
+        session
+            .scan(&rescan, &AtomicBool::new(false), None)
+            .unwrap()
+            .unwrap();
+        let second = next_hash(&session);
+        assert_ne!(second.id, first.id);
+        run_hash(&session, &second).unwrap();
+        assert_eq!(pending_extracts(&session), 0);
+        // A complete pass lists the stored failure again.
+        assert_eq!(listed(), [damaged]);
+        assert!(lock(&session.pending).hash.is_none());
+    }
+
+    #[test]
+    fn extraction_makes_way_for_a_scan_an_import_a_rebuild_or_a_failure() {
+        let (dir, session) = inactive_session();
+        // Without a live watcher or worker racing the test.
+        session.shutdown().unwrap();
+        session.stopped.store(false, Ordering::Release);
+        let idle = || {
+            let mut pending = lock(&session.pending);
+            pending.rescan = None;
+            pending.imports.clear();
+            pending.rebuild = None;
+            pending.failure = None;
+        };
+        idle();
+        assert!(!session.waiting());
+
+        session.watch(WatchEvent::Rescan(Rescan::Full));
+        assert!(session.waiting(), "a scan");
+        idle();
+        let source = dir.path().join("queued.txt");
+        std::fs::write(&source, b"source").unwrap();
+        session
+            .queue_import(import_core::Request {
+                sources: vec![import_core::Source::select(source).unwrap()],
+                target: folio_core::library::operations::EntryRef {
+                    id: catalog::EntryId(1),
+                    path: folio_core::paths::RelPath::parse("Fall/Course").unwrap(),
+                },
+                tags: Default::default(),
+                on_conflict: import_core::Conflict::KeepBoth,
+                delete_originals: false,
+            })
+            .unwrap();
+        assert!(session.waiting(), "an import");
+        idle();
+        session.rebuild().unwrap();
+        assert!(session.waiting(), "a rebuild");
+        idle();
+        let gone = std::io::Error::other("the folder went away");
+        session.watch(WatchEvent::Failed(gone));
+        assert!(session.waiting(), "a failure");
+        idle();
+        session.shutdown().unwrap();
+    }
+
+    #[test]
+    fn cancelling_the_hash_job_stops_extraction_whose_bar_counts_on_from_hashing() {
+        let files: [(&str, &[u8]); 5] = [
+            ("a0.md", b"Lecture 0 on eigenvalues"),
+            ("a1.md", b"Lecture 1 on eigenvalues"),
+            ("m.docx", b"not really a document"),
+            ("z0.md", b"Lecture 2 on eigenvalues"),
+            ("z1.md", b"Lecture 3 on eigenvalues"),
+        ];
+        let (_dir, session, reached, release) = gated_session(&files, "m.docx");
+        session.queue_hash(Duration::ZERO).unwrap();
+        let job = next_hash(&session);
+        thread::scope(|scope| {
+            let running = scope.spawn(|| run_hash(&session, &job));
+            reached.recv_timeout(Duration::from_secs(10)).unwrap();
+            // The five files hashed, then two of the five extracted.
+            let crate::ipc::jobs::JobStatus::Running { progress } = status(&session, &job) else {
+                panic!("the hash job is not running");
+            };
+            assert_eq!((progress.done, progress.total), (7, Some(10)));
+            session.jobs.cancel(&job.id).unwrap();
+            release.send(()).unwrap();
+            running.join().unwrap().unwrap();
+        });
+        assert!(matches!(
+            status(&session, &job),
+            crate::ipc::jobs::JobStatus::Cancelled { .. }
+        ));
+        // The document's reading stopped, and the files after it were not read.
+        assert_eq!(pending_extracts(&session), 3);
     }
 }

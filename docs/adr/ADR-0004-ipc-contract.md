@@ -236,6 +236,12 @@ pages of one revision consistent.
      includes the required items (§5.1, §6.2). Bindings regenerated, the fake shell's summarize
      and `REVIEWED_BINDINGS` updated. No command, event, error code or grant changed. Independent
      audit (code and security) and `/simplify` passed.
+   - 2026-10-07, `feat/core-text-extract`: the hash job also extracts the text of text and Word
+     files into the search bodies (versioning.md §10.2–§10.3, §13), so `search` finds file
+     contents; `list_problems` (and the total `ProblemsChanged` reports) also counts the files
+     whose text could not be extracted (ipc-m1.md §14). No command, event, error code, grant or binding changed.
+     Independent audit (code and security, three rounds, every confirmed finding fixed) and
+     `/simplify` done.
 4. [x] Operations lane: amend ADR-0002 and library core §4.2 for the course code, optional badge
    text and colour, 1–3 character badges, and palette keys for preset tags (spec §20).
 5. [ ] Preview lane: the `folio-file` scheme, the main window's CSP sources, and an e2e test that

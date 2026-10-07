@@ -283,6 +283,7 @@ impl Model {
             Op::Scan => self.scan(),
             Op::Hash => {
                 self.f.hash_all();
+                extract_all(&self.f, &self.f.catalog);
             }
         }
     }
@@ -353,32 +354,57 @@ impl Model {
     }
 }
 
-/// Everything in a catalog, by path: entries, tags, search rows, settings and definitions. Not
-/// when entries were added: scans record when they first saw an entry, a rebuild takes the
-/// file's creation time (docs/specs/library-scan.md §6.3).
+/// Extracts the text of every hashed text and Word file into `catalog`.
+fn extract_all(f: &Fixture, catalog: &Catalog) {
+    let report = f
+        .library
+        .extract_pending(catalog, &AtomicBool::new(false), &mut |_, _| {})
+        .unwrap();
+    assert!(report.complete);
+}
+
+/// Everything in a catalog, by path: entries, tags, search rows with their bodies, extraction
+/// outcomes, settings and definitions. Not when entries were added: scans record when they first
+/// saw an entry, a rebuild takes the file's creation time (docs/specs/library-scan.md §6.3).
 fn contents(catalog: &Catalog) -> String {
     let rows = catalog
         .read(|tx| {
             let mut rows = Vec::new();
-            let mut statement = tx.prepare(
-                "SELECT entries.path, entries.kind, entries.class, entries.size,
-                        entries.mtime_ns, entries.file_id, entries.hash,
-                        parent.path, search.name, search.path, search.tags
-                 FROM entries
-                 LEFT JOIN entries AS parent ON parent.id = entries.parent_id
-                 JOIN search ON search.rowid = entries.id
-                 ORDER BY entries.path",
-            )?;
-            let mut query = statement.query([])?;
-            while let Some(row) = query.next()? {
-                let values: Vec<String> = (0..11)
-                    .map(|column| format!("{:?}", row.get_ref(column).unwrap()))
-                    .collect();
-                rows.push(values.join(" | "));
+            for (sql, columns) in [
+                (
+                    "SELECT entries.path, entries.kind, entries.class, entries.size,
+                            entries.mtime_ns, entries.file_id, entries.hash,
+                            parent.path, search.name, search.path, search.tags, search.body
+                     FROM entries
+                     LEFT JOIN entries AS parent ON parent.id = entries.parent_id
+                     JOIN search ON search.rowid = entries.id
+                     ORDER BY entries.path",
+                    12,
+                ),
+                (
+                    "SELECT entries.path, extracts.hash, extracts.class, extracts.version,
+                            extracts.status, extracts.failure, extracts.detail
+                     FROM extracts JOIN entries ON entries.id = extracts.entry_id
+                     ORDER BY entries.path",
+                    7,
+                ),
+            ] {
+                let mut statement = tx.prepare(sql)?;
+                let mut query = statement.query([])?;
+                while let Some(row) = query.next()? {
+                    let values: Vec<String> = (0..columns)
+                        .map(|column| format!("{:?}", row.get_ref(column).unwrap()))
+                        .collect();
+                    rows.push(values.join(" | "));
+                }
             }
-            let searches: i64 =
-                tx.query_row("SELECT count(*) FROM search", [], |row| row.get(0))?;
-            rows.push(format!("search rows: {searches}"));
+            for table in ["search", "extracts"] {
+                let count: i64 =
+                    tx.query_row(&format!("SELECT count(*) FROM {table}"), [], |row| {
+                        row.get(0)
+                    })?;
+                rows.push(format!("{table} rows: {count}"));
+            }
             Ok(rows)
         })
         .unwrap();
@@ -414,11 +440,13 @@ proptest! {
         }
         model.scan();
         model.f.hash_all();
+        extract_all(&model.f, &model.f.catalog);
 
         let dir = tempfile::tempdir().unwrap();
         let rebuilt = open_catalog(dir.path());
         model.f.scan_into(&rebuilt);
         model.f.hash_all_into(&rebuilt);
+        extract_all(&model.f, &rebuilt);
         prop_assert_eq!(contents(&model.f.catalog), contents(&rebuilt));
     }
 }

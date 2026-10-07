@@ -114,7 +114,42 @@ CREATE TABLE objects (
 CREATE INDEX objects_by_pack ON objects (pack);
 ";
 
-const STEPS: &[M<'static>] = &[M::up(V1), M::up(V2), M::up(V3)];
+/// What extracting the text of each text and Word file gave (versioning.md §10.2–§10.3), so that a
+/// file is extracted again only when its content, its class or the extractor changes. The text
+/// itself is the `search` row's `body`.
+const V4: &str = "
+-- The entries the extractor reads, so finding what it has to do reads only them, in this index
+-- alone; queries repeat the condition (extracts::EXTRACTABLE).
+CREATE INDEX entries_extractable ON entries (id, hash, class, kind)
+    WHERE kind = 'file' AND class IN ('text', 'word') AND hash IS NOT NULL;
+-- hash, class: the entry's when it was extracted; version: the extractor's (extract::VERSION).
+-- failure and detail (for logs, at most 500 characters) on failed rows only.
+CREATE TABLE extracts (
+    entry_id INTEGER PRIMARY KEY REFERENCES entries (id) ON DELETE CASCADE,
+    hash TEXT NOT NULL,
+    class TEXT NOT NULL CHECK (class IN ('text', 'word')),
+    version INTEGER NOT NULL CHECK (version >= 0),
+    status TEXT NOT NULL CHECK (status IN ('text', 'empty', 'binary', 'skipped', 'failed')),
+    failure TEXT CHECK (failure IN ('invalid', 'too_large')),
+    detail TEXT,
+    CHECK ((status = 'failed') = (failure IS NOT NULL)),
+    CHECK ((status = 'failed') = (detail IS NOT NULL))
+) STRICT;
+-- A file that stops being a text or Word file (another extension, other versioning rules, a folder
+-- in its place) loses its row and its search body with that change. One waiting for its new hash
+-- keeps both until it is extracted again.
+CREATE TRIGGER entries_not_extractable AFTER UPDATE OF kind, class ON entries
+WHEN old.kind = 'file' AND old.class IN ('text', 'word')
+    AND NOT (new.kind = 'file' AND new.class IN ('text', 'word'))
+BEGIN
+    DELETE FROM extracts WHERE entry_id = new.id;
+    UPDATE search SET body = NULL WHERE rowid = new.id;
+END;
+-- The files whose text could not be read; queries repeat the condition (extracts::FAILED).
+CREATE INDEX extracts_failed ON extracts (entry_id) WHERE status = 'failed';
+";
+
+const STEPS: &[M<'static>] = &[M::up(V1), M::up(V2), M::up(V3), M::up(V4)];
 
 pub(super) const MIGRATIONS: Migrations<'static> = Migrations::from_slice(STEPS);
 
@@ -133,7 +168,7 @@ mod tests {
     use crate::test_support::{course_at, library_id};
 
     /// The schema version the migrations end at.
-    const LATEST: u32 = 3;
+    const LATEST: u32 = 4;
 
     fn rows(conn: &Connection, table: &str) -> Vec<Vec<Value>> {
         let mut statement = conn
@@ -324,6 +359,82 @@ mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         assert_eq!(indexed, ["pack"]);
+    }
+
+    /// Migration 4 (versioning.md §10.2–§10.3) keeps every row of a version-3 catalog and adds
+    /// `extracts` empty, so the next hash job extracts every text and Word file.
+    #[test]
+    fn opening_a_populated_v3_catalog_keeps_its_rows_and_adds_an_empty_extracts_table() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("catalog.sqlite");
+        let mut conn = populated_v1(&file);
+        MIGRATIONS.to_version(&mut conn, 3).unwrap();
+        // What only version 3 holds: a pack and the location of an object in it.
+        let pack = "ab".repeat(32);
+        conn.execute("INSERT INTO packs VALUES (?1, 150, 1)", [&pack])
+            .unwrap();
+        conn.execute(
+            "INSERT INTO objects VALUES (?1, ?2, 12)",
+            [format!("b3:{}", "cd".repeat(32)), pack],
+        )
+        .unwrap();
+        assert_eq!(user_version(&conn).unwrap(), 3);
+        let tables = [
+            "info",
+            "semesters",
+            "courses",
+            "entries",
+            "tags",
+            "entry_tags",
+            "search",
+            "packs",
+            "objects",
+        ];
+        let before = tables.map(|table| rows(&conn, table));
+        drop(conn);
+
+        for _ in 0..2 {
+            let opened = Catalog::open(&file, &library_id()).unwrap();
+            assert_eq!(opened.recovered, None);
+            assert!(!dir.path().join("catalog.broken.sqlite").exists());
+            opened
+                .catalog
+                .read(|tx| {
+                    assert_eq!(user_version(tx)?, LATEST);
+                    assert_eq!(tables.map(|table| rows(tx, table)), before);
+                    assert!(rows(tx, "extracts").is_empty());
+                    Ok(())
+                })
+                .unwrap();
+        }
+
+        // A strict table whose rows go with their entry, and an index of the failed rows only.
+        let conn = Connection::open(&file).unwrap();
+        super::super::configure(&conn).unwrap();
+        let (strict, without_rowid): (bool, bool) = conn
+            .query_row(
+                "SELECT strict, wr FROM pragma_table_list WHERE name = 'extracts'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+        assert!(strict && !without_rowid);
+        let reference: [String; 4] = conn
+            .query_row(
+                "SELECT \"table\", \"from\", \"to\", on_delete FROM pragma_foreign_key_list('extracts')",
+                [],
+                |row| Ok([row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?]),
+            )
+            .unwrap();
+        assert_eq!(reference, ["entries", "entry_id", "id", "CASCADE"]);
+        let index: (String, bool) = conn
+            .query_row(
+                "SELECT name, partial FROM pragma_index_list('extracts') WHERE origin = 'c'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(index, ("extracts_failed".to_owned(), true));
     }
 
     /// `Migrations::validate()` on a connection that has the tokenizer: `validate()` itself opens

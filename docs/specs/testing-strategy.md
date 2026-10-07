@@ -116,8 +116,10 @@ every 2 s; a run that saw one is repeated), and Defender's state recorded, never
 
 - Core, release build: `cargo test -p folio-core --release --test search_benchmark --
   --ignored --nocapture browse_and_search_pages` (a 50,000-entry catalog; it fails past the two
-  targets) and `--test scan_benchmark` (49,920 files of 2 KB on disk; first scan, rescan,
-  hashing). Run the built test binaries directly, so no `cargo` process competes.
+  targets) and `--test scan_benchmark` (49,920 files of 2 KB on disk, the Markdown, text and Word
+  files holding Chinese and Latin notes; first scan, rescan, hashing, text extraction, a pass with
+  nothing to extract, a course rename before and after extraction). Run the built test binaries
+  directly, so no `cargo` process competes.
 - The app: `e2e/tests/performance.spec.ts` with `FOLIO_E2E_PERF=1` on an optimised build that
   keeps the debug-only test hooks (`CARGO_PROFILE_RELEASE_DEBUG_ASSERTIONS=true`, its own
   `CARGO_TARGET_DIR`, `tauri build --no-bundle`; `FOLIO_APP_PATH` names the exe). It writes the
@@ -142,6 +144,17 @@ benchmark's pass over the same files; a 200-row page still answered in 25–30 m
 Library stays usable. The cause is open (Defender scanning files a new process opens is one
 guess); `test/build-release-candidate` takes it with its loose end on hashing (each file opened
 three times).
+
+Text extraction, 2026-10-06, `feat/core-text-extract` (versioning.md §13.3), core benchmark on the
+same machine and toolchain, Defender real-time protection on, undisturbed, two rounds: of the
+49,920 files, 21,600 are text and Word files (7,200 each of Markdown, plain text and `.docx`, 2 KB
+of notes each). The first extraction pass takes 8.45–8.53 s with either adapter (about 2,500 files
+a second), and a pass with nothing to extract 7–11 ms, which every hash job adds. The catalog grows
+from 58 to 195 MB (`WindowsFileSystem`: 66 to 203 MB; database and write-ahead log, the M1 figure
+above is the database alone). With the bodies in the index, the scan after renaming a course takes
+0.30–0.31 s for its 2,092 changes against 0.17–0.19 s before (`WindowsFileSystem`, 1,046 changes:
+0.57–0.65 s against 0.24–0.25 s), because scans write entries and search rows interleaved; and
+without file ids the renamed course's 450 text and Word files are extracted again (0.40–0.42 s).
 
 ## Test data
 

@@ -41,7 +41,12 @@ pub trait FileSystem: Send + Sync {
     fn read_dir(&self, folder: &Path) -> io::Result<Vec<DirEntry>>;   // no `.` or `..`
     fn metadata(&self, path: &Path) -> io::Result<Metadata>;          // does not follow links
     fn open(&self, path: &Path) -> io::Result<Box<dyn Read + '_>>;    // shared with other programs
+    // As `open`, for reading in any order (a Word document from its end). Provided: reads the
+    // file through `open` into memory, for fakes; `StdFileSystem` and `WindowsFileSystem` return
+    // the file itself.
+    fn open_seekable(&self, path: &Path) -> io::Result<Box<dyn ReadSeek + '_>>;
 }
+pub trait ReadSeek: Read + Seek {}  // for every `Read + Seek`
 pub struct DirEntry { pub name: OsString, pub metadata: Metadata }
 pub struct Metadata {
     pub kind: FileKind,             // File, Folder, Link (symbolic link or junction), Other

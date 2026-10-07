@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { crc32 } from 'node:zlib';
 
 import type { Page } from '@playwright/test';
 
@@ -10,8 +11,8 @@ import { blockingViolations, expect, invoke, openLibrary, test } from '../fixtur
 
 // The search dialog on the real shell (app-shell handoff §8, UI architecture §9): Ctrl+K, results
 // from the real index in two groups with highlights as text, one- and two-character Chinese
-// queries, the arrow keys and Enter revealing the file in the Library, Esc, the empty and too-long
-// states, axe and reduced motion.
+// queries, words inside Markdown and Word files with their snippets, the arrow keys and Enter
+// revealing the file in the Library, Esc, the empty and too-long states, axe and reduced motion.
 
 test.use({ libraryFolder: true });
 
@@ -26,8 +27,7 @@ async function openSearchable(page: Page, text: string): Promise<void> {
 
 /**
  * A course whose Exams/Midterm folder holds a file named for the midterm and one that only its
- * path matches. The real shell indexes names, paths and tags in M1; body text comes later, so the
- * snippet rendering is covered by the component tests against the fake shell.
+ * path matches; no file's text holds "midterm".
  */
 async function seed(libraryDir: string): Promise<void> {
   const midterm = path.join(libraryDir, 'Fall 2026', COURSE, 'Exams', 'Midterm');
@@ -126,6 +126,98 @@ test('finds Chinese names by one and two characters and marks exactly them', asy
     for (const name of expected) {
       await expect(results.getByRole('option', { name }).locator('mark')).toHaveText(text);
     }
+  }
+});
+
+/** A ZIP archive of `parts`, stored (not compressed), with ASCII names. */
+function storedZip(parts: Record<string, string>): Buffer {
+  const files: Buffer[] = [];
+  const directory: Buffer[] = [];
+  let offset = 0;
+  for (const [name, text] of Object.entries(parts)) {
+    const content = Buffer.from(text, 'utf8');
+    const nameBytes = Buffer.from(name, 'ascii');
+    // From "version needed" to the extra field's length, the same in both headers: version 2.0,
+    // no flags, stored, 2026-10-06 00:00, the CRC-32 and both sizes, no extra field.
+    const fields = Buffer.alloc(26);
+    fields.writeUInt16LE(20, 0);
+    fields.writeUInt16LE((46 << 9) | (10 << 5) | 6, 8);
+    fields.writeUInt32LE(crc32(content), 10);
+    fields.writeUInt32LE(content.length, 14);
+    fields.writeUInt32LE(content.length, 18);
+    fields.writeUInt16LE(nameBytes.length, 22);
+    const local = Buffer.alloc(4);
+    local.writeUInt32LE(0x04034b50);
+    files.push(local, fields, nameBytes, content);
+    // Made by version 2.0; no comment, disk 0, no attributes; where the local header starts.
+    const central = Buffer.alloc(6);
+    central.writeUInt32LE(0x02014b50);
+    central.writeUInt16LE(20, 4);
+    const tail = Buffer.alloc(14);
+    tail.writeUInt32LE(offset, 10);
+    directory.push(central, fields, tail, nameBytes);
+    offset += local.length + fields.length + nameBytes.length + content.length;
+  }
+  const listing = Buffer.concat(directory);
+  const count = Object.keys(parts).length;
+  const end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0);
+  end.writeUInt16LE(count, 8);
+  end.writeUInt16LE(count, 10);
+  end.writeUInt32LE(listing.length, 12);
+  end.writeUInt32LE(offset, 16);
+  return Buffer.concat([...files, listing, end]);
+}
+
+/** A Word document with one run of text in each paragraph. */
+function docx(paragraphs: string[]): Buffer {
+  const body = paragraphs.map((text) => `<w:p><w:r><w:t>${text}</w:t></w:r></w:p>`).join('');
+  return storedZip({
+    '[Content_Types].xml':
+      '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>',
+    '_rels/.rels':
+      '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>',
+    'word/document.xml': `<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}</w:body></w:document>`,
+  });
+}
+
+test('finds Markdown and Word files by words inside them and marks the words in the snippet', async ({ folio }) => {
+  test.setTimeout(120_000);
+  const { page, libraryDir } = folio;
+  if (!libraryDir) throw new Error('This test requires the isolated library-folder fixture');
+  const course = path.join(libraryDir, 'Fall 2026', 'PHY131 Physics');
+  await mkdir(course, { recursive: true });
+  await writeFile(
+    path.join(course, 'Week 3.md'),
+    '# Week 3\n\nGaussian elimination finds each eigenvector of a small matrix by hand.\n',
+  );
+  await writeFile(path.join(course, 'Lab report.docx'), docx(['Lab 2: the simple pendulum', '单摆的周期只与摆长有关。']));
+  await openLibrary(page);
+  // The hash job extracts the text after hashing; files written just now wait a few seconds first.
+  for (const text of ['eigenvector', '摆长']) {
+    const request = { text, scope: null, page: { offset: 0, limit: 50 } };
+    await expect
+      .poll(async () => (await invoke<SearchPage>(page, 'search', { request })).items.length, { timeout: 30_000 })
+      .toBe(1);
+  }
+
+  await page.keyboard.press('Control+K');
+  const dialog = page.getByRole('dialog', { name: search.label });
+  const field = dialog.getByRole('textbox', { name: search.label });
+  const results = dialog.getByRole('listbox', { name: search.results });
+  const contents = results.getByRole('group').filter({ hasText: search.groups.contents });
+  const queries: [string, string][] = [
+    ['eigenvector', 'Week 3.md'],
+    ['pendulum', 'Lab report.docx'],
+    ['摆长', 'Lab report.docx'],
+  ];
+  for (const [text, name] of queries) {
+    await field.fill(text);
+    await expect(results.getByRole('option')).toHaveCount(1);
+    // Only the text matched: a Contents hit, its name unmarked and the word marked in its snippet.
+    const hit = contents.getByRole('option', { name });
+    await expect(hit.locator('.search-hit__name mark')).toHaveCount(0);
+    await expect(hit.locator('.search-hit__snippet mark')).toHaveText(text);
   }
 });
 

@@ -215,7 +215,7 @@ Value rules:
 - A panic inside a transaction rolls it back; a poisoned mutex is recovered, because the
   connection is consistent after the rollback.
 
-### 5.2 Schema v3 (migrations 1 and 2 preserved)
+### 5.2 Schema v4 (migrations 1 to 3 preserved)
 
 `rusqlite_migration` tracks the version in `PRAGMA user_version`. Its `validate()` opens a
 connection without `folio_cjk`, so the test applies the migrations to a connection that has it.
@@ -233,17 +233,18 @@ This lane preserves migration 1 and adds migration 2 with a populated v1 fixture
 | `search` | FTS5 over `name`, `path` (the parent folder), `tags` (tag names), `body`; `rowid` = entry id; `folio_cjk`, `detail=full`, `prefix='3'` |
 | `packs` | The local history's packs ([versioning.md](versioning.md) §4.3, §13.1): `name` (64 hex, the file name without `.pack`), `size` (at least 150 bytes), `objects` (at least 1) |
 | `objects` | Where each history object is: `id` (`b3:` + 64 hex, like `entries.hash`), `pack` (cascading from `packs`, indexed), `offset` of its record (at least 12); one location per object, from the pack indexed first |
+| `extracts` | What extracting each text and Word file's text gave ([versioning.md](versioning.md) §10.2–§10.3): `entry_id` (cascading from `entries`); the `hash` and `class` (`text`, `word`) it was extracted from; the extractor's `version`; `status` (`text`, `empty`, `binary`, `skipped`, `failed`); `failure` (`invalid`, `too_large`) and `detail` (for logs, at most 500 characters) on failed rows only; a partial index on the failed rows. The text itself is the `search` row's `body` |
 
 All ordinary tables are `STRICT`. Entries hold no semester or course ids: a semester or course
 view is a range scan on `path` (`path > 'P/' AND path < 'P0'`), so a rename touches only paths.
-Extraction status, thumbnails and recents get their tables with their features.
+Thumbnails and recents get their tables with their features.
 
 Migration 2 replaces only the courses mirror in the migration transaction, retaining STRICT,
 WITHOUT ROWID and the archive check. It copies each path, explicit abbreviation/colour, order
 and archive value, with code initialized to NULL. All other data, entry ids, tags/assignments,
 search text, indexes and info remain intact. Fresh databases run every migration. Regression tests
 open a populated v1 fixture through `Catalog::open`, verify preservation and the latest
-`user_version` (3 since migration 3), exercise nullable/three-grapheme/code settings, and reopen
+`user_version` (4 since migration 4), exercise nullable/three-grapheme/code settings, and reopen
 without recovery or data loss.
 Catalog schema version is separate from metadata `format_version`; SQLite stays rebuildable.
 
@@ -254,6 +255,41 @@ rest of the catalog, so a rebuild reads the packs again ([versioning.md](version
 version 2, opens it through `Catalog::open` twice, and checks that every row stays without
 recovery and that the two tables arrive empty, `STRICT` and without rowids, with the cascading
 reference and the index on `objects (pack)`.
+
+Migration 4 (feat/core-text-extract) adds `extracts`, empty; the covering partial index
+`entries_extractable` on `entries (id, hash, class, kind)` for the hashed text and Word files; and
+the trigger `entries_not_extractable`, which deletes an entry's row and clears its body in the
+update that makes it a folder or another class (a rename to another extension, other versioning
+rules), while a file waiting for its new hash keeps both until it is extracted again. Every other
+table stays as it is; fresh databases run all four. The next hash job extracts every text and
+Word file, so a library from an older build gets its search bodies without a rebuild.
+`catalog/extracts.rs` holds the repository:
+
+- `pending_extracts(after, limit, version)` (by id, like `unhashed_files`) and
+  `count_pending_extracts(version)`: hashed text and Word files without a row, or whose row has
+  another hash, class or extractor version. Never folders, `other` files or files without a hash.
+  The count, most of a pass with nothing to do, pairs two scans in id order (the index, and the
+  table `extracts`) instead of looking up each entry's row, which overflows SQLite's page cache on
+  a large library (21,600 files: 5 ms against 85). A new extractor version (`extract::VERSION`)
+  re-extracts every file through the ordinary pass, with no work while the catalog opens.
+- `record_extract(file, version, state)` writes the row only if the entry still has the id, hash
+  and class the caller read (`INSERT … SELECT … WHERE EXISTS … ON CONFLICT DO UPDATE`), and only
+  then sets the body (the text, or `NULL` for every other status) with `set_body`; a file deleted
+  or changed meanwhile is passed over (`false`), never an error. A failure is stored with the hash
+  and tried again only when the content, class or version changes. `record_extracts(version,
+  outcomes)` does the same for a batch, every row before any body: each row's insert opens a
+  statement savepoint, at which FTS5 writes what it holds as a new index segment, so interleaving
+  would cost a segment and its merges per file.
+- `failed_extracts(version)`, by path: the failed rows that still hold for their entry's hash and
+  class and the given version, read through the partial index.
+
+The row and the body change in the caller's transaction. Rows go with their entries through the
+cascade (which needs `foreign_keys=ON`; `sqlite3_changes` does not count cascades, so delete
+counts stay exact), and with `reset_for_rebuild`; rebuilt entries have new ids, so a late guarded
+write after a rebuild changes nothing. Its regression test takes the populated v1 fixture to
+version 3, adds a pack and an object, opens it through `Catalog::open` twice, and checks that every
+row stays without recovery and that `extracts` arrives empty and `STRICT`, with the cascading
+reference and the partial index.
 
 The entry repositories keep the `search` row in step: an entry's `name` and `path` columns are
 written with the entry, `tags` whenever its tags or a tag's name change, and `body` by extraction.
@@ -334,7 +370,7 @@ logs.
 |---|---|
 | `paths` | Every name rule, NFC, join and prefix helpers; properties: valid paths round-trip, keys ignore case, parsing never panics |
 | `meta` | Golden bytes per file; round trips; deterministic output; sorted keys; `NewerFormat`; missing or unknown fields; BOM; duplicate and case-duplicate keys; escaping round trip (property); atomic replace leaves no temporary file; retry on transient errors |
-| `catalog` | `Migrations::validate()`; reopen keeps data; WAL and PRAGMAs; readers can query `search`; tokenizer and path-key version changes; recovery from garbage, a newer schema and another library; I/O errors are not recovered; subtree delete removes `search` rows; tags feed the `tags` column; semester and course mirrors; reads while a write is open |
+| `catalog` | `Migrations::validate()`; reopen keeps data; WAL and PRAGMAs; readers can query `search`; tokenizer and path-key version changes; recovery from garbage, a newer schema and another library; I/O errors are not recovered; subtree delete removes `search` rows; tags feed the `tags` column; semester and course mirrors; reads while a write is open; `extracts`: pending selection, guarded records and batches (one index segment per batch), cascades and rebuilds, the trigger for entries that stop being text, the count's two scans, failures through their index, search over recorded bodies, a model-based property test |
 | `search` | Quoting, prefix rules, NUL and quotes, too-long input; ranking by column; recency boost; highlight spans; marker characters removed from bodies |
 
 ## 9. Refinements to ADR-0002
@@ -349,6 +385,14 @@ logs.
    shell already calls the core from blocking tasks.
 5. **Module name `catalog`**, as in the system overview, instead of `storage`.
 6. **Entries carry no semester or course ids** (§5.2): views use path ranges.
+
+A seventh refinement, decided by the roadmap session under Sirui's authorization (2026-10-07,
+roadmap decision `search-generated-by-name`; proposed by `feat/core-text-extract`, 2026-10-06):
+**generated files are skipped by name only**, where ADR-0002 §5 skips "generated or
+minified files": a name whose stem ends in `.min`, and known lockfiles (`extract::is_generated`,
+[versioning.md](versioning.md) §13.3). Telling minified code by its content misfires on notebooks
+with outputs, so a minified bundle under an ordinary name (`dist/bundle.js`) is indexed, within the
+1 MiB cap.
 
 ## 10. Next lanes
 

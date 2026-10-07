@@ -729,6 +729,13 @@ type StrandedCause = "readOnly" | "folderTags" | "unreadable" | "tooLong";
 - The variants are the core's (library scan §9); `detail` is for logs.
 - The shell keeps the latest problems of every scan scope, plus files that hashing could not read.
   An `id` stays the same while its problem does, so later actions can name it.
+- It also keeps the files whose text could not be extracted for search (as built by
+  `feat/core-text-extract`, versioning.md §13): `unreadable` with `other` for a damaged Word
+  document, `tooLarge` for one over the extraction caps (bytes read or expanded, entries,
+  nesting), and the read failure of a text or Word file that could not be read, `other` for a
+  Word document not read within the time limit. A damaged or oversized document stays listed until
+  its content changes, while a file that could not be read, or not in time, is tried again by the
+  next hash job.
 - `ProblemsChanged` reports the new total whenever the list changes.
 
 ## 15. Events

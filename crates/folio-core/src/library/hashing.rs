@@ -1,12 +1,16 @@
-//! Content hashes for the files a scan found (docs/specs/library-scan.md §8).
+//! Content hashes for the files a scan found (docs/specs/library-scan.md §8), and how a pass
+//! reads a file the catalog has ([`Library::read_cataloged`]).
 
 use std::io;
+use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 use super::{Library, LibraryError, Problem};
-use crate::catalog::{Catalog, Entry, EntryId, count_unhashed_files, set_hash, unhashed_files};
-use crate::fs::{FileKind, Metadata, Presence};
+use crate::catalog::{
+    Catalog, Entry, EntryId, EntryRecord, count_unhashed_files, set_hash, unhashed_files,
+};
+use crate::fs::{FileKind, Presence};
 use crate::hash::ContentHash;
 
 /// Files read from the catalog at a time.
@@ -33,12 +37,15 @@ pub struct HashReport {
     pub cancelled: bool,
 }
 
-enum Outcome {
-    Hashed(ContentHash),
-    Deferred,
+/// What reading a file the catalog has gave ([`Library::read_cataloged`]).
+pub(super) enum Reading<T> {
+    /// What the read gave, from the version of the file the catalog has.
+    Read(T),
+    /// Its content is not on this disk, such as a cloud placeholder's: it was not opened.
     NotLocal,
-    /// The file is not what the catalog says any more; the next scan updates it.
+    /// It is gone, or not what the catalog says any more; the next scan updates the catalog.
     Changed,
+    /// It could not be inspected or read; reading it again may work.
     Failed(io::Error),
     Cancelled,
 }
@@ -82,17 +89,32 @@ impl Library {
             let mut hashes = Vec::new();
             let mut since = Instant::now();
             for file in &batch {
-                match self.hash_file(file, now_ns, cancel, &mut buffer) {
-                    Outcome::Hashed(hash) => hashes.push((file, hash)),
-                    Outcome::Deferred => report.deferred += 1,
-                    Outcome::NotLocal => report.not_local += 1,
-                    Outcome::Changed => {}
-                    Outcome::Failed(error) => report
-                        .problems
-                        .push(Problem::unreadable(file.record.path.clone(), &error)),
-                    Outcome::Cancelled => {
-                        report.cancelled = true;
-                        break;
+                let record = &file.record;
+                if cancel.load(Ordering::Relaxed) {
+                    report.cancelled = true;
+                    break;
+                }
+                if record
+                    .mtime_ns
+                    .is_some_and(|modified| modified.abs_diff(now_ns) < FRESH_NS)
+                {
+                    report.deferred += 1;
+                } else {
+                    let read = |native: &Path| {
+                        let reader = self.fs.open(native)?;
+                        ContentHash::read(reader, cancel, &mut buffer)
+                    };
+                    match self.read_cataloged(record, read) {
+                        Reading::Read(hash) => hashes.push((file, hash)),
+                        Reading::NotLocal => report.not_local += 1,
+                        Reading::Changed => {}
+                        Reading::Failed(error) => report
+                            .problems
+                            .push(Problem::unreadable(record.path.clone(), &error)),
+                        Reading::Cancelled => {
+                            report.cancelled = true;
+                            break;
+                        }
                     }
                 }
                 done += 1;
@@ -107,50 +129,47 @@ impl Library {
         Ok(report)
     }
 
-    fn hash_file(
+    /// Reads the file `record` describes with `read`, between two checks that it is on disk as
+    /// the catalog has it (a file of the same size, modification time and file id), so that what
+    /// `read` gives comes from that one version: a hash or a text never mixes two. A file whose
+    /// content is not on this disk is not opened. `read` gets the file's path, and gives `None`
+    /// when it was cancelled.
+    pub(super) fn read_cataloged<T>(
         &self,
-        file: &Entry,
-        now_ns: i64,
-        cancel: &AtomicBool,
-        buffer: &mut Vec<u8>,
-    ) -> Outcome {
-        if cancel.load(Ordering::Relaxed) {
-            return Outcome::Cancelled;
-        }
-        let record = &file.record;
-        if record
-            .mtime_ns
-            .is_some_and(|modified| modified.abs_diff(now_ns) < FRESH_NS)
-        {
-            return Outcome::Deferred;
-        }
+        record: &EntryRecord,
+        read: impl FnOnce(&Path) -> io::Result<Option<T>>,
+    ) -> Reading<T> {
         let native = record.path.to_native(self.root());
-        let unchanged = |metadata: &Metadata| {
-            metadata.kind == FileKind::File
-                && metadata.size == record.size
-                && metadata.modified_ns == record.mtime_ns
-                && metadata.file_id == record.file_id
-        };
-        // The same before and after reading, or the hash may mix two versions.
-        match self.fs.metadata(&native) {
-            Ok(metadata) if !unchanged(&metadata) => return Outcome::Changed,
-            Ok(metadata) if metadata.presence != Presence::Local => return Outcome::NotLocal,
-            Ok(_) => {}
-            Err(error) => return failed(error),
+        match self.presence(&native, record) {
+            Ok(Presence::Local) => {}
+            Ok(_) => return Reading::NotLocal,
+            Err(reading) => return reading,
         }
-        let hash = match self
-            .fs
-            .open(&native)
-            .and_then(|reader| ContentHash::read(reader, cancel, buffer))
-        {
-            Ok(Some(hash)) => hash,
-            Ok(None) => return Outcome::Cancelled,
+        let value = match read(&native) {
+            Ok(Some(value)) => value,
+            Ok(None) => return Reading::Cancelled,
             Err(error) => return failed(error),
         };
-        match self.fs.metadata(&native) {
-            Ok(metadata) if unchanged(&metadata) => Outcome::Hashed(hash),
-            Ok(_) => Outcome::Changed,
-            Err(error) => failed(error),
+        match self.presence(&native, record) {
+            Ok(_) => Reading::Read(value),
+            Err(reading) => reading,
+        }
+    }
+
+    /// Whether the content of the file at `native` is on this disk, if it is as `record`
+    /// describes it; else why it cannot be read.
+    fn presence<T>(&self, native: &Path, record: &EntryRecord) -> Result<Presence, Reading<T>> {
+        match self.fs.metadata(native) {
+            Ok(metadata)
+                if metadata.kind == FileKind::File
+                    && metadata.size == record.size
+                    && metadata.modified_ns == record.mtime_ns
+                    && metadata.file_id == record.file_id =>
+            {
+                Ok(metadata.presence)
+            }
+            Ok(_) => Err(Reading::Changed),
+            Err(error) => Err(failed(error)),
         }
     }
 }
@@ -179,11 +198,11 @@ fn store(
 }
 
 /// A file that vanished waits for the next scan; anything else is reported.
-fn failed(error: io::Error) -> Outcome {
+fn failed<T>(error: io::Error) -> Reading<T> {
     if error.kind() == io::ErrorKind::NotFound {
-        Outcome::Changed
+        Reading::Changed
     } else {
-        Outcome::Failed(error)
+        Reading::Failed(error)
     }
 }
 

@@ -2,6 +2,7 @@
 //! content hashes (docs/specs/library-scan.md).
 
 mod discard;
+mod extracting;
 mod hashing;
 mod mirror;
 pub mod operations;
@@ -17,6 +18,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 pub use discard::DiscardedMove;
+pub use extracting::ExtractReport;
 pub use hashing::HashReport;
 pub use rules::{DEFAULT_IGNORE_RULES, invalid_ignore_lines};
 
@@ -105,7 +107,7 @@ pub enum Problem {
         name: String,
     },
     /// A folder that could not be listed, whose catalog entries stay as they were, or a file
-    /// that could not be read.
+    /// that could not be read, or whose text could not be extracted.
     Unreadable {
         path: RelPath,
         failure: ReadFailure,

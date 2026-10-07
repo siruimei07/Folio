@@ -83,3 +83,5 @@ pub mod win;
 
 /// Version of the core crate, reported to the UI for diagnostics.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+pub mod extract;

@@ -6,6 +6,7 @@
 //! change data must run inside `write`: `read` connections are read-only.
 
 mod entries;
+mod extracts;
 mod fulltext;
 mod groups;
 mod objects;
@@ -29,6 +30,10 @@ pub use entries::{
     Entry, EntryChanges, EntryId, EntryRecord, apply_changes, children, count_entries,
     count_unhashed_files, delete_entry, entries_in, entries_with_key, entry, entry_by_id,
     has_no_entries, set_hash, unhashed_files, upsert_entry,
+};
+pub use extracts::{
+    ExtractFailure, ExtractState, FailedExtract, count_pending_extracts, failed_extracts,
+    pending_extracts, record_extract, record_extracts,
 };
 pub use fulltext::{Hit, HitText, MAX_BODY_BYTES, Span, hit_text, search, set_body};
 pub use groups::{

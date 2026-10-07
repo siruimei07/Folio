@@ -7,7 +7,7 @@
 
 use std::ffi::OsString;
 use std::fs::{self, File};
-use std::io::{self, Read};
+use std::io::{self, BufReader, Cursor, Read, Seek};
 use std::path::Path;
 use std::time::SystemTime;
 
@@ -24,7 +24,23 @@ pub trait FileSystem: Send + Sync {
     /// Opens the file at `path` for reading, without keeping other programs from reading,
     /// writing or deleting it.
     fn open(&self, path: &Path) -> io::Result<Box<dyn Read + '_>>;
+
+    /// Opens the file at `path` as [`FileSystem::open`] does, for reading in any order: a Word
+    /// document is read from its end, and only the parts that hold text.
+    ///
+    /// This default reads the whole file through `open` into memory, which suits fakes; an
+    /// adapter over real files returns the file itself.
+    fn open_seekable(&self, path: &Path) -> io::Result<Box<dyn ReadSeek + '_>> {
+        let mut bytes = Vec::new();
+        self.open(path)?.read_to_end(&mut bytes)?;
+        Ok(Box::new(Cursor::new(bytes)))
+    }
 }
+
+/// A reader that can also seek, as [`FileSystem::open_seekable`] returns.
+pub trait ReadSeek: Read + Seek {}
+
+impl<T: Read + Seek + ?Sized> ReadSeek for T {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DirEntry {
@@ -136,6 +152,11 @@ impl FileSystem for StdFileSystem {
         // `std` opens files on Windows sharing reading, writing and deletion.
         Ok(Box::new(File::open(path)?))
     }
+
+    fn open_seekable(&self, path: &Path) -> io::Result<Box<dyn ReadSeek + '_>> {
+        // Buffered: readers that seek, such as zip's, make many small reads in between.
+        Ok(Box::new(BufReader::new(File::open(path)?)))
+    }
 }
 
 fn metadata_of(metadata: &fs::Metadata) -> Metadata {
@@ -183,6 +204,7 @@ pub fn unix_ns(time: SystemTime) -> Option<i64> {
 
 #[cfg(test)]
 mod tests {
+    use std::io::Write;
     use std::time::Duration;
 
     use super::*;
@@ -222,6 +244,89 @@ mod tests {
             .read_to_string(&mut text)
             .unwrap();
         assert_eq!(text, "# 线性代数");
+    }
+
+    /// Reads `len` bytes at `from`, and then the last `tail` bytes, through `file`.
+    fn seek_and_read(
+        file: &mut dyn ReadSeek,
+        from: u64,
+        len: usize,
+        tail: i64,
+    ) -> (Vec<u8>, Vec<u8>) {
+        use std::io::SeekFrom;
+        let mut middle = vec![0; len];
+        file.seek(SeekFrom::Start(from)).unwrap();
+        file.read_exact(&mut middle).unwrap();
+        let mut end = Vec::new();
+        file.seek(SeekFrom::End(-tail)).unwrap();
+        file.read_to_end(&mut end).unwrap();
+        (middle, end)
+    }
+
+    #[test]
+    fn opens_the_file_itself_for_seeking() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("论文.docx");
+        fs::write(&path, b"0123456789").unwrap();
+        let mut file = StdFileSystem.open_seekable(&path).unwrap();
+        assert_eq!(
+            seek_and_read(&mut *file, 4, 3, 2),
+            (b"456".to_vec(), b"89".to_vec())
+        );
+        // The file itself, not a copy: what another program appends shows, and it may write
+        // while Folio reads.
+        std::fs::OpenOptions::new()
+            .append(true)
+            .open(&path)
+            .unwrap()
+            .write_all(b"AB")
+            .unwrap();
+        assert_eq!(
+            seek_and_read(&mut *file, 9, 1, 2),
+            (b"9".to_vec(), b"AB".to_vec())
+        );
+        let missing = StdFileSystem.open_seekable(&dir.path().join("missing.docx"));
+        assert_eq!(
+            missing.err().map(|error| error.kind()),
+            Some(io::ErrorKind::NotFound)
+        );
+    }
+
+    /// Only `open`: one file, `file.docx`, whose opens it counts.
+    struct OpenOnly(std::sync::atomic::AtomicUsize);
+
+    impl FileSystem for OpenOnly {
+        fn read_dir(&self, _folder: &Path) -> io::Result<Vec<DirEntry>> {
+            Err(io::ErrorKind::Unsupported.into())
+        }
+
+        fn metadata(&self, _path: &Path) -> io::Result<Metadata> {
+            Err(io::ErrorKind::Unsupported.into())
+        }
+
+        fn open(&self, path: &Path) -> io::Result<Box<dyn Read + '_>> {
+            if path != Path::new("file.docx") {
+                return Err(io::ErrorKind::NotFound.into());
+            }
+            self.0.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            Ok(Box::new(&b"0123456789"[..]))
+        }
+    }
+
+    #[test]
+    fn opening_for_seeking_reads_through_open_by_default() {
+        let fake = OpenOnly(Default::default());
+        let mut file = fake.open_seekable(Path::new("file.docx")).unwrap();
+        assert_eq!(
+            seek_and_read(&mut *file, 4, 3, 2),
+            (b"456".to_vec(), b"89".to_vec())
+        );
+        assert_eq!(fake.0.load(std::sync::atomic::Ordering::Relaxed), 1);
+        let missing = fake.open_seekable(Path::new("missing.docx"));
+        assert_eq!(
+            missing.err().map(|error| error.kind()),
+            Some(io::ErrorKind::NotFound)
+        );
     }
 
     #[cfg(unix)]

@@ -568,6 +568,16 @@ version and the commit's.
 - **Limits:** each side at most 8 MiB of text and 200,000 lines, and one second of diffing (beyond
   that, line changes only, marked approximate). Hunks have 3 lines of context and are paged.
 
+As built (`feat/core-text-extract`, 2026-10-06): `extract::decode(bytes)` gives
+`Decoded::{Text(TextFile), Binary}`, where `TextFile` holds the text (LF only, no byte order mark),
+its `TextEncoding` (`Utf8`, `Utf8Bom`, `Utf16Le`, `Utf16Be`, `Gb18030`) and its `LineEndings`
+(`None`, `Lf`, `Crlf`, `Cr`, `Mixed`), which tell a diff that only the line endings or the mark
+changed. It gives what Chromium's `TextDecoder`, the preview's, gives on 200,000 random byte strings
+and on every GB18030 two- and four-byte sequence. Search reads only a file's first 2 MiB + 8 bytes
+through `extract::decode_prefix`, which drops a character the cut splits; a file whose first
+invalid UTF-8 byte lies beyond that is read as UTF-8 by search and as GB18030 by the preview. The
+diff decodes whole files with `decode`.
+
 ### 10.3 Word
 
 The text of `word/document.xml` (`extract`, the same reader as search): paragraphs in reading order,
@@ -575,6 +585,31 @@ including table cells, then footnotes and endnotes; inserted text counts and del
 changes) does not; tabs and line breaks inside a paragraph are kept. Paragraphs are diffed like
 lines, with changes inside them. The reader opens the ZIP without running anything, refuses
 DTDs, and caps the expanded size (64 MiB) and the number of entries.
+
+As built (`feat/core-text-extract`, 2026-10-06): `extract::read_word(reader, &WordLimits,
+&Control)` gives `WordText { paragraphs, complete }` or `WordError::{Invalid, TooLarge, TimedOut,
+Cancelled, Io}`; a blob is read through a `Cursor`, a file through `FileSystem::open_seekable`.
+`WordLimits` holds the text cap (`max_text`, which stops reading early with `complete: false`: the
+diff's "too large"), 64 MiB of expanded bytes, 10,000 entries and 80 MiB read from the file (the
+expanded cap and 16 MiB for the directory and headers, so a part whose bytes expand to nothing
+cannot keep the reader busy); `Control` the deadline and the cancel flag. The entry count comes
+from the end record before the directory is read, and a file in which zip could take another
+zip64 end record (one it would not take as it is), or go back to an earlier end record without
+stopping there, is refused: zip reserves memory for every entry a record declares, and going from
+end record to end record it would search for a time that grows with the square of their number.
+zip then loads the directory from the bytes the check read (from the directory's start, less one
+1 KiB search window, to the end), so a file that changes meanwhile shows it nothing else. Those
+caps bound the work, which grows with the bytes read and expanded (§13.3 has the slowest crafted
+documents measured); the deadline is a backstop. A `WordError`'s detail is cut to 300 bytes.
+Encrypted entries and other compression methods are refused; the main part is found through `_rels/.rels`
+(transitional or strict), the footnotes and endnotes through its relationships. Every part is read
+through one counter of expanded bytes that does not trust the declared sizes and checks the
+deadline and the flag. Elements are matched by namespace, never by prefix; only the five XML
+entities and character references are resolved; nesting stops at 256. `mc:AlternateContent` gives
+its first branch, so a text box comes once, before the paragraph it is anchored in. A paragraph
+keeps `w:tab` as a tab and `w:br` and `w:cr` as line breaks; empty paragraphs are kept, for the
+diff's alignment. Word joins a paragraph whose mark is a tracked deletion to the next one; the
+reader keeps them apart.
 
 ### 10.4 Metadata
 
@@ -723,6 +758,52 @@ index every pack (header, trailer and index, §4.3), walk the chain from `HEAD`,
 `head_files` (pairing by path), and read the operation log. A catalog rebuild (ipc-m1 §13) includes
 this. Ordinary commits, rewords and uncommits update the tables by their changes instead (§6.1,
 §7.5).
+
+### 13.3 Search bodies (as built)
+
+`feat/core-text-extract`, 2026-10-06. Catalog migration 4 adds `extracts` (library-core.md §5.2):
+for each text or Word file, the hash, class and `extract::VERSION` its outcome came from, and the
+outcome: `text` (the body is in `search.body`), `empty`, `binary`, `skipped` or `failed` (`invalid`
+or `too_large`). A file is extracted again only when one of the three changes; a
+file that stops being a text or Word file loses its row and body in that same update (a trigger);
+a rebuild empties the table with the entries.
+
+- **When:** the hash job extracts after hashing (`Library::extract_pending_with_commits`), with
+  the session's operation lock released, so a long first pass holds up no rename, tag or import.
+  Each write is guarded by the entry's id, hash and class, so a file changed or deleted meanwhile
+  is passed over. A change committed during extraction asks for another hash job when this one
+  ends. At each write (every 250 ms or 16 MiB of text) the pass makes way for a waiting scan,
+  import or rebuild and goes on in the hash job queued behind it. The job's progress counts the
+  files hashed, then those extracted; its cancel stops both. So its total counts a new text or
+  Word file twice, and the hash row's "N of M files" (library-actions handoff §10.2) overstates M
+  and falls back when extraction starts: a follow-up for `feat/ipc-extract-followups` (the meaning
+  of `total`, or the row's copy). The first commit (§7.7) needs only the hashes, yet a shell that
+  queues `start_history` behind the hash job by kind, as the fake shell does, waits for the whole
+  first extraction pass: `feat/core-commit-history` queues it behind hashing only, or adds it to
+  the work extraction makes way for.
+- **Bodies:** text files from their first 2 MiB + 8 bytes (§10.2); Word documents from their
+  paragraphs (§10.3), the empty ones dropped and the others joined by a blank line, so the
+  tokenizer pairs no Chinese characters across paragraphs; at most 1 MiB. An empty file is never
+  opened. Minified files (`*.min.*`) and lockfiles are skipped by name; runs of 256 or more base64
+  characters (with upper- and lower-case letters and digits) are dropped, so images embedded in
+  notebooks, Markdown and HTML do not fill the index. Each Word document may take 10 s. The caps
+  of §10.3 (one directory loaded at most, 80 MiB read, 64 MiB expanded) bound the work, and a
+  tag's attributes are looked up in one pass that resolves only the names wanted, so the work
+  grows with the bytes. The slowest crafted documents measured within the caps (release,
+  DESKTOP-N7UG6S7, 2026-10-07, each read in a fresh process): millions of empty elements under
+  128 namespace bindings, 1.1 s, or 1.7 s with an undeclared prefix; millions of `q:type`
+  attributes on footnotes, 1.0 s; the other shapes probed (attribute floods on a relationship or a
+  footnote, character references, empty deflate blocks), under 1 s; at most about 200 MiB, for one
+  tag of nearly 64 MiB held whole. That is a sixth of the limit, so a document that takes longer
+  (a machine asleep or stalled) is not stored as failed but tried again.
+- **Problems:** a damaged or oversized document is stored as failed, and every complete pass lists
+  it (ipc-m1.md §14) until its content changes; a file that could not be read, or not in time, is
+  listed and tried again by the next pass; a placeholder whose content is not on this disk waits
+  until it is.
+- **Events:** extraction's commits advance the catalog revision in a `CatalogChanged` without
+  entries, as hashing's do. Search results already on screen therefore stay as they were until the
+  next search; a `bodies` flag in the event, touching searches, would be a contract change.
+- **Cost** on the 50,000-file library: testing-strategy.md, Performance.
 
 ## 14. Format versions M2 changes
 

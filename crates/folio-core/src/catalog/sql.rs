@@ -3,6 +3,7 @@
 
 use rusqlite::types::{FromSql, FromSqlError, FromSqlResult, ToSql, ToSqlOutput, ValueRef};
 
+use super::ExtractFailure;
 use crate::hash::ContentHash;
 use crate::meta::{Abbr, Color, DisplayName, EntryKind, FileClass, TagId};
 use crate::paths::{CoursePath, RelPath, SemesterPath};
@@ -91,6 +92,11 @@ word_sql!(FileClass {
     "text" => FileClass::Text,
     "word" => FileClass::Word,
     "other" => FileClass::Other,
+});
+
+word_sql!(ExtractFailure {
+    "invalid" => ExtractFailure::Invalid,
+    "too_large" => ExtractFailure::TooLarge,
 });
 
 /// Text columns holding a value in the text form its `Display` writes and its `parse` reads: the

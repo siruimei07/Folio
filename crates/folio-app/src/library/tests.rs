@@ -11,7 +11,7 @@ use tempfile::TempDir;
 use crate::ipc::events::EntryChange;
 use crate::ipc::jobs::{JobKind, JobResult, JobStatus};
 use crate::ipc::library::PresetTagNames;
-use crate::ipc::problems::Problem;
+use crate::ipc::problems::{Problem, ReadFailure};
 use crate::ipc::types::PageRequest;
 
 use super::*;
@@ -1307,4 +1307,206 @@ fn discarding_a_record_replaced_with_a_newer_format_keeps_it_and_its_status() {
     assert_eq!(f.state.status().unwrap(), status);
     assert_eq!(fs::read(&journal).unwrap(), newer);
     assert!(lock(&f.state.0.state).session.is_some());
+}
+
+/// Writes `bytes` to `path` and dates the file an hour back, so the hash job takes it at once
+/// instead of waiting for a file that was just written to settle.
+pub(super) fn settled(path: &Path, bytes: &[u8]) {
+    fs::write(path, bytes).unwrap();
+    fs::File::options()
+        .write(true)
+        .open(path)
+        .unwrap()
+        .set_modified(std::time::SystemTime::now() - Duration::from_secs(3600))
+        .unwrap();
+}
+
+/// What search finds for `text`: each hit's path and the matched text of its body snippet,
+/// joined by `|`, if its body matched.
+fn found(f: &Fixture, text: &str) -> Vec<(String, Option<String>)> {
+    let query = folio_core::search::SearchQuery::parse(text)
+        .unwrap()
+        .unwrap();
+    f.state
+        .read_catalog(|catalog| {
+            catalog
+                .read(|tx| {
+                    let mut found = Vec::new();
+                    for hit in catalog::search(tx, &query, 10, 0)? {
+                        let snippet = catalog::hit_text(tx, &query, hit.entry.id)?
+                            .and_then(|text| text.snippet)
+                            .map(|spans| {
+                                let matched = spans.into_iter().filter(|span| span.matched);
+                                matched.map(|span| span.text).collect::<Vec<_>>().join("|")
+                            });
+                        found.push((hit.entry.record.path.as_str().to_owned(), snippet));
+                    }
+                    Ok(found)
+                })
+                .map_err(catalog_error)
+        })
+        .unwrap()
+}
+
+/// A Word document with these paragraphs, as a ZIP archive of stored parts (the shell has no ZIP
+/// writer; the core's tests build documents with `zip`).
+fn docx(paragraphs: &[&str]) -> Vec<u8> {
+    let body: String = paragraphs
+        .iter()
+        .map(|text| format!("<w:p><w:r><w:t>{text}</w:t></w:r></w:p>"))
+        .collect();
+    stored_zip(&[
+        (
+            "[Content_Types].xml",
+            r#"<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>"#.to_owned(),
+        ),
+        (
+            "_rels/.rels",
+            r#"<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>"#.to_owned(),
+        ),
+        (
+            "word/document.xml",
+            format!(
+                r#"<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>{body}</w:body></w:document>"#
+            ),
+        ),
+    ])
+}
+
+/// A ZIP archive of `parts`, stored (not compressed), with ASCII names.
+fn stored_zip(parts: &[(&str, String)]) -> Vec<u8> {
+    let mut archive = Vec::new();
+    let mut directory = Vec::new();
+    for (name, content) in parts {
+        let offset = u32::try_from(archive.len()).unwrap();
+        // From "version needed" to the extra field's length, the same in both headers: version
+        // 2.0, no flags, stored, 2026-10-06 00:00, the CRC-32 and both sizes, no extra field.
+        let mut fields = Vec::new();
+        for value in [20_u16, 0, 0, 0, (46 << 9) | (10 << 5) | 6] {
+            fields.extend(value.to_le_bytes());
+        }
+        let size = u32::try_from(content.len()).unwrap();
+        for value in [crc32(content.as_bytes()), size, size] {
+            fields.extend(value.to_le_bytes());
+        }
+        fields.extend(u16::try_from(name.len()).unwrap().to_le_bytes());
+        fields.extend(0_u16.to_le_bytes());
+        archive.extend(0x0403_4b50_u32.to_le_bytes());
+        archive.extend(&fields);
+        archive.extend(name.as_bytes());
+        archive.extend(content.as_bytes());
+        directory.extend(0x0201_4b50_u32.to_le_bytes());
+        directory.extend(20_u16.to_le_bytes());
+        directory.extend(&fields);
+        // No comment, disk 0, no attributes; then where the local header starts.
+        directory.extend([0; 10]);
+        directory.extend(offset.to_le_bytes());
+        directory.extend(name.as_bytes());
+    }
+    let start = u32::try_from(archive.len()).unwrap();
+    let entries = u16::try_from(parts.len()).unwrap();
+    let length = u32::try_from(directory.len()).unwrap();
+    archive.extend(directory);
+    archive.extend(0x0605_4b50_u32.to_le_bytes());
+    archive.extend([0; 4]);
+    archive.extend(entries.to_le_bytes());
+    archive.extend(entries.to_le_bytes());
+    archive.extend(length.to_le_bytes());
+    archive.extend(start.to_le_bytes());
+    archive.extend([0; 2]);
+    archive
+}
+
+fn crc32(bytes: &[u8]) -> u32 {
+    let mut crc = u32::MAX;
+    for &byte in bytes {
+        crc ^= u32::from(byte);
+        for _ in 0..8 {
+            crc = (crc >> 1) ^ (0xEDB8_8320 & (crc & 1).wrapping_neg());
+        }
+    }
+    !crc
+}
+
+#[test]
+fn a_new_library_finds_markdown_by_its_text_once_its_hash_job_is_done() {
+    let f = Fixture::new();
+    f.state.initialize();
+    fs::create_dir_all(f.root.join("Fall/Math")).unwrap();
+    settled(
+        &f.root.join("Fall/Math/notes.md"),
+        "# 第三周\n\nThe eigenvalues of a symmetric matrix are real.\n".as_bytes(),
+    );
+    let opened = f.create();
+    f.done(&opened.scan);
+    // Extraction runs inside the hash job: its body is there when the job is done.
+    f.kind_done(JobKind::Hash);
+    assert_eq!(
+        found(&f, "eigenvalues"),
+        [(
+            "Fall/Math/notes.md".to_owned(),
+            Some("eigenvalues".to_owned())
+        )]
+    );
+    assert_eq!(found(&f, "三周").len(), 1);
+    assert_eq!(f.state.problems(page(0, 500)).unwrap().total, 0);
+}
+
+#[test]
+fn a_damaged_word_document_is_a_problem_until_it_is_repaired() {
+    let f = Fixture::new();
+    f.state.initialize();
+    fs::create_dir_all(f.root.join("Fall/Math")).unwrap();
+    let report = f.root.join("Fall/Math/report.docx");
+    settled(&report, b"not really a document");
+    let opened = f.create();
+    f.done(&opened.scan);
+    f.kind_done(JobKind::Hash);
+    let problems = f.state.problems(page(0, 500)).unwrap();
+    assert_eq!(
+        problems
+            .items
+            .iter()
+            .map(|item| &item.problem)
+            .collect::<Vec<_>>(),
+        [&Problem::Unreadable {
+            path: "Fall/Math/report.docx".to_owned(),
+            failure: ReadFailure::Other,
+        }]
+    );
+    assert!(
+        f.events
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|event| matches!(event, Event::Problems(1)))
+    );
+
+    // The same document repaired: the scan sees new content, and the hash job reads it.
+    settled(
+        &report,
+        &docx(&[
+            "Spectral theorem",
+            "Every symmetric matrix is diagonalizable.",
+        ]),
+    );
+    until("the repaired document's text", || {
+        (f.state.problems(page(0, 500)).unwrap().total == 0
+            && !found(&f, "diagonalizable").is_empty())
+        .then_some(())
+    });
+    assert_eq!(
+        found(&f, "diagonalizable"),
+        [(
+            "Fall/Math/report.docx".to_owned(),
+            Some("diagonalizable".to_owned())
+        )]
+    );
+    assert!(
+        f.events
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|event| matches!(event, Event::Problems(0)))
+    );
 }

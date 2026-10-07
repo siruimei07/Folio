@@ -83,6 +83,10 @@ fn probe(root: &Path, folder: &OwnedHandle) -> io::Result<Option<u64>> {
 }
 
 impl FileSystem for WindowsFileSystem {
+    fn open_seekable(&self, path: &Path) -> io::Result<Box<dyn crate::fs::ReadSeek + '_>> {
+        StdFileSystem.open_seekable(path)
+    }
+
     fn read_dir(&self, folder: &Path) -> io::Result<Vec<DirEntry>> {
         match self.serial {
             Some(serial) => list(folder, serial),
@@ -415,6 +419,39 @@ mod tests {
         assert_eq!(
             adapter.read_dir(&missing).unwrap_err().kind(),
             io::ErrorKind::NotFound
+        );
+    }
+
+    #[test]
+    fn opens_the_file_itself_for_seeking() {
+        use std::io::{Seek, SeekFrom, Write};
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("论文.docx");
+        fs::write(&path, b"0123456789").unwrap();
+        let adapter = adapter(dir.path());
+        let mut file = adapter.open_seekable(&path).unwrap();
+        let mut read_from = |from: SeekFrom| {
+            let mut bytes = Vec::new();
+            file.seek(from).unwrap();
+            file.read_to_end(&mut bytes).unwrap();
+            bytes
+        };
+        assert_eq!(read_from(SeekFrom::End(-3)), b"789");
+        assert_eq!(read_from(SeekFrom::Start(2))[..2], *b"23");
+        // The file itself, not a copy: another program may append while Folio reads.
+        fs::OpenOptions::new()
+            .append(true)
+            .open(&path)
+            .unwrap()
+            .write_all(b"AB")
+            .unwrap();
+        assert_eq!(read_from(SeekFrom::Start(9)), b"9AB");
+        assert_eq!(
+            adapter
+                .open_seekable(&dir.path().join("missing.docx"))
+                .err()
+                .map(|error| error.kind()),
+            Some(io::ErrorKind::NotFound)
         );
     }
 

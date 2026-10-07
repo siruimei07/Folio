@@ -13,6 +13,15 @@ enum Source {
     Metadata,
     Rules,
     Hash,
+    /// Files whose text could not be extracted for search (the hash job's second part).
+    Extract,
+}
+
+impl Source {
+    /// Problems found by reading files: a commit that changes a file invalidates its own.
+    fn reads(self) -> bool {
+        matches!(self, Self::Hash | Self::Extract)
+    }
 }
 
 #[derive(Default)]
@@ -59,7 +68,7 @@ impl Problems {
                 ScanCoverage::Scope(scope) => !within(&item.problem, scope),
                 ScanCoverage::Metadata | ScanCoverage::None => true,
             },
-            Source::Hash => true,
+            Source::Hash | Source::Extract => true,
         });
         for problem in problems {
             let source = if matches!(problem, CoreProblem::InvalidIgnoreRule { file: None, .. }) {
@@ -75,6 +84,18 @@ impl Problems {
     }
 
     pub fn hash(&mut self, problems: Vec<CoreProblem>, cancelled: bool) -> bool {
+        self.read(Source::Hash, problems, !cancelled)
+    }
+
+    /// The files whose text an extraction pass could not extract. A complete pass lists every
+    /// one and replaces the earlier list; a pass that stopped early replaces only what it saw.
+    pub fn extract(&mut self, problems: Vec<CoreProblem>, complete: bool) -> bool {
+        self.read(Source::Extract, problems, complete)
+    }
+
+    /// Replaces the problems of a reading pass: all of them after a complete pass, else only
+    /// those of the files it reported, keeping the files it did not get to.
+    fn read(&mut self, from: Source, problems: Vec<CoreProblem>, complete: bool) -> bool {
         let visible = self.items();
         let old = self.items.clone();
         let visited: HashSet<_> = problems
@@ -85,21 +106,22 @@ impl Problems {
             })
             .collect();
         self.items.retain(|(source, _), item| {
-            *source != Source::Hash || (cancelled && !matches!(
+            *source != from || (!complete && !matches!(
                 &item.problem, Problem::Unreadable { path, .. } if visited.contains(path.as_str())
             ))
         });
         for problem in problems {
-            self.add(Source::Hash, problem, &old);
+            self.add(from, problem, &old);
         }
         self.items() != visible
     }
 
-    /// A changed file/folder no longer has the content that failed hashing. Invalidate old
-    /// errors at both ends of a move, including descendants; tag changes do not affect reads.
-    pub fn invalidate_hash(&mut self, changes: &[EntryChange]) -> bool {
+    /// A changed file/folder no longer has the content that failed hashing or extraction.
+    /// Invalidate old errors at both ends of a move, including descendants; tag changes do not
+    /// affect reads.
+    pub fn invalidate_reads(&mut self, changes: &[EntryChange]) -> bool {
         // Usually none: then a first scan's 50,000 changes need no path set.
-        if !self.items.keys().any(|(source, _)| *source == Source::Hash) {
+        if !self.items.keys().any(|(source, _)| source.reads()) {
             return false;
         }
         let visible = self.items();
@@ -114,7 +136,7 @@ impl Problems {
             }
         }
         self.items.retain(|(source, _), item| {
-            if *source != Source::Hash {
+            if !source.reads() {
                 return true;
             }
             let Problem::Unreadable { path, .. } = &item.problem else {
@@ -141,13 +163,19 @@ impl Problems {
             return;
         }
         let existing = |items: &BTreeMap<(Source, String), ProblemItem>| {
-            [Source::Files, Source::Metadata, Source::Rules, Source::Hash]
-                .into_iter()
-                .find_map(|source| {
-                    items
-                        .get(&(source, key.clone()))
-                        .map(|item| item.id.clone())
-                })
+            [
+                Source::Files,
+                Source::Metadata,
+                Source::Rules,
+                Source::Hash,
+                Source::Extract,
+            ]
+            .into_iter()
+            .find_map(|source| {
+                items
+                    .get(&(source, key.clone()))
+                    .map(|item| item.id.clone())
+            })
         };
         let id = existing(old)
             .or_else(|| existing(&self.items))
@@ -507,12 +535,12 @@ mod tests {
             ],
             false,
         );
-        assert!(!problems.invalidate_hash(&[EntryChange {
+        assert!(!problems.invalidate_reads(&[EntryChange {
             id: EntryId(1),
             path: path("other.md"),
             kind: EntryChangeKind::Tagged
         }]));
-        assert!(problems.invalidate_hash(&[EntryChange {
+        assert!(problems.invalidate_reads(&[EntryChange {
             id: EntryId(2),
             path: path("new"),
             kind: EntryChangeKind::Moved { from: path("old") }
@@ -522,6 +550,77 @@ mod tests {
             problems.items()[0].problem,
             convert(unreadable("other.md")).0
         );
+    }
+
+    fn damaged(value: &str) -> CoreProblem {
+        CoreProblem::Unreadable {
+            path: path(value),
+            failure: CoreReadFailure::Other,
+            detail: "not a ZIP archive".to_owned(),
+        }
+    }
+
+    #[test]
+    fn a_complete_extraction_replaces_its_list_and_one_that_stopped_keeps_the_rest() {
+        let mut problems = Problems::default();
+        assert!(problems.extract(vec![damaged("a.docx"), damaged("b.docx")], true));
+        let b = problems.items()[1].clone();
+        // A pass that stopped early saw only a.docx, which reads now: b.docx stays listed.
+        assert!(!problems.extract(Vec::new(), false));
+        assert!(problems.extract(vec![unreadable("a.docx")], false));
+        let listed: Vec<_> = problems
+            .items()
+            .into_iter()
+            .map(|item| item.problem)
+            .collect();
+        assert_eq!(listed, [b.problem.clone(), convert(unreadable("a.docx")).0]);
+        // A complete pass lists everything again, with the same ids for the same problems.
+        assert!(problems.extract(vec![damaged("b.docx")], true));
+        assert_eq!(problems.items(), [b]);
+        assert!(problems.extract(Vec::new(), true));
+        assert!(problems.items().is_empty());
+    }
+
+    #[test]
+    fn extraction_problems_survive_scans_and_hashing_but_not_a_change_to_their_file() {
+        let mut problems = Problems::default();
+        problems.extract(vec![damaged("s/c/a.docx"), damaged("s/c/b.docx")], true);
+        let before = problems.items();
+        assert!(!problems.scan(&ScanCoverage::Full, Vec::new()));
+        assert!(!problems.scan(&ScanCoverage::Scope(path("s/c")), Vec::new()));
+        assert!(!problems.hash(Vec::new(), false));
+        assert_eq!(problems.items(), before);
+        assert!(!problems.invalidate_reads(&[EntryChange {
+            id: EntryId(1),
+            path: path("s/c/a.docx"),
+            kind: EntryChangeKind::Tagged
+        }]));
+        assert!(problems.invalidate_reads(&[EntryChange {
+            id: EntryId(1),
+            path: path("s/c/a.docx"),
+            kind: EntryChangeKind::Modified
+        }]));
+        assert_eq!(problems.items(), before[1..]);
+        assert!(problems.invalidate_reads(&[EntryChange {
+            id: EntryId(2),
+            path: path("t"),
+            kind: EntryChangeKind::Moved { from: path("s") }
+        }]));
+        assert!(problems.items().is_empty());
+    }
+
+    #[test]
+    fn a_file_both_hashing_and_extraction_reported_counts_once() {
+        let mut problems = Problems::default();
+        problems.hash(vec![unreadable("a.md")], false);
+        let before = problems.items();
+        assert!(!problems.extract(vec![unreadable("a.md")], true));
+        assert_eq!(problems.total(), 1);
+        assert_eq!(problems.items(), before);
+        assert!(!problems.hash(Vec::new(), false));
+        assert_eq!(problems.items(), before);
+        assert!(problems.extract(Vec::new(), true));
+        assert!(problems.items().is_empty());
     }
 
     #[test]
