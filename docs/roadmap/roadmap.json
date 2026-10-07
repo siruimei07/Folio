@@ -20,10 +20,10 @@
     "stage": "M2 实现：工作区核心和正文抽取已合并，提交和历史开工",
     "focus": "M2",
     "summary": [
-      "10-07：工作区视图（34ea8bd9）、正文抽取（320862db）、工作区核心（2e93d660）已合并；工作区核心合并前做了聚焦复审（多角度、逐条反驳）和第 4 轮修复，逐条用改回旧代码的方法核验。进行中：`feat/core-commit-history`（关键路径，规划时问的「历史太大」已定：决策 history-too-large-contract）；`feat/ui-history-view` 审完 3 轮，在做聚焦复审。恢复参数在 folio-agent-work/roadmap-session/m2-resume.md。",
-      "已合并（M2）：M2 合约、AI 设置页、差异组件、对象库、选择汇总加两个计数、工作区视图、正文抽取、工作区核心，以及回收站两个修复、标签丢失修复、问题列表两个偶发测试的修复；另有中文 README 和截图。main 2e93d660。",
+      "10-07：工作区视图（e5f05f76）、正文抽取（44c13f0b）、工作区核心（3f50069f）已合并；工作区核心合并前做了聚焦复审（多角度、逐条反驳）和第 4 轮修复，逐条用改回旧代码的方法核验。进行中：`feat/core-commit-history`（关键路径，规划时问的「历史太大」已定：决策 history-too-large-contract）；`feat/ui-history-view` 审完 3 轮，在做聚焦复审。恢复参数在 folio-agent-work/roadmap-session/m2-resume.md。",
+      "已合并（M2）：M2 合约、AI 设置页、差异组件、对象库、选择汇总加两个计数、工作区视图、正文抽取、工作区核心，以及回收站两个修复、标签丢失修复、问题列表两个偶发测试的修复；另有中文 README 和截图。main 3f50069f。",
       "接下来：历史视图复审完就合；然后 `feat/ipc-history-too-large`（合约）→ `feat/ipc-extract-followups`（都重新生成绑定，排开）；`feat/ui-history-too-large` 跟在合约后面。提交和历史之后是差异和恢复、AI 提交说明、M2 验收。`feat/ipc-recycle-cloud-trash` 暂缓（决策 icloud-no-delete）。",
-      "你 10-06 授权：之后的判断由路线图会话自己定、自己合并，事后汇报（决策 m2-subagents）。和模型训练会话共用内存：子代理的测试单个超过 4 GB 就停下排查。现在没有要你做的事。仓库已改回 private，M2 合并完的空档重写历史后再决定是否公开（决策 public-history）。",
+      "你 10-06 授权：之后的判断由路线图会话自己定、自己合并，事后汇报（决策 m2-subagents）。和模型训练会话共用内存：子代理的测试单个超过 4 GB 就停下排查。现在没有要你做的事。10-07 晚：历史已按 lane 压成 114 个提交、清掉课程截图和个人记录，仓库以 GPL-3.0 公开；原来的 648 个提交在 private 的 Folio-archive（决策 public-repo）。M2 的 4 条 lane 已在新历史上重建，提交号变了，按分支名恢复。",
       "按你批准的 versioning.md §19：差异和恢复也等正文抽取；AI 提交说明等差异做完再开；M3 新增 `feat/core-retention`（Word 旧版本稀疏保留）；M1 的三处资料库细节由新的 `feat/ui-library-m1-notes` 做。关键路径：工作区 → 提交和历史 → 差异和恢复 → AI 提交说明 → M2 验收。",
       "模型：Fable 5.1 暂停（你 10-03 的决定）：推荐给它的 lane（关卡、规格、IPC 合约、推理强度 max）都由 Opus 5.5 用同样的推理强度代替；界面、核心、测试、设计用 Opus 5.5，只改文档和只合并的用 Sonnet 5.5。恢复时删掉 meta.pausedModels 里的 fable 即可。",
       "Codex 的项目级 skills（`AGENTS.md`、`.agents/skills/`、`.codex/`、`.claude/skills/`）和 CLAUDE.md 里的两处改动不进仓库，由 Codex 管理：任何 lane 都不提交、不丢弃。"
@@ -2059,6 +2059,37 @@
       ]
     },
     {
+      "id": "docs/docs-roadmap-public-repo",
+      "title": "整理提交历史并公开仓库",
+      "milestone": "M2",
+      "phase": "m2-impl",
+      "track": "flow",
+      "agent": "claude-code",
+      "size": "S",
+      "deps": [],
+      "summary": "按 lane 把 main 的 648 个提交压成 114 个、清掉课程截图和个人记录、加 GPL-3.0 许可证后公开；原来的历史放进 private 的 Folio-archive；文档里的旧提交号换成新的；以后每条 lane 合并前压成一个提交",
+      "status": "done",
+      "updated": "2026-10-07",
+      "landed": "2026-10-07",
+      "gates": {
+        "check": "partial",
+        "e2e": "na",
+        "codeReview": "na",
+        "securityReview": "na",
+        "simplify": "na",
+        "designCritique": "na",
+        "a11y": "na"
+      },
+      "owns": [
+        "docs/roadmap/roadmap.json",
+        "docs/roadmap/README.md",
+        "CLAUDE.md"
+      ],
+      "notes": [
+        "pnpm check：提交身份、路线图、格式向量和前端检查（1687 个测试）都通过；Rust 那步被 feat/core-commit-history 未提交的 WIP 格式挡住（与本 lane 无关），由合并后 main 的 CI 跑"
+      ]
+    },
+    {
       "id": "refactor/core-sta-helper",
       "title": "合并 STA 辅助函数",
       "milestone": "M1",
@@ -2216,7 +2247,7 @@
         "e2e/tests/settings-ui.spec.ts"
       ],
       "notes": [
-        "CI run 37036505917（a306072）只有这一条失败（含重试）；修后本机 settings-ui.spec 3/3"
+        "CI run 37036505917（58330bf）只有这一条失败（含重试）；修后本机 settings-ui.spec 3/3"
       ]
     },
     {
@@ -2347,7 +2378,7 @@
       ],
       "notes": [
         "原来写在 feat/ui-first-run 里的未完成项，拆成单独的小 lane（整理时新加，名字可改）",
-        "feat/core-discard-move 已合并（a722917，10-03）：契约、假 shell 场景和 first-run 里的占位都在 main"
+        "feat/core-discard-move 已合并（ca6126f，10-03）：契约、假 shell 场景和 first-run 里的占位都在 main"
       ],
       "links": [
         "docs/specs/library-state.md",
@@ -2356,7 +2387,7 @@
         "docs/specs/library-scan.md"
       ],
       "prompt": [
-        "Folio lane feat/ui-discard-move-action (docs/roadmap/roadmap.json, M1 wave 4). feat/core-discard-move has landed (a722917): the Unavailable reason `unfinishedMove` and the command `discard_unfinished_move` are on main. Use frontend-design.",
+        "Folio lane feat/ui-discard-move-action (docs/roadmap/roadmap.json, M1 wave 4). feat/core-discard-move has landed (ca6126f): the Unavailable reason `unfinishedMove` and the command `discard_unfinished_move` are on main. Use frontend-design.",
         "Read docs/specs/ipc-m1.md §6 (the `unfinishedMove` row and the `discard_unfinished_move` bullets) and §20.4, docs/specs/library-scan.md §7.1 \"Discarding an unfinished move\", docs/specs/library-state.md, docs/design/handoff/first-run.md §7 (it has no row for this reason yet) and apps/desktop/src/first-run/Unavailable.tsx (`retry`, `REASONS`).",
         "Goal: on the unavailable screen for `unfinishedMove`, replace the placeholder (`REASONS.unfinishedMove` and `first-run.json` `unavailable.unfinishedMove`, title \"A move didn't finish\") with the real design: a \"Discard the move\" action behind an alert dialog that says what is let go of and that files are not touched (copy via design:ux-copy; add the §7 row to the handoff). Call `ipc.discardUnfinishedMove()` only after confirmation and follow its LibraryStatus answer exactly as \"Try again\" does (usually `open` plus LibraryStateChanged and a start-up scan job; or `unavailable` with a new reason). Any other status comes back unchanged, so a double press or a stale screen is harmless.",
         "Errors go to the screen's banner like Try again's and change nothing (the user can press again): InUse, AccessDenied, NotFound, DiskFull, FileSystem, NewerFormat, Internal, Busy, DataDirUnavailable, Transport. Timing: at start-up and after Try again, `library_status` may answer `open` first and LibraryStateChanged brings `unfinishedMove` a moment later; wait for the heading, not the first answer. Fake shell: `?scenario=unavailable&reason=unfinishedMove`, `?fail=discard_unfinished_move:InUse`, `&retry=open`.",
@@ -2423,7 +2454,7 @@
       "deps": [
         "feat/ui-problems-list"
       ],
-      "summary": "问题列表合并后 main 的 CI 红了：problems.spec.ts 拿 os.tmpdir() 的 8.3 短路径（CI 上是 RUNNER~1）和剪贴板比较；改成比较规范路径（同 35e9938）",
+      "summary": "问题列表合并后 main 的 CI 红了：problems.spec.ts 拿 os.tmpdir() 的 8.3 短路径（CI 上是 RUNNER~1）和剪贴板比较；改成比较规范路径（同 414c841）",
       "status": "done",
       "updated": "2026-10-03",
       "landed": "2026-10-03",
@@ -2440,7 +2471,7 @@
         "e2e/tests/problems.spec.ts"
       ],
       "notes": [
-        "CI run 37102902231 失败（adc2f88）；本机路径不是短路径，所以本机能过。problems.spec.ts 2/2 本机通过"
+        "CI run 37102902231 失败（667505e）；本机路径不是短路径，所以本机能过。problems.spec.ts 2/2 本机通过"
       ]
     },
     {
@@ -3296,14 +3327,14 @@
         "apps/desktop/src/search/SearchDialog.test.tsx"
       ],
       "notes": [
-        "main CI 37237819510（41539d2，feat/ui-library-m1-notes 合并后）只有这一个测试失败；那个 lane 没碰问题列表用到的代码"
+        "main CI 37237819510（da3f511，feat/ui-library-m1-notes 合并后）只有这一个测试失败；那个 lane 没碰问题列表用到的代码"
       ],
       "links": [
         "docs/design/handoff/library-actions.md"
       ],
       "prompt": {
         "extra": [
-          "apps/desktop/src/problems/problems.test.tsx, \"asks for the next page by itself while the end of a short list is in view\", failed on main's CI (run 37237819510: 200 rows, expected 250). It is the sibling of the test fix/ui-problems-paging-flake fixed (3f08d18), which changed the fake IntersectionObserver; read that lane's finding first.",
+          "apps/desktop/src/problems/problems.test.tsx, \"asks for the next page by itself while the end of a short list is in view\", failed on main's CI (run 37237819510: 200 rows, expected 250). It is the sibling of the test fix/ui-problems-paging-flake fixed (fbd3b09), which changed the fake IntersectionObserver; read that lane's finding first.",
           "Reproduce it under load (many repeats while other tests load the machine, as that lane did), then decide: does the test set the end in view too late for the first watcher, or does ProblemList miss a page when the end is already in view while a page loads? If the component misses it, a user's short list would stop at 200 too: fix the component, not only the test. No longer timeouts or retries.",
           "Also move the remembering fake IntersectionObserver into one helper in apps/desktop/src/test/ and use it from problems.test.tsx and search/SearchDialog.test.tsx (loose end). Show every paging test in both files stable over many repeated runs and alongside a full `pnpm check`."
         ]
@@ -3348,7 +3379,7 @@
       ],
       "prompt": {
         "extra": [
-          "apps/desktop/src/problems/problems.test.tsx, \"loads the next page when the end is reached the moment a page shows\", failed on main's CI (run 37519512994 after feat/core-object-store landed, which changed no web code): 400 rows, expected 450, the waitFor timed out (the test took 2389 ms). It is the third paging test of this file to flake: read fix/ui-problems-paging-flake (3f08d18) and fix/ui-problems-short-list-flake (58d4e09, its lane noted that at double load this 450-row test sometimes hit vitest's 5 s per-test limit).",
+          "apps/desktop/src/problems/problems.test.tsx, \"loads the next page when the end is reached the moment a page shows\", failed on main's CI (run 37519512994 after feat/core-object-store landed, which changed no web code): 400 rows, expected 450, the waitFor timed out (the test took 2389 ms). It is the third paging test of this file to flake: read fix/ui-problems-paging-flake (fbd3b09) and fix/ui-problems-short-list-flake (86770b4, its lane noted that at double load this 450-row test sometimes hit vitest's 5 s per-test limit).",
           "This test reaches the end in the microtask after the commit that shows 400 rows, before React runs that commit's effects. Reproduce under load (many repeats while other tests load the machine) and decide: does the test wait too little (one waitFor covering several renders, or a fake-shell latency longer than the timeout), or does ProblemList miss the page when the end is reached in that window? If the component misses it, a user's list would stop at 400: fix the component, not only the test. No longer timeouts or retries without a reason.",
           "Show every paging test in problems.test.tsx and search/SearchDialog.test.tsx stable over many repeated runs under load and alongside a full `pnpm check`."
         ]
@@ -4222,7 +4253,7 @@
       "item": "main 的 CI 红了：预览合并后 CI 上 PDF 预览失败（`e2e/tests/preview.spec.ts:162`，windows-2022 显示「Can't show this file」，本机通过）。要不要开修复 lane（建议 `fix/ui-preview-pdf-ci`，Opus 5.5 · high），还是先回退或跳过这个用例",
       "type": "decide",
       "state": "done",
-      "result": "开了 fix/ui-preview-pdf-ci（pdf.js legacy 构建，兼容 CI 上的 WebView2 131），已合并 ac766fe"
+      "result": "开了 fix/ui-preview-pdf-ci（pdf.js legacy 构建，兼容 CI 上的 WebView2 131），已合并 579f7d2"
     },
     {
       "id": "approve-landing",
@@ -4245,7 +4276,7 @@
       "item": "同步点 3：按合并队列的顺序一次合并一个",
       "type": "approve",
       "state": "done",
-      "result": "10-02 已全部合并（导入 20c1d58、路线图三个 lane 到 2e08a75），main 的 CI 绿"
+      "result": "10-02 已全部合并（导入 62c1ccf、路线图三个 lane 到 8934229），main 的 CI 绿"
     },
     {
       "id": "git-email",
@@ -4261,7 +4292,7 @@
       "item": "在这台电脑上登录 GitHub：but land 要推送（Git Credential Manager 第一次推送时会弹出登录），GitButler 的 forge 认证在 GitButler 设置里",
       "type": "manual",
       "state": "done",
-      "result": "10-02 已从这台电脑合并并推送（WebView 快捷键 ff7d693、设置界面 a306072）"
+      "result": "10-02 已从这台电脑合并并推送（WebView 快捷键 5ca2be2、设置界面 58330bf）"
     },
     {
       "id": "codex-device",
@@ -4386,7 +4417,7 @@
       "item": "M2 设计细节（design/design-m2-details，workspace-history.md §1）",
       "type": "decide",
       "state": "done",
-      "result": "30B 窄窗口的工作区把提交栏固定在底部；31A「未同步」列出最近三个提交；32A 第一次提交自动记录（\"Start history\"）；33B 标签筛选最多两行，其余收进「+N」；34A 快捷视图跟当前学期；35A 课程或文件夹网格里的文件夹显示成一排 48 px 卡片。10-04 合并（ed245bf、ab61012）"
+      "result": "30B 窄窗口的工作区把提交栏固定在底部；31A「未同步」列出最近三个提交；32A 第一次提交自动记录（\"Start history\"）；33B 标签筛选最多两行，其余收进「+N」；34A 快捷视图跟当前学期；35A 课程或文件夹网格里的文件夹显示成一排 48 px 卡片。10-04 合并（cbc1b5b）"
     },
     {
       "id": "m2-subagents",
@@ -4467,6 +4498,14 @@
       "type": "decide",
       "state": "done",
       "result": "Sirui：先改回 private，等有空档再重写历史（清除这些文件和邮箱、删旧分支、重打 v0.1.0），之后再决定是否公开"
+    },
+    {
+      "id": "public-repo",
+      "when": "2026-10-07",
+      "item": "怎么整理历史并公开：合并粒度、GitHub 上怎么发布、原来的历史放哪、学校名、许可证、以后怎么合并",
+      "type": "decide",
+      "state": "done",
+      "result": "Sirui：每条 lane 压成一个提交（main 114 个，含许可证）；旧仓库改名 Folio-archive，保持 private，留原来的 648 个提交（按他的要求把时间重排到 07-08～10-07）；新建 Folio 推送新历史、重建 v0.1.0 Release 后公开；示例数据里的多伦多大学保留；GPL-3.0；以后每条 lane 在 but land 前压成一个提交（CLAUDE.md §7.3 第 12 条）。旧提交号到新提交号的对照在 folio-agent-work/history-rewrite/sha-map.json"
     },
     {
       "id": "search-generated-by-name",
@@ -4613,7 +4652,7 @@
     },
     {
       "state": "done",
-      "item": "会记住「已滚到底」的假 IntersectionObserver 在 problems.test.tsx 和 SearchDialog.test.tsx 各写了一份：工作区列表要第三份之前合成 src/test/ 里的共用 helper（10-05 合并：src/test/listEnd.ts 的 fakeListEnd，58d4e09）",
+      "item": "会记住「已滚到底」的假 IntersectionObserver 在 problems.test.tsx 和 SearchDialog.test.tsx 各写了一份：工作区列表要第三份之前合成 src/test/ 里的共用 helper（10-05 合并：src/test/listEnd.ts 的 fakeListEnd，86770b4）",
       "lane": "fix/ui-problems-short-list-flake"
     },
     {
@@ -4672,7 +4711,7 @@
       "lane": "docs/specs-sync"
     },
     {
-      "state": "open",
+      "state": "done",
       "item": "M2 的 lane 都合并后的空档：重写 Git 历史，清除 docs/agents/device-handoff-2026-10-01*、office-preview-spike 的 7 张课程截图、gitbutler-operations-history.png 和学校邮箱（备份在 folio-agent-work/public-repo-backup/），删除 GitHub 上 10 个旧分支、重打 v0.1.0；之后 Sirui 决定是否再公开（决策 public-history）",
       "lane": "gate/m2-acceptance"
     },
@@ -4757,7 +4796,7 @@
     "拆开热点文件：命令按功能组、文案按视图、registry 只改一行、依赖由 chore/build-deps-* 集中装",
     "并行上限：Rust session 最多 3 个，界面最多 4 个，另加 Cowork；pnpm e2e 用 app lock 排队",
     "独占操作放在同步点：but land、but pull、装依赖",
-    "每个 lane 同样收尾：pnpm check + pnpm e2e → /code-review（+ /security-review）→ /simplify → 中文汇报 → 你批准 → but land（Codex lane 见下一条）",
+    "每个 lane 同样收尾：pnpm check + pnpm e2e → /code-review（+ /security-review）→ /simplify → 中文汇报 → 你批准 → 压成一个提交（but squash）→ but land（Codex lane 见下一条）",
     "CI 红了先修",
     "M2 以外的 Codex lane（标着 Codex 的后端 lane）：用「交给 Codex」提示词开工，Codex 自己跑完检查、code-review 和 simplify 后停在 review；再开 Claude Code session 用「Claude 快速审计」提示词：一次 /code-review，涉及特权层再加 /security-review，不重跑 /simplify",
     "开 session 时按路径图标签（也是提示词第一行）选模型和推理强度：Opus 5.5 是日常默认，Sonnet 5.5 给只改文档和只合并的 lane；Fable 5.1 给最难回退的工作，暂停期间（meta.pausedModels）由 Opus 5.5 代替",
@@ -4774,7 +4813,7 @@
       "{extra}",
       "3. Take the app lock (CLAUDE.md §7.5), run `pnpm check` and `pnpm e2e`, release the lock.",
       "4. Mark it done in the roadmap (`pnpm roadmap status {lane} done`) and commit that one entry on {lane}.",
-      "5. Land one lane at a time: check that no other lane is landing and that the previous land's CI run on main has finished green (a land is workspace-wide, CLAUDE.md §7.4: run it only when every other active lane is at checkpoint, review or done, or after telling me), then `but land {lane} --yes`, `but status`, delete the lane file and check the CI run on main. Stop at the first conflict or failure and report it; never use --ai.",
+      "5. Land one lane at a time, its branch squashed into one commit first (`but squash`, CLAUDE.md §7.3 rule 12): check that no other lane is landing and that the previous land's CI run on main has finished green (a land is workspace-wide, CLAUDE.md §7.4: run it only when every other active lane is at checkpoint, review or done, or after telling me), then `but land {lane} --yes`, `but status`, delete the lane file and check the CI run on main. Stop at the first conflict or failure and report it; never use --ai.",
       "Report to me in Chinese."
     ],
     "reviewCodex": [
@@ -4784,7 +4823,7 @@
       "{extra}",
       "3. Take the app lock (CLAUDE.md §7.5), run `pnpm check` and `pnpm e2e`, release the lock.",
       "4. If the lane has not, add its progress line to the ADR and spec items it finishes (for commands: ADR-0004 action item 3 and docs/specs/ipc-m1.md §21). Mark it done (`pnpm roadmap status {lane} done`) and commit that entry on the branch.",
-      "5. Land one lane at a time: check that no other lane is landing and that the previous land's CI run on main has finished green (a land is workspace-wide, CLAUDE.md §7.4: run it only when every other active lane is at checkpoint, review or done, or after telling me), then `but land {lane} --yes`, `but status`, delete the lane file and check the CI run on main. Stop at the first conflict or failure and report it; never use --ai.",
+      "5. Land one lane at a time, its branch squashed into one commit first (`but squash`, CLAUDE.md §7.3 rule 12): check that no other lane is landing and that the previous land's CI run on main has finished green (a land is workspace-wide, CLAUDE.md §7.4: run it only when every other active lane is at checkpoint, review or done, or after telling me), then `but land {lane} --yes`, `but status`, delete the lane file and check the CI run on main. Stop at the first conflict or failure and report it; never use --ai.",
       "Report to me in Chinese."
     ],
     "landRoadmap": [
@@ -4804,7 +4843,7 @@
       "1. Start: read CLAUDE.md, every file in .agents/lanes/ and `pnpm roadmap show {lane}`; run `but status` and `but pull --check`. Read before designing: {links}. Owns: {owns}. Shared files, small additive hunks only: {shared}. If an active lane owns a path you need, stop and ask me. Write .agents/lanes/{laneFile}.md (CLAUDE.md §7.3), create the branch with `but branch new {lane}` and run `pnpm roadmap status {lane} wip --next \"<what you are doing>\"`.",
       "2. Follow the feature pipeline in CLAUDE.md §4.2 for this kind of lane. Dependency changes are exclusive operations (CLAUDE.md §7.4): new versions at least one day old (pnpm minimumReleaseAge; crates pinned with `cargo update --precise`; GitHub Actions pinned to a release's commit SHA); record why each one was chosen.",
       "3. Finish: `pnpm check`, `pnpm e2e` under the app lock if the app is affected (CLAUDE.md §7.5; remove the lock only if you took it), /code-review, /security-review if it touches the privileged layer, CI or secrets, and /simplify; record the gates (`pnpm roadmap gate {lane} check=pass e2e=pass codeReview=pass simplify=pass`), set `pnpm roadmap status {lane} review --next \"<what I approve>\"`, add the lane to landingQueue and report to me in Chinese: what changed, checks, open risks.",
-      "4. When I approve the land: `pnpm roadmap status {lane} done` and commit that entry on the branch; check that no other lane is landing and that the previous land's CI run on main finished green; then `but land {lane} --yes`, `but status`, delete the lane file and check the CI run on main. Stop at the first conflict or failure and report it; never use --ai."
+      "4. When I approve the land: `pnpm roadmap status {lane} done` and commit that entry on the branch, then squash the branch into one commit (`but squash`, CLAUDE.md §7.3 rule 12); check that no other lane is landing and that the previous land's CI run on main finished green; then `but land {lane} --yes`, `but status`, delete the lane file and check the CI run on main. Stop at the first conflict or failure and report it; never use --ai."
     ],
     "codexHandoff": [
       "Folio Codex lane {lane}: {title} ({milestone}, {phase}). Backend Rust only. Work in D:/CS Projects Repositories/Files & Backup/Folio (REPO); scratch and review notes go in D:/CS Projects Repositories/Files & Backup/folio-agent-work/tasks/{taskDir}/ (WORK).",
@@ -4833,7 +4872,7 @@
       "2. One /code-review pass over the lane's commits, aimed at the handoff's hot spots: correctness, swallowed errors, new or changed types, data safety. Add /security-review only if the lane touches the privileged layer, IPC, capabilities or unsafe code. Codex's own simplify pass counts; skip /simplify.",
       "3. Fix small findings with a commit on {lane}. A finding that needs a redesign, or a product or security decision: stop and report it to me; it goes back to Codex.",
       "4. Take the app lock (CLAUDE.md §7.5), run `pnpm check` and `pnpm e2e`, release the lock. Record the gates, mark the lane done (`pnpm roadmap status {lane} done`) and commit that entry on the branch.",
-      "5. Land one lane at a time, after the previous land's main CI has finished: `but land {lane} --yes`, `but status`, delete the lane file, check the CI run on main. Stop at the first conflict or failure; never use --ai.",
+      "5. Land one lane at a time, after the previous land's main CI has finished: squash the branch into one commit (`but squash`, CLAUDE.md §7.3 rule 12), then `but land {lane} --yes`, `but status`, delete the lane file, check the CI run on main. Stop at the first conflict or failure; never use --ai.",
       "Report to me in Chinese: findings, fixes and check results."
     ],
     "startUi": [
@@ -4845,7 +4884,7 @@
       "2. UI lane (CLAUDE.md §4.2): build from the handoff spec in docs/design/handoff/; if the screen has none, or it leaves a state open, stop and ask me (design goes to Cowork first). Use frontend-design and the shared components in apps/desktop/src/components/. Develop against the fake shell (apps/desktop/src/ipc/mock/); a UI lane never changes the IPC contract or the bindings. Strings only in your view's i18n namespace, visual values only from tokens, one icon family, a prefers-reduced-motion fallback for every animation; code and libraries must run on WebView2 131 (CI).",
       "3. Verify: component tests for every state (loading, empty, error, success, disabled), a Playwright flow in e2e/tests/ (reuse the helpers in e2e/fixtures.ts, and e2e/desktop.ts for the mouse and the Recycle Bin), design:design-critique and then design:accessibility-review on the built screen (keyboard path, visible focus and focus return, contrast, hit targets), and a reduced-motion check.",
       "4. Finish: `pnpm check`, then `pnpm e2e` under the app lock (CLAUDE.md §7.5; remove the lock only if you took it), /code-review and /simplify; record the gates (`pnpm roadmap gate {lane} check=pass e2e=pass codeReview=pass simplify=pass designCritique=pass a11y=pass securityReview=na`), set `pnpm roadmap status {lane} review --next \"<what I approve>\"`, add the lane to landingQueue and report to me in Chinese: what changed, checks, open risks, screenshots.",
-      "5. When I approve the land: `pnpm roadmap status {lane} done` and commit that entry on the branch; check that no other lane is landing and that the previous land's CI run on main finished green; then `but land {lane} --yes`, `but status`, delete the lane file and check the CI run on main. Stop at the first conflict or failure and report it; never use --ai."
+      "5. When I approve the land: `pnpm roadmap status {lane} done` and commit that entry on the branch, then squash the branch into one commit (`but squash`, CLAUDE.md §7.3 rule 12); check that no other lane is landing and that the previous land's CI run on main finished green; then `but land {lane} --yes`, `but status`, delete the lane file and check the CI run on main. Stop at the first conflict or failure and report it; never use --ai."
     ],
     "startCore": [
       "Folio lane {lane}: {title} ({milestone}, {phase}). Run this session on {model} at {effort} effort.",
@@ -4857,7 +4896,7 @@
       "3. Contract lanes (feat/ipc-*) only: write the commands, events, types and error tables into the IPC spec first; planned commands stay test-only stubs until their lane implements them; regenerate the bindings with `cargo test -p folio-app export_bindings` (never by hand) and update the fake shell and its REVIEWED_BINDINGS fingerprint in the same commit; land before the core and UI lanes that build on it.",
       "4. Tests in the same commits as the behaviour: failure paths, crash injection at every journal step that writes state, migrations; disposable data only (a per-lane temporary data directory).",
       "5. Finish: `pnpm check`, `pnpm e2e` under the app lock, /code-review, /security-review (privileged layer and IPC surface) and /simplify; add progress lines to ADR-0004 action item 3 and the IPC spec for the commands it finishes; record the gates (`pnpm roadmap gate {lane} check=pass e2e=pass codeReview=pass securityReview=pass simplify=pass`), set `pnpm roadmap status {lane} review --next \"<what I approve>\"`, add the lane to landingQueue and report to me in Chinese: what changed, checks, open risks, anything the frontend needs.",
-      "6. When I approve the land: `pnpm roadmap status {lane} done` and commit that entry on the branch; check that no other lane is landing and that the previous land's CI run on main finished green; then `but land {lane} --yes`, `but status`, delete the lane file and check the CI run on main. Stop at the first conflict or failure and report it; never use --ai."
+      "6. When I approve the land: `pnpm roadmap status {lane} done` and commit that entry on the branch, then squash the branch into one commit (`but squash`, CLAUDE.md §7.3 rule 12); check that no other lane is landing and that the previous land's CI run on main finished green; then `but land {lane} --yes`, `but status`, delete the lane file and check the CI run on main. Stop at the first conflict or failure and report it; never use --ai."
     ],
     "startSpec": [
       "Folio lane {lane}: {title} ({milestone}, {phase}). Run this session on {model} at {effort} effort.",
@@ -4868,7 +4907,7 @@
       "2. Spec lane: engineering:system-design, then engineering:architecture for each costly choice (an ADR in docs/adr/). Write in English under docs/specs/. A format must be language-neutral and versioned, with golden test vectors a future Swift app could check; say what is frozen and what may change. Weigh the options with their trade-offs; product, scope and privacy choices go to me in Chinese as concrete options (AskUserQuestion), never decided by you.",
       "3. Keep the roadmap honest: if the spec changes how later lanes split, propose the change (new, merged or reordered lanes and their deps) in your report rather than editing other lanes' entries.",
       "4. Finish: `pnpm check` (docs only: no e2e); /code-review on any code or vectors; record the gates (`pnpm roadmap gate {lane} check=pass e2e=na codeReview=pass securityReview=na simplify=na`), set `pnpm roadmap status {lane} review --next \"<what I approve>\"`, add the lane to landingQueue and report to me in Chinese with every decision I need to make, each with your recommendation.",
-      "5. When I approve the land: `pnpm roadmap status {lane} done` and commit that entry on the branch; check that no other lane is landing and that the previous land's CI run on main finished green; then `but land {lane} --yes`, `but status`, delete the lane file and check the CI run on main. Stop at the first conflict or failure and report it; never use --ai."
+      "5. When I approve the land: `pnpm roadmap status {lane} done` and commit that entry on the branch, then squash the branch into one commit (`but squash`, CLAUDE.md §7.3 rule 12); check that no other lane is landing and that the previous land's CI run on main finished green; then `but land {lane} --yes`, `but status`, delete the lane file and check the CI run on main. Stop at the first conflict or failure and report it; never use --ai."
     ],
     "startDesign": [
       "Folio Cowork design lane {lane}: {title} ({milestone}, {phase}). Run this session on {model} at {effort} effort. Write only under docs/ and design/; never run git or but.",
@@ -4888,7 +4927,7 @@
       "2. Verification lane: start with engineering:testing-strategy: which risk each test retires and its pass criterion. Disposable data and a per-lane temporary data directory only; never the shared dev database, and never a real library without a copy. Record the evidence (commands, counts, timings, versions, screenshots) in the lane's document.",
       "3. A finding that needs a product decision goes to me in Chinese; a product bug gets its own fix lane (roadmap entry, deps and prompt), never a silent workaround in the test.",
       "4. Finish: `pnpm check`, `pnpm e2e` under the app lock if the lane runs the app, /code-review on harness code; record the gates (`pnpm roadmap gate {lane} check=pass e2e=pass codeReview=pass`), set `pnpm roadmap status {lane} review --next \"<what I approve>\"`, add the lane to landingQueue and report to me in Chinese.",
-      "5. When I approve the land: `pnpm roadmap status {lane} done` and commit that entry on the branch; check that no other lane is landing and that the previous land's CI run on main finished green; then `but land {lane} --yes`, `but status`, delete the lane file and check the CI run on main. Stop at the first conflict or failure and report it; never use --ai."
+      "5. When I approve the land: `pnpm roadmap status {lane} done` and commit that entry on the branch, then squash the branch into one commit (`but squash`, CLAUDE.md §7.3 rule 12); check that no other lane is landing and that the previous land's CI run on main finished green; then `but land {lane} --yes`, `but status`, delete the lane file and check the CI run on main. Stop at the first conflict or failure and report it; never use --ai."
     ],
     "gate": [
       "Folio acceptance gate {lane}: {title} ({milestone}). Run this session on {model} at {effort} effort. You verify and fix small things; you do not add features.",
@@ -4951,7 +4990,7 @@
     {
       "at": "2026-10-02",
       "by": "Claude Code",
-      "text": "main 复绿（CI 37033529420、Commits 37033529409 通过，ac766fe）；之后合并了 WebView 快捷键（ff7d693）；合并队列恢复，一次一个"
+      "text": "main 复绿（CI 37033529420、Commits 37033529409 通过，579f7d2）；之后合并了 WebView 快捷键（5ca2be2）；合并队列恢复，一次一个"
     },
     {
       "at": "2026-10-02",
@@ -4976,37 +5015,37 @@
     {
       "at": "2026-10-02",
       "by": "Claude Code",
-      "text": "合并：fix/ui-settings-e2e-long-path（da1c486）、fix/ui-e2e-subpixel-bounds（1688239，路线图的 done 由路线图 lane 补记）；main 复绿（CI 37045746411）"
+      "text": "合并：fix/ui-settings-e2e-long-path（414c841）、fix/ui-e2e-subpixel-bounds（1688239，路线图的 done 由路线图 lane 补记）；main 复绿（CI 37045746411）"
     },
     {
       "at": "2026-10-02",
       "by": "Claude Code",
-      "text": "合并：feat/core-first-frame-theme（a417dd9，它在合并队列里的那行由路线图 lane 移除）；等 main 的 CI run 37048178937"
+      "text": "合并：feat/core-first-frame-theme（8ea69e7，它在合并队列里的那行由路线图 lane 移除）；等 main 的 CI run 37048178937"
     },
     {
       "at": "2026-10-02",
       "by": "Claude Code",
-      "text": "合并：fix/core-window-theme（7c88c0b，CI 37051369268 通过）。Sirui：Codex 的项目级 skills 不进仓库、由 Codex 管理；iCloud for Windows 已装"
+      "text": "合并：fix/core-window-theme（cdf7d4f，CI 37051369268 通过）。Sirui：Codex 的项目级 skills 不进仓库、由 Codex 管理；iCloud for Windows 已装"
     },
     {
       "at": "2026-10-02",
       "by": "Claude Code",
-      "text": "合并：换电脑交接（8c193ff、25f29f3、9c84d3e，Commits 37054521417 通过；它的 done 由路线图 lane 补记）。路线图盘点：队列只剩导入审计和三个路线图 lane"
+      "text": "合并：换电脑交接（3a022e0，Commits 37054521417 通过；它的 done 由路线图 lane 补记）。路线图盘点：队列只剩导入审计和三个路线图 lane"
     },
     {
       "at": "2026-10-02",
       "by": "Claude Code",
-      "text": "合并：docs/docs-roadmap-sync-point-3（e84ccd0，Commits 37054713751 通过，explorer 已重新发布）。路线图队列剩 Codex 交接和换电脑刷新两个 lane"
+      "text": "合并：docs/docs-roadmap-sync-point-3（b778022，Commits 37054713751 通过，explorer 已重新发布）。路线图队列剩 Codex 交接和换电脑刷新两个 lane"
     },
     {
       "at": "2026-10-02",
       "by": "Claude Code",
-      "text": "合并：feat/core-import（20c1d58，Claude 审计无发现，pnpm check 和 e2e 40/40 通过）；main 的 CI run 37055180308 进行中，Commits 37055180557 通过。解锁 feat/ui-import；STA 辅助函数可以交给 Codex"
+      "text": "合并：feat/core-import（62c1ccf，Claude 审计无发现，pnpm check 和 e2e 40/40 通过）；main 的 CI run 37055180308 进行中，Commits 37055180557 通过。解锁 feat/ui-import；STA 辅助函数可以交给 Codex"
     },
     {
       "at": "2026-10-02",
       "by": "Claude Code",
-      "text": "合并：docs/docs-roadmap-codex-handoff 和 docs/docs-roadmap-device-refresh（2e08a75，Commits 37056772887 通过）。同步点 3 结束；在做 feat/ipc-import-ui-contract 和 feat/ui-import，refactor/core-sta-helper 等审计"
+      "text": "合并：docs/docs-roadmap-codex-handoff 和 docs/docs-roadmap-device-refresh（8934229，Commits 37056772887 通过）。同步点 3 结束；在做 feat/ipc-import-ui-contract 和 feat/ui-import，refactor/core-sta-helper 等审计"
     },
     {
       "at": "2026-10-02",
@@ -5016,12 +5055,12 @@
     {
       "at": "2026-10-03",
       "by": "Claude Code",
-      "text": "合并：feat/ipc-import-ui-contract（660b915，CI 37094484726 通过）、feat/ui-import（b246288，Commits 37095267917 通过，CI 37095267893 在跑）；refactor/core-sta-helper（79a9a0a，CI 37093247762 通过）。新增 feat/ui-problems-list（Sirui 决定，M1 验收前）"
+      "text": "合并：feat/ipc-import-ui-contract（7570ad0，CI 37094484726 通过）、feat/ui-import（f80f0d6，Commits 37095267917 通过，CI 37095267893 在跑）；refactor/core-sta-helper（1d23746，CI 37093247762 通过）。新增 feat/ui-problems-list（Sirui 决定，M1 验收前）"
     },
     {
       "at": "2026-10-03",
       "by": "Claude Code",
-      "text": "合并：feat/ui-problems-list（adc2f88）；main CI 37102902231 因 e2e 比较 8.3 短路径失败，fix/ui-problems-e2e-long-path（6c52ffc，CI 37103936499 通过）修复；feat/core-discard-move（Codex，Claude Opus 审计无问题，7556aea）。解锁 feat/ui-discard-move-action"
+      "text": "合并：feat/ui-problems-list（667505e）；main CI 37102902231 因 e2e 比较 8.3 短路径失败，fix/ui-problems-e2e-long-path（8ff2875，CI 37103936499 通过）修复；feat/core-discard-move（Codex，Claude Opus 审计无问题，ca6126f）。解锁 feat/ui-discard-move-action"
     },
     {
       "at": "2026-10-03",
@@ -5061,7 +5100,7 @@
     {
       "at": "2026-10-04",
       "by": "Claude Code",
-      "text": "合并：design/design-m2-details（ed245bf、ab61012、56ff81a）；M2 合约可以开始；记下设计决定 30B～35A"
+      "text": "合并：design/design-m2-details（cbc1b5b）；M2 合约可以开始；记下设计决定 30B～35A"
     },
     {
       "at": "2026-10-04",
@@ -5071,27 +5110,27 @@
     {
       "at": "2026-10-04",
       "by": "Claude Code",
-      "text": "合并：chore/build-deps-m2（CI 37230017035 绿）、feat/ui-library-m1-notes（41539d2；main CI 37237819510 第一次因 problems.test.tsx 短列表测试偶尔失败而红，重跑通过）。新增 fix/ui-problems-short-list-flake；同步仿真第二次审计退回 Codex"
+      "text": "合并：chore/build-deps-m2（CI 37230017035 绿）、feat/ui-library-m1-notes（da3f511；main CI 37237819510 第一次因 problems.test.tsx 短列表测试偶尔失败而红，重跑通过）。新增 fix/ui-problems-short-list-flake；同步仿真第二次审计退回 Codex"
     },
     {
       "at": "2026-10-05",
       "by": "Claude Code",
-      "text": "合并：feat/ipc-m2-contract（cd4344b，合约会话合并）、fix/ui-problems-short-list-flake。Sirui 决定 M2 剩下的 lane 由路线图会话的子代理做、合并按一次授权（m2-subagents）；6 个 M2 核心 lane 从 Codex 改为 Claude Code"
+      "text": "合并：feat/ipc-m2-contract（466ab4d，合约会话合并）、fix/ui-problems-short-list-flake。Sirui 决定 M2 剩下的 lane 由路线图会话的子代理做、合并按一次授权（m2-subagents）；6 个 M2 核心 lane 从 Codex 改为 Claude Code"
     },
     {
       "at": "2026-10-05",
       "by": "Claude Code",
-      "text": "合并：fix/ui-problems-short-list-flake（58d4e09）、fix/core-catalog-tags-property（f828cfe）、fix/core-recycle-cloud-placeholder（d98e709，路线图会话独立审计 3 轮后合并）。M2 子代理开工：对象库、差异组件、AI 设置页；新增 feat/ipc-recycle-cloud-trash；决策 m2-ai-page、m2-diff-folders"
+      "text": "合并：fix/ui-problems-short-list-flake（86770b4）、fix/core-catalog-tags-property（8bd5eb3）、fix/core-recycle-cloud-placeholder（92b007d，路线图会话独立审计 3 轮后合并）。M2 子代理开工：对象库、差异组件、AI 设置页；新增 feat/ipc-recycle-cloud-trash；决策 m2-ai-page、m2-diff-folders"
     },
     {
       "at": "2026-10-06",
       "by": "Claude Code",
-      "text": "合并：feat/ui-settings-ai（052c6ca，CI 37415119695 绿）。Sirui 10-06 授权路线图会话自己判断和合并；决策 m2-ai-card-order、text-extract-migration；为模型训练让内存时暂停过子代理"
+      "text": "合并：feat/ui-settings-ai（830c00c，CI 37415119695 绿）。Sirui 10-06 授权路线图会话自己判断和合并；决策 m2-ai-card-order、text-extract-migration；为模型训练让内存时暂停过子代理"
     },
     {
       "at": "2026-10-06",
       "by": "Claude Code",
-      "text": "合并：feat/ui-diff-viewer（79f5a07，CI 37453770679 绿，独立审计 4 轮）。开工：feat/ui-history-view、feat/ui-changes-view。决策 diff-word-version"
+      "text": "合并：feat/ui-diff-viewer（8613fc5，CI 37453770679 绿，独立审计 4 轮）。开工：feat/ui-history-view、feat/ui-changes-view。决策 diff-word-version"
     },
     {
       "at": "2026-10-06",
@@ -5101,7 +5140,7 @@
     {
       "at": "2026-10-06",
       "by": "Claude Code",
-      "text": "合并：feat/core-object-store（d5f9e628，自审 3 轮 + 独立审计 3 轮 + 专项复查收敛）、fix/core-recycle-icloud-startup（28de0ac1）。对象库的交接写进 docs/specs-sync、feat/core-commit-history、feat/core-workspace；决策 m2-too-large-folder"
+      "text": "合并：feat/core-object-store（dfa07d6a，自审 3 轮 + 独立审计 3 轮 + 专项复查收敛）、fix/core-recycle-icloud-startup（8267b870）。对象库的交接写进 docs/specs-sync、feat/core-commit-history、feat/core-workspace；决策 m2-too-large-folder"
     },
     {
       "at": "2026-10-06",
@@ -5111,7 +5150,7 @@
     {
       "at": "2026-10-06",
       "by": "Claude Code",
-      "text": "合并：fix/ui-problems-race-flake（eb5032a6：问题列表每页只渲染新行，竞态测试有实测等待）。决策 m2-summary-counts，新增 feat/ipc-workspace-summary-counts"
+      "text": "合并：fix/ui-problems-race-flake（54319fef：问题列表每页只渲染新行，竞态测试有实测等待）。决策 m2-summary-counts，新增 feat/ipc-workspace-summary-counts"
     },
     {
       "at": "2026-10-07",
@@ -5121,17 +5160,22 @@
     {
       "at": "2026-10-07",
       "by": "Claude Code",
-      "text": "仓库公开后补了中文 README、截图和 Description，并把课程资料截图、交接快照、学校邮箱移出当前文件（2380f693）；历史里还有，按 Sirui 的决定先改回 private，等空档重写历史。iCloud：现在不做删除策略，所有删除在 Mac 上进行（决策 icloud-no-delete），feat/ipc-recycle-cloud-trash 暂缓"
+      "text": "仓库公开后补了中文 README、截图和 Description，并把课程资料截图、交接快照、学校邮箱移出当前文件（8788ae07）；历史里还有，按 Sirui 的决定先改回 private，等空档重写历史。iCloud：现在不做删除策略，所有删除在 Mac 上进行（决策 icloud-no-delete），feat/ipc-recycle-cloud-trash 暂缓"
     },
     {
       "at": "2026-10-07",
       "by": "Claude Code",
-      "text": "正文抽取合并（320862db，第 3 轮修复复审通过）；按文件名跳过自动生成的文件（决策 search-generated-by-name）；新增 feat/ipc-extract-followups（搜索刷新、损坏文档、进度数字）"
+      "text": "正文抽取合并（44c13f0b，第 3 轮修复复审通过）；按文件名跳过自动生成的文件（决策 search-generated-by-name）；新增 feat/ipc-extract-followups（搜索刷新、损坏文档、进度数字）"
     },
     {
       "at": "2026-10-07",
       "by": "Claude Code",
-      "text": "工作区核心合并（2e93d660，聚焦复审 + 第 4 轮修复逐条核验）；feat/core-commit-history 开工，「历史太大」走方案 A（决策 history-too-large-contract：新 lane feat/ipc-history-too-large、feat/ui-history-too-large）；新增 refactor/ui-change-rows"
+      "text": "工作区核心合并（3f50069f，聚焦复审 + 第 4 轮修复逐条核验）；feat/core-commit-history 开工，「历史太大」走方案 A（决策 history-too-large-contract：新 lane feat/ipc-history-too-large、feat/ui-history-too-large）；新增 refactor/ui-change-rows"
+    },
+    {
+      "at": "2026-10-07",
+      "by": "Claude Code",
+      "text": "历史改写并公开：main 按 lane 压成 114 个提交（含 GPL-3.0 许可证），清除课程截图、交接快照、学校邮箱和课程名；新仓库 Folio 公开，原来的 648 个提交在 private 的 Folio-archive；v0.1.0 Release 已重建；4 条 M2 lane 在新历史上重建（提交号变了）；文档里的旧提交号换成新的；以后每条 lane 合并前压成一个提交（决策 public-repo）"
     }
   ]
 }

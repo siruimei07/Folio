@@ -6,7 +6,7 @@ edit them: a fixture that changes proves nothing.
 
 ## v0.1 (M1)
 
-Written on 2026-10-03 by the code of `origin/main` `58af168` (gate `gate/m1-acceptance`), through
+Written on 2026-10-03 by the code of `origin/main` `27b3cda` (gate `gate/m1-acceptance`), through
 the same calls the app makes: `library::state::create` with the first run's English preset tags,
 then a scan, hashing, and `update_course`, `update_semester`, `create_course`, `create_folder`,
 `create_tag` and `set_entry_tags` on the catalog.

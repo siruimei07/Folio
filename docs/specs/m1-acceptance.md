@@ -6,7 +6,7 @@ gate/m1-acceptance`). Policy: [testing strategy](testing-strategy.md); CLAUDE.md
 
 Status: accepted. Sirui tried the v0.1 installer on a copy of his library and accepted M1 on
 2026-10-03 (no clear problems so far); his one finding, a course badge taken from the course code,
-became an M2 lane. Baseline before the gate, on the integrated main `58af168`: `pnpm check` passed
+became an M2 lane. Baseline before the gate, on the integrated main `27b3cda`: `pnpm check` passed
 (web 682 tests, Rust 586) and `pnpm e2e` 45/45. Commit ids below are the ones on main; the gate was
 rebased onto main before it landed, which changed docs only.
 
@@ -33,8 +33,8 @@ Recycle Bin run on CI, and locally with `FOLIO_E2E_DESKTOP=1` (`e2e/desktop.ts`)
 | Problems list | `problems.spec.ts` | — |
 
 Results: CI on the gate branch (`gh workflow run`, windows-2022, WebView2 131, one worker), with the
-drop and the Recycle Bin specs running: run 37153681921 at `e29128b` passed 52/52, and run
-37157738302 at `1dc8e82` passed 53 and skipped the timing spec. The final local run, with
+drop and the Recycle Bin specs running: run 37153681921 at `bb48159` passed 52/52, and run
+37157738302 at `bb48159` passed 53 and skipped the timing spec. The final local run, with
 `FOLIO_E2E_DESKTOP=1` (Sirui agreed) and two workers, passed 53 and skipped the timing spec. An
 earlier local run with two workers found the drop target covered by the window of the delete spec
 running beside it; the drop now keeps Folio's window above others for the drag.
@@ -87,15 +87,15 @@ the versions.
 
 | Loose end | Lane | Settled |
 |---|---|---|
-| pdf.js standard fonts by `bundled:` URL, refused by the preview CSP | feat/ui-preview | Fixed here (`3aab9d0`): no standard-font URL, so no `url()` in substituted fonts; the PDF e2e fails on any console error |
+| pdf.js standard fonts by `bundled:` URL, refused by the preview CSP | feat/ui-preview | Fixed here (`bb48159`): no standard-font URL, so no `url()` in substituted fonts; the PDF e2e fails on any console error |
 | Search highlights rendered as text only | feat/ui-search-palette | A requirement, met: `search/Highlighted.tsx` and its test render `<b>` and `<img onerror>` as text |
-| Shared name rules (UI and fake shell) | feat/ui-first-run | Fixed here (`7ba3da3`): `lib/names.ts`; the fake shell had drifted (CONIN$, COM0, `CON .txt`) and the rename field let DEL and C1 through |
-| LibraryView's unused "no library" branch | feat/ui-first-run | Removed here (`56f6737`) with its strings and test |
-| Shared failure states | feat/ui-search-palette | Done by `11ccb88` and `576a21a` (`app/feedback.tsx`) |
-| Shared e2e helpers | feat/ui-search-palette | Done here (`48e168b`, `88951cf`, `dde0778`) |
+| Shared name rules (UI and fake shell) | feat/ui-first-run | Fixed here (`bb48159`): `lib/names.ts`; the fake shell had drifted (CONIN$, COM0, `CON .txt`) and the rename field let DEL and C1 through |
+| LibraryView's unused "no library" branch | feat/ui-first-run | Removed here (`bb48159`) with its strings and test |
+| Shared failure states | feat/ui-search-palette | Done by `58330bf` and `f80f0d6` (`app/feedback.tsx`) |
+| Shared e2e helpers | feat/ui-search-palette | Done here (`bb48159`) |
 | Shared selection bar (four CSS copies on the same tokens) | feat/ui-search-palette | To `feat/ui-changes-view`, before its list adds a fifth |
 | Dialog look (import dialog 96 px from the top, the pending button) | feat/ui-search-palette | To `feat/ui-history-view`, which adds dialogs |
-| `discard.rs:46` root kind by `from` | feat/core-discard-move | Not needed: `ScanJournal::read` refuses an intent whose first entry is not the moved item; a comment says so (`de38a38`) |
+| `discard.rs:46` root kind by `from` | feat/core-discard-move | Not needed: `ScanJournal::read` refuses an intent whose first entry is not the moved item; a comment says so (`bb48159`) |
 | A successful discard logged under `Event::Error` | feat/core-discard-move | To `feat/core-commit-history`: an info level in the diagnostics log, which commits need too |
 | The app hashes at a tenth of the benchmark's rate | (new) | To `test/build-release-candidate`, with its hashing loose end |
 
@@ -106,7 +106,7 @@ the versions.
 WebView2 bootstrapper embedded. Smart App Control on DESKTOP-N7UG6S7 is in evaluation mode, which
 does not block; if Windows turns it on, an unsigned Folio cannot run (ADR-0001 action item 6).
 
-Built on 2026-10-03 from `dde0778` (later commits change docs and the timing spec only):
+Built on 2026-10-03 from `bb48159` (later commits change docs and the timing spec only):
 `target/release/bundle/nsis/Folio_0.1.0_x64-setup.exe`, 9.01 MiB, SHA-256
 `b998616e66bd6209400043850ca8fadce5b75c57f41398f8e5b2e887015850fb`. The Tauri CLI fetched NSIS 3.11
 and nsis_tauri_utils 0.5.3 (hash-checked) and Microsoft's WebView2 bootstrapper. Smoke test of the

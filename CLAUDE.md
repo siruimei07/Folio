@@ -17,7 +17,7 @@ conversation, Sirui wins.
 | Platforms | Desktop — Windows 10/11 only (decided 2026-09-26). macOS is out of scope; a future Mac version would be a separate Swift app. |
 | Product one-liner | Windows desktop document library for students: files organised in semester → course folders with multi-select category tags, quick search, in-app preview, and a GitButler-style change history (full versions for text and Word files, change events only for everything else), pushed to and pulled from a plain folder in iCloud Drive that serves as a versioned backup other devices can browse. Scope and decisions: [`docs/product/brief.md`](docs/product/brief.md) (Chinese). Do not extend scope beyond it without asking. |
 | Tech stack | Tauri 2 shell + React 19 / TypeScript UI + Rust core crate `folio-core` ([ADR-0001](docs/adr/ADR-0001-application-stack.md), accepted 2026-09-26). Pins (exact versions live in the files named): Node 24 (`.nvmrc`), pnpm 11 (`packageManager`), Rust (`rust-toolchain.toml`), Tauri 2.12 (`Cargo.lock` and `package.json`), TypeScript 6.0 (`catalog` in `pnpm-workspace.yaml`; typescript-eslint does not support TypeScript 7 yet). |
-| Repo | Scaffolded 2026-09-26 (§6 milestone 7): Cargo + pnpm workspaces, placeholder UI, CI; no product features yet. GitButler workspace mode, target `origin/main`. Remote `github.com/siruimei07/Folio` (private). |
+| Repo | Scaffolded 2026-09-26 (§6 milestone 7): Cargo + pnpm workspaces, placeholder UI, CI; no product features yet. GitButler workspace mode, target `origin/main`. Remote `github.com/siruimei07/Folio`, public since 2026-10-07, licensed GPL-3.0; its history was rewritten that day to one commit per lane, and the original 648 commits are in the private `siruimei07/Folio-archive`. |
 | Local path | `D:\CS Projects Repositories\Files & Backup\Folio` (device `DESKTOP-N7UG6S7`, since 2026-10-02; before that `E:\CS Projects Development\Documents Manage\Folio` on `g16-strix`). Open agent sessions in this folder, not its parent. The path has spaces and an `&`: quote it everywhere. Develop on one device at a time (lane files and locks are not in Git). |
 | Local toolchain | Node 24.19.0, pnpm 11.25.0, Rust 1.97.1, VS 2022 Build Tools (MSVC, Windows SDK), WebView2 154, GitButler 0.22.3 (`D:\Program Files\GitButler`, on the user PATH), Python 3.14, Claude Code 2.1.286 (as of 2026-10-02). ADR-0001 pins the versions the project uses. |
 
@@ -212,7 +212,7 @@ syntax. On syntax, the skill wins; on policy, this section wins.
 11. **Contract first.** When a feature spans UI and core, create a small `feat/ipc-<feature>-contract` lane with the shared types; land it first, then run the UI and core lanes in parallel on top of `main`. If it cannot land first, stack core on the contract lane and UI on core.
 
 **Finish**
-12. Clean history on your own branch only: `but oplog snapshot` first, then `but squash` / `but reword` / `but move`.
+12. Squash the lane into one commit before it lands, so main keeps one commit per lane (Sirui, 2026-10-07): `but oplog snapshot` first, then `but squash` the branch's commits into one whose subject names the lane's outcome and whose body says what it delivered (`but reword` for the message). Rewrite history on your own branch only.
 13. Set lane `Status: review` and report to Sirui in Chinese: branch name, what changed, checks run, open risks.
 14. After approval: `but land <branch> --yes` (an exclusive operation, 7.4). It fast-forwards `origin/main` when possible, pushes it, and reconciles the other applied branches like `but pull`. For a stack, name the top branch and add `--whole-stack`. A land cannot be undone with `but undo`; fix mistakes with a new commit.
 15. After landing: confirm with `but status` that the branch is gone, then delete your lane file.
@@ -270,7 +270,7 @@ Check every item that applies; a docs or ADR lane skips the UI and backend items
 - [ ] `/simplify` pass done; no duplicated pattern introduced.
 - [ ] ADR written for any costly-to-reverse decision.
 - [ ] Roadmap entry current (`pnpm roadmap status`), and `done` committed on the lane right before landing.
-- [ ] Commits on the lane branch only, Conventional Commits, authored as Sirui with no agent information (§7.1 rule 5, `pnpm check`).
+- [ ] Commits on the lane branch only, squashed into one before landing (§7.3 rule 12), Conventional Commits, authored as Sirui with no agent information (§7.1 rule 5, `pnpm check`).
 - [ ] Chinese summary sent to Sirui.
 
 ---

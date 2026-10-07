@@ -2,7 +2,7 @@
 
 Implementation design for `feat/core-library-state`, applying ADR-0002, ADR-0004 and
 [ipc-m1.md](ipc-m1.md) sections 6, 13–15 and 18. IPC shapes remain unchanged. The prerequisite
-Tauri 2.12 upgrade and roadmap step 0.5 are on `origin/main` at `ce27ffd`.
+Tauri 2.12 upgrade and roadmap step 0.5 are on `origin/main` at `99e837e`.
 
 ## Command ownership
 
@@ -16,7 +16,7 @@ remain mandatory. All grants target `main`; the page receives no filesystem/dial
 The operations lane additionally owns `folio-core::library::operations`, course metadata and
 catalog migration 2 (Sirui approved the narrow supporting files on 2026-09-29). Core returns
 typed results plus `CommittedScan` deltas; its list calls emit no change. The operations shell
-hooks and `library_status` retry build on landed `feat/core-file-scheme` (main 1ebd2ad),
+hooks and `library_status` retry build on landed `feat/core-file-scheme` (main 3b232bb),
 reusing its guarded `with_entry` transition pattern. This approval does not transfer
 browse/search query or generated-binding ownership.
 

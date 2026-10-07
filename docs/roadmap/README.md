@@ -28,7 +28,7 @@ The CLI writes canonical formatting, which keeps each lane's volatile fields (`s
 | Lane starts (no entry yet: add one by hand, then `pnpm roadmap fmt`) | `pnpm roadmap status <lane> wip --next "<what you are doing>"` | with your first checkpoint |
 | Checks or reviews finish | `pnpm roadmap gate <lane> check=pass e2e=pass codeReview=pass …` | with the checkpoint |
 | Lane reaches review | `pnpm roadmap status <lane> review --next "<what Sirui approves>"`, and add it to `landingQueue` | with the last commit |
-| Right before `but land` | `pnpm roadmap status <lane> done` (sets `landed`, drops `next`, removes it from the queue) | on the lane branch, so main shows it done exactly when it lands |
+| Right before `but land` | `pnpm roadmap status <lane> done` (sets `landed`, drops `next`, removes it from the queue) | on the lane branch, so main shows it done exactly when it lands; then squash the lane into one commit (CLAUDE.md §7.3 rule 12) |
 | Sync points only | `pnpm roadmap log "<text>"`, edit `now`, `decisions`, `limits`, `runtime` | in a roadmap lane: these are shared hunks |
 
 Run `pnpm roadmap next` at the start of a session for the landing queue, active lanes, what

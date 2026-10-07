@@ -2,7 +2,7 @@
 
 - Lane: `feat/core-import`; backend implementation, stop at review.
 - Contract: ipc-m1 §4.2, §12, §13, §17; ADR-0004 options 2 and 5.
-- Prerequisites: core-library-ops and browse queries landed; implementation base `3eef7bf`.
+- Prerequisites: core-library-ops and browse queries landed; implementation base `e971136`.
 
 ## Flow and ownership
 

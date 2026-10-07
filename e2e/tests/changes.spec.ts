@@ -26,7 +26,7 @@ import { blockingViolations, countCalls, expect, openLibrary, test } from '../fi
 // block while it runs and "Your history has started.", then the rows and the badge's count,
 // selection → diff (Enter into it, F7), Space and Ctrl+A on the check boxes, Ctrl+Enter committing
 // with the template, the commit in Not synced and the activity button, and the layouts this file
-// checked before the workspace answered (git history of this file, e6b7abc9): the commit bar under
+// checked before the workspace answered (git history of this file, e5f05f76): the commit bar under
 // the list in a narrow window without Not synced, the view narrow below 1,000 px while the shell
 // stays wide, and the narrow window's Back. With a count on it, the commit button's "Ctrl+Enter"
 // hint is 4.12:1 on the accent fill, an accepted exception (handoff decision 36) that axe reports

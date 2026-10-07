@@ -143,8 +143,8 @@ every 2 s; a run that saw one is repeated), and Defender's state recorded, never
   round trips of a 200-row page and a 50-result search page, and five clicks on each common file
   until it is rendered. It fails past 1 s for a preview.
 
-Results, 2026-10-03, gate `gate/m1-acceptance` at `6775b0a`: main `58af168` plus the gate's first
-four commits (`e29128b` on main, after a rebase that changed docs only). DESKTOP-N7UG6S7: Intel Core Ultra 7 270K Plus (24 cores), 32 GB, WD Blue SN5000 NVMe,
+Results, 2026-10-03, gate `gate/m1-acceptance` at `6775b0a`: main `27b3cda` plus the gate's first
+four commits (`bb48159` on main, after a rebase that changed docs only). DESKTOP-N7UG6S7: Intel Core Ultra 7 270K Plus (24 cores), 32 GB, WD Blue SN5000 NVMe,
 Windows 11 Pro 26200, Defender real-time protection on; Rust 1.97.1, Node 24.19.0, SQLite 3.53.2
 (libsqlite3-sys 0.38.2), WebView2 154.0.4258.53. Times are median / slowest; every run undisturbed.
 

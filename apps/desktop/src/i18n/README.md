@@ -60,6 +60,6 @@ Rules:
 Decided 2026-09-28: `zh-CN` does not stay as a second locale until the Chinese UI version. v1
 cannot switch languages, so it would never show, and keeping it current would double every UI
 lane's copy work. The Chinese strings written so far are in git
-(`git show a4b1956:apps/desktop/src/i18n/locales/zh-CN.json`). The Chinese UI version adds
+(`git show d09663b:apps/desktop/src/i18n/locales/zh-CN.json`). The Chinese UI version adds
 `locales/zh-CN/`, a language setting, `<html lang>` that follows it, and a test that every locale
 has the keys of `en`.

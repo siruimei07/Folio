@@ -1105,7 +1105,7 @@ they are Claude Code lanes, so the drift never reaches `main`.
 ## 12. i18n structure (from `feat/ui-i18n-english`)
 
 The lane `feat/ui-i18n-english` decided the i18n structure, not this spec; it landed on 2026-09-28
-(`5e88bd0`, `720c5b9`). This section describes what it built; `apps/desktop/src/i18n/README.md` is
+(`4e663c4`). This section describes what it built; `apps/desktop/src/i18n/README.md` is
 the reference, and wins if the two ever differ.
 
 - **One locale in v1: `en`**, the default and the fallback. No language detection: the UI never
