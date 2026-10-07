@@ -17,6 +17,7 @@ use serde::de::{self, DeserializeOwned, Deserializer, MapAccess, SeqAccess, Visi
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+pub(crate) use layout::{FolioFile, folio_file};
 pub use layout::{
     FolioPart, Layout, TagFile, TagFileKey, folio_part, is_folio_owned, tag_location, unescape_name,
 };
@@ -66,7 +67,7 @@ pub enum MetaError {
 
 /// A metadata file's content. The format version is not part of it: reading checks it, and
 /// writing always writes [`FORMAT_VERSION`].
-trait MetaFile: Serialize + DeserializeOwned {
+pub(crate) trait MetaFile: Serialize + DeserializeOwned {
     /// What the file holds, for messages.
     const WHAT: &'static str;
 
@@ -127,12 +128,12 @@ fn write<T: MetaFile>(layout: &Layout, path: &Path, value: &T) -> Result<(), Met
 
 /// Why bytes are not a readable metadata file.
 #[derive(Debug, PartialEq, Eq)]
-enum Problem {
+pub(crate) enum Problem {
     Newer(u64),
     Invalid(String),
 }
 
-fn from_bytes<T: MetaFile>(bytes: &[u8]) -> Result<T, Problem> {
+pub(crate) fn from_bytes<T: MetaFile>(bytes: &[u8]) -> Result<T, Problem> {
     let invalid = |error: serde_json::Error| Problem::Invalid(error.to_string());
     let bytes = bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(bytes);
     // `Value` keeps the last of two equal keys, so find them first.
@@ -159,7 +160,7 @@ fn from_bytes<T: MetaFile>(bytes: &[u8]) -> Result<T, Problem> {
 
 /// The file's bytes: the current format version first, fields and map keys sorted, objects one
 /// field per line, arrays on one line, LF line ends and a final newline.
-fn to_bytes<T: MetaFile>(value: &T) -> Result<Vec<u8>, String> {
+pub(crate) fn to_bytes<T: MetaFile>(value: &T) -> Result<Vec<u8>, String> {
     #[derive(Serialize)]
     struct Envelope<'a, T> {
         format_version: u32,

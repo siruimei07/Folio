@@ -363,6 +363,15 @@ whose hash is missing (ADR-0003 §2): after a scan added or modified it. It is a
   [windows-adapter.md](windows-adapter.md) §3.4).
 - `cancel` is checked between files and every 256 KiB; `progress` receives files done and the
   total.
+- Since M2 (feat/core-workspace, catalog migration 5), why a file stays pending is recorded for the
+  workspace's readiness ([versioning.md](versioning.md) §6.2): in the same short writes as the
+  hashes, a file found not local or unreadable gets an `unhashed` row (`not_local` or
+  `unreadable`, with the entry's size, modification time and file id then), and storing a file's
+  hash deletes its row. A row that no longer matches the entry is ignored until the pass records it
+  again. A write that only records rows (a batch with no hash to store) is committed and reported
+  through `hash_pending_with_commits`' `on_commit` like one that stores hashes, so the workspace
+  hears that a file's readiness changed; a batch that records what the catalog says already changes
+  nothing and reports nothing.
 
 Scans never hash, so a new library is browsable before its hashes are done (system overview §6).
 

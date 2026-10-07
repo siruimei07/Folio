@@ -116,6 +116,7 @@ pub fn run() {
                             LibraryStateChanged { status }.emit(&handle)
                         }
                         library::Event::Catalog(event) => event.emit(&handle),
+                        library::Event::Workspace(event) => event.emit(&handle),
                         library::Event::Job(job) => JobChanged { job }.emit(&handle),
                         library::Event::Problems(total) => ProblemsChanged { total }.emit(&handle),
                         library::Event::FilesDropped(event) => event.emit_to(&handle, "main"),

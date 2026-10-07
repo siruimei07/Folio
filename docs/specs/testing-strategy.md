@@ -120,6 +120,22 @@ every 2 s; a run that saw one is repeated), and Defender's state recorded, never
   files holding Chinese and Latin notes; first scan, rescan, hashing, text extraction, a pass with
   nothing to extract, a course rename before and after extraction). Run the built test binaries
   directly, so no `cargo` process competes.
+- The workspace, release build: the folio-core lib test `workspace::bench` (`cargo test -p
+  folio-core --release --lib --locked --no-run`, then the binary with `workspace::bench --ignored
+  --nocapture --test-threads 1`): 49,920 files in the scan benchmark's shape on a MemFs with a real
+  catalog, course settings and a tag on every eighth file; the refresh the shell's tracker runs on
+  a notification, and the commands from its cache. It fails past 100 ms with a few changes and
+  500 ms when everything changed (versioning.md §2). 2026-10-07, feat/core-workspace after its
+  audit fixes (head sync in runs, no unpaired index, the disk-files digest and link check on every
+  refresh), this machine, undisturbed but for another lane's idle Vite dev server, median /
+  slowest: refresh 63 / 64 ms with nothing changed, 61 / 63 ms after a few changes of every kind (19
+  items, 2 metadata rows), 66 / 67 ms after a course rename; every file edited 200 / 204 ms before
+  hashing and 147 / 154 ms after, every file renamed 217 / 218 ms, every semester renamed 117 / 118
+  ms, everything deleted 57 / 57 ms, everything written again (every row paired again by path, one
+  run) 265 ms; head sync 350 ms the first time, 422 / 435 ms forced after a rebuild, 42 / 43 ms with
+  `HEAD` already in the catalog; from the cache a 200-row page under 0.01 ms, a summary of 49,920
+  items 8–11 ms, the comparison with the last snapshot sent 6–9 ms; a commit's tree of everything
+  (`apply`) 64 ms.
 - The app: `e2e/tests/performance.spec.ts` with `FOLIO_E2E_PERF=1` on an optimised build that
   keeps the debug-only test hooks (`CARGO_PROFILE_RELEASE_DEBUG_ASSERTIONS=true`, its own
   `CARGO_TARGET_DIR`, `tauri build --no-bundle`; `FOLIO_APP_PATH` names the exe). It writes the

@@ -9,11 +9,13 @@ mod entries;
 mod extracts;
 mod fulltext;
 mod groups;
+pub mod head_files;
 mod objects;
 pub mod queries;
 mod schema;
 mod sql;
 mod tags;
+pub mod unhashed;
 
 use std::ffi::OsString;
 use std::fs;

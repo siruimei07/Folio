@@ -1077,7 +1077,7 @@ pub struct Owners<'a> {
 }
 
 impl<'a> Owners<'a> {
-    fn new(files: impl IntoIterator<Item = &'a TagFile>) -> Self {
+    pub(crate) fn new(files: impl IntoIterator<Item = &'a TagFile>) -> Self {
         let files: BTreeSet<&TagFile> = files.into_iter().collect();
         let mut first = HashMap::new();
         for file in &files {

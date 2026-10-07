@@ -41,6 +41,7 @@
 //! | `pack.abandon` | removing a pack that is not published |
 //! | `pack.remove`, `pack.delete` | moving a pack out of `packs/`, deleting it |
 //! | `staging.clean` | removing a pack file left in `staging/` |
+//! | `head.index`, `head.files`, `head.marks` | the catalog writes of a head sync: each pack added to the packs' index, each run of `head_files` rows, then the history marks (`workspace::head`) |
 
 /// Marks the point right before an effect of a write, named `step` (see the table above). Nothing
 /// happens outside tests.

@@ -190,12 +190,12 @@ pub fn validate_metadata(root: &Path) -> Result<(), MetaError> {
 
     let meta = layout.meta_dir();
     if metadata_directory(&meta)? {
-        for entry in fs::read_dir(&meta).map_err(|source| io_at(&meta, source))? {
+        for entry in listing(&meta)? {
             let path = entry.map_err(|source| io_at(&meta, source))?.path();
             if unlinked_type(&path)?.is_some_and(|kind| kind.is_dir()) {
                 // Metadata has only two levels: a semester folder and its group/course files.
                 // Never recurse through an unchecked parent, even for an unknown filename.
-                for child in fs::read_dir(&path).map_err(|source| io_at(&path, source))? {
+                for child in listing(&path)? {
                     let child = child.map_err(|source| io_at(&path, source))?.path();
                     unlinked_type(&child)?;
                 }
@@ -214,6 +214,20 @@ pub fn validate_metadata(root: &Path) -> Result<(), MetaError> {
         }
     }
     Ok(())
+}
+
+/// The entries of the metadata folder `path`, checked just before; none once it is gone. The
+/// mirror removes a semester's folder when its last file goes, and a reader that checks without
+/// the catalog's writer (the workspace) may list it after the removal: nothing left there to
+/// follow.
+fn listing(path: &Path) -> Result<impl Iterator<Item = io::Result<fs::DirEntry>>, MetaError> {
+    match fs::read_dir(path) {
+        Ok(entries) => Ok(Some(entries).into_iter().flatten()),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {
+            Ok(None::<fs::ReadDir>.into_iter().flatten())
+        }
+        Err(source) => Err(io_at(path, source)),
+    }
 }
 
 fn unlinked_type(path: &Path) -> Result<Option<fs::FileType>, MetaError> {
@@ -481,5 +495,17 @@ mod tests {
             fs::read(file.path().join(".folio")).unwrap(),
             b"not metadata"
         );
+    }
+
+    /// The link check lists a metadata folder removed since it was checked as empty: the
+    /// workspace checks without the catalog's writer, while the mirror may remove a semester's
+    /// folder with its last file.
+    #[test]
+    fn a_metadata_folder_removed_since_it_was_checked_lists_nothing() {
+        let dir = tempfile::tempdir().unwrap();
+        assert_eq!(listing(&dir.path().join("gone")).unwrap().count(), 0);
+        fs::write(dir.path().join("_group.json"), b"{}").unwrap();
+        assert_eq!(listing(dir.path()).unwrap().count(), 1);
+        assert!(listing(&dir.path().join("_group.json")).is_err());
     }
 }

@@ -15,6 +15,7 @@ use folio_core::watch::{Rescan, WatchOptions};
 use folio_core::win::{WatchEvent, Watcher, WindowsFileSystem};
 
 use super::errors::{self, Failure};
+use super::workspace::Tracker;
 use super::{Event, Sink, lock, problems::Problems};
 use crate::error::AppError;
 use crate::ipc::events::{CatalogChanged, EntryChange};
@@ -43,6 +44,8 @@ pub(super) struct Session {
     watcher: Mutex<Option<Watcher>>,
     worker: Mutex<Option<JoinHandle<()>>>,
     emit: Sink,
+    /// The workspace (ipc-m2.md §6): told of every commit, sent `CatalogChanged` and rebuild.
+    pub(super) workspace: Tracker,
 }
 
 struct Snapshot {
@@ -143,9 +146,17 @@ impl Session {
             }
         }));
         let startup = jobs.queue(JobKind::Scan, true).map_err(Failure::own)?;
+        let catalog = Arc::new(opened.catalog);
+        let workspace = Tracker::new(
+            catalog.clone(),
+            library.layout().clone(),
+            config.id.clone(),
+            emit.clone(),
+            active.clone(),
+        );
         let session = Arc::new(Self {
             library,
-            catalog: Arc::new(opened.catalog),
+            catalog,
             jobs,
             startup: startup.id.clone(),
             snapshot: Mutex::new(Snapshot {
@@ -174,6 +185,7 @@ impl Session {
             watcher: Mutex::new(None),
             worker: Mutex::new(None),
             emit,
+            workspace,
         });
         let weak = Arc::downgrade(&session);
         let watcher = Watcher::start(&root, options, move |event| {
@@ -199,6 +211,10 @@ impl Session {
             }
         };
         *lock(&session.worker) = Some(worker);
+        if let Err(error) = session.workspace.start() {
+            session.shutdown().map_err(Failure::own)?;
+            return Err(Failure::own(error));
+        }
         Ok(session)
     }
 
@@ -389,6 +405,7 @@ impl Session {
         }
         self.active.store(true, Ordering::Release);
         self.wake.notify_one();
+        self.workspace.activate();
     }
 
     pub fn status(&self) -> LibraryStatus {
@@ -499,10 +516,12 @@ impl Session {
                 .join()
                 .map_err(|_| AppError::Internal("library worker panicked".to_owned()))
         });
+        // A head sync or a computation that runs stops at its next check, without another write.
+        let tracked = self.workspace.stop();
         // Commands wait for the operation mutex outside the library transition. A write that
         // holds it finishes before the drain does; a later one sees `stopped` under it.
         drop(lock(&self.operation));
-        joined
+        joined.and(tracked)
     }
 
     /// Library and catalog failures keep the reason they got where they happened; a failure of
@@ -551,7 +570,11 @@ impl Session {
                     if !self.jobs.start(&ticket).map_err(Failure::own)? {
                         continue;
                     }
+                    // The workspace waits while the catalog is reset and filled again, then
+                    // derives `HEAD`'s rows anew (versioning.md §13.2).
+                    self.workspace.rebuilding();
                     let result = self.rebuild_catalog(&ticket);
+                    self.workspace.rebuilt();
                     self.finish(&ticket, result.as_ref().cloned())?;
                     if result?.is_some() {
                         self.queue_hash(Duration::ZERO)?;
@@ -773,7 +796,7 @@ impl Session {
                 self.progress(ticket, done, total);
             },
             // Hashes are not in the entry rows the UI shows; the revision still counts them.
-            &mut || self.bump(true, false, false),
+            &mut || self.bump(true, false, false, true),
         );
         let report = match report.map_err(errors::library) {
             Ok(report) => report,
@@ -859,7 +882,7 @@ impl Session {
                     )
                 },
                 // Search bodies are not in the entry rows either; the revision counts them.
-                &mut || self.bump(true, false, false),
+                &mut || self.bump(true, false, false, false),
             )
             .map_err(errors::library)
     }
@@ -886,7 +909,7 @@ impl Session {
         self.library
             .reset_catalog(&self.catalog)
             .map_err(errors::library)?;
-        self.bump(false, true, true);
+        self.bump(false, true, true, true);
         if self
             .scan(&Rescan::Full, &ticket.cancel, Some(ticket))?
             .is_none()
@@ -925,13 +948,19 @@ impl Session {
                 None
             };
             if changed {
+                let revision = self.catalog.stamp().revision;
                 snapshot.changed(
-                    self.catalog.stamp().revision,
+                    revision,
                     report.entries.into_iter().map(entry_change),
                     true,
                     report.tags,
                     report.groups,
                 );
+                self.workspace.catalog_changed(revision);
+            } else {
+                // A metadata rescan that changed no row may still change `library.json` or
+                // `.folio/ignore`, which the workspace reads from the disk.
+                self.workspace.changed();
             }
             (problems_changed, status)
         };
@@ -944,9 +973,19 @@ impl Session {
         }
     }
 
-    /// Reports a commit whose entries the UI need not refetch one by one.
-    fn bump(&self, complete: bool, tags: bool, groups: bool) {
-        lock(&self.snapshot).changed(self.catalog.stamp().revision, [], complete, tags, groups);
+    /// Reports a commit whose entries the UI need not refetch one by one; `workspace`: whether
+    /// the workspace reads what it changed (hashes and readiness do, versioning.md §6.2; search
+    /// bodies do not).
+    fn bump(&self, complete: bool, tags: bool, groups: bool, workspace: bool) {
+        let mut snapshot = lock(&self.snapshot);
+        let revision = self.catalog.stamp().revision;
+        snapshot.changed(revision, [], complete, tags, groups);
+        if workspace {
+            self.workspace.catalog_changed(revision);
+        } else {
+            self.workspace.search_changed(revision);
+        }
+        drop(snapshot);
         self.flush();
     }
 
@@ -964,7 +1003,10 @@ impl Session {
         }
         drop(snapshot);
         if let Some(event) = event {
+            let revision = event.revision;
             self.send(Event::Catalog(event));
+            // Only now may a `WorkspaceChanged` of this revision follow (ipc-m2.md §14).
+            self.workspace.catalog_sent(revision);
         }
     }
 
@@ -1356,6 +1398,60 @@ mod tests {
         assert_eq!(hashes.len(), 1);
         assert_eq!(hashes[0].id, hash.id);
         session.shutdown().unwrap();
+    }
+
+    /// A change committed within 100 ms of the last `CatalogChanged` waits for the next one; a
+    /// command makes the tracker compute at once, but the `WorkspaceChanged` waits for that
+    /// `CatalogChanged` (ipc-m2.md §14).
+    #[test]
+    fn a_workspace_event_waits_for_a_catalog_changed_its_interval_holds_back() {
+        use crate::ipc::entries::CreateFolder;
+        let f = super::super::workspace::testing::Fixture::new();
+        f.write("Fall/MAT232/a.md", b"a");
+        f.commit(None);
+        f.open();
+        super::super::tests::until("the first WorkspaceChanged", || {
+            (!f.workspace_events().is_empty()).then_some(())
+        });
+        // Past both intervals, then a CatalogChanged that changes nothing in the workspace.
+        thread::sleep(Duration::from_millis(300));
+        let session = f.session();
+        session.bump(true, false, false, true);
+        let bumped = session.catalog().stamp().revision;
+        let course = f.reference("Fall/MAT232");
+        f.state
+            .create_folder(CreateFolder {
+                parent: course,
+                name: "Week 1".to_owned(),
+            })
+            .unwrap();
+        // A command makes the tracker compute at once, before the CatalogChanged goes out.
+        assert_eq!(f.workspace().workspace().totals().items, 1);
+        // The folder's WorkspaceChanged and its CatalogChanged, held back by the interval.
+        let position = |log: &[(Instant, Event)], wanted: &dyn Fn(&Event) -> bool| {
+            log.iter().position(|(_, event)| wanted(event))
+        };
+        let is_folder =
+            |event: &Event| matches!(event, Event::Workspace(event) if event.total == 1);
+        let is_after_bump =
+            |event: &Event| matches!(event, Event::Catalog(event) if event.revision > bumped);
+        let (workspace, catalog) = super::super::tests::until("both events", || {
+            let log = f.events.lock().unwrap();
+            Some((position(&log, &is_folder)?, position(&log, &is_after_bump)?))
+        });
+        let log = f.events.lock().unwrap();
+        let (Event::Workspace(sent), Event::Catalog(changed)) =
+            (&log[workspace].1, &log[catalog].1)
+        else {
+            unreachable!()
+        };
+        assert!(changed.revision <= sent.revision, "{changed:?} {sent:?}");
+        assert!(
+            catalog < workspace,
+            "CatalogChanged {} came after WorkspaceChanged {}",
+            changed.revision,
+            sent.revision
+        );
     }
 
     #[test]

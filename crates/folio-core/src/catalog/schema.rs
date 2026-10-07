@@ -149,7 +149,40 @@ END;
 CREATE INDEX extracts_failed ON extracts (entry_id) WHERE status = 'failed';
 ";
 
-const STEPS: &[M<'static>] = &[M::up(V1), M::up(V2), M::up(V3), M::up(V4)];
+/// `HEAD`'s tree with each path paired with the catalog entry that is that file or folder, and why
+/// the hashing pass left a file unhashed (versioning.md §6.1–§6.2, §13.1): what the workspace
+/// compares. Both are derived, from `HEAD` and from the hashing pass.
+const V5: &str = "
+-- HEAD's tree, flattened: every path, `.folio/` included. hash: a file's content hash or a folder's
+-- tree id (`b3:` and 64 hexadecimal digits, like entries.hash); size and stored: files only.
+-- entry_id: the catalog entry that is this file or folder; removing the entry unpairs the row,
+-- and head_files::pair_by_path pairs it again by path.
+CREATE TABLE head_files (
+    path TEXT PRIMARY KEY,
+    kind TEXT NOT NULL CHECK (kind IN ('file', 'folder')),
+    hash TEXT NOT NULL,
+    size INTEGER CHECK (size >= 0),
+    stored INTEGER CHECK (stored IN (0, 1)),
+    entry_id INTEGER REFERENCES entries (id) ON DELETE SET NULL,
+    CHECK ((kind = 'file') = (size IS NOT NULL)),
+    CHECK ((kind = 'file') = (stored IS NOT NULL))
+) STRICT, WITHOUT ROWID;
+-- One row per entry; the reference's action and the unpaired entries' probes use it. No index of
+-- the unpaired rows: a second B-tree keyed by paths doubles what a crafted HEAD of long paths
+-- costs to write, and pairing again scans the table in path order (head_files::pair_by_path).
+CREATE UNIQUE INDEX head_files_by_entry ON head_files (entry_id) WHERE entry_id IS NOT NULL;
+-- reason: the hashing pass found the file not on this disk, or could not read it. Holds while the
+-- entry has no hash and the size, modification time and file id recorded here (unhashed::VALID).
+CREATE TABLE unhashed (
+    entry_id INTEGER PRIMARY KEY REFERENCES entries (id) ON DELETE CASCADE,
+    reason TEXT NOT NULL CHECK (reason IN ('not_local', 'unreadable')),
+    size INTEGER NOT NULL CHECK (size >= 0),
+    mtime_ns INTEGER,
+    file_id TEXT
+) STRICT;
+";
+
+const STEPS: &[M<'static>] = &[M::up(V1), M::up(V2), M::up(V3), M::up(V4), M::up(V5)];
 
 pub(super) const MIGRATIONS: Migrations<'static> = Migrations::from_slice(STEPS);
 
@@ -168,7 +201,7 @@ mod tests {
     use crate::test_support::{course_at, library_id};
 
     /// The schema version the migrations end at.
-    const LATEST: u32 = 4;
+    const LATEST: u32 = 5;
 
     fn rows(conn: &Connection, table: &str) -> Vec<Vec<Value>> {
         let mut statement = conn
@@ -435,6 +468,115 @@ mod tests {
             )
             .unwrap();
         assert_eq!(index, ("extracts_failed".to_owned(), true));
+    }
+
+    /// Migration 5 (versioning.md §6.1–§6.2, §13.1) keeps every row of a version-4 catalog and adds
+    /// `head_files` and `unhashed` empty: the next head sync flattens `HEAD` into the first, and the
+    /// next hashing pass records the second.
+    #[test]
+    fn opening_a_populated_v4_catalog_keeps_its_rows_and_adds_empty_workspace_tables() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("catalog.sqlite");
+        let mut conn = populated_v1(&file);
+        MIGRATIONS.to_version(&mut conn, 4).unwrap();
+        // What only versions 3 and 4 hold: a pack with an object, and an extraction.
+        let pack = "ab".repeat(32);
+        conn.execute("INSERT INTO packs VALUES (?1, 150, 1)", [&pack])
+            .unwrap();
+        conn.execute(
+            "INSERT INTO objects VALUES (?1, ?2, 12)",
+            [format!("b3:{}", "cd".repeat(32)), pack],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO extracts (entry_id, hash, class, version, status)
+             SELECT id, hash, class, 1, 'text' FROM entries WHERE id = 11",
+            [],
+        )
+        .unwrap();
+        assert_eq!(user_version(&conn).unwrap(), 4);
+        let tables = [
+            "info",
+            "semesters",
+            "courses",
+            "entries",
+            "tags",
+            "entry_tags",
+            "search",
+            "packs",
+            "objects",
+            "extracts",
+        ];
+        let before = tables.map(|table| rows(&conn, table));
+        drop(conn);
+
+        for _ in 0..2 {
+            let opened = Catalog::open(&file, &library_id()).unwrap();
+            assert_eq!(opened.recovered, None);
+            assert!(!dir.path().join("catalog.broken.sqlite").exists());
+            opened
+                .catalog
+                .read(|tx| {
+                    assert_eq!(user_version(tx)?, LATEST);
+                    assert_eq!(tables.map(|table| rows(tx, table)), before);
+                    for table in ["head_files", "unhashed"] {
+                        assert!(rows(tx, table).is_empty(), "{table}");
+                    }
+                    Ok(())
+                })
+                .unwrap();
+        }
+
+        let conn = Connection::open(&file).unwrap();
+        super::super::configure(&conn).unwrap();
+        // Strict tables; only `head_files`, keyed by its paths, is without rowids.
+        for (table, rowless) in [("head_files", true), ("unhashed", false)] {
+            let (strict, without_rowid): (bool, bool) = conn
+                .query_row(
+                    "SELECT strict, wr FROM pragma_table_list WHERE name = ?1",
+                    [table],
+                    |row| Ok((row.get(0)?, row.get(1)?)),
+                )
+                .unwrap();
+            assert!(strict, "{table}");
+            assert_eq!(without_rowid, rowless, "{table}");
+        }
+        // A row loses its entry with the entry; an unhashed record goes with it.
+        for (table, action) in [("head_files", "SET NULL"), ("unhashed", "CASCADE")] {
+            let reference: [String; 4] = conn
+                .query_row(
+                    "SELECT \"table\", \"from\", \"to\", on_delete
+                     FROM pragma_foreign_key_list(?1)",
+                    [table],
+                    |row| Ok([row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?]),
+                )
+                .unwrap();
+            assert_eq!(reference, ["entries", "entry_id", "id", action], "{table}");
+        }
+        // One row per entry, partial; no index of the rows to pair again.
+        let indexes: Vec<(String, bool, bool)> = conn
+            .prepare(
+                "SELECT name, \"unique\", partial FROM pragma_index_list('head_files')
+                 WHERE origin = 'c' ORDER BY name",
+            )
+            .unwrap()
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))
+            .unwrap()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        assert_eq!(indexes, [("head_files_by_entry".to_owned(), true, true)]);
+        // A folder row has no size and no `stored`; a file row has both.
+        let folder = "INSERT INTO head_files (path, kind, hash, size, stored) VALUES
+                      ('f', 'folder', 'b3:x', ?1, ?2)";
+        assert!(
+            conn.execute(folder, params![None::<i64>, None::<i64>])
+                .is_ok()
+        );
+        assert!(conn.execute(folder, params![1, None::<i64>]).is_err());
+        let file_row = "INSERT INTO head_files (path, kind, hash, size, stored) VALUES
+                        ('g', 'file', 'b3:x', ?1, ?2)";
+        assert!(conn.execute(file_row, params![1, None::<i64>]).is_err());
+        assert!(conn.execute(file_row, params![1, 0]).is_ok());
     }
 
     /// `Migrations::validate()` on a connection that has the tokenizer: `validate()` itself opens

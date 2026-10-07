@@ -215,7 +215,7 @@ Value rules:
 - A panic inside a transaction rolls it back; a poisoned mutex is recovered, because the
   connection is consistent after the rollback.
 
-### 5.2 Schema v4 (migrations 1 to 3 preserved)
+### 5.2 Schema v5 (migrations 1 to 4 preserved)
 
 `rusqlite_migration` tracks the version in `PRAGMA user_version`. Its `validate()` opens a
 connection without `folio_cjk`, so the test applies the migrations to a connection that has it.
@@ -224,7 +224,7 @@ This lane preserves migration 1 and adds migration 2 with a populated v1 fixture
 
 | Table | Columns |
 |---|---|
-| `info` | `key`, `value`: `library_id`, `tokenizer_version`, `paths_version`; the scan's `scan_journal` and `first_scan_ns` ([library-scan.md](library-scan.md) §6.3, §7.1) |
+| `info` | `key`, `value`: `library_id`, `tokenizer_version`, `paths_version`; the scan's `scan_journal` and `first_scan_ns` ([library-scan.md](library-scan.md) §6.3, §7.1); the workspace's `history_head`, `history_version` and `workspace_disk_files` ([versioning.md](versioning.md) §6.5, §13.1) |
 | `semesters` | `path` (one segment), `sort_order`, `archived` |
 | `courses` | `path` (two segments), nullable `abbr`, nullable `code`, nullable `color`, `sort_order`, `archived` |
 | `entries` | `id`; `path` (unique); `path_key` (indexed); `parent_id` (not cascading); `name`; `kind` (`file`, `folder`); `class` (`text`, `word`, `other`); `size`; `mtime_ns`; `file_id`; `hash` (`b3:` + 64 hex); `added_ns` (when a scan first saw it; a rebuild takes the file's creation time, [library-scan.md](library-scan.md) §6.3) |
@@ -234,6 +234,8 @@ This lane preserves migration 1 and adds migration 2 with a populated v1 fixture
 | `packs` | The local history's packs ([versioning.md](versioning.md) §4.3, §13.1): `name` (64 hex, the file name without `.pack`), `size` (at least 150 bytes), `objects` (at least 1) |
 | `objects` | Where each history object is: `id` (`b3:` + 64 hex, like `entries.hash`), `pack` (cascading from `packs`, indexed), `offset` of its record (at least 12); one location per object, from the pack indexed first |
 | `extracts` | What extracting each text and Word file's text gave ([versioning.md](versioning.md) §10.2–§10.3): `entry_id` (cascading from `entries`); the `hash` and `class` (`text`, `word`) it was extracted from; the extractor's `version`; `status` (`text`, `empty`, `binary`, `skipped`, `failed`); `failure` (`invalid`, `too_large`) and `detail` (for logs, at most 500 characters) on failed rows only; a partial index on the failed rows. The text itself is the `search` row's `body` |
+| `head_files` | `HEAD`'s flattened tree ([versioning.md](versioning.md) §6.1, §13.1): `path` (primary key, without rowid), `kind` (`file`, `folder`), `hash` (a file's content hash or a folder's tree id, `b3:` + 64 hex), `size` and `stored` (files only), `entry_id` (the paired entry; `ON DELETE SET NULL`); a partial unique index on the paired rows' `entry_id` |
+| `unhashed` | Why a file is still unhashed ([versioning.md](versioning.md) §6.2): `entry_id` (cascading from `entries`), `reason` (`not_local`, `unreadable`), and the entry's `size`, `mtime_ns` and `file_id` when the hash pass recorded it |
 
 All ordinary tables are `STRICT`. Entries hold no semester or course ids: a semester or course
 view is a range scan on `path` (`path > 'P/' AND path < 'P0'`), so a rename touches only paths.
@@ -244,7 +246,7 @@ WITHOUT ROWID and the archive check. It copies each path, explicit abbreviation/
 and archive value, with code initialized to NULL. All other data, entry ids, tags/assignments,
 search text, indexes and info remain intact. Fresh databases run every migration. Regression tests
 open a populated v1 fixture through `Catalog::open`, verify preservation and the latest
-`user_version` (4 since migration 4), exercise nullable/three-grapheme/code settings, and reopen
+`user_version` (5 since migration 5), exercise nullable/three-grapheme/code settings, and reopen
 without recovery or data loss.
 Catalog schema version is separate from metadata `format_version`; SQLite stays rebuildable.
 
@@ -290,6 +292,19 @@ write after a rebuild changes nothing. Its regression test takes the populated v
 version 3, adds a pack and an object, opens it through `Catalog::open` twice, and checks that every
 row stays without recovery and that `extracts` arrives empty and `STRICT`, with the cascading
 reference and the partial index.
+
+Migration 5 (feat/core-workspace) adds `head_files` and `unhashed`, empty, and leaves every other
+table as it is; fresh databases run all five. `head_files` derives from `HEAD` (the head sync,
+`workspace::sync`, which records `history_head` and `history_version` once its rows are in), and
+`unhashed` from the hash pass, which writes a row for a file it found not local or could not read
+and removes it when it stores the file's hash. `reset_for_rebuild` removes the `unhashed` rows with
+their entries and leaves the `head_files` rows unpaired; the rebuild's forced head sync derives
+them again and pairs them by path. `catalog/head_files.rs` and
+`catalog/unhashed.rs` hold the repositories. No index of the unpaired rows: re-pairing scans the
+table in path order, and a second B-tree keyed by paths doubles what a crafted `HEAD` of long
+paths costs to write. Its regression test takes a populated version-4 catalog through
+`Catalog::open` and checks that every row stays and that the two tables arrive empty and `STRICT`,
+with their references (`SET NULL`, cascading), the partial index and the kind checks.
 
 The entry repositories keep the `search` row in step: an entry's `name` and `path` columns are
 written with the entry, `tags` whenever its tags or a tag's name change, and `body` by extraction.

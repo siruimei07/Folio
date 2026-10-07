@@ -5,6 +5,7 @@ mod import;
 mod operations;
 mod problems;
 mod worker;
+pub(crate) mod workspace;
 
 use std::collections::HashMap;
 use std::ffi::OsString;
@@ -38,6 +39,7 @@ use worker::Session;
 pub(crate) enum Event {
     Library(LibraryStatus),
     Catalog(CatalogChanged),
+    Workspace(crate::ipc::events::WorkspaceChanged),
     Job(Job),
     Problems(u32),
     Error(String),
@@ -462,6 +464,14 @@ impl LibraryState {
         query: impl FnOnce(&folio_core::catalog::Catalog) -> Result<T, AppError>,
     ) -> Result<T, AppError> {
         self.with_reads(|session| query(session.catalog()))
+    }
+
+    /// The open library's workspace (ipc-m2.md §6), as its tracker computed it. The session is
+    /// taken under the transition and let go before waiting, as for writes (`with_operations`):
+    /// a head sync or a computation never holds up a switch or closing, which stops the tracker
+    /// and answers a waiting call `NoLibrary`.
+    pub(crate) fn workspace(&self) -> Result<workspace::Current, AppError> {
+        self.with_operations(|session| session.workspace.current())
     }
 
     pub fn list_jobs(&self) -> Result<Vec<Job>, AppError> {

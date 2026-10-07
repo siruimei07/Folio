@@ -242,6 +242,16 @@ pages of one revision consistent.
      whose text could not be extracted (ipc-m1.md §14). No command, event, error code, grant or binding changed.
      Independent audit (code and security, three rounds, every confirmed finding fixed) and
      `/simplify` done.
+   - 2026-10-07, `feat/core-workspace` (ipc-m2.md §20 item 2): `get_workspace`,
+     `list_workspace_items`, `list_metadata_changes` and `summarize_selection` implemented and
+     registered in the `workspace` group (`commands/workspace/manifest.rs`,
+     `capabilities/workspace.json`, main window only; `commit`, `start_history` and
+     `get_workspace_diff` stay test-only stubs), and `WorkspaceChanged` sent as §14 says, after the
+     `CatalogChanged` of every revision it read. Limits are checked before anything is read, the
+     selection's fingerprint before its keys; `.folio/local/` is read as untrusted input (bounded
+     walks and caps, links refused). Bindings unchanged; the fake shell matches the contract (its
+     differences are of order, timing and opaque keys). Independent audit (code and security,
+     three rounds, every confirmed finding fixed) and `/simplify` done.
 4. [x] Operations lane: amend ADR-0002 and library core §4.2 for the course code, optional badge
    text and colour, 1–3 character badges, and palette keys for preset tags (spec §20).
 5. [ ] Preview lane: the `folio-file` scheme, the main window's CSP sources, and an e2e test that

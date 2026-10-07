@@ -7,11 +7,13 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 use super::{Library, LibraryError, Problem};
+use crate::catalog::unhashed::{clear_unhashed, record_unhashed};
 use crate::catalog::{
     Catalog, Entry, EntryId, EntryRecord, count_unhashed_files, set_hash, unhashed_files,
 };
 use crate::fs::{FileKind, Presence};
 use crate::hash::ContentHash;
+use crate::workspace::Blocked;
 
 /// Files read from the catalog at a time.
 const BATCH: u32 = 1024;
@@ -67,6 +69,11 @@ impl Library {
 
     /// As `hash_pending`, notifying after every batch that changed the catalog. The callback
     /// runs after releasing the writer lock, including batches preceding a later failure.
+    ///
+    /// Each file it leaves unhashed because its content is not on this disk, or because it could
+    /// not be read, is recorded with why (`catalog::unhashed`), and the record goes when its hash
+    /// is stored: the workspace's readiness (versioning.md §6.2). A batch that only records again
+    /// what the catalog says already changes nothing and notifies nobody.
     pub fn hash_pending_with_commits(
         &self,
         catalog: &Catalog,
@@ -87,6 +94,7 @@ impl Library {
             };
             after = last.id;
             let mut hashes = Vec::new();
+            let mut blocked = Vec::new();
             let mut since = Instant::now();
             for file in &batch {
                 let record = &file.record;
@@ -106,11 +114,17 @@ impl Library {
                     };
                     match self.read_cataloged(record, read) {
                         Reading::Read(hash) => hashes.push((file, hash)),
-                        Reading::NotLocal => report.not_local += 1,
+                        Reading::NotLocal => {
+                            report.not_local += 1;
+                            blocked.push((file, Blocked::NotLocal));
+                        }
                         Reading::Changed => {}
-                        Reading::Failed(error) => report
-                            .problems
-                            .push(Problem::unreadable(record.path.clone(), &error)),
+                        Reading::Failed(error) => {
+                            report
+                                .problems
+                                .push(Problem::unreadable(record.path.clone(), &error));
+                            blocked.push((file, Blocked::Unreadable));
+                        }
                         Reading::Cancelled => {
                             report.cancelled = true;
                             break;
@@ -120,11 +134,11 @@ impl Library {
                 done += 1;
                 progress(done, total);
                 if since.elapsed() >= WRITE_EVERY {
-                    report.hashed += store(catalog, &mut hashes, on_commit)?;
+                    report.hashed += store(catalog, &mut hashes, &mut blocked, on_commit)?;
                     since = Instant::now();
                 }
             }
-            report.hashed += store(catalog, &mut hashes, on_commit)?;
+            report.hashed += store(catalog, &mut hashes, &mut blocked, on_commit)?;
         }
         Ok(report)
     }
@@ -174,24 +188,34 @@ impl Library {
     }
 }
 
-/// Writes `hashes` to the catalog and empties it; returns how many were stored.
+/// Writes `hashes`, and why the files of `blocked` stay unhashed, to the catalog and empties both;
+/// returns how many hashes were stored. Notifies when the catalog changed.
 fn store(
     catalog: &Catalog,
     hashes: &mut Vec<(&Entry, ContentHash)>,
+    blocked: &mut Vec<(&Entry, Blocked)>,
     on_commit: &mut dyn FnMut(),
 ) -> Result<u64, LibraryError> {
-    if hashes.is_empty() {
+    if hashes.is_empty() && blocked.is_empty() {
         return Ok(0);
     }
-    let stored = catalog.write(|tx| {
+    let (stored, recorded) = catalog.write(|tx| {
         let mut stored = 0;
         for (file, hash) in hashes.iter() {
-            stored += u64::from(set_hash(tx, file, hash)?);
+            if set_hash(tx, file, hash)? {
+                stored += 1;
+                clear_unhashed(tx, file.id)?;
+            }
         }
-        Ok(stored)
+        let mut recorded = false;
+        for (file, why) in blocked.iter() {
+            recorded |= record_unhashed(tx, file, *why)?;
+        }
+        Ok((stored, recorded))
     })?;
     hashes.clear();
-    if stored != 0 {
+    blocked.clear();
+    if stored != 0 || recorded {
         on_commit();
     }
     Ok(stored)

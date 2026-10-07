@@ -273,6 +273,59 @@ Comparing the two (one join, indexed) gives, for each file and folder: unchanged
 row pairs with), deleted (a row without an entry), modified (same path, other hash), moved (another
 path, maybe modified).
 
+**As built (feat/core-workspace).** The comparison is not one join: `head_files::comparison` reads
+the entries and the tags in entry id order and the whole of `head_files` in path order, sorts the
+rows by entry id and pairs them in Rust, since looking up each row's entry overflows SQLite's page
+cache (250–600 ms on 50,000 files against about 45). It gives the paired rows whose entry has
+another path, kind or size, or a known other hash; the rows without an entry outside `.folio/`; the
+entries no row pairs with; and every row below a folder row that is not in place (§6.3's frames need
+them). Re-pairing is `pair_by_path`, one `UPDATE … FROM entries` that pairs each row without an
+entry with the entry at exactly its path, of its kind, that no row pairs with. It runs when
+`head_files` is filled (§13.2), and when the workspace's read finds such a pair
+(`Comparison::pairable`) in a short write before that read is repeated; with nothing to pair nothing
+is written and the revision stays. No trigger on `entries` does it: one makes every insert of a scan
+flush the search index's pending terms (3–4 times slower inserts). A pairing whose kinds differ
+counts as a deleted row and an added entry. Until feat/core-commit-history, the head sync
+(`workspace::sync`) fills `head_files` and the re-pairing above is its only other write. It
+first brings the catalog's index of the packs (§4.3) up to `packs/`, whatever `HEAD` is, none
+included: the catalog, outside the library, outlives a `.folio/local/` that is removed or restored
+without it, and a writer stores only the objects the index does not find. Each pack the index lacks
+is read and added in a write of its own, one pack's index in memory at a time; when a pack it holds
+is gone, or after a catalog rebuild, the first write clears it and every pack is added again (an
+object two packs hold loses its location with either), and a write of its own clears it when no
+pack is added then (`packs/` holds none, or none whose index reads). A pack whose index does not
+read is left out, the other packs added all the same; with a `HEAD` that reads, the first such
+pack's problem is the history's state: read-only when a newer Folio wrote the pack, damaged when
+it is invalid (without `HEAD`, or with one that does not read, the state is `HEAD`'s). An I/O
+error reading an index stops the sync, which is tried again. So a sync that finds the index
+current writes nothing to it, also at every open while `HEAD` stays damaged or too large, and a
+pack whose index stays unreadable costs a read of its index at each sync and no write; whatever a
+crash or a cancel leaves of the index the next sync completes, even one that finds `head_files`
+current. A record that does not read as its pack's index said makes
+the sync read that pack's index again: when it differs from the catalog's (the pack was replaced by
+a good copy of its name since, §4.3), the pack is indexed again and `HEAD` derived again, once; a
+pack that stays damaged costs a read of its index at each sync and no write. The cancel is asked
+before every write of the sync, so none follows it. Then `HEAD`
+flattened within the store's path budget, at most 32 MiB of its paths kept (`MAX_HEAD_PATH_BYTES`,
+an eighth of what the walk may list, which bounds one transient walk and not a table keyed by its
+paths; a crafted chain of about 5,800 nested one-letter folders reaches it), its folders encoded
+again and checked against the commit's tree id, its `.folio/` files read with caps (32 MiB a file,
+64 MiB and 10,000 files in all). The rows go in in runs of at most 8,192 rows or 4 MiB of paths,
+each a short write that pairs its rows by path, and the history marks go in last, so the scans get
+the writer between runs and a crash or a cancel between them leaves rows without marks, which the
+next sync derives again. A `HEAD` missing or damaged in its tree (a pack, the commit, a tree, a root
+that breaks remote-format §7.4 or encodes to another id), another library's, or too large (the path
+budget or `MAX_HEAD_PATH_BYTES`) leaves the table empty; its `library.json` is read before its
+other metadata files, so another library's `HEAD` does so whatever else they hold, and only once,
+so a read that failed is the sync's error (tried again) and no later read skips the check of its
+library id. Damage in its
+metadata (a metadata file missing, invalid, over the caps or of another size than its tree says)
+and a metadata file a newer Folio wrote keep the rows: the items are listed while `historyState` is
+`damaged` or `readOnly`, and the metadata changes are not. The shell logs why the history is
+damaged, read-only or too large (§4.2: the problem is reported), once for each `HEAD` and problem. Links in `.folio/` and `.folio/local/` are refused before the head
+sync or the workspace reads anything there, as every reader of the metadata refuses them
+(`library::state::validate_metadata`).
+
 ### 6.2 Readiness
 
 A file's comparison needs its hash. An entry whose hash is missing (the hashing job has not reached
@@ -280,6 +333,15 @@ it) is **hashing**; one whose content is not on this disk is **not local** (libr
 the hashing job could not read is **unreadable**. An added file is listed in any of these states; a
 modified file is listed once its hash differs. A commit hashes what is still hashing; items that are
 not local or unreadable cannot be committed yet (§7.4).
+
+**As built.** The hash pass records a file it found not local or could not read in the catalog's
+`unhashed` table (§13.1), with the entry's size, modification time and file id at the time; storing
+a hash removes the row. A row counts only while the entry still has no hash and the same size, time
+and file id (`unhashed::VALID`); a stale row is ignored until the next pass. Recording what a row
+says already changes nothing and bumps no revision. An entry without a hash or a valid row is
+hashing. A file whose hash is unknown is unchanged while it has the size `HEAD` has for it and
+modified at once with another size; moves are listed at once. A file that is not local has the size
+0 on the disk's side.
 
 ### 6.3 Items
 
@@ -309,6 +371,38 @@ kind and its main path (the new path, or the old one for a deletion).
 - An item carries what the views need: its paths, the class, sizes before and after, whether the
   old and new versions are stored (so the diff view knows what it can show), its readiness, a count
   for folder items, and the tag changes of its entry (§6.4).
+
+**As built: frames and binding rules.** `workspace::changes` walks `HEAD`'s rows by path, each in the
+frame of its parent folder. A row at its own path is in place: modified when its content changed,
+never moved. A row where the nearest moved folder above it carries it is covered by that folder
+move; an edit there is a modification at the disk path. A row anywhere else is a file or folder
+move, and a moved folder starts a frame of its own, so nested moves work. A row without an entry is
+covered by its parent's folder deletion, or else deleted on its own. A kind mismatch is a deletion
+and an addition, and `.folio/` paths are never items. A row in place below a folder that moved or
+went is *pinned*; the change that decides where that folder goes is its *leaver*. `workspace::bind`
+groups the changes (union-find over places: a frame folder and a name compared as NTFS does):
+
+1. A change that writes a place, or a new folder above it, is bound to the change that frees it. A
+   pinned row counts as a move made by its leaver. Names that differ only in case are one place, so
+   a case-only rename without file ids needs no rule of its own.
+2. A folder deletion is bound to every move out of it.
+3. A folder move on a possible cycle (strongly connected in "a move → the changes that may decide
+   where its destination goes") is bound to the change that decides where its destination goes.
+   As built, each folder on the way up from a destination is a node of that graph, met once
+   however many moves pass it, so the search costs the bytes of the folders' paths, not the moves
+   times the depth.
+4. While the disk's versioning rules differ from `HEAD`'s, a held-back change that keeps a file
+   `HEAD` did not store, that the new rules store and whose committed content is no longer on the
+   disk makes its row required, with the part `versioningRules` (§5.2). A move without an edit does
+   not bind.
+
+A row's main change is its first writer by path and key, else its first change; the others are its
+parts, in path and key order; its readiness is the worst of theirs. `Workspace::apply` builds a
+selection's tree the same way everywhere: every row stays in its frame unless the change that
+decides its own place is chosen, missing parent folders are created, and a tree that would break a
+rule is refused (`ApplyError`) rather than built. A property test commits random selections of
+random changes (moves, nested moves, swaps, case-only renames, file↔folder replacements, with and
+without file ids) and checks every tree and that the rest commits to the disk's tree.
 
 ### 6.4 Tag and settings changes (decision 4)
 
@@ -347,6 +441,35 @@ entry's tag change is part of its item when it has one, and a row of its own oth
 - `WorkspaceChanged` carries the catalog revision, the totals and `HEAD`, at most four times a
   second. It follows `CatalogChanged`, hashing batches, metadata changes and `HEAD` changes. While
   the first commit is running (§7.7) the workspace lists nothing.
+
+**As built.** Keys are `fa:`, `fd:`, `fm:`, `da:` or `dd:` and the path; a move is `fv<h>:` or
+`dv<h>:` and its path, `<h>` being 16 hex digits of BLAKE3 of the old path; metadata keys are `t:`,
+`s:`, `c:` (`sg:` and `cg:` for a semester or course whose folder is gone), `T:`, `L:` and `I:`. A
+row's key is its main change's, at most 32,800 characters. The fingerprint's terms are BLAKE3 of
+`<key>\n<0|1>` for every change (each part of a bound row, with its row's includable flag), of the
+key alone for every metadata change and every tag change shown on an item, and a term for each
+required item. The shell's tracker (a thread per open library) computes the workspace on its own,
+at most every 250 ms and at once when a command waits, and keeps it; commands answer from it once it
+is as new as the notifications before them, and wait for the first head sync. A commit of search
+bodies alone (text extraction, §10.3) notifies nothing: the workspace reads none of them, so its
+snapshot stays at the revision it read until something it reads changes. `WorkspaceChanged`
+goes out when the workspace, `HEAD` or the history state changed, at most every 250 ms, never during
+a catalog rebuild and never before the `CatalogChanged` of its revision, and once after a library
+opens. A `HEAD` that is too large shows as `damaged` until decision m2-too-large-folder
+(feat/core-commit-history) gives it a state. Times on 50,000 files: testing-strategy.md,
+Performance.
+
+What the workspace reads of `.folio/` beside the catalog (`library.json`'s name and versioning
+rules, `.folio/ignore`, which metadata files cannot be read) is kept as a digest in `info`
+(`workspace_disk_files`), written in a short write before the workspace's read whenever it changes.
+So a change of those files moves the catalog revision like a change of the catalog's rows, and two
+snapshots at one revision list the same workspace (ipc-m1 §15.2). That write, like the re-pairing
+(§6.1), sends no `CatalogChanged`: nothing listed outside the workspace changes with it, and
+`WorkspaceChanged` follows the new snapshot. A computation stops at its next read or write when the
+library closes (`Workspace::load` takes the session's cancel flag), so closing or switching a
+library does not wait for it; one that saw a catalog rebuild start is dropped even when the rebuild
+has ended since. A computation that fails answers the commands that waited for it, and the next
+command asks for another.
 
 ### 6.6 Summary
 
@@ -741,6 +864,7 @@ migrations are the real schema, and each M2 lane appends its own (§14).
 | `packs` | Each local pack: name, size, object count | object store |
 | `objects` | Object id → pack and offset, from the pack's index (§4.3); one location per object | object store |
 | `head_files` | `HEAD`'s flattened tree: path, kind, hash (a folder's tree id), size, `stored`, paired entry id (`ON DELETE SET NULL`) | workspace |
+| `unhashed` | Files the hash pass found not local or unreadable, with the entry's size, time and file id then (§6.2) | workspace |
 | `commits` | `HEAD`'s chain: position (1 = first commit), id, parent, tree, kind, effective time (§5.4) and time, summary, body, device id and name, change count, `rebased_from`, pruned count | commit and history |
 | `commit_changes` | Each change record (or, without `changes`, each difference of the trees), by commit position; indexed by path and by `from` | commit and history |
 | `pruned` | Each blob a prune commit of the chain lists, with that commit's position: a version is pruned when its blob is not in `objects` and a later prune commit lists it (remote-format.md §7.5) | commit and history |
@@ -749,6 +873,28 @@ migrations are the real schema, and each M2 lane appends its own (§14).
 
 `info` gains `history_head` (the `HEAD` the tables reflect) and `history_version` (the version of
 the code that derives them; a new version rebuilds them, like `tokenizer_version`).
+
+**As built (migration 5, feat/core-workspace).** `head_files` is strict and without rowid: `path`
+primary key, `kind`, `hash`, `size` and `stored` (files only, checked against the kind), `entry_id`
+referencing `entries` with `ON DELETE SET NULL`; a partial unique index `head_files_by_entry` (on
+`entry_id` where it is set), and no index of the unpaired rows: a second B-tree keyed by paths
+doubles what a crafted `HEAD` of long paths costs to write, and re-pairing scans the table in path
+order. `unhashed` holds `entry_id` (deleted with its entry), `reason` (`not_local` or
+`unreadable`), `size`, `mtime_ns` and `file_id`. `history_version` is 1
+(`head_files::HISTORY_VERSION`): a head sync that finds another value or another `history_head`
+flattens `HEAD` again, in runs of short writes with the marks last (§6.1); a catalog rebuild forces
+it. Every head sync, with or without `HEAD`, first adds the packs the index lacks, each in a write
+of its own, indexes every pack again only when one it holds is gone or after a catalog rebuild, and
+clears it in a write of its own when no pack is added then (`packs/` holds none, or none whose index
+reads); a pack whose index does not read is left out, and a pack replaced under its name is indexed
+again when one of its records does not read as the index said (§6.1). Known limit: a pack's index
+has no checksum of its own, so an index damaged in an object id, its ids still in order, reads, and
+the catalog keeps the damaged id; the object it should name is then `Missing`, which names no pack,
+so once a good copy replaces the pack (§4.3) nothing reads its index again until a catalog rebuild
+forces the sync or the pack is gone. Reading every pack's index again whenever an object is missing
+would read every index at each sync while `HEAD` stays damaged, the cost the incremental index
+avoids. `info` also keeps `workspace_disk_files` (§6.5). Migration 4 is text extraction's `extracts`;
+the next lane's migration is 6.
 
 ### 13.2 Rebuilding
 
@@ -844,6 +990,18 @@ The shell maps them to IPC codes (§17.4): `Newer` and `StoreError::Newer` to `H
 `Damaged`, `Missing` and `Invalid` to `HistoryDamaged`, `Unreadable` and `Io` by their I/O error
 (ipc-m1 §16.2), and `Cancelled` to the job's cancelled state. `detail` strings are for logs
 (library-core.md §7).
+
+**As built (feat/core-workspace).** The workspace has no `WorkspaceError`. `workspace::sync` returns
+the history's state (§4.2: newer metadata is `readOnly`, a state and not an error), or a `SyncError`
+that is tried again: `Catalog`, `Io` (a file of the store could not be read, such as a `HEAD`
+another program holds open), `Meta` (`.folio/` holds a link) or `Cancelled`. `Workspace::load`
+returns a `LoadError`: `Catalog`, `Meta` (a link in `.folio/`, or `.folio/meta/` cannot be listed),
+`HeadChanged` (the tracker syncs again, no command sees it) or `Cancelled`. The shell maps catalog
+errors as everywhere (ipc-m1 §16.2), the store's I/O by its error kind, `Meta` and `HeadChanged` to
+`Internal`, and `Cancelled` to `NoLibrary`; a head sync that failed is tried again when a command
+asks, or at a notification after 5 s. So the four workspace commands can also answer `InUse`,
+`AccessDenied`, `DiskFull`, `FileSystem` or `NotFound`, which ipc-m2 §6.1's tables do not list;
+an invalid `HEAD` is `damaged`, one that cannot be read for an I/O error is that error.
 
 ## 16. Tests
 

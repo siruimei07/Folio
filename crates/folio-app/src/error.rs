@@ -107,10 +107,6 @@ pub enum AppError {
     Internal(String),
     // M2 (docs/specs/ipc-m2.md §15)
     /// The changes changed since the UI read them (the fingerprint or the base).
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "returned once its M2 lane lands")
-    )]
     #[error("the workspace changed: {0}")]
     WorkspaceChanged(String),
     /// The selection and the metadata hold no change.

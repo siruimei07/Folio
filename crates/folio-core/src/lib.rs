@@ -80,6 +80,7 @@ mod test_support;
 pub mod watch;
 #[cfg(windows)]
 pub mod win;
+pub mod workspace;
 
 /// Version of the core crate, reported to the UI for diagnostics.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

@@ -1077,6 +1077,15 @@ For later lanes:
 1. **`feat/core-object-store`**: no command; the store the others read.
 2. **`feat/core-workspace`**: `get_workspace`, `list_workspace_items`, `list_metadata_changes`,
    `summarize_selection`, `WorkspaceChanged`.
+   - 2026-10-07, `feat/core-workspace`: the four commands are registered and granted to the main
+     window, and `WorkspaceChanged` is sent at most every 250 ms, after the `CatalogChanged` of
+     every revision the workspace read, never during a catalog rebuild, and once when a library
+     opens (versioning.md §6 as built). `historyState` is `none`, `ready`, `readOnly` or `damaged`;
+     a history too large to show is `damaged` until a state for it exists (decision
+     m2-too-large-folder), and `starting` comes with `feat/core-commit-history`. A required item's
+     parts end with `versioningRules`; a course whose folder is gone keeps `HEAD`'s code as well as
+     its name. Until `start_history` answers, a new library's Changes view shows the first commit's
+     refused start (e2e/tests/changes.spec.ts).
 3. **`feat/core-commit-history`**: `commit`, `start_history`, the `commit` and `firstCommit`
    jobs, `list_history`, `get_commit`, `list_commit_changes`, `list_commit_metadata`,
    `list_file_history`, `locate_version`, `reword_commit`, `uncommit`, `HistoryChanged`.

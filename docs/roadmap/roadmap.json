@@ -2798,8 +2798,19 @@
         "feat/core-object-store"
       ],
       "summary": "工作区 = 磁盘现状对比上次提交；WorkspaceChanged",
-      "status": "planned",
-      "updated": "2026-10-05",
+      "status": "done",
+      "updated": "2026-10-07",
+      "landed": "2026-10-07",
+      "gates": {
+        "check": "pass",
+        "e2e": "pass",
+        "codeReview": "pass",
+        "securityReview": "pass",
+        "simplify": "pass"
+      },
+      "notes": [
+        "Finish 2026-10-07: pnpm check passed in the shared tree; pnpm e2e 60 passed, 2 failed outside this lane (first-run.spec.ts axe role-img-alt, known; shell.spec.ts counts 4 rail buttons, 5 with feat/ui-history-view's History)"
+      ],
       "links": [
         "docs/specs/versioning.md",
         "docs/specs/ipc-m2.md",

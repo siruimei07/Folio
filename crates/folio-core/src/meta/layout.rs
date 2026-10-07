@@ -223,7 +223,7 @@ pub enum TagFile {
 impl TagFile {
     /// The file's path below `.folio/meta/`, names joined by `/`, which [`TagFile::at`] reads
     /// back.
-    pub(super) fn meta_path(&self) -> Result<String, MetaError> {
+    pub(crate) fn meta_path(&self) -> Result<String, MetaError> {
         Ok(match self {
             Self::Root => ROOT_FILE.to_owned(),
             Self::Group(semester) => format!("{}/{GROUP_FILE}", escape(semester.name(), "")?),
@@ -299,6 +299,28 @@ pub fn is_folio_owned(path: &RelPath) -> bool {
     path.names()
         .next()
         .is_some_and(|first| same_name(first, FOLIO_DIR))
+}
+
+/// A metadata file of a commit's tree (remote-format.md §7.4).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum FolioFile {
+    Library,
+    Tags,
+    Ignore,
+    /// A file of `.folio/meta/` that holds tags, and settings for a semester or course.
+    Meta(TagFile),
+}
+
+/// The metadata file at `path` of a commit's tree, relative to the library root, or `None` for
+/// any other path. A tree spells names exactly, so they are compared exactly.
+pub(crate) fn folio_file(path: &RelPath) -> Option<FolioFile> {
+    let rest = path.as_str().strip_prefix(FOLIO_DIR)?.strip_prefix('/')?;
+    match rest {
+        LIBRARY_FILE => Some(FolioFile::Library),
+        TAGS_FILE => Some(FolioFile::Tags),
+        IGNORE_FILE => Some(FolioFile::Ignore),
+        _ => TagFile::at(rest.strip_prefix(META_DIR)?.strip_prefix('/')?).map(FolioFile::Meta),
+    }
 }
 
 /// What a change in Folio's folder touches (docs/specs/windows-adapter.md §5.3).

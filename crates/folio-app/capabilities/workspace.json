@@ -1,0 +1,12 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "workspace",
+  "description": "The workspace's totals, items, tag and settings changes and selection summaries, for the main window.",
+  "windows": ["main"],
+  "permissions": [
+    "allow-get-workspace",
+    "allow-list-workspace-items",
+    "allow-list-metadata-changes",
+    "allow-summarize-selection"
+  ]
+}
