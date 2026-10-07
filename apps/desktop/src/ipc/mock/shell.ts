@@ -123,6 +123,15 @@ interface PendingEvent {
   complete: boolean;
   tags: boolean;
   groups: boolean;
+  bodies: boolean;
+}
+
+/** What a commit changed besides its entries, as CatalogChanged's flags say (ipc-m1 §15.1). */
+interface ChangeFlags {
+  tags?: boolean;
+  groups?: boolean;
+  /** Search bodies, written or cleared by the hash job, while no row changed. */
+  bodies?: boolean;
 }
 
 /** A copy as JSON would carry it across IPC, so neither side shares objects with the other. */
@@ -385,12 +394,19 @@ export class FakeShell {
    * Commits changes: the next revision, and a CatalogChanged soon after the answer. Entries that
    * changed other than by their tags end a first commit's `tooLarge` (ipc-m2 §6.1).
    */
-  changed(entries: EntryChange[], flags: { tags?: boolean; groups?: boolean } = {}): void {
+  changed(entries: EntryChange[], flags: ChangeFlags = {}): void {
     this.library.commit();
-    const pending = (this.pending ??= { entries: [], complete: true, tags: false, groups: false });
+    const pending = (this.pending ??= {
+      entries: [],
+      complete: true,
+      tags: false,
+      groups: false,
+      bodies: false,
+    });
     pending.entries.push(...entries);
     pending.tags ||= flags.tags ?? false;
     pending.groups ||= flags.groups ?? false;
+    pending.bodies ||= flags.bodies ?? false;
     this.scheduleCatalogEvent();
     if (entries.some((entry) => entry.kind !== 'tagged')) this.versioning.libraryChanged();
   }
@@ -422,6 +438,7 @@ export class FakeShell {
       complete,
       tags: pending.tags,
       groups: pending.groups,
+      bodies: pending.bodies,
     };
     this.emit(() => events.catalogChanged.emit(payload));
   }
@@ -505,6 +522,18 @@ export class FakeShell {
 
   downloadFile(path: string): void {
     this.versioning.downloadFile(path);
+  }
+
+  /**
+   * Console helper (ui-architecture §11.2): the hash job read the text of the file at `path` for
+   * search. The fake's search finds `text` in it from now on, and CatalogChanged says `bodies`
+   * with no entry, since the file's row did not change (ipc-m1 §15.1).
+   */
+  extractText(path: string, text: string): void {
+    const node = this.library.at(path);
+    if (node?.kind !== 'file') fail('NotFound', `no file at "${path}"`);
+    node.text = text;
+    this.changed([], { bodies: true });
   }
 
   // ---- settings

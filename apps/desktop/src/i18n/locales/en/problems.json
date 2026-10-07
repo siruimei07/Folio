@@ -83,6 +83,7 @@
       "denied": "Windows denied access. Folio keeps what it already knew about it.",
       "inUse": "Another app is using it. Folio tries again on the next scan.",
       "tooLarge": "It's too large for Folio to read.",
+      "damaged": "It may be damaged or protected with a password, so Folio can't search inside it. Folio tries again when the file changes.",
       "other": "Something went wrong reading it. Folio tries again on the next scan."
     },
     "link": "It links to another place, so Folio skips it.",

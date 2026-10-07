@@ -61,7 +61,8 @@ impl Snapshot {
     /// Takes the catalog's revision after a commit (`Catalog::stamp`, read after the commit, so
     /// pages at that revision hold the change) and merges the commit's changes into the pending
     /// event. Converts entries only while the event has room: a first scan reports every file,
-    /// an event at most 200.
+    /// an event at most 200. A flag once on (`complete` once off) stays so until the event goes
+    /// out.
     fn changed(
         &mut self,
         revision: u32,
@@ -69,6 +70,7 @@ impl Snapshot {
         complete: bool,
         tags: bool,
         groups: bool,
+        bodies: bool,
     ) {
         self.revision = revision;
         let event = self.event.get_or_insert_with(|| CatalogChanged {
@@ -77,11 +79,13 @@ impl Snapshot {
             complete: true,
             tags: false,
             groups: false,
+            bodies: false,
         });
         event.revision = revision;
         event.complete &= complete;
         event.tags |= tags;
         event.groups |= groups;
+        event.bodies |= bodies;
         for entry in entries {
             if event.entries.len() < LIMITS.event_entries as usize {
                 event.entries.push(entry);
@@ -784,20 +788,31 @@ impl Session {
     /// makes is guarded by the entry's id, hash and class instead. Retries files that were too
     /// fresh, and runs again for changes committed while it extracted, or when it stopped early
     /// to make way for a scan, an import or a rebuild.
+    ///
+    /// The job's progress counts steps (ipc-m1 §13): each file hashed, then each text or Word
+    /// file whose text is read. The text to read is counted before hashing, so the total is known
+    /// from the first report; extraction then goes on after the files hashing counted with its
+    /// own count, usually smaller, and `done` never falls back.
     fn hash(&self, ticket: &Ticket, operation: MutexGuard<'_, ()>) -> Result<(), Failure> {
-        // The job's bar goes on through extraction, after the files hashing counted.
         let mut hashing = 0;
-        let report = self.library.hash_pending_with_commits(
-            &self.catalog,
-            now_ns(),
-            &ticket.cancel,
-            &mut |done, total| {
-                hashing = total;
-                self.progress(ticket, done, total);
-            },
-            // Hashes are not in the entry rows the UI shows; the revision still counts them.
-            &mut || self.bump(true, false, false, true),
-        );
+        let report = self
+            .catalog
+            .read(|tx| catalog::count_extract_work(tx, folio_core::extract::VERSION))
+            .map_err(core::LibraryError::from)
+            .and_then(|text| {
+                self.library.hash_pending_with_commits(
+                    &self.catalog,
+                    now_ns(),
+                    &ticket.cancel,
+                    &mut |done, total| {
+                        hashing = total;
+                        self.progress(ticket, done, total.saturating_add(text));
+                    },
+                    // Hashes are not in the entry rows the UI shows; the revision still counts
+                    // them.
+                    &mut || self.bump(true, false, false, false),
+                )
+            });
         let report = match report.map_err(errors::library) {
             Ok(report) => report,
             Err(failure) => {
@@ -866,8 +881,8 @@ impl Session {
     }
 
     /// Extracts the text of the files that have none for their content yet, for a started job
-    /// whose bar already counts `offset` files. Stops early, incomplete, when work it makes way
-    /// for is waiting (`waiting`).
+    /// whose progress already counts `offset` files hashed. Stops early, incomplete, when work it
+    /// makes way for is waiting (`waiting`).
     fn extract(&self, ticket: &Ticket, offset: u64) -> Result<ExtractReport, Failure> {
         self.library
             .extract_pending_with_commits(
@@ -881,8 +896,8 @@ impl Session {
                         offset.saturating_add(total),
                     )
                 },
-                // Search bodies are not in the entry rows either; the revision counts them.
-                &mut || self.bump(true, false, false, false),
+                // Search bodies are not in the entry rows either, so the event says they changed.
+                &mut || self.bump(true, false, false, true),
             )
             .map_err(errors::library)
     }
@@ -909,7 +924,8 @@ impl Session {
         self.library
             .reset_catalog(&self.catalog)
             .map_err(errors::library)?;
-        self.bump(false, true, true, true);
+        // `complete: false` says the bodies went too (ipc-m1 §15.1).
+        self.bump(false, true, true, false);
         if self
             .scan(&Rescan::Full, &ticket.cancel, Some(ticket))?
             .is_none()
@@ -955,6 +971,7 @@ impl Session {
                     true,
                     report.tags,
                     report.groups,
+                    false,
                 );
                 self.workspace.catalog_changed(revision);
             } else {
@@ -973,17 +990,18 @@ impl Session {
         }
     }
 
-    /// Reports a commit whose entries the UI need not refetch one by one; `workspace`: whether
-    /// the workspace reads what it changed (hashes and readiness do, versioning.md §6.2; search
-    /// bodies do not).
-    fn bump(&self, complete: bool, tags: bool, groups: bool, workspace: bool) {
+    /// Reports a commit whose entries the UI need not refetch one by one; `bodies`: it changed
+    /// search bodies alone (text extraction), which the UI's searches read (ipc-m1 §15.1) and the
+    /// workspace does not. Every other commit here changed what the workspace reads (hashes and
+    /// readiness, versioning.md §6.2).
+    fn bump(&self, complete: bool, tags: bool, groups: bool, bodies: bool) {
         let mut snapshot = lock(&self.snapshot);
         let revision = self.catalog.stamp().revision;
-        snapshot.changed(revision, [], complete, tags, groups);
-        if workspace {
-            self.workspace.catalog_changed(revision);
-        } else {
+        snapshot.changed(revision, [], complete, tags, groups, bodies);
+        if bodies {
             self.workspace.search_changed(revision);
+        } else {
+            self.workspace.catalog_changed(revision);
         }
         drop(snapshot);
         self.flush();
@@ -1081,6 +1099,7 @@ pub(super) fn now_ns() -> i64 {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::atomic::AtomicUsize;
     use std::sync::{Barrier, mpsc};
     use std::thread;
 
@@ -1416,7 +1435,7 @@ mod tests {
         // Past both intervals, then a CatalogChanged that changes nothing in the workspace.
         thread::sleep(Duration::from_millis(300));
         let session = f.session();
-        session.bump(true, false, false, true);
+        session.bump(true, false, false, false);
         let bumped = session.catalog().stamp().revision;
         let course = f.reference("Fall/MAT232");
         f.state
@@ -1900,16 +1919,37 @@ mod tests {
         );
     }
 
-    /// The library's adapter, holding up the extraction of the Word document named `name` once:
-    /// `open_seekable`, which only extraction calls, says it was reached and waits to be let go.
-    /// Listings come sorted by name, so scans give entries their ids, and extraction its order,
-    /// by name.
+    /// Which reads of its file a [`Gate`] holds up.
+    #[derive(Clone, Copy)]
+    enum Hold {
+        /// The first `open_seekable`, which only extraction calls: a Word document's.
+        Document,
+        /// The first this many `open`s: hashing reads each file first, then extraction a text
+        /// file.
+        Opens(usize),
+    }
+
+    /// The library's adapter, holding up reads of the file named `name` as `Hold` says: a held
+    /// read says it was reached and waits to be let go. Listings come sorted by name, so scans
+    /// give entries their ids, and hashing and extraction their order, by name.
     struct Gate {
         base: WindowsFileSystem,
         name: &'static str,
+        /// Whether `open_seekable` holds, once.
         armed: AtomicBool,
+        /// How many more `open`s hold.
+        opens: AtomicUsize,
         reached: Mutex<mpsc::Sender<()>>,
         release: Mutex<mpsc::Receiver<()>>,
+    }
+
+    impl Gate {
+        fn hold(&self) {
+            lock(&self.reached).send(()).unwrap();
+            lock(&self.release)
+                .recv_timeout(Duration::from_secs(10))
+                .unwrap();
+        }
     }
 
     impl folio_core::fs::FileSystem for Gate {
@@ -1924,6 +1964,16 @@ mod tests {
         }
 
         fn open(&self, path: &Path) -> std::io::Result<Box<dyn std::io::Read + '_>> {
+            if path.file_name() == Some(std::ffi::OsStr::new(self.name))
+                && self
+                    .opens
+                    .fetch_update(Ordering::AcqRel, Ordering::Acquire, |left| {
+                        left.checked_sub(1)
+                    })
+                    .is_ok()
+            {
+                self.hold();
+            }
             self.base.open(path)
         }
 
@@ -1934,21 +1984,28 @@ mod tests {
             if path.file_name() == Some(std::ffi::OsStr::new(self.name))
                 && self.armed.swap(false, Ordering::AcqRel)
             {
-                lock(&self.reached).send(()).unwrap();
-                lock(&self.release)
-                    .recv_timeout(Duration::from_secs(10))
-                    .unwrap();
+                self.hold();
             }
             self.base.open_seekable(path)
         }
     }
 
     /// An inactive session whose library holds `Fall/Course/` with `files`, settled, and the
-    /// adapter `Gate` holding up `gate`; the worker is drained, so the test drives the scheduler
-    /// itself. Returns the session, the "reached" receiver and the "release" sender.
+    /// adapter `Gate` holding up the extraction of the Word document `gate`; the worker is
+    /// drained, so the test drives the scheduler itself. Returns the session, the "reached"
+    /// receiver and the "release" sender.
     fn gated_session(
         files: &[(&str, &[u8])],
         gate: &'static str,
+    ) -> (TempDir, Arc<Session>, mpsc::Receiver<()>, mpsc::Sender<()>) {
+        gated_session_holding(files, gate, Hold::Document)
+    }
+
+    /// [`gated_session`], the `Gate` holding up the reads of `gate` that `hold` says.
+    fn gated_session_holding(
+        files: &[(&str, &[u8])],
+        gate: &'static str,
+        hold: Hold,
     ) -> (TempDir, Arc<Session>, mpsc::Receiver<()>, mpsc::Sender<()>) {
         let (dir, mut session) = inactive_session();
         session.shutdown().unwrap();
@@ -1963,7 +2020,11 @@ mod tests {
         let adapter = Gate {
             base: WindowsFileSystem::open(&root).unwrap(),
             name: gate,
-            armed: AtomicBool::new(true),
+            armed: AtomicBool::new(matches!(hold, Hold::Document)),
+            opens: AtomicUsize::new(match hold {
+                Hold::Document => 0,
+                Hold::Opens(opens) => opens,
+            }),
             reached: Mutex::new(reached),
             release: Mutex::new(release),
         };
@@ -2140,6 +2201,388 @@ mod tests {
         assert!(!pending.extracting && !pending.rehash && pending.hash.is_none());
     }
 
+    /// The running job's `done` and `total`.
+    fn progress(session: &Session, ticket: &Ticket) -> (u32, Option<u32>) {
+        match status(session, ticket) {
+            crate::ipc::jobs::JobStatus::Running { progress } => (progress.done, progress.total),
+            other => panic!("the hash job is not running: {other:?}"),
+        }
+    }
+
+    /// A hash job's progress counts steps known from its start (ipc-m1 §13): each file hashed,
+    /// then each text or Word file whose text is read, so its total holds when reading starts.
+    #[test]
+    fn a_hash_job_counts_the_text_it_will_read_from_its_start() {
+        let files: [(&str, &[u8]); 5] = [
+            ("a.md", b"Lecture 1 on eigenvalues"),
+            ("b.md", b"Lecture 2 on eigenvalues"),
+            ("c.md", b"Lecture 3 on eigenvalues"),
+            ("x.pdf", b"%PDF-1.7 not really a paper"),
+            ("y.pdf", b"%PDF-1.7 not really a paper either"),
+        ];
+        // Hashing's read of b.md, then extraction's.
+        let (_dir, session, reached, release) =
+            gated_session_holding(&files, "b.md", Hold::Opens(2));
+        session.queue_hash(Duration::ZERO).unwrap();
+        let job = next_hash(&session);
+        thread::scope(|scope| {
+            let running = scope.spawn(|| run_hash(&session, &job));
+            // a.md hashed, of five files to hash and three to read.
+            reached.recv_timeout(Duration::from_secs(10)).unwrap();
+            assert_eq!(progress(&session, &job), (1, Some(8)));
+            release.send(()).unwrap();
+            // The five hashed and a.md read: the total as it was.
+            reached.recv_timeout(Duration::from_secs(10)).unwrap();
+            assert_eq!(progress(&session, &job), (6, Some(8)));
+            release.send(()).unwrap();
+            running.join().unwrap().unwrap();
+        });
+        assert_eq!(
+            status(&session, &job),
+            crate::ipc::jobs::JobStatus::Done {
+                result: JobResult::Hash {
+                    hashed: 5,
+                    deferred: 0
+                }
+            }
+        );
+        assert_eq!(pending_extracts(&session), 0);
+    }
+
+    /// A text file hashing leaves unhashed (here changed since the scan; too fresh, not local or
+    /// unreadable alike) leaves its text unread: the total shrinks when reading starts, and
+    /// `done` goes on from hashing's.
+    #[test]
+    fn a_file_left_unhashed_shrinks_the_total_when_reading_starts_and_done_goes_on() {
+        let files: [(&str, &[u8]); 3] = [
+            ("a.md", b"Lecture 1 on eigenvalues"),
+            ("b.md", b"Lecture 2 on eigenvalues"),
+            ("c.md", b"Lecture 3 on eigenvalues"),
+        ];
+        let (_dir, session, reached, release) =
+            gated_session_holding(&files, "b.md", Hold::Opens(2));
+        super::super::tests::settled(
+            &session.root().join("Fall/Course/c.md"),
+            b"Lecture 3 on eigenvalues, longer now",
+        );
+        session.queue_hash(Duration::ZERO).unwrap();
+        let job = next_hash(&session);
+        thread::scope(|scope| {
+            let running = scope.spawn(|| run_hash(&session, &job));
+            reached.recv_timeout(Duration::from_secs(10)).unwrap();
+            assert_eq!(progress(&session, &job), (1, Some(6)));
+            release.send(()).unwrap();
+            // Three files hashing went through, a.md read, of the two left to read.
+            reached.recv_timeout(Duration::from_secs(10)).unwrap();
+            assert_eq!(progress(&session, &job), (4, Some(5)));
+            release.send(()).unwrap();
+            running.join().unwrap().unwrap();
+        });
+        assert_eq!(
+            status(&session, &job),
+            crate::ipc::jobs::JobStatus::Done {
+                result: JobResult::Hash {
+                    hashed: 2,
+                    deferred: 0
+                }
+            }
+        );
+    }
+
+    /// The text to read is counted before hashing: when the count fails, the job fails as a
+    /// failed hashing does, before any file is read.
+    #[test]
+    fn a_failed_count_of_the_text_to_read_fails_the_job_before_hashing() {
+        let (_dir, session, _reached, _release) =
+            gated_session(&[("a.md", b"The spectral theorem.")], "none.docx");
+        session
+            .catalog
+            .write(|tx| -> Result<(), catalog::CatalogError> {
+                tx.execute_batch("DROP TABLE extracts;")?;
+                Ok(())
+            })
+            .unwrap();
+        session.queue_hash(Duration::ZERO).unwrap();
+        let ticket = next_hash(&session);
+        let failure = run_hash(&session, &ticket).unwrap_err();
+        assert!(
+            failure
+                .error
+                .to_string()
+                .contains("no such table: extracts"),
+            "{:?}",
+            failure.error
+        );
+        assert_eq!(failure.reason, Unavailable::CatalogFailed);
+        assert!(matches!(
+            status(&session, &ticket),
+            crate::ipc::jobs::JobStatus::Failed { .. }
+        ));
+        let a = session
+            .catalog
+            .read(|tx| {
+                catalog::entry(
+                    tx,
+                    &folio_core::paths::RelPath::parse("Fall/Course/a.md").unwrap(),
+                )
+            })
+            .unwrap()
+            .unwrap();
+        assert!(a.record.hash.is_none());
+        let pending = lock(&session.pending);
+        assert!(!pending.extracting && !pending.rehash && pending.hash.is_none());
+    }
+
+    /// `CatalogChanged.bodies` (ipc-m1 §15.1): extraction's writes say it, so open searches
+    /// refresh though no row changed; a scan's, hashing's and a rebuild's do not, the rebuild's
+    /// saying `complete: false` instead.
+    #[test]
+    fn only_extraction_says_that_search_bodies_changed() {
+        let (_dir, mut session, reached, release) = gated_session(
+            &[
+                ("a.docx", b"not really a document"),
+                ("b.md", b"The spectral theorem."),
+            ],
+            "a.docx",
+        );
+        let log: Arc<Mutex<Vec<CatalogChanged>>> = Arc::default();
+        let sink = log.clone();
+        Arc::get_mut(&mut session).unwrap().emit = Arc::new(move |event| {
+            if let Event::Catalog(event) = event {
+                lock(&sink).push(event);
+            }
+        });
+        // The events sent since the last call, the pending one included, whatever the interval.
+        let sent = || {
+            lock(&session.snapshot).last_event = None;
+            session.flush();
+            std::mem::take(&mut *lock(&log))
+        };
+        sent();
+        super::super::tests::settled(&session.root().join("Fall/Course/c.md"), b"Eigenvalues.");
+        session
+            .scan(&Rescan::Full, &AtomicBool::new(false), None)
+            .unwrap()
+            .unwrap();
+        let scanned = sent();
+        assert!(
+            scanned.iter().any(|event| !event.entries.is_empty())
+                && scanned.iter().all(|event| !event.bodies),
+            "{scanned:?}"
+        );
+        session.queue_hash(Duration::ZERO).unwrap();
+        let job = next_hash(&session);
+        let (hashed, extracted) = thread::scope(|scope| {
+            let running = scope.spawn(|| run_hash(&session, &job));
+            // Every file hashed; the document is read first, so nothing is extracted yet.
+            reached.recv_timeout(Duration::from_secs(10)).unwrap();
+            let hashed = sent();
+            release.send(()).unwrap();
+            running.join().unwrap().unwrap();
+            (hashed, sent())
+        });
+        assert_eq!(pending_extracts(&session), 0);
+        let says = |events: &[CatalogChanged], bodies: bool| {
+            !events.is_empty()
+                && events.iter().all(|event| {
+                    event.bodies == bodies && event.complete && event.entries.is_empty()
+                })
+        };
+        assert!(says(&hashed, false), "{hashed:?}");
+        assert!(says(&extracted, true), "{extracted:?}");
+
+        let rebuild = session.jobs.queue(JobKind::Rebuild, true).unwrap();
+        assert!(session.jobs.start(&rebuild).unwrap());
+        session.rebuild_catalog(&rebuild).unwrap().unwrap();
+        let rebuilt = sent();
+        assert!(
+            !rebuilt.is_empty()
+                && !rebuilt[0].complete
+                && rebuilt.iter().all(|event| !event.bodies),
+            "{rebuilt:?}"
+        );
+    }
+
+    /// Merged into one pending event, a commit's entries and another's bodies both stay.
+    #[test]
+    fn a_bodies_commit_merged_with_entry_changes_keeps_both() {
+        let (_dir, session) = inactive_session();
+        session.shutdown().unwrap();
+        let entry = |id: &str| EntryRef {
+            id: id.to_owned(),
+            path: format!("Fall/Course/{id}.md"),
+        };
+        let mut snapshot = lock(&session.snapshot);
+        snapshot.event = None;
+        let added = EntryChange::Added { entry: entry("7") };
+        let modified = EntryChange::Modified { entry: entry("8") };
+        snapshot.changed(4, [added.clone()], true, false, false, false);
+        snapshot.changed(5, [], true, false, false, true);
+        snapshot.changed(6, [modified.clone()], true, false, true, false);
+        assert_eq!(
+            snapshot.event.take(),
+            Some(CatalogChanged {
+                revision: 6,
+                entries: vec![added, modified],
+                complete: true,
+                tags: false,
+                groups: true,
+                bodies: true,
+            })
+        );
+        // The next event starts over.
+        let removed = EntryChange::Removed { entry: entry("7") };
+        snapshot.changed(7, [removed], true, false, false, false);
+        assert!(snapshot.event.as_ref().is_some_and(|event| !event.bodies));
+    }
+
+    /// `bump` tells the workspace of each commit by its `bodies` flag (ipc-m2.md §14,
+    /// versioning.md §13.3): hashing's commits change hashes and readiness, which the workspace
+    /// reads, so it computes again; extraction's change search bodies alone, so it computes
+    /// nothing for them, yet a `WorkspaceChanged` that reads their revision waits for their
+    /// `CatalogChanged`.
+    #[test]
+    fn the_workspace_follows_hashing_and_waits_for_the_event_of_extracted_text() {
+        use std::collections::HashSet;
+
+        use super::super::workspace::Current;
+        use super::super::workspace::testing::{HeadTree, write_head};
+        use crate::ipc::events::WorkspaceChanged;
+
+        let (_dir, mut session, reached, release) = gated_session(
+            &[
+                ("a.docx", b"not really a document"),
+                ("b.md", b"The spectral theorem."),
+                // Extraction never reads it: only hashing's commits make it ready.
+                ("c.pdf", b"%PDF-1.7 not really a paper"),
+            ],
+            "a.docx",
+        );
+        // `HEAD` holds the folders, so the workspace lists the three files as additions.
+        let mut tree = HeadTree::of_disk(session.root());
+        tree.rows
+            .retain(|path, side| side.is_none() || !path.starts_with("Fall/"));
+        let kept: HashSet<_> = tree.rows.values().flatten().map(|side| side.hash).collect();
+        tree.blobs.retain(|hash, _| kept.contains(hash));
+        write_head(session.library.layout(), &tree, None);
+        #[derive(Debug)]
+        enum Seen {
+            Catalog(CatalogChanged),
+            Workspace(WorkspaceChanged),
+        }
+        let log: Arc<Mutex<Vec<Seen>>> = Arc::default();
+        let sink: Sink = {
+            let log = log.clone();
+            Arc::new(move |event| match event {
+                Event::Catalog(event) => lock(&log).push(Seen::Catalog(event)),
+                Event::Workspace(event) => lock(&log).push(Seen::Workspace(event)),
+                _ => {}
+            })
+        };
+        // The session's tracker stopped with its worker (`gated_session`): a live one instead,
+        // whose events go to the same log as the session's, in the order the UI gets them.
+        let id = session.library.layout().read_library().unwrap().unwrap().id;
+        let tracker = Tracker::new(
+            session.catalog.clone(),
+            session.library.layout().clone(),
+            id,
+            sink.clone(),
+            session.active.clone(),
+        );
+        {
+            let session = Arc::get_mut(&mut session).unwrap();
+            session.emit = sink;
+            session.workspace = tracker;
+        }
+        session.workspace.start().unwrap();
+        session.workspace.activate();
+        // Sends the session's pending event, whatever the interval.
+        let flush = || {
+            lock(&session.snapshot).last_event = None;
+            session.flush();
+        };
+        let totals = |current: &Current| {
+            let totals = current.workspace().totals();
+            (totals.items, totals.hashing)
+        };
+        assert_eq!(totals(&session.workspace.current().unwrap()), (3, 3));
+        session.queue_hash(Duration::ZERO).unwrap();
+        let job = next_hash(&session);
+        let hashed = thread::scope(|scope| {
+            let running = scope.spawn(|| run_hash(&session, &job));
+            // Every file hashed; extraction holds at its first read, the document's, before it
+            // writes anything.
+            reached.recv_timeout(Duration::from_secs(10)).unwrap();
+            flush();
+            let hashed = session.workspace.current().unwrap();
+            // From now on the session's events wait for the test.
+            lock(&session.snapshot).last_event = Some(Instant::now() + Duration::from_secs(3600));
+            release.send(()).unwrap();
+            running.join().unwrap().unwrap();
+            hashed
+        });
+        assert_eq!(totals(&hashed), (3, 0), "computed nothing for hashing");
+        let extracted = session.catalog.stamp().revision;
+        assert!(extracted > hashed.revision());
+        assert!(
+            lock(&session.snapshot)
+                .event
+                .as_ref()
+                .is_some_and(|event| event.bodies && event.revision == extracted)
+        );
+        assert_eq!(
+            session.workspace.current().unwrap().revision(),
+            hashed.revision(),
+            "computed again for search bodies"
+        );
+
+        // A change the workspace reads that sends no `CatalogChanged` (as a metadata rescan that
+        // changed no row): its workspace reads extraction's revision too, so its event waits.
+        super::super::tests::settled(&session.root().join("Fall/Course/d.md"), b"Eigenvalues.");
+        session
+            .library
+            .scan(&session.catalog, None, now_ns())
+            .unwrap();
+        session.workspace.changed();
+        let later = session.workspace.current().unwrap();
+        assert!(later.revision() > extracted);
+        assert_eq!(totals(&later), (4, 1));
+        let sent = |log: &[Seen]| {
+            log.iter().any(
+                |seen| matches!(seen, Seen::Workspace(event) if event.revision == later.revision()),
+            )
+        };
+        // Longer than the tracker's event interval: an event it did not hold back is out.
+        thread::sleep(Duration::from_millis(400));
+        {
+            let log = lock(&log);
+            assert!(!sent(&log), "sent before extraction's event: {log:?}");
+        }
+        flush();
+        super::super::tests::until("the workspace's event", || sent(&lock(&log)).then_some(()));
+        session.workspace.stop().unwrap();
+        let log = lock(&log);
+        let bodies = log
+            .iter()
+            .position(|seen| matches!(seen, Seen::Catalog(event) if event.bodies));
+        let held = log.iter().position(|seen| sent(std::slice::from_ref(seen)));
+        assert!(
+            bodies.is_some_and(|bodies| held.is_some_and(|held| bodies < held)),
+            "{log:?}"
+        );
+        // No `CatalogChanged` came after a `WorkspaceChanged` that read its revision.
+        for (index, seen) in log.iter().enumerate() {
+            let Seen::Workspace(workspace) = seen else {
+                continue;
+            };
+            for next in &log[index + 1..] {
+                if let Seen::Catalog(catalog) = next {
+                    assert!(catalog.revision > workspace.revision, "{log:?}");
+                }
+            }
+        }
+    }
+
     #[test]
     fn a_waiting_rescan_stops_extraction_and_the_next_hash_job_resumes_it() {
         let files: Vec<(String, Vec<u8>)> =
@@ -2191,7 +2634,7 @@ mod tests {
         use crate::ipc::problems::{Problem, ReadFailure};
         let damaged = Problem::Unreadable {
             path: "Fall/Course/a.docx".to_owned(),
-            failure: ReadFailure::Other,
+            failure: ReadFailure::Damaged,
         };
         let listed = || -> Vec<Problem> {
             lock(&session.snapshot)

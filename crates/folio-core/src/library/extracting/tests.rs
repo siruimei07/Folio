@@ -10,7 +10,7 @@ use zip::{CompressionMethod, ZipWriter};
 
 use super::*;
 use crate::catalog::{MAX_BODY_BYTES, entry, record_extract, search};
-use crate::extract::testing::{Package, paragraph};
+use crate::extract::testing::{Package, paragraph, set_encrypted};
 use crate::fs::{DirEntry, FileSystem, Metadata, Presence, ReadSeek};
 use crate::meta::{DisplayName, LibraryConfig};
 use crate::search::SearchQuery;
@@ -631,7 +631,7 @@ fn a_damaged_document_is_recorded_once_and_listed_until_it_changes() {
     assert_eq!((report.extracted, report.complete), (1, true));
     assert_eq!(
         problems(&report),
-        [("thesis.docx".to_owned(), ReadFailure::Other)]
+        [("thesis.docx".to_owned(), ReadFailure::Damaged)]
     );
     let Problem::Unreadable { detail, .. } = &report.problems[0] else {
         unreachable!()
@@ -652,6 +652,37 @@ fn a_damaged_document_is_recorded_once_and_listed_until_it_changes() {
     assert_eq!(f.extract(), complete(1));
     assert_eq!(f.found("chapter"), ["thesis.docx"]);
     assert_eq!(f.extract(), complete(0));
+}
+
+#[test]
+fn every_document_the_reader_refuses_is_damaged() {
+    let f = Fixture::new();
+    // What Word saves with a password to open it: a compound file, not a ZIP archive.
+    let mut protected = vec![0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1];
+    protected.resize(4 << 10, 0);
+    f.fs.file("protected.docx", &protected);
+    // Another format under a .docx name.
+    f.fs.file("scan.docx", b"%PDF-1.7\n% an invented page\n%%EOF\n");
+    // A package whose main part is encrypted.
+    let mut sealed = docx(&["kept apart"]);
+    set_encrypted(&mut sealed, "word/document.xml");
+    f.fs.file("sealed.docx", &sealed);
+    f.scan_and_hash();
+    let report = f.extract();
+    assert_eq!((report.extracted, report.complete), (3, true));
+    let names = ["protected.docx", "scan.docx", "sealed.docx"];
+    assert_eq!(
+        problems(&report),
+        names.map(|name| (name.to_owned(), ReadFailure::Damaged))
+    );
+    // The catalog keeps them as it did before `Damaged`: no migration.
+    for name in names {
+        assert_eq!(
+            f.outcome(name),
+            outcome("failed", Some("invalid")),
+            "{name}"
+        );
+    }
 }
 
 #[test]
@@ -768,15 +799,15 @@ fn an_incomplete_pass_lists_only_the_failures_it_found() {
     assert!(report.cancelled && !report.complete);
     assert_eq!(
         problems(&report),
-        [("new.docx".to_owned(), ReadFailure::Other)]
+        [("new.docx".to_owned(), ReadFailure::Damaged)]
     );
     let report = f.extract();
     assert_eq!(report.extracted, 1);
     assert_eq!(
         problems(&report),
         [
-            ("new.docx".to_owned(), ReadFailure::Other),
-            ("old.docx".to_owned(), ReadFailure::Other)
+            ("new.docx".to_owned(), ReadFailure::Damaged),
+            ("old.docx".to_owned(), ReadFailure::Damaged)
         ]
     );
 }

@@ -1471,7 +1471,7 @@ fn a_damaged_word_document_is_a_problem_until_it_is_repaired() {
             .collect::<Vec<_>>(),
         [&Problem::Unreadable {
             path: "Fall/Math/report.docx".to_owned(),
-            failure: ReadFailure::Other,
+            failure: ReadFailure::Damaged,
         }]
     );
     assert!(

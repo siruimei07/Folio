@@ -242,6 +242,14 @@ pages of one revision consistent.
      whose text could not be extracted (ipc-m1.md §14). No command, event, error code, grant or binding changed.
      Independent audit (code and security, three rounds, every confirmed finding fixed) and
      `/simplify` done.
+   - 2026-10-07, `feat/ipc-extract-followups` (ipc-m1.md §20.5): the three follow-ups of
+     `feat/core-text-extract`. `CatalogChanged` gains `bodies` (decision 3: the hash job wrote or
+     cleared search bodies, so the UI refetches its searches); `ReadFailure` gains `damaged`, a
+     Word document the reader refuses; a hash job's `Progress` counts its steps, the text it will
+     read counted from its start, so `done` never falls back (§13, docs only). Bindings
+     regenerated, the fake shell sends `bodies` and gains the console helper `extractText`,
+     `REVIEWED_BINDINGS` updated. No command, error code or grant changed. Independent audit
+     (code and security, two rounds, every confirmed finding fixed) and `/simplify` done.
    - 2026-10-07, `feat/core-workspace` (ipc-m2.md §20 item 2): `get_workspace`,
      `list_workspace_items`, `list_metadata_changes` and `summarize_selection` implemented and
      registered in the `workspace` group (`commands/workspace/manifest.rs`,

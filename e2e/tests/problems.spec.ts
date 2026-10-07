@@ -5,14 +5,14 @@ import path from 'node:path';
 import type { Page } from '@playwright/test';
 
 import problems from '../../apps/desktop/src/i18n/locales/en/problems.json' with { type: 'json' };
-import type { Job } from '../../apps/desktop/src/ipc/bindings';
-import { blockingViolations, createLibrary, expect, invoke, test } from '../fixtures';
+import type { Job, ProblemItem } from '../../apps/desktop/src/ipc/bindings';
+import { blockingViolations, createLibrary, expect, invoke, openLibrary, test } from '../fixtures';
 
 // The problems list on the real shell (library-actions handoff §11): a library whose scan finds a
 // junction, a .gitignore line and a line of the ignore rules it can't use. "View problems" in the
 // Activity popover opens the list with focus on its title; the groups, Copy path and "Edit ignore
 // rules" work; Esc returns focus to the activity button; the dialog stays still under reduced
-// motion; axe finds nothing serious.
+// motion; axe finds nothing serious. A Word document the hash job can't read is listed too.
 
 test.use({ libraryFolder: true });
 
@@ -104,6 +104,29 @@ test('lists what the scan left out, copies a path, opens the ignore rules, and p
     .click();
   const settings = page.getByRole('dialog', { name: 'Library settings' });
   await expect(settings.getByRole('tab', { name: 'Ignore rules', selected: true })).toBeVisible();
+});
+
+test("lists a Word document the hash job can't read under Couldn't read, as damaged", async ({ folio }) => {
+  test.setTimeout(120_000);
+  const { page, libraryDir } = folio;
+  if (!libraryDir) throw new Error('This test requires the isolated library-folder fixture');
+  await mkdir(path.join(libraryDir, COURSE), { recursive: true });
+  // Not a Word package at all, so the reader refuses it (ipc-m1 §14 `damaged`).
+  await writeFile(path.join(libraryDir, COURSE, 'Essay draft.docx'), 'not really a document');
+  await openLibrary(page);
+  // The hash job reads the text after hashing; a file written just now waits a few seconds first.
+  const draft = 'Fall 2026/MAT232 Calculus/Essay draft.docx';
+  const listed = async () => {
+    const request = { page: { offset: 0, limit: 50 } };
+    return (await invoke<{ items: ProblemItem[] }>(page, 'list_problems', { request })).items.map((item) => item.problem);
+  };
+  await expect.poll(listed, { timeout: 30_000 }).toEqual([{ kind: 'unreadable', path: draft, failure: 'damaged' }]);
+
+  const { dialog } = await openProblems(page);
+  const unreadable = dialog.getByRole('region', { name: `${problems.groups.unreadable}, 1 item` });
+  await expect(unreadable.getByTitle(draft)).toBeVisible();
+  await expect(unreadable.getByText(problems.explanation.unreadable.damaged)).toBeVisible();
+  await expect(unreadable.getByRole('button', { name: `Copy path of ${draft}` })).toBeVisible();
 });
 
 test('keeps the problems list still under reduced motion', async ({ folio }) => {

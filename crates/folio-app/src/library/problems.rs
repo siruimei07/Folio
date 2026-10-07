@@ -253,6 +253,7 @@ fn failure(value: folio_core::library::ReadFailure) -> ReadFailure {
         C::Denied => ReadFailure::Denied,
         C::InUse => ReadFailure::InUse,
         C::TooLarge => ReadFailure::TooLarge,
+        C::Damaged => ReadFailure::Damaged,
         C::Other => ReadFailure::Other,
     }
 }
@@ -400,6 +401,43 @@ mod tests {
                     folder: None,
                     name: "bad".to_owned(),
                     rule
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn every_read_failure_maps_to_the_matching_ipc_value_for_files_and_metadata() {
+        for (core, ipc) in [
+            (CoreReadFailure::Denied, ReadFailure::Denied),
+            (CoreReadFailure::InUse, ReadFailure::InUse),
+            (CoreReadFailure::TooLarge, ReadFailure::TooLarge),
+            (CoreReadFailure::Damaged, ReadFailure::Damaged),
+            (CoreReadFailure::Other, ReadFailure::Other),
+        ] {
+            let (problem, detail) = convert(CoreProblem::Unreadable {
+                path: path("Fall/Math/report.docx"),
+                failure: core,
+                detail: "why".to_owned(),
+            });
+            assert_eq!(
+                problem,
+                Problem::Unreadable {
+                    path: "Fall/Math/report.docx".to_owned(),
+                    failure: ipc
+                }
+            );
+            assert_eq!(detail, "why");
+            let (problem, _) = convert(CoreProblem::Metadata {
+                file: ".folio/meta/tags.json".to_owned(),
+                failure: CoreMetadataFailure::Unreadable(core),
+                detail: "why".to_owned(),
+            });
+            assert_eq!(
+                problem,
+                Problem::Metadata {
+                    file: ".folio/meta/tags.json".to_owned(),
+                    failure: MetadataFailure::Unreadable { failure: ipc }
                 }
             );
         }
@@ -555,7 +593,7 @@ mod tests {
     fn damaged(value: &str) -> CoreProblem {
         CoreProblem::Unreadable {
             path: path(value),
-            failure: CoreReadFailure::Other,
+            failure: CoreReadFailure::Damaged,
             detail: "not a ZIP archive".to_owned(),
         }
     }

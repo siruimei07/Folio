@@ -381,7 +381,7 @@ Scans never hash, so a new library is browsable before its hashes are done (syst
 |---|---|
 | `library::LibraryError` | The current scan stopped: the root cannot be listed, `library.json` is missing, invalid or newer, a metadata file cannot be written, recovery evidence conflicts (`UnfinishedMove` for an in-app move recovery cannot reconcile, §7.1), or the catalog failed. A recovery committed before the scan remains committed and is published separately |
 | `library::Problem` | Something the user should see, the scan went on: `NotUnicode`, `InvalidName`, `NotNfc`, `CaseTwins`, `Link`, `Special`, `Unreadable`, `InvalidIgnoreRule`, `Metadata`, `OrphanedMetadata`, `NotRelocated` |
-| `library::ReadFailure` | Why something could not be read: `Denied`, `InUse` (another program holds it; Windows sharing and lock violations), `TooLarge`, `Other` |
+| `library::ReadFailure` | Why something could not be read: `Denied`, `InUse` (another program holds it; Windows sharing and lock violations), `TooLarge`, `Damaged` (a Word document whose text the reader refuses: damaged, protected with a password, or another format under a `.docx` name; only text extraction reports it, versioning.md §13.3), `Other` |
 | `library::MetadataFailure` | `Newer`, `Invalid`, `Unreadable(ReadFailure)` |
 | `meta::StrandedCause` | Why tags or settings could not follow a move: `ReadOnly`, `FolderTags`, `Unreadable`, `TooLong` |
 

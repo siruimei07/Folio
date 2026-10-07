@@ -216,5 +216,7 @@ export function isTouched(query: LibraryQuery, event: CatalogChanged): boolean {
   // Search ranks by tag names too (library core §5.2), so a renamed tag changes its results.
   if (event.tags && (query.kind === 'tags' || query.kind === 'search')) return true;
   if (event.groups && (query.kind === 'semesters' || query.kind === 'courses')) return true;
+  // Search matches the text read from files (ipc-m1 §15.1); nothing else reads it.
+  if (event.bodies && query.kind === 'search') return true;
   return event.entries.some((change) => touches(query, change));
 }

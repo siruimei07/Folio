@@ -59,4 +59,4 @@ export function fingerprint(text: string): string {
 }
 
 /** The fingerprint of the bindings.ts the fake shell was last reviewed against. */
-export const REVIEWED_BINDINGS = '17b70036b1d4ca';
+export const REVIEWED_BINDINGS = '1014b6bc0fc50d';

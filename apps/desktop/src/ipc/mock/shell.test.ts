@@ -310,6 +310,7 @@ describe('entries', () => {
         complete: true,
         tags: false,
         groups: false,
+        bodies: false,
       },
     ]);
     expect((await childrenOf(null)).revision).toBe(1);
@@ -378,7 +379,9 @@ describe('entries', () => {
     expect(done).toEqual({ done: 300, failed: [] });
     await settle();
     catalog.stop();
-    expect(catalog.seen).toEqual([{ revision: 1, entries: [], complete: false, tags: false, groups: false }]);
+    expect(catalog.seen).toEqual([
+      { revision: 1, entries: [], complete: false, tags: false, groups: false, bodies: false },
+    ]);
   });
 });
 
@@ -470,6 +473,29 @@ describe('search', () => {
     expect(second.more).toBe(false);
     const ids = [...first.items, ...second.items].map((hit) => hit.entry.id);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('finds the text extractText gives a file; CatalogChanged says bodies, with no entry (ipc-m1 §15.1)', async () => {
+    const fake = install();
+    const catalog = collect(shellEvents.onCatalogChanged);
+    const ask = () => unwrap(ipc.search({ text: 'eigenvalue', scope: null, page: { offset: 0, limit: 50 } }));
+    expect((await ask()).items).toEqual([]);
+    const path = 'Fall 2026/CSC148 Introduction to Computer Science/hw1.py';
+    expect(() => {
+      fake.extractText('Fall 2026/CSC148 Introduction to Computer Science', 'eigenvalue');
+    }).toThrow('no file');
+
+    fake.extractText(path, 'Find every eigenvalue of the matrix.');
+    await settle();
+    catalog.stop();
+
+    expect(catalog.seen).toEqual<CatalogChanged[]>([
+      { revision: 1, entries: [], complete: true, tags: false, groups: false, bodies: true },
+    ]);
+    const found = await ask();
+    expect(found.revision).toBe(1);
+    expect(found.items.map((hit) => hit.entry.path)).toEqual([path]);
+    expect(found.items[0]?.snippet?.some((span) => span.matched && span.text === 'eigenvalue')).toBe(true);
   });
 });
 

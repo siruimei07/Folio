@@ -2935,8 +2935,19 @@
         "feat/core-text-extract"
       ],
       "summary": "正文抽取合并后留下的三件事：正文变了，屏幕上的搜索结果跟着刷新（CatalogChanged 加正文 / 搜索标志）；损坏的 Word 文档有自己的读取失败和文案；「检查文件」的进度总数现在把每个文本和 Word 文件算两遍",
-      "status": "planned",
+      "status": "done",
       "updated": "2026-10-07",
+      "landed": "2026-10-07",
+      "gates": {
+        "check": "pass",
+        "e2e": "pass",
+        "codeReview": "pass",
+        "securityReview": "pass",
+        "simplify": "pass"
+      },
+      "notes": [
+        "Finish 2026-10-07: pnpm check and pnpm e2e pass on the lane's own tree (git archive copy: 1660 vitest, Rust workspace tests, 64 e2e passed); in the shared workspace pnpm check stops at another lane's lint (app/firstCommit.test.tsx) and 7 e2e fail in changes/history/workspace specs of other lanes' uncommitted work, while this lane's search and problems specs pass."
+      ],
       "links": [
         "docs/specs/ipc-m1.md",
         "docs/specs/ipc-m2.md",

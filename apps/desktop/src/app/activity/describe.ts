@@ -125,16 +125,19 @@ export function describeJob(t: ShellT, item: ActivityJob, now: number, language:
       return { ...base, look: 'queued', title: activeTitle(t, item, null), meta: t(`activity.queued.${kind}`), cancelLabel };
     case 'running': {
       const { done, total, current, bytes } = status.progress;
-      // Commits measure what they read in bytes; hashing may report bytes later and keeps its
-      // own words (ipc-m2 §13).
+      // Commits measure what they read in bytes. Hashing counts steps, not files (ipc-m1 §13),
+      // so its row says why it runs, with no count (handoff §10.2); it keeps these words if it
+      // reports bytes later (ipc-m2 §13).
       const meta =
         (kind === 'commit' || kind === 'firstCommit') && bytes !== null
           ? bytesMeta(t, bytes, language)
-          : kind === 'rebuild'
-            ? t('activity.runningMeta.rebuild', { done })
-            : total === null
-              ? t(`activity.runningMeta.${kind}SoFar`, { done })
-              : t(`activity.runningMeta.${kind}`, { done, total });
+          : kind === 'hash'
+            ? t('activity.runningMeta.hash')
+            : kind === 'rebuild'
+              ? t('activity.runningMeta.rebuild', { done })
+              : total === null
+                ? t(`activity.runningMeta.${kind}SoFar`, { done })
+                : t(`activity.runningMeta.${kind}`, { done, total });
       return { ...base, look: 'running', title: activeTitle(t, item, total), meta, percent: jobPercent(job), current, cancelLabel };
     }
     case 'done': {

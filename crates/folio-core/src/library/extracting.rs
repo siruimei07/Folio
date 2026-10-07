@@ -4,8 +4,9 @@
 //!
 //! A file is extracted once for its content hash, its class and [`extract::VERSION`]. A damaged
 //! or oversized file is recorded as failed the same way, and tried again only when one of them
-//! changes, while a file that could not be read (in use, access denied, not in the time allowed)
-//! is tried again by the next pass. Every write is guarded by the entry's id, hash and class, so
+//! changes (the problems list calls it [`ReadFailure::Damaged`] or [`ReadFailure::TooLarge`]),
+//! while a file that could not be read (in use, access denied, not in the time allowed) is tried
+//! again by the next pass. Every write is guarded by the entry's id, hash and class, so
 //! the pass may run while the library changes: a file changed or deleted meanwhile is passed over.
 
 use std::io::{self, Read};
@@ -313,13 +314,14 @@ fn state_of(body: Body) -> ExtractState {
 }
 
 /// A file whose text could not be extracted, as the problems list words it
-/// (docs/specs/ipc-m1.md §14): a damaged file is unreadable for another reason, and one over a
-/// cap is too large.
+/// (docs/specs/ipc-m1.md §14): a document the reader refuses is damaged, and one over a cap is
+/// too large. Both stay listed until the file's content changes; a file not read in time is
+/// never recorded, so it is never one of these.
 fn problem_of(failed: FailedExtract) -> Problem {
     Problem::Unreadable {
         path: failed.path,
         failure: match failed.failure {
-            ExtractFailure::Invalid => ReadFailure::Other,
+            ExtractFailure::Invalid => ReadFailure::Damaged,
             ExtractFailure::TooLarge => ReadFailure::TooLarge,
         },
         detail: failed.detail,

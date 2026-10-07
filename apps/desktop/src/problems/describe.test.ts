@@ -203,6 +203,10 @@ describe('describeProblem', () => {
     ['denied', 'Windows denied access. Folio keeps what it already knew about it.'],
     ['inUse', 'Another app is using it. Folio tries again on the next scan.'],
     ['tooLarge', "It's too large for Folio to read."],
+    [
+      'damaged',
+      "It may be damaged or protected with a password, so Folio can't search inside it. Folio tries again when the file changes.",
+    ],
     ['other', 'Something went wrong reading it. Folio tries again on the next scan.'],
   ] as const)('unreadable %s, and a metadata file unreadable the same way', (failure, explanation) => {
     expect(row({ kind: 'unreadable', path: 'STA256/rec.m4a', failure })).toEqual({

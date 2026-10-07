@@ -263,7 +263,7 @@ revision or later is not refetched. `lastRevision` lives beside the store in `da
 (`latestRevision()`), since only the event handler reads it. The fake shell sends a command's
 events before its answer when `?latency` is set, so the browser pane and tests see this race.
 
-**On `CatalogChanged { revision, entries, complete, tags, groups }`:**
+**On `CatalogChanged { revision, entries, complete, tags, groups, bodies }`:**
 
 1. Set `lastRevision`.
 2. `complete: false` (too many changes, or a rebuild): invalidate every `['lib', id, …]` query.
@@ -272,7 +272,9 @@ events before its answer when `?latency` is set, so the browser pane and tests s
 3. Otherwise, for each query, ask whether a change touches it (table below). Touched active
    queries refetch and keep showing their data until the new page arrives; touched inactive page
    queries are removed, so a page scrolled into view later never shows rows of an older revision.
-4. `tags` → invalidate `tags`; `groups` → invalidate `semesters` and `courses`.
+4. `tags` → invalidate `tags`; `groups` → invalidate `semesters` and `courses`; `bodies` (search
+   bodies written or cleared, ipc-m1 §15.1) → every `search` is touched as in step 3: shown
+   searches refetch and keep their results until the new ones arrive, hidden ones are removed.
 5. Pass the entry changes to the reference followers (§5.5).
 
 A change at path `P` (and, for `moved`, from path `F`) touches:
@@ -280,7 +282,7 @@ A change at path `P` (and, for `moved`, from path `F`) touches:
 | Query | Touched when |
 |---|---|
 | `children` of folder `X` | `parent(P)` or `parent(F)` is `X`; for `tagged` on a folder: `X` is `P` or below it (their `folderTags` changed) |
-| `files` / `count` / `search` over scope `S` | `P` or `F` is inside `S` (`null` = everything); for `tagged` on a folder: also `S` inside `P` |
+| `files` / `count` / `search` over scope `S` | `P` or `F` is inside `S` (`null` = everything); for `tagged` on a folder: also `S` inside `P`; `search` also on `bodies` (it matches the text read from files), whatever the scope |
 | `entry` `id` | the change's entry id is `id`; for `tagged` on a folder: the entry is below `P` |
 | `courses`, `semesters` | `groups`, or any `added`, `removed` or `moved` change (course file counts) |
 | `tags` | `tags`, or any `tagged` change (usage counts) |
@@ -1057,7 +1059,9 @@ error state in the browser, and the fixtures serve a few sample files through
   The console drives the fake through `window.__FOLIO_FAKE_SHELL__`: `finishJobs()`,
   `dropFiles()`, `setProblems()`, `makeUnavailable()`, `setFailure()`, and for M2 `editFile()`,
   `addFile()`, `deleteFile()` and `downloadFile()`; the M2 scenarios and parameters are in
-  ipc-m2.md §17.
+  ipc-m2.md §17. `extractText(path, text)` sets the text the fake's search finds in a file and
+  sends `CatalogChanged` with `bodies: true`, as the hash job does after reading a file's text
+  (ipc-m1 §15.1, `feat/ipc-extract-followups`).
 - Production builds contain no fake shell: `import.meta.env.DEV` is statically false, so the import
   is removed. The fake sets `window.__FOLIO_FAKE_SHELL__`; an e2e test checks that the real app
   has no such property.

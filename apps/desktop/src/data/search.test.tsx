@@ -13,6 +13,8 @@ import { unwrap } from './errors';
 import { combineHits, nextOffset, SEARCH_PAGE, useSearch } from './search';
 
 const MAT = 'Fall 2026/MAT232 Calculus of Several Variables';
+/** A note of `notesLibrary` whose text the tests have the hash job read. */
+const NOTE = 'Fall 2026/MAT232/gradient 2.md';
 
 /** A library with `count` notes that match "gradient", and a folder elsewhere. */
 function notesLibrary(count: number): Fixture {
@@ -219,6 +221,64 @@ describe('useSearch', () => {
 
     await waitFor(() => {
       expect(result.current.hits).toEqual([]);
+    });
+  });
+
+  it('shows a file whose text was read while it is open, without being asked again (ipc-m1 §15.1)', async () => {
+    const { result, shell } = renderAppHook(() => useSearch('eigenvalue', null), {
+      fixture: notesLibrary(3),
+      now: NOW,
+    });
+    await waitFor(() => {
+      expect(result.current.status).toBe('success');
+    });
+    expect(result.current.hits).toEqual([]);
+
+    // The hash job reads the note's text: no row changes, CatalogChanged says `bodies`.
+    shell.extractText(NOTE, 'Every eigenvalue of a symmetric matrix is real.');
+
+    await waitFor(() => {
+      expect(result.current.hits.map((item) => item.entry.path)).toEqual([NOTE]);
+    });
+    expect(result.current.hits[0]?.snippet?.some((span) => span.matched && span.text === 'eigenvalue')).toBe(true);
+  });
+
+  it('removes a hidden search when text was read, and asks for it again once it shows', async () => {
+    const { result, rerender, shell, client } = renderAppHook((text: string) => useSearch(text, null), {
+      initialProps: 'eigenvalue',
+      fixture: notesLibrary(3),
+      now: NOW,
+    });
+    await waitFor(() => {
+      expect(result.current.status).toBe('success');
+    });
+    rerender('gradient');
+    await waitFor(() => {
+      expect(result.current.isPrevious).toBe(false);
+    });
+    expect(result.current.hits).toHaveLength(3);
+    const hidden = () =>
+      client.getQueryCache().findAll({
+        predicate: (query) =>
+          query.queryKey[2] === 'search' && (query.queryKey[3] as { text: string }).text === 'eigenvalue',
+      });
+    expect(hidden()).toHaveLength(1);
+    const invoke = vi.spyOn(shell, 'invoke');
+
+    shell.extractText(NOTE, 'Every eigenvalue of a symmetric matrix is real.');
+
+    // The shown search asks again; the hidden one is not asked, but goes.
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalled();
+    });
+    expect(hidden()).toEqual([]);
+    expect(invoke.mock.calls.map(([, payload]) => (payload as { request: { text: string } }).request.text)).toEqual([
+      'gradient',
+    ]);
+
+    rerender('eigenvalue');
+    await waitFor(() => {
+      expect(result.current.hits.map((item) => item.entry.path)).toEqual([NOTE]);
     });
   });
 

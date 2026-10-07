@@ -117,6 +117,23 @@ describe('ProblemsDialog', () => {
     ).toBeInTheDocument();
   });
 
+  it("lists a damaged Word document under Couldn't read, saying it is tried again when the file changes", async () => {
+    renderProblems([
+      { kind: 'unreadable', path: 'MAT232/Essay draft.docx', failure: 'damaged' },
+      { kind: 'unreadable', path: 'STA256/rec.m4a', failure: 'inUse' },
+    ]);
+    const dialog = await screen.findByRole('dialog', { name: 'Problems' });
+    const group = await within(dialog).findByRole('region', { name: "Couldn't read, 2 items" });
+    expect(within(group).getByTitle('MAT232/Essay draft.docx')).toBeInTheDocument();
+    expect(
+      within(group).getByText(
+        "It may be damaged or protected with a password, so Folio can't search inside it. Folio tries again when the file changes.",
+      ),
+    ).toBeInTheDocument();
+    expect(within(group).getByText('Another app is using it. Folio tries again on the next scan.')).toBeInTheDocument();
+    expect(within(group).getByRole('button', { name: 'Copy path of MAT232/Essay draft.docx' })).toBeInTheDocument();
+  });
+
   it('starts with focus on the title, then Tab moves through the row buttons; Esc closes', async () => {
     const { user, onClose } = renderProblems(SAMPLE);
     const title = await screen.findByRole('heading', { name: 'Problems' });

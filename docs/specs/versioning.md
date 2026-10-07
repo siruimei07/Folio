@@ -919,11 +919,16 @@ a rebuild empties the table with the entries.
   Each write is guarded by the entry's id, hash and class, so a file changed or deleted meanwhile
   is passed over. A change committed during extraction asks for another hash job when this one
   ends. At each write (every 250 ms or 16 MiB of text) the pass makes way for a waiting scan,
-  import or rebuild and goes on in the hash job queued behind it. The job's progress counts the
-  files hashed, then those extracted; its cancel stops both. So its total counts a new text or
-  Word file twice, and the hash row's "N of M files" (library-actions handoff §10.2) overstates M
-  and falls back when extraction starts: a follow-up for `feat/ipc-extract-followups` (the meaning
-  of `total`, or the row's copy). The first commit (§7.7) needs only the hashes, yet a shell that
+  import or rebuild and goes on in the hash job queued behind it. The job's cancel stops both
+  parts. Its progress counts steps (ipc-m1.md §13; `feat/ipc-extract-followups`, 2026-10-07):
+  each file hashed, then each text or Word file whose text is read. Before hashing, under the
+  operation lock, one catalog read (`catalog::count_extract_work`: the files pending extraction
+  plus the text and Word files not hashed yet, through the `entries_unhashed` index) counts the
+  text to read, so the total is known from the first report; a failed count fails the job as
+  hashing does. When reading starts, that part is replaced by the pass's own count: smaller when a
+  file was left unhashed or hashed to content read already, rarely larger (a rename committed in
+  between); `done` never falls back, and Activity's hash row (library-actions handoff §10.2)
+  shows no count of files. The first commit (§7.7) needs only the hashes, yet a shell that
   queues `start_history` behind the hash job by kind, as the fake shell does, waits for the whole
   first extraction pass: `feat/core-commit-history` queues it behind hashing only, or adds it to
   the work extraction makes way for.
@@ -943,12 +948,21 @@ a rebuild empties the table with the entries.
   tag of nearly 64 MiB held whole. That is a sixth of the limit, so a document that takes longer
   (a machine asleep or stalled) is not stored as failed but tried again.
 - **Problems:** a damaged or oversized document is stored as failed, and every complete pass lists
-  it (ipc-m1.md §14) until its content changes; a file that could not be read, or not in time, is
-  listed and tried again by the next pass; a placeholder whose content is not on this disk waits
+  it (ipc-m1.md §14) until its content changes: a document the reader refuses (damaged, protected
+  with a password, or another format under a .docx name) as `unreadable` with `damaged`, whose
+  copy says Folio tries again when the file changes, and one over the caps with `tooLarge`
+  (`feat/ipc-extract-followups`; the catalog still stores `invalid` and `too_large`, so no
+  migration). A file that could not be read, or not in time, is listed (`inUse`, `denied` or
+  `other`) and tried again by the next pass; a placeholder whose content is not on this disk waits
   until it is.
 - **Events:** extraction's commits advance the catalog revision in a `CatalogChanged` without
-  entries, as hashing's do. Search results already on screen therefore stay as they were until the
-  next search; a `bodies` flag in the event, touching searches, would be a contract change.
+  entries and with `bodies` (ipc-m1.md §15.1; `feat/ipc-extract-followups`); hashing's commits and
+  a rebuild's say `false` (a rebuild is `complete: false`, which refetches everything). The UI
+  refetches every search on `bodies`, whatever its scope (ui-architecture §5.4): a search on
+  screen shows what a pass finds without being typed again, and a hidden one is dropped. A body
+  cleared at scan time rides on the entry change that clears it (`moved`, `modified`). The
+  workspace reads no bodies, so extraction's commits start no computation of it; a
+  `WorkspaceChanged` that reads their revision still waits until their event is sent.
 - **Cost** on the 50,000-file library: testing-strategy.md, Performance.
 
 ## 14. Format versions M2 changes

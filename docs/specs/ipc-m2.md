@@ -935,7 +935,7 @@ type JobStatus =
   | { state: "failed"; error: AppError; file: string | null }   // file: the library path it failed on
   | { state: "cancelled"; result: JobResult | null };
 type Progress = {
-  done: number; total: number | null;      // items: files or entries
+  done: number; total: number | null;      // items: files, entries or a hash job's steps (ipc-m1 §13)
   permille: number | null;                 // 0–1000 by bytes, for jobs that measure bytes
   bytes: ByteProgress | null;              // bytes done and in all, for jobs that measure bytes
   current: string | null;

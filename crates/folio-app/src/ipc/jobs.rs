@@ -64,9 +64,12 @@ pub enum JobStatus {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
 pub struct Progress {
-    /// Items done: files or entries.
+    /// Items done: files, entries or, for a hash job, steps (ipc-m1 §13): one for each file it
+    /// hashes, then one for each text or Word file whose text it reads.
     pub done: u32,
-    /// Items in all, once known.
+    /// Items in all, once known. A hash job's is known from its first report, the text it will
+    /// read counted before it hashes; when reading starts, that part becomes the text due then,
+    /// usually less, while `done` goes on.
     pub total: Option<u32>,
     /// 0–1000 of the work by bytes, for jobs that measure bytes.
     pub permille: Option<u32>,

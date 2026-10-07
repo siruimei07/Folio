@@ -25,6 +25,11 @@ const MAX_DETAIL_CHARS: usize = 500;
 /// query to use it.
 const EXTRACTABLE: &str = "kind = 'file' AND class IN ('text', 'word') AND hash IS NOT NULL";
 
+/// The text and Word files the hashing pass has still to read. The partial index `entries_unhashed`
+/// has the condition of its first two terms (`entries::UNHASHED`), which SQLite needs to see in a
+/// query to use it.
+const UNHASHED_TEXT: &str = "hash IS NULL AND kind = 'file' AND class IN ('text', 'word')";
+
 /// An `extracts` row that holds for its entry as it is now, derived by the extractor `:version`.
 const CURRENT: &str = "extracts.entry_id = entries.id AND extracts.hash = entries.hash
     AND extracts.class = entries.class AND extracts.version = :version";
@@ -150,6 +155,22 @@ fn count_queries() -> (String, String) {
         format!("SELECT id, hash, class FROM entries WHERE {EXTRACTABLE} ORDER BY id"),
         "SELECT entry_id, hash, class, version FROM extracts ORDER BY entry_id".to_owned(),
     )
+}
+
+/// The text a hash job has to read for `version` (docs/specs/ipc-m1.md §13), counted before it
+/// hashes: the files [`count_pending_extracts`] gives, and the text and Word files still to hash,
+/// which join them once hashed unless their text was read for that content already. With the
+/// files to hash, a job's progress then knows its work from its start.
+pub fn count_extract_work(conn: &Connection, version: u32) -> Result<u64, CatalogError> {
+    let unhashed: u64 = conn
+        .prepare_cached(&unhashed_text_query())?
+        .query_row([], |row| row.get(0))?;
+    Ok(count_pending_extracts(conn, version)? + unhashed)
+}
+
+/// [`count_extract_work`]'s count of the text and Word files still to hash.
+fn unhashed_text_query() -> String {
+    format!("SELECT count(*) FROM entries WHERE {UNHASHED_TEXT}")
 }
 
 /// Records what the extractor `version` gave for `file`, and sets its search body to the text, or

@@ -220,13 +220,13 @@ describe('touches: the history', () => {
   it('no change touches the timeline, a commit’s rows or the first commit: HistoryChanged refreshes them', () => {
     for (const query of commits) {
       for (const change of everyChange) expect(touches(query, change)).toBe(false);
-      expect(isTouched(query, { revision: 5, entries: everyChange, complete: true, tags: true, groups: true })).toBe(false);
+      expect(isTouched(query, { revision: 5, entries: everyChange, complete: true, tags: true, groups: true, bodies: true })).toBe(false);
       // Not even a rebuilt catalog's.
-      expect(isTouched(query, { revision: 6, entries: [], complete: false, tags: false, groups: false })).toBe(false);
+      expect(isTouched(query, { revision: 6, entries: [], complete: false, tags: false, groups: false, bodies: false })).toBe(false);
     }
     // File histories and restore plans compare versions with the files: a rebuild refreshes them.
     for (const query of [ofEntry(lecture), ofVersion, plan]) {
-      expect(isTouched(query, { revision: 6, entries: [], complete: false, tags: false, groups: false })).toBe(true);
+      expect(isTouched(query, { revision: 6, entries: [], complete: false, tags: false, groups: false, bodies: false })).toBe(true);
     }
   });
 
@@ -291,6 +291,7 @@ describe('isTouched', () => {
     complete: true,
     tags: false,
     groups: false,
+    bodies: false,
     ...overrides,
   });
 
@@ -311,6 +312,41 @@ describe('isTouched', () => {
   it('`tags` touches every search too, since tag names are searched', () => {
     expect(isTouched(search(course), event({ tags: true }))).toBe(true);
     expect(isTouched(search(null), event({ groups: true }))).toBe(false);
+  });
+
+  it('`bodies` alone touches every search, whatever its scope, and no other query (ipc-m1 §15.1)', () => {
+    // One query of every kind: `tsc` fails here when a kind is added.
+    const every: { [Kind in LibraryQuery['kind']]: Extract<LibraryQuery, { kind: Kind }> } = {
+      workspace: { kind: 'workspace', part: 'summary' },
+      children: { kind: 'children', folder: null },
+      files: { kind: 'files', scope: null },
+      count: { kind: 'count', request: { of: 'files', scope: null, filter: noTags } },
+      search: { kind: 'search', scope: lecture },
+      entry: { kind: 'entry', entry: lecture },
+      semesters: { kind: 'semesters' },
+      courses: { kind: 'courses' },
+      tags: { kind: 'tags' },
+      resolve: { kind: 'resolve', base: lecture },
+      importCheck: { kind: 'importCheck', target: lectures },
+      jobs: { kind: 'jobs' },
+      problems: { kind: 'problems' },
+      ignoreRules: { kind: 'ignoreRules' },
+      diff: { kind: 'diff', of: { source: 'workspace', key: 'k1' } },
+      located: { kind: 'located' },
+      history: { kind: 'history' },
+      commitChanges: { kind: 'commitChanges' },
+      commitMetadata: { kind: 'commitMetadata' },
+      fileHistory: { kind: 'fileHistory', file: { kind: 'entry', entry: lecture } },
+      firstCommit: { kind: 'firstCommit' },
+      restorePlan: { kind: 'restorePlan' },
+      versionChange: { kind: 'versionChange' },
+      unknown: { kind: 'unknown' },
+    };
+    const bodies = event({ bodies: true });
+    for (const query of Object.values(every)) {
+      expect(isTouched(query, bodies), query.kind).toBe(query.kind === 'search');
+    }
+    for (const scope of [null, course, other]) expect(isTouched(search(scope), bodies)).toBe(true);
   });
 
   it('otherwise any listed change decides', () => {

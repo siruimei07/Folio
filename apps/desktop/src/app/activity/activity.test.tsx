@@ -116,6 +116,18 @@ describe('activity words', () => {
     expect(row({ job: running('import', 7, 12), target: 'MAT232' }).title).toBe('Adding 12 files to MAT232');
     expect(row({ job: running('import', 7, null) }).title).toBe('Adding files');
     expect(row({ job: running('rebuild', 8400, null) }).meta).toBe('8,400 entries so far');
+    // Hashing counts steps, not files (ipc-m1 §13): its row says why it runs, with no count.
+    expect(row({ job: running('hash', 6, 8) })).toMatchObject({
+      look: 'running',
+      title: 'Checking files',
+      meta: 'So Folio can spot changes and moves, and search inside files',
+      percent: 75,
+      cancelLabel: 'Cancel checking files',
+    });
+    expect(row({ job: running('hash', 0, null) })).toMatchObject({
+      meta: 'So Folio can spot changes and moves, and search inside files',
+      percent: null,
+    });
 
     const scanDone: Job = { ...queued('scan'), status: { state: 'done', result: { kind: 'scan', changes: 12, problems: 3 } } };
     expect(row({ job: scanDone, finishedAt: new Date(2026, 8, 30, 17, 12).getTime() })).toMatchObject({
@@ -133,6 +145,11 @@ describe('activity words', () => {
       meta: '20 were busy; Folio tries again later',
       time: 'Sep 27',
     });
+    // A job that hashed nothing may still have read text: no "Checked 0 files".
+    const hashedNone: Job = { ...queued('hash'), status: { state: 'done', result: { kind: 'hash', hashed: 0, deferred: 0 } } };
+    expect(row({ job: hashedNone })).toMatchObject({ look: 'success', title: 'Checked files', meta: 'So Folio can spot changes and moves' });
+    const hashedOne: Job = { ...queued('hash'), status: { state: 'done', result: { kind: 'hash', hashed: 1, deferred: 0 } } };
+    expect(row({ job: hashedOne }).title).toBe('Checked 1 file');
 
     const rebuildDone: Job = { ...queued('rebuild'), status: { state: 'done', result: { kind: 'rebuild', entries: 50210 } } };
     expect(row({ job: rebuildDone })).toMatchObject({ title: 'Rebuilt the search index', meta: '50,210 items' });

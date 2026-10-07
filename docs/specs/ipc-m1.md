@@ -669,7 +669,7 @@ type JobStatus =
   | { state: "failed"; error: AppError }
   | { state: "cancelled"; result: JobResult | null };
 type Progress = {
-  done: number; total: number | null;     // items: files or entries
+  done: number; total: number | null;     // items: files, entries or a hash job's steps (below)
   permille: number | null;                // 0–1000 by bytes, for jobs that measure bytes
   current: string | null;                 // the item in progress, for display
 };
@@ -691,6 +691,17 @@ type ImportFailure = { name: string; error: AppError }; // name: the item's path
   and `ProblemsChanged`.
 - One job of each kind runs at a time; imports queue. `list_jobs` returns the queued and running
   jobs, then the last 20 finished ones.
+- A `hash` job hashes the files the catalog has no current hash for, then reads the text of text
+  and Word files for search (versioning.md §13.3). Its `done` and `total` count steps, not files:
+  one for each file it hashes, then one for each text or Word file whose text it reads, so a text
+  or Word file new to the library counts twice (`feat/ipc-extract-followups`, 2026-10-07).
+  `total` is known from its first report: the files to hash plus the text and Word files whose
+  text is due, those not hashed yet included, counted once before hashing. When reading starts,
+  the second part becomes the files whose text is due then: usually fewer (a file left unhashed,
+  too fresh or unreadable, or one whose content turned out unchanged, its text read already),
+  rarely more (a file renamed into a text class meanwhile). `done` never falls back. The UI shows
+  the bar and the percentage, never a count of files (library-actions handoff §10.2); `hashed` in
+  the result counts files.
 - Cancelling stops between files and keeps what is done: copied files stay, hashes stay. An import
   cancelled after it started ends with the `ImportResult` of what it did before it stopped, its
   failures included and its originals kept; every other cancelled job, and an import cancelled
@@ -721,7 +732,7 @@ type Problem =
   | { kind: "notRelocated"; from: string; to: string; cause: StrandedCause };
 type NameRule = "empty" | "notNfc" | "dotName" | "invalidCharacter" | "trailingDotOrSpace"
   | "reservedName" | "tooLong" | "pathTooLong";
-type ReadFailure = "denied" | "inUse" | "tooLarge" | "other";
+type ReadFailure = "denied" | "inUse" | "tooLarge" | "damaged" | "other";
 type MetadataFailure = { kind: "newer" } | { kind: "invalid" } | { kind: "unreadable"; failure: ReadFailure };
 type StrandedCause = "readOnly" | "folderTags" | "unreadable" | "tooLong";
 ```
@@ -730,12 +741,15 @@ type StrandedCause = "readOnly" | "folderTags" | "unreadable" | "tooLong";
 - The shell keeps the latest problems of every scan scope, plus files that hashing could not read.
   An `id` stays the same while its problem does, so later actions can name it.
 - It also keeps the files whose text could not be extracted for search (as built by
-  `feat/core-text-extract`, versioning.md §13): `unreadable` with `other` for a damaged Word
-  document, `tooLarge` for one over the extraction caps (bytes read or expanded, entries,
-  nesting), and the read failure of a text or Word file that could not be read, `other` for a
-  Word document not read within the time limit. A damaged or oversized document stays listed until
-  its content changes, while a file that could not be read, or not in time, is tried again by the
-  next hash job.
+  `feat/core-text-extract`, versioning.md §13; `damaged` from `feat/ipc-extract-followups`,
+  2026-10-07): `unreadable` with `damaged` for a Word document the reader refuses (damaged,
+  protected with a password, or another format under a `.docx` name), `tooLarge` for one over the
+  extraction caps (bytes read or expanded, entries, nesting), and the read failure of a text or
+  Word file that could not be read, `other` for a Word document not read within the time limit. A
+  damaged or oversized document stays listed until its content changes, while a file that could
+  not be read, or not in time, is tried again by the next hash job. Only extraction reports
+  `damaged`: a scan or hashing never does, and a metadata file that does not parse is `metadata`
+  with `invalid`.
 - `ProblemsChanged` reports the new total whenever the list changes.
 
 ## 15. Events
@@ -745,7 +759,7 @@ type StrandedCause = "readOnly" | "folderTags" | "unreadable" | "tooLong";
 | Event | Payload | When |
 |---|---|---|
 | `LibraryStateChanged` | `{ status: LibraryStatus }` | The library opens, is created, becomes unavailable or read-only |
-| `CatalogChanged` | `{ revision; entries: EntryChange[]; complete; tags; groups }` | After committed catalog changes, Folio's own or from outside; at most ten per second, merged |
+| `CatalogChanged` | `{ revision; entries: EntryChange[]; complete; tags; groups; bodies }` | After committed catalog changes, Folio's own or from outside; at most ten per second, merged |
 | `JobChanged` | `{ job: Job }` | A job changes state; while it runs, at most every 250 ms |
 | `ProblemsChanged` | `{ total }` | The problem list changed |
 | `FilesDropped` | `{ source: ImportSource; position: Point }` | Files or folders were dropped on the window (§12) |
@@ -765,6 +779,13 @@ type EntryChange =
   everything.
 - `tags`: tag definitions changed (name, colour, order, deletion). `groups`: semesters or courses
   changed (their folders, settings or order).
+- `bodies`: the search bodies of some files changed while their rows did not: the hash job wrote
+  or cleared the text it read for search (versioning.md §13.3). Searches may then match, rank or
+  highlight differently, so refetch them; nothing else reads bodies. Every other change that
+  clears a body is an entry change that touches searches already: a file renamed out of the text
+  and Word classes is `moved`, one the versioning rules reclass is `modified`. A rebuild empties
+  every body and says so with `complete: false` alone, so `bodies` may be `false` whenever
+  `complete` is (`feat/ipc-extract-followups`, 2026-10-07).
 - Settings have their own events, `AppSettingsChanged` and `IgnoreRulesChanged` (§22).
 
 ### 15.2 Revisions
@@ -779,7 +800,8 @@ with each other; a page older than the last event is stale.
 
 - Keep pages per query. On `CatalogChanged`, refetch the visible pages of queries that a change
   touches: `list_children` of each changed entry's parent (and old parent), and `list_files`,
-  `search` and counts over a scope that contains one; everything when `complete` is `false`.
+  `search` and counts over a scope that contains one; every `search` when `bodies` is `true`;
+  everything when `complete` is `false`.
 - Follow the previewed entry: `moved` gives its new path, `removed` closes the preview.
 - On `LibraryStateChanged`, drop every cached page and reference.
 
@@ -1027,6 +1049,53 @@ copy to the unavailable screen (first-run handoff §7; `data/library.ts`
 had already brought; the UI now keeps an event that arrives while a status call waits
 (`answeredStatus` in `data/library.ts`). Other documents: library scan §7.1, §9 and §10;
 library-state.md "State and threads".
+
+### 20.5 Text extraction follow-ups (2026-10-07)
+
+Lane `feat/ipc-extract-followups` (roadmap M2), contract and implementation in one lane, settles
+the three follow-ups `feat/core-text-extract` left (versioning.md §13.3). The roadmap session
+decided the meaning of the hash job's progress, its wording and the damaged document's copy on
+2026-10-07, under Sirui's authorization.
+
+| # | Change | Where |
+|---|---|---|
+| 1 | `CatalogChanged.bodies`: the hash job wrote or cleared search bodies, so the UI refetches its searches; an open search shows what a first pass finds without being typed again | §15.1, §15.3 |
+| 2 | `ReadFailure` `damaged` for a Word document the reader refuses, in place of `other`, whose copy says it is tried again when the file changes, not on the next scan | §14 |
+| 3 | A hash job's `done` and `total` count its steps, the text it will read counted from the start, so the bar never falls back when reading starts; the hash row says why, without a count of files | §13 |
+
+The generated bindings gain the field (1) and the value (2); `Progress` changes in its doc
+comments only (3). The core gains `library::ReadFailure::Damaged` (library scan §9); the catalog
+keeps storing a refused document as `invalid`, so no migration. History errors never carry
+`damaged` (a commit reads bytes, not text), and ipc-m2 §15.2's "else `FileSystem`" would cover
+it. The fake shell sends `bodies` and gains the console helper `extractText(path, text)`
+(ui-architecture §11.2). Other documents: ipc-m2 §13 (`Progress`), ui-architecture §5.4 and
+§11.2, library-actions handoff §10.2 and §11, versioning.md §13.3, ADR-0004 action item 3.
+
+**As built.** The worker (`folio-app` `library/worker.rs`) merges `bodies` into the pending event
+as it merges `tags`; only extraction's commits set it, and they skip the workspace's computation
+(`search_changed`, not `catalog_changed`), which reads no bodies. The UI's `isTouched`
+(`data/touch.ts`) touches every `search` on `bodies`: a shown search refetches and keeps its hits
+until the answer arrives, a hidden one is removed. The core maps the reader's refusal to
+`ReadFailure::Damaged` (`library/extracting.rs`, `problem_of`); `problems.json` gains
+`explanation.unreadable.damaged`, which `tsc` requires once the binding has the value. Before
+hashing, under the operation lock, the hash job counts its text to read with
+`catalog::count_extract_work` (pending extracts plus the text and Word files not hashed yet,
+through the `entries_unhashed` index); a failed count fails the job as hashing does. Activity's
+hash row (`app/activity/describe.ts`) shows no numbers, and a job that hashed nothing is "Checked
+files" (`activity.doneTitle.hash_zero`). Tests: the worker's events in each phase (scan, hashing,
+extraction, rebuild); the workspace computed again after hashing's commits and not after
+extraction's, whose revision holds back a `WorkspaceChanged` until their `CatalogChanged` is
+sent; the progress while hashing and when reading starts, with a total that
+shrinks and `done` that goes on; the failed count; every refusal of the reader `Damaged`, and each
+read failure's IPC value; `isTouched` for every kind of query; an open and a hidden search after
+the fake shell's `extractText`; the problems dialog's damaged row. On the real shell
+(`e2e/tests/search.spec.ts`), an open search for a word no file holds shows a file written
+outside Folio, under Contents with the word marked, once the hash job reads it, without being
+typed again; `problems.spec.ts` lists a junk .docx under "Couldn't read" with the damaged copy.
+
+**Status (2026-10-07).** Built and in review: independent audit (code and security, two rounds,
+every confirmed finding fixed) and `/simplify` done; `pnpm check` and `pnpm e2e` pass on the
+lane's own tree. Nothing of the three follow-ups is left open.
 
 ## 21. Next lanes
 

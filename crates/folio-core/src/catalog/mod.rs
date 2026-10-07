@@ -34,8 +34,8 @@ pub use entries::{
     has_no_entries, set_hash, unhashed_files, upsert_entry,
 };
 pub use extracts::{
-    ExtractFailure, ExtractState, FailedExtract, count_pending_extracts, failed_extracts,
-    pending_extracts, record_extract, record_extracts,
+    ExtractFailure, ExtractState, FailedExtract, count_extract_work, count_pending_extracts,
+    failed_extracts, pending_extracts, record_extract, record_extracts,
 };
 pub use fulltext::{Hit, HitText, MAX_BODY_BYTES, Span, hit_text, search, set_body};
 pub use groups::{

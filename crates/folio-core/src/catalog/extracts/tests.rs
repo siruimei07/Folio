@@ -738,6 +738,93 @@ fn the_count_pairs_rows_with_their_entries_by_id() {
     assert_eq!(pending(&catalog, VERSION + 1), ["a.md", "c.docx", "d.md"]);
 }
 
+/// A hash job's text to read, counted before it hashes (ipc-m1 §13): the pending files and the
+/// text and Word files still to hash, each once; never other files or folders, nor a file whose
+/// text was read for its current hash, class and version.
+#[test]
+fn the_text_to_read_is_what_is_pending_and_the_text_still_to_hash() {
+    let dir = tempfile::tempdir().unwrap();
+    let catalog = open_catalog(dir.path());
+    let unhashed = |record: EntryRecord| EntryRecord {
+        hash: None,
+        ..record
+    };
+    let files = put(
+        &catalog,
+        &[
+            text("a.md"),
+            word("b.docx"),
+            record_of("c.pdf", FileClass::Other, b"pdf"),
+            unhashed(record_of("d.pdf", FileClass::Other, b"pdf")),
+            unhashed(text("e.md")),
+            unhashed(word("f.docx")),
+            // Neither a folder with a text extension, hashed or not.
+            EntryRecord {
+                kind: EntryKind::Folder,
+                size: 0,
+                ..unhashed(text("folder.md"))
+            },
+            EntryRecord {
+                kind: EntryKind::Folder,
+                size: 0,
+                ..word("folder.docx")
+            },
+        ],
+    );
+    let work = |version| catalog.read(|tx| count_extract_work(tx, version)).unwrap();
+    // a.md and b.docx pending, e.md and f.docx still to hash.
+    assert_eq!(work(VERSION), 4);
+    assert!(record(&catalog, &files[0], ExtractState::Empty));
+    assert!(record(
+        &catalog,
+        &files[1],
+        failed(ExtractFailure::Invalid, "no main part")
+    ));
+    assert_eq!(work(VERSION), 2);
+    // Another version of the extractor reads a.md and b.docx again.
+    assert_eq!(work(VERSION + 1), 4);
+    // Hashed, e.md is pending instead: still counted once.
+    put(&catalog, &[text("e.md")]);
+    assert_eq!(work(VERSION), 2);
+    // a.md changed and waits for its new hash: counted again.
+    put(
+        &catalog,
+        &[unhashed(record_of("a.md", FileClass::Text, b"edited"))],
+    );
+    assert_eq!(work(VERSION), 3);
+    // b.docx waits for its hash too, and is counted until it hashes to the content whose text
+    // was read.
+    put(&catalog, &[unhashed(word("b.docx"))]);
+    assert_eq!(work(VERSION), 4);
+    put(&catalog, &[word("b.docx")]);
+    assert_eq!(work(VERSION), 3);
+    // f.docx becomes another kind of file under other versioning rules.
+    put(
+        &catalog,
+        &[unhashed(record_of("f.docx", FileClass::Other, b"f.docx"))],
+    );
+    assert_eq!(work(VERSION), 2);
+}
+
+/// Hashing's count of the text and Word files left reads only the unhashed files, through their
+/// partial index.
+#[test]
+fn the_text_still_to_hash_is_counted_through_the_unhashed_index() {
+    let dir = tempfile::tempdir().unwrap();
+    let catalog = open_catalog(dir.path());
+    let plan: Vec<String> = catalog
+        .read(|tx| {
+            let mut statement =
+                tx.prepare(&format!("EXPLAIN QUERY PLAN {}", unhashed_text_query()))?;
+            let details = statement
+                .query_map([], |row| row.get(3))?
+                .collect::<Result<_, _>>()?;
+            Ok(details)
+        })
+        .unwrap();
+    assert_eq!(plan, ["SCAN entries USING INDEX entries_unhashed"]);
+}
+
 #[test]
 fn search_finds_recorded_text_until_another_outcome_clears_it() {
     let dir = tempfile::tempdir().unwrap();
@@ -1094,6 +1181,17 @@ proptest! {
                     .collect();
                 expected.sort();
                 let expected: Vec<String> = expected.into_iter().map(|(_, name)| name).collect();
+                // A hash job's text to read: these, and the text and Word files still to hash.
+                let to_hash = model
+                    .iter()
+                    .filter(|current| {
+                        current.class != FileClass::Other && current.content.is_none()
+                    })
+                    .count();
+                prop_assert_eq!(
+                    catalog.read(|tx| count_extract_work(tx, version)).unwrap(),
+                    (expected.len() + to_hash) as u64
+                );
                 prop_assert_eq!(pending(&catalog, version), expected);
 
                 let failures: Vec<String> = catalog

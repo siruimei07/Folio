@@ -140,6 +140,10 @@ pub enum Problem {
 /// Why a file or folder could not be read.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReadFailure {
+    /// A Word document whose text the reader refuses: damaged, protected with a password, or
+    /// another format under a `.docx` name. Only text extraction reports it; the file is tried
+    /// again when its content changes.
+    Damaged,
     /// Access is denied.
     Denied,
     /// Another program holds it open.

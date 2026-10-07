@@ -11,8 +11,9 @@ import { blockingViolations, expect, invoke, openLibrary, test } from '../fixtur
 
 // The search dialog on the real shell (app-shell handoff §8, UI architecture §9): Ctrl+K, results
 // from the real index in two groups with highlights as text, one- and two-character Chinese
-// queries, words inside Markdown and Word files with their snippets, the arrow keys and Enter
-// revealing the file in the Library, Esc, the empty and too-long states, axe and reduced motion.
+// queries, words inside Markdown and Word files with their snippets, an open search showing a file
+// once the hash job has read its text, the arrow keys and Enter revealing the file in the Library,
+// Esc, the empty and too-long states, axe and reduced motion.
 
 test.use({ libraryFolder: true });
 
@@ -219,6 +220,39 @@ test('finds Markdown and Word files by words inside them and marks the words in 
     await expect(hit.locator('.search-hit__name mark')).toHaveCount(0);
     await expect(hit.locator('.search-hit__snippet mark')).toHaveText(text);
   }
+});
+
+test('shows a file in an open search once its text is read, without the search typed again', async ({ folio }) => {
+  test.setTimeout(120_000);
+  const { page, libraryDir } = folio;
+  if (!libraryDir) throw new Error('This test requires the isolated library-folder fixture');
+  await seed(libraryDir);
+  await openSearchable(page, 'midterm');
+
+  await page.keyboard.press('Control+K');
+  const dialog = page.getByRole('dialog', { name: search.label });
+  const field = dialog.getByRole('textbox', { name: search.label });
+  await page.keyboard.type('eigenvalue');
+  await expect(dialog.getByRole('heading', { name: search.empty.title.replace('{{text}}', 'eigenvalue') })).toBeVisible();
+
+  // Written outside Folio while the dialog is open. The scan that adds it refetches the search,
+  // which its name does not match; a few seconds later the hash job reads its text, and that
+  // CatalogChanged lists no entry but says `bodies` (ipc-m1 §15.1), which refetches every search.
+  await writeFile(
+    path.join(libraryDir, 'Fall 2026', COURSE, 'Week 4.md'),
+    '# Week 4\n\nEach eigenvalue of a triangular matrix sits on its diagonal.\n',
+  );
+  const results = dialog.getByRole('listbox', { name: search.results });
+  const hit = results
+    .getByRole('group')
+    .filter({ hasText: search.groups.contents })
+    .getByRole('option', { name: 'Week 4.md' });
+  await expect(hit).toBeVisible({ timeout: 30_000 });
+  await expect(hit.locator('.search-hit__name mark')).toHaveCount(0);
+  await expect(hit.locator('.search-hit__snippet mark')).toHaveText('eigenvalue');
+  await expect(results.getByRole('option')).toHaveCount(1);
+  await expect(field).toHaveValue('eigenvalue');
+  await expect(field).toBeFocused();
 });
 
 test('says when nothing matches or the text is too long, and Esc closes it', async ({ folio }) => {

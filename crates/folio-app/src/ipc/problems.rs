@@ -55,7 +55,7 @@ pub enum Problem {
         name: String,
     },
     /// A folder that could not be listed, whose entries stay as they were, or a file that could
-    /// not be read.
+    /// not be read, or whose text could not be read for search.
     Unreadable { path: String, failure: ReadFailure },
     /// A line of `.folio/ignore` (`file` is `null`) or of a `.gitignore` that is not a valid
     /// pattern; the other lines apply. Line 0 is the whole file.
@@ -102,6 +102,10 @@ pub enum ReadFailure {
     InUse,
     /// Larger than Folio reads.
     TooLarge,
+    /// A Word document whose text Folio cannot read: damaged, protected with a password, or
+    /// another format under a `.docx` name. Only text extraction reports it, and tries the file
+    /// again when its content changes.
+    Damaged,
     Other,
 }
 

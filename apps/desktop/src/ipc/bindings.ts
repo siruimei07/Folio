@@ -432,6 +432,13 @@ export type CatalogChanged = {
 	tags: boolean,
 	/**  Semesters or courses changed: their folders, settings or order. */
 	groups: boolean,
+	/**
+	 *  The search bodies of some files changed while their rows did not: the hash job wrote or
+	 *  cleared the text it read for search. Searches may match, rank or highlight differently:
+	 *  refetch them. Every other body change comes with an entry change; a rebuild says so with
+	 *  `complete: false` alone, so this may be `false` whenever `complete` is.
+	 */
+	bodies: boolean,
 };
 
 export type ChangeCounts = {
@@ -1360,7 +1367,7 @@ export type Problem =
 { kind: "special"; folder: string | null; name: string } | 
 /**
  *  A folder that could not be listed, whose entries stay as they were, or a file that could
- *  not be read.
+ *  not be read, or whose text could not be read for search.
  */
 { kind: "unreadable"; path: string; failure: ReadFailure } | 
 /**
@@ -1389,9 +1396,16 @@ export type ProblemsChanged = {
 };
 
 export type Progress = {
-	/**  Items done: files or entries. */
+	/**
+	 *  Items done: files, entries or, for a hash job, steps (ipc-m1 §13): one for each file it
+	 *  hashes, then one for each text or Word file whose text it reads.
+	 */
 	done: number,
-	/**  Items in all, once known. */
+	/**
+	 *  Items in all, once known. A hash job's is known from its first report, the text it will
+	 *  read counted before it hashes; when reading starts, that part becomes the text due then,
+	 *  usually less, while `done` goes on.
+	 */
 	total: number | null,
 	/**  0–1000 of the work by bytes, for jobs that measure bytes. */
 	permille: number | null,
@@ -1408,7 +1422,13 @@ export type ReadFailure = "denied" |
 /**  Another program holds it. */
 "inUse" | 
 /**  Larger than Folio reads. */
-"tooLarge" | "other";
+"tooLarge" | 
+/**
+ *  A Word document whose text Folio cannot read: damaged, protected with a password, or
+ *  another format under a `.docx` name. Only text extraction reports it, and tries the file
+ *  again when its content changes.
+ */
+"damaged" | "other";
 
 /**  Whether an item can be committed now (versioning.md §6.2). */
 export type Readiness = "ready" | 

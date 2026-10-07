@@ -35,6 +35,11 @@ pub struct CatalogChanged {
     pub tags: bool,
     /// Semesters or courses changed: their folders, settings or order.
     pub groups: bool,
+    /// The search bodies of some files changed while their rows did not: the hash job wrote or
+    /// cleared the text it read for search. Searches may match, rank or highlight differently:
+    /// refetch them. Every other body change comes with an entry change; a rebuild says so with
+    /// `complete: false` alone, so this may be `false` whenever `complete` is.
+    pub bodies: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]

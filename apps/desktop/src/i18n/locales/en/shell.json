@@ -89,8 +89,7 @@
     "runningMeta": {
       "scan": "{{done, number}} of {{total, number}} files",
       "scanSoFar": "{{done, number}} files so far",
-      "hash": "So Folio can spot changes and moves; {{done, number}} of {{total, number}} files",
-      "hashSoFar": "So Folio can spot changes and moves; {{done, number}} files so far",
+      "hash": "So Folio can spot changes and moves, and search inside files",
       "import": "{{done, number}} of {{total, number}} files",
       "importSoFar": "{{done, number}} files so far",
       "rebuild": "{{done, number}} entries so far",
@@ -116,6 +115,7 @@
     },
     "doneTitle": {
       "scan": "Scanned the library",
+      "hash_zero": "Checked files",
       "hash_one": "Checked {{count, number}} file",
       "hash_other": "Checked {{count, number}} files",
       "import_one": "Added {{count, number}} file",
