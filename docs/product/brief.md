@@ -104,7 +104,7 @@
 
 ### 5.6 历史（Operations History）
 
-- 参考截图 [`references/gitbutler-operations-history.png`](references/gitbutler-operations-history.png)：
+- 参考截图 `references/gitbutler-operations-history.png`（GitButler 的界面截图，含其他项目的信息，仓库公开后只留在本机）：
   - 左侧是按日期分组的时间线。每条显示时间、操作图标、说明、短 ID 和**来源**（这台电脑显示设备名，例如 `G16`；在其他设备上直接改的显示 `iCloud`）。
   - 每条下面是文件卡片：类型图标、灰色路径 + 加粗文件名、右侧状态图标；超过 4 个文件时折叠为「显示全部 N 个文件」。
   - 右侧是预览区；没选文件时显示点状网格背景和「选择一个文件以预览」。

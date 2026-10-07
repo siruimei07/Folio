@@ -7,6 +7,8 @@
 
 # Claude Code per-machine settings
 .claude/settings.local.json
+.claude/worktrees/
+CLAUDE.local.md
 
 # Dependencies
 node_modules/
@@ -42,3 +44,28 @@ desktop.ini
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Keys and certificates (e.g. the Tauri updater's signing key); never in a public repository
+*.pem
+*.key
+*.p12
+*.pfx
+
+# SQLite side files and archives (handoff bundles, backups)
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+*.db-journal
+*.db-wal
+*.db-shm
+*.zip
+
+# Kept on this machine only since the repository went public (2026-10-07): renders of real course
+# material (third-party copyright) and the device-handoff snapshot with personal records
+/docs/agents/device-handoff-2026-10-01.md
+/docs/agents/device-handoff-2026-10-01/
+/docs/product/references/gitbutler-operations-history.png
+/docs/research/office-preview-spike/docx-syllabus-p2.jpg
+/docs/research/office-preview-spike/docx-worksheet-shapes.jpg
+/docs/research/office-preview-spike/pptx-week*.jpg
+/docs/research/office-preview-spike/pptx-zh-news.jpg
