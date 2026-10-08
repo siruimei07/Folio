@@ -17,13 +17,13 @@
     ]
   },
   "now": {
-    "stage": "M2 实现：工作区核心和正文抽取已合并，提交和历史开工",
+    "stage": "M2 实现：历史视图和「历史太大」合约已合并，三条 lane 恢复进行",
     "focus": "M2",
     "summary": [
-      "10-07：工作区视图（e5f05f76）、正文抽取（44c13f0b）、工作区核心（3f50069f）已合并；工作区核心合并前做了聚焦复审（多角度、逐条反驳）和第 4 轮修复，逐条用改回旧代码的方法核验。进行中：`feat/core-commit-history`（关键路径，规划时问的「历史太大」已定：决策 history-too-large-contract）；`feat/ui-history-view` 审完 3 轮，在做聚焦复审。恢复参数在 folio-agent-work/roadmap-session/m2-resume.md。",
-      "已合并（M2）：M2 合约、AI 设置页、差异组件、对象库、选择汇总加两个计数、工作区视图、正文抽取、工作区核心，以及回收站两个修复、标签丢失修复、问题列表两个偶发测试的修复；另有中文 README 和截图。main 3f50069f。",
-      "接下来：历史视图复审完就合；然后 `feat/ipc-history-too-large`（合约）→ `feat/ipc-extract-followups`（都重新生成绑定，排开）；`feat/ui-history-too-large` 跟在合约后面。提交和历史之后是差异和恢复、AI 提交说明、M2 验收。`feat/ipc-recycle-cloud-trash` 暂缓（决策 icloud-no-delete）。",
-      "你 10-06 授权：之后的判断由路线图会话自己定、自己合并，事后汇报（决策 m2-subagents）。和模型训练会话共用内存：子代理的测试单个超过 4 GB 就停下排查。现在没有要你做的事。10-07 晚：历史已按 lane 压成 114 个提交、清掉课程截图和个人记录，仓库以 GPL-3.0 公开；原来的 648 个提交在 private 的 Folio-archive（决策 public-repo）。M2 的 4 条 lane 已在新历史上重建，提交号变了，按分支名恢复。",
+      "10-08：历史重写、仓库公开后 M2 恢复，三条 lane 按原来的参数接着做。10-07 已合并：工作区视图（e5f05f76）、正文抽取（44c13f0b）、工作区核心（3f50069f）、历史视图（25a53afd）、「历史太大」合约（e43a5404）。进行中：`feat/core-commit-history`（关键路径，8 步做到第 5 步）、`feat/ipc-extract-followups`（合约，5 步做到第 3 步；进度怎么数、损坏的 Word 文件怎么说已定：决策 extract-progress-steps、damaged-word-copy）、`feat/ui-history-too-large`（做完 3 步）。恢复参数在 folio-agent-work/roadmap-session/m2-resume.md。",
+      "已合并（M2）：M2 合约、AI 设置页、差异组件、对象库、选择汇总加两个计数、工作区视图、正文抽取、工作区核心、历史视图、「历史太大」合约，以及回收站两个修复、标签丢失修复、问题列表两个偶发测试的修复；另有中文 README 和截图、MIT 许可证。main 62b54f2c。",
+      "接下来：`feat/ipc-extract-followups`（合约，单独合并）和 `feat/ui-history-too-large` 做完就合；提交和历史之后是差异和恢复、AI 提交说明、M2 验收。`refactor/ui-change-rows`（M3）可以开始，优先级低。`feat/ipc-recycle-cloud-trash` 暂缓（决策 icloud-no-delete）。",
+      "你 10-06 授权：之后的判断由路线图会话自己定、自己合并，事后汇报（决策 m2-subagents）；每条 lane 合并前压成一个提交（CLAUDE.md §7.3 第 12 条）。和模型训练会话共用内存：子代理的测试单个超过 4 GB 就停下排查。现在没有要你做的事。10-07 晚：历史已按 lane 压成 114 个提交、清掉课程截图和个人记录，仓库公开（许可证当晚由 GPL-3.0 改成 MIT：决策 license-mit）；原来的 648 个提交在 private 的 Folio-archive（决策 public-repo）。",
       "按你批准的 versioning.md §19：差异和恢复也等正文抽取；AI 提交说明等差异做完再开；M3 新增 `feat/core-retention`（Word 旧版本稀疏保留）；M1 的三处资料库细节由新的 `feat/ui-library-m1-notes` 做。关键路径：工作区 → 提交和历史 → 差异和恢复 → AI 提交说明 → M2 验收。",
       "模型：Fable 5.1 暂停（你 10-03 的决定）：推荐给它的 lane（关卡、规格、IPC 合约、推理强度 max）都由 Opus 5.5 用同样的推理强度代替；界面、核心、测试、设计用 Opus 5.5，只改文档和只合并的用 Sonnet 5.5。恢复时删掉 meta.pausedModels 里的 fable 即可。",
       "Codex 的项目级 skills（`AGENTS.md`、`.agents/skills/`、`.codex/`、`.claude/skills/`）和 CLAUDE.md 里的两处改动不进仓库，由 Codex 管理：任何 lane 都不提交、不丢弃。"
@@ -4505,7 +4505,15 @@
       "item": "怎么整理历史并公开：合并粒度、GitHub 上怎么发布、原来的历史放哪、学校名、许可证、以后怎么合并",
       "type": "decide",
       "state": "done",
-      "result": "Sirui：每条 lane 压成一个提交（main 114 个，含许可证）；旧仓库改名 Folio-archive，保持 private，留原来的 648 个提交（按他的要求把时间重排到 07-08～10-07）；新建 Folio 推送新历史、重建 v0.1.0 Release 后公开；示例数据里的多伦多大学保留；GPL-3.0；以后每条 lane 在 but land 前压成一个提交（CLAUDE.md §7.3 第 12 条）。旧提交号到新提交号的对照在 folio-agent-work/history-rewrite/sha-map.json"
+      "result": "Sirui：每条 lane 压成一个提交（main 114 个，含许可证）；旧仓库改名 Folio-archive，保持 private，留原来的 648 个提交（按他的要求把时间重排到 07-08～10-07）；新建 Folio 推送新历史、重建 v0.1.0 Release 后公开；示例数据里的多伦多大学保留；GPL-3.0（当晚改成 MIT，决策 license-mit）；以后每条 lane 在 but land 前压成一个提交（CLAUDE.md §7.3 第 12 条）。旧提交号到新提交号的对照在 folio-agent-work/history-rewrite/sha-map.json"
+    },
+    {
+      "id": "license-mit",
+      "when": "2026-10-07",
+      "item": "许可证：公开时定的 GPL-3.0 还是 MIT",
+      "type": "decide",
+      "state": "done",
+      "result": "Sirui 当晚在 GitHub 网页上把 LICENSE 换成 MIT（5d5a6c65），并确认 README、CLAUDE.md 和路线图跟着改。依赖里没有 GPL：只有几个 MPL-2.0 的库（cssparser、selectors 等；dompurify 可选 Apache-2.0），和 MIT 不冲突。网页提交的 committer 是 GitHub，check-commits 现在接受作者是 Sirui 的这种提交（chore/build-license-mit）"
     },
     {
       "id": "search-generated-by-name",
@@ -4522,6 +4530,22 @@
       "type": "decide",
       "state": "done",
       "result": "路线图会话按授权决定（方案 A）：单开合约 lane feat/ipc-history-too-large（HistoryState tooLarge、WorkspaceSummary 的文件夹路径、AppError HistoryTooLarge），再开界面 lane feat/ui-history-too-large；顺序：历史视图 → 这个合约 → 正文抽取后续。合约合并前，feat/core-commit-history 把超大的首次提交报成 Internal（日志里写文件夹），超大的 HEAD 暂时显示成损坏"
+    },
+    {
+      "id": "extract-progress-steps",
+      "when": "2026-10-07",
+      "item": "正文抽取后续：哈希任务的进度怎么数（读正文算不算进度）、活动里哈希那一行要不要带数字",
+      "type": "decide",
+      "state": "done",
+      "result": "路线图会话按授权定：方案 A。哈希任务按步数算进度：每哈希一个文件算一步，每读一个文本或 Word 文件的正文也算一步；要读的正文数一开始就算进总数（哈希前查一次资料库），进度条不会倒退。哈希那一行的说明不带数字（「So Folio can spot changes and moves, and search inside files」）；一个文件都没哈希时说「Checked files」，不说「Checked 0 files」。IPC 类型不变，Progress 的文档和 ipc-m1/ipc-m2 §13 跟着改。由 feat/ipc-extract-followups 做"
+    },
+    {
+      "id": "damaged-word-copy",
+      "when": "2026-10-07",
+      "item": "正文抽取后续：损坏或加了密码的 Word 文件在问题列表里怎么说",
+      "type": "decide",
+      "state": "done",
+      "result": "路线图会话按授权定：用第一个方案「It may be damaged or protected with a password, so Folio can't search inside it. Folio tries again when the file changes.」由 feat/ipc-extract-followups 做"
     }
   ],
   "looseEnds": [
@@ -5176,6 +5200,11 @@
       "at": "2026-10-07",
       "by": "Claude Code",
       "text": "历史改写并公开：main 按 lane 压成 114 个提交（含 GPL-3.0 许可证），清除课程截图、交接快照、学校邮箱和课程名；新仓库 Folio 公开，原来的 648 个提交在 private 的 Folio-archive；v0.1.0 Release 已重建；4 条 M2 lane 在新历史上重建（提交号变了）；文档里的旧提交号换成新的；以后每条 lane 合并前压成一个提交（决策 public-repo）"
+    },
+    {
+      "at": "2026-10-08",
+      "by": "Claude Code",
+      "text": "M2 恢复：历史视图（25a53afd）和「历史太大」合约（e43a5404）10-07 已合并；feat/core-commit-history、feat/ipc-extract-followups、feat/ui-history-too-large 按原参数接着做；正文抽取后续的进度和文案已定（决策 extract-progress-steps、damaged-word-copy）"
     }
   ]
 }
