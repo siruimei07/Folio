@@ -180,4 +180,4 @@ docs/                产品简介、路线图、ADR、技术规格、设计交�
 
 ## 许可证
 
-Folio 以 [GNU 通用公共许可证第 3 版（GPL-3.0）](LICENSE) 发布。
+Folio 以 [MIT 许可证](LICENSE) 发布。

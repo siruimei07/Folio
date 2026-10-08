@@ -1,14 +1,17 @@
 #!/usr/bin/env node
 // Commits are Sirui's (CLAUDE.md §7.1 rule 5): author and committer are Sirui Mei
 // <sirui.mei07@gmail.com>, and no agent puts its name, model, session, link or co-author
-// trailer into a commit message. `pnpm check` runs this on the commits not yet on origin/main;
-// CI (and `--all`) runs it on every commit reachable from HEAD.
+// trailer into a commit message. A commit Sirui makes on github.com has GitHub's web-flow
+// identity as committer, which is accepted when he is the author. `pnpm check` runs this on the
+// commits not yet on origin/main; CI (and `--all`) runs it on every commit reachable from HEAD.
 
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 
 export const NAME = 'Sirui Mei';
 export const EMAIL = 'sirui.mei07@gmail.com';
+/** The committer of an edit made in GitHub's web interface. */
+export const GITHUB_WEB = { name: 'GitHub', email: 'noreply@github.com' };
 
 /** Message patterns that credit an agent, each with what it catches for the error line. */
 const FORBIDDEN = [
@@ -25,8 +28,10 @@ const WORKSPACE_COMMIT = 'GitButler Workspace Commit';
 /** What is wrong with one commit: its identities and its message. */
 export function problemsIn({ an, ae, cn, ce, body }) {
   const problems = [];
-  if (an !== NAME || ae !== EMAIL) problems.push(`author is ${an} <${ae}>, not ${NAME} <${EMAIL}>`);
-  if (cn !== NAME || ce !== EMAIL) problems.push(`committer is ${cn} <${ce}>, not ${NAME} <${EMAIL}>`);
+  const bySirui = an === NAME && ae === EMAIL;
+  const onGitHub = bySirui && cn === GITHUB_WEB.name && ce === GITHUB_WEB.email;
+  if (!bySirui) problems.push(`author is ${an} <${ae}>, not ${NAME} <${EMAIL}>`);
+  if ((cn !== NAME || ce !== EMAIL) && !onGitHub) problems.push(`committer is ${cn} <${ce}>, not ${NAME} <${EMAIL}>`);
   for (const [pattern, what] of FORBIDDEN) if (pattern.test(body)) problems.push(`message contains ${what}`);
   return problems;
 }

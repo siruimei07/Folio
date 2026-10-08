@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { EMAIL, NAME, problemsIn } from './check-commits.mjs';
+import { EMAIL, GITHUB_WEB, NAME, problemsIn } from './check-commits.mjs';
 
 const sirui = { an: NAME, ae: EMAIL, cn: NAME, ce: EMAIL };
 const message = (body) => problemsIn({ ...sirui, body });
@@ -38,4 +38,11 @@ test('rejects any identity but Sirui as author or committer', () => {
   assert.equal(problemsIn({ ...sirui, ae: 'sirui.mei@school.example.edu', body }).length, 1);
   assert.equal(problemsIn({ ...sirui, cn: 'GitButler', ce: 'gitbutler@gitbutler.com', body }).length, 1);
   assert.equal(problemsIn({ an: 'Claude', ae: 'noreply@anthropic.com', cn: NAME, ce: EMAIL, body }).length, 1);
+});
+
+test("accepts GitHub's web-flow committer only on Sirui's own commits", () => {
+  const web = { cn: GITHUB_WEB.name, ce: GITHUB_WEB.email, body: 'Add LICENSE file' };
+  assert.deepEqual(problemsIn({ an: NAME, ae: EMAIL, ...web }), []);
+  assert.equal(problemsIn({ an: 'Claude', ae: 'noreply@anthropic.com', ...web }).length, 2);
+  assert.equal(problemsIn({ an: NAME, ae: EMAIL, cn: 'GitHub', ce: 'web-flow@example.com', body: 'fix: a' }).length, 1);
 });
