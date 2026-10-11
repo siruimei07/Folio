@@ -17,12 +17,12 @@
     ]
   },
   "now": {
-    "stage": "M2 实现：提交和历史建完待审计；正文抽取后续和「历史太大」界面已合并",
+    "stage": "M2 实现：提交和历史修完第一轮审计待复审；差异和恢复已规划；改动行共用组件已合并",
     "focus": "M2",
     "summary": [
-      "10-07 晚，结算点（你要求做到这里停下）：正文抽取后续（1be532a3：读完正文后打开的搜索自动刷新；损坏或加密的 Word 文件有自己的读取失败和文案；哈希任务的进度按步数）和「历史太大」界面（3eac4c60）已合并，各压成一个提交，CI 都绿。`feat/core-commit-history`（关键路径）8 个构建步骤都已提交（有日志的提交和崩溃恢复、自动的第一次提交、修改说明和撤销、历史表和历史查询、外壳命令、真实外壳上的 e2e），停在独立审计之前，下次从审计接着做。恢复参数在 folio-agent-work/roadmap-session/m2-resume.md。",
-      "已合并（M2）：M2 合约、AI 设置页、差异组件、对象库、选择汇总加两个计数、工作区视图、正文抽取、工作区核心、历史视图、「历史太大」的合约和界面、正文抽取后续，以及回收站两个修复、标签丢失修复、问题列表两个偶发测试的修复；另有中文 README 和截图、MIT 许可证。main 3eac4c60。",
-      "接下来：`feat/core-commit-history` 审计、修复后合并；然后差异和恢复、AI 提交说明、M2 验收。`refactor/ui-change-rows`（M3）可以开始，优先级低。`feat/ipc-recycle-cloud-trash` 暂缓（决策 icloud-no-delete）。",
+      "10-11 暂停点（你要求做到这里停下）：改动行共用组件（34ccd5e：改动列表、历史卡片和差异标题用同一个改动行模块，外观和行为不变）已合并，压成一个提交，CI 绿。`feat/core-commit-history`（关键路径）第一轮审计确认的问题都已修好并提交（6 个中等、7 个低级），第二轮复审开始时停下。`feat/core-diff-restore` 只做了规划（方案在它的 lane 文件里），等提交和历史合并后再开始写代码。恢复步骤在 folio-agent-work/roadmap-session/m2-resume.md。",
+      "已合并（M2）：M2 合约、AI 设置页、差异组件、对象库、选择汇总加两个计数、工作区视图、正文抽取、工作区核心、历史视图、「历史太大」的合约和界面、正文抽取后续、改动行共用组件（M3 前置），以及回收站两个修复、标签丢失修复、问题列表两个偶发测试的修复；另有中文 README 和截图、MIT 许可证。main 34ccd5e。",
+      "接下来：`feat/core-commit-history` 第二轮复审、修复后合并；然后 `feat/core-diff-restore` 按已有方案构建，再做 AI 提交说明、M2 验收。`feat/ipc-recycle-cloud-trash` 暂缓（决策 icloud-no-delete）。",
       "你 10-06 授权：之后的判断由路线图会话自己定、自己合并，事后汇报（决策 m2-subagents）；每条 lane 合并前压成一个提交（CLAUDE.md §7.3 第 12 条）。和模型训练会话共用内存：子代理的测试单个超过 4 GB 就停下排查。现在没有要你做的事。10-07 晚：历史已按 lane 压成 114 个提交、清掉课程截图和个人记录，仓库公开（许可证当晚由 GPL-3.0 改成 MIT：决策 license-mit）；原来的 648 个提交在 private 的 Folio-archive（决策 public-repo）。",
       "按你批准的 versioning.md §19：差异和恢复也等正文抽取；AI 提交说明等差异做完再开；M3 新增 `feat/core-retention`（Word 旧版本稀疏保留）；M1 的三处资料库细节由新的 `feat/ui-library-m1-notes` 做。关键路径：工作区 → 提交和历史 → 差异和恢复 → AI 提交说明 → M2 验收。",
       "模型：Fable 5.1 暂停（你 10-03 的决定）：推荐给它的 lane（关卡、规格、IPC 合约、推理强度 max）都由 Opus 5.5 用同样的推理强度代替；界面、核心、测试、设计用 Opus 5.5，只改文档和只合并的用 Sonnet 5.5。恢复时删掉 meta.pausedModels 里的 fable 即可。",
@@ -5252,6 +5252,11 @@
       "at": "2026-10-07",
       "by": "Claude Code",
       "text": "正文抽取后续合并（1be532a3）、「历史太大」界面合并（3eac4c60），合并前各压成一个提交；feat/core-commit-history 8 步建完，按 Sirui 的要求在审计前停下（结算点）"
+    },
+    {
+      "at": "2026-10-11",
+      "by": "Claude Code",
+      "text": "改动行共用组件合并（34ccd5e，压成一个提交）；feat/core-commit-history 修完第一轮审计；feat/core-diff-restore 只做规划；按 Sirui 的要求在第二轮复审前停下（暂停点）"
     }
   ]
 }
