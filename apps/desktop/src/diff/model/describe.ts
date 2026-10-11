@@ -1,13 +1,22 @@
 // What the diff pane says about a row (handoff workspace-history §6.1, §6.2, §6.8): the heading,
 // its icon and change status, the summary strip, the event banners, which body shows and whether
 // "Changes | This version" is offered (§6.7). Pure: messages are i18n keys of the `diff` namespace
-// (sizes are `common`'s) with their values, dates and sizes already in the UI language; the pane
-// renders them and words the bodies itself.
+// (sizes, settings titles and " · Tags" are `common`'s) with their values, dates and sizes already
+// in the UI language; the pane renders them and words the bodies itself. The heading's icon, status
+// and titles are the change row's (`components/ChangeRow/words`), as the Changes list and History
+// show them.
 //
 // The row is known before its diff loads, so the header, the move and bound-part banners and the
 // toggle come from it at once; the content decides the rest when the first window answers.
 import type { ParseKeys, TFunction } from 'i18next';
 
+import {
+  CHANGE_ROW_TAGS,
+  type ChangeRowIcon,
+  changeRowIcon,
+  changeStatusOf,
+  metadataTitle,
+} from '../../components/ChangeRow/words';
 import type { ChangeStatus } from '../../components/ChangeStatusIcon/ChangeStatusIcon';
 import type {
   AppError,
@@ -27,11 +36,10 @@ import type {
   TagDefinitionChange,
   TextDiff,
 } from '../../ipc';
-import { courseLabel } from '../../lib/courses';
 import { type FileType, fileTypeOf } from '../../lib/file-types';
 import { formatDateTime, sizeParts } from '../../lib/format';
 import { isBelow, nameOf, parentOf } from '../../lib/paths';
-import { courseIn, placeOf, prefixOf } from '../../lib/places';
+import { placeOf, prefixOf } from '../../lib/places';
 import type { DiffTarget } from './target';
 
 /** A key of the `diff` namespace, or of another namespace with its prefix (`common:size.bytes`). */
@@ -68,11 +76,6 @@ export interface DescribeContext {
    */
   showsVersion: (name: string) => boolean;
 }
-
-/** The heading's 16 px icon: the file's type icon, or a Lucide icon named in camel case. */
-export type HeadingIcon =
-  | { kind: 'file'; name: string }
-  | { kind: 'folder' | 'folderOpen' | 'tag' | 'settings' | 'tags' | 'fileCog' };
 
 /** The heading: a library path (course label, folders, name), or a title such as "Ignore rules". */
 export type DiffHeading =
@@ -133,7 +136,8 @@ export type DiffBody =
   | { kind: 'nothing' };
 
 export interface DiffDescription {
-  icon: HeadingIcon;
+  /** The heading's 16 px icon, the change row's. */
+  icon: ChangeRowIcon;
   heading: DiffHeading;
   /** The change status icon after the heading (20A). */
   status: ChangeStatus;
@@ -161,11 +165,6 @@ const EVENT_TYPES = new Set<FileType>(['pdf', 'powerpoint', 'excel', 'image', 'a
 function eventTypeOf(name: string): EventType {
   const type = fileTypeOf(name);
   return EVENT_TYPES.has(type) ? (type as EventType) : 'other';
-}
-
-/** A change's status icon: a move is "Renamed" (ipc-m2 §5.2). */
-export function statusOf(change: ChangeKind): ChangeStatus {
-  return change === 'moved' ? 'renamed' : change;
 }
 
 function banner(status: ChangeStatus, message: Message): EventBanner {
@@ -264,11 +263,6 @@ function offersVersion(change: FileChange, context: DescribeContext): boolean {
   );
 }
 
-function fileIcon(change: FileChange): HeadingIcon {
-  if (change.kind === 'file') return { kind: 'file', name: nameOf(change.path) };
-  return { kind: change.change === 'moved' ? 'folderOpen' : 'folder' };
-}
-
 /** "Renamed from …", "Moved from …/", or both at once. */
 function moveBanner(from: string, to: string, context: DescribeContext): EventBanner {
   const folder = parentOf(from);
@@ -290,7 +284,7 @@ function moveBanner(from: string, to: string, context: DescribeContext): EventBa
 /** One banner per part of a bound item (versioning §6.3), by how the part touches the item. */
 function partBanner(item: FileChange, part: ItemPart, context: DescribeContext): EventBanner {
   if (part.kind === 'versioningRules') return banner('modified', { key: 'banner.part.versioningRules' });
-  const status = statusOf(part.change);
+  const status = changeStatusOf(part.change);
   const folderPart = part.entryKind === 'folder';
   const at = (key: DiffKey, name?: string) => banner(status, name === undefined ? { key } : { key, values: { name } });
   // A file replaced by another, or by a folder that now holds the item.
@@ -505,9 +499,9 @@ function describeFile(
   if (change.change === 'moved' && change.fromPath !== null) banners.push(moveBanner(change.fromPath, change.path, context));
   for (const part of change.parts) banners.push(partBanner(change, part, context));
   const common = {
-    icon: fileIcon(change),
+    icon: changeRowIcon(change),
     heading: { kind: 'path', path: change.path, suffix: null },
-    status: statusOf(change.change),
+    status: changeStatusOf(change.change),
   } as const;
   if (diff === undefined) {
     return {
@@ -533,33 +527,13 @@ function describeFile(
 
 // ---- tag and settings changes
 
-function metadataHeading(subject: MetadataSubject, courses: readonly Course[]): { icon: HeadingIcon; heading: DiffHeading } {
-  switch (subject.kind) {
-    case 'tags':
-      return {
-        icon: { kind: 'tag' },
-        heading: { kind: 'path', path: subject.path, suffix: { key: 'heading.tags' } },
-      };
-    case 'semester':
-      return {
-        icon: { kind: 'settings' },
-        heading: { kind: 'title', title: { key: 'heading.semesterSettings', values: { name: nameOf(subject.path) } } },
-      };
-    case 'course': {
-      const course = courseIn(subject.path, courses);
-      const name = course?.folder.path === subject.path ? courseLabel(course) : nameOf(subject.path);
-      return {
-        icon: { kind: 'settings' },
-        heading: { kind: 'title', title: { key: 'heading.courseSettings', values: { name } } },
-      };
-    }
-    case 'tagDefinitions':
-      return { icon: { kind: 'tags' }, heading: { kind: 'title', title: { key: 'heading.tagDefinitions' } } };
-    case 'library':
-      return { icon: { kind: 'settings' }, heading: { kind: 'title', title: { key: 'heading.librarySettings' } } };
-    case 'ignoreRules':
-      return { icon: { kind: 'fileCog' }, heading: { kind: 'title', title: { key: 'heading.ignoreRules' } } };
+/** A tag change's path with " · Tags", or a settings change's title, as the change rows show them. */
+function metadataHeading(subject: MetadataSubject, courses: readonly Course[]): { icon: ChangeRowIcon; heading: DiffHeading } {
+  if (subject.kind === 'tags') {
+    return { icon: { kind: 'tag' }, heading: { kind: 'path', path: subject.path, suffix: { key: CHANGE_ROW_TAGS } } };
   }
+  const { icon, title } = metadataTitle(subject, courses);
+  return { icon, heading: { kind: 'title', title } };
 }
 
 function metadataBody(diff: Diff, subject: MetadataSubject, history: boolean): DiffBody {
@@ -591,7 +565,7 @@ function describeMetadata(
   context: DescribeContext,
 ): DiffDescription {
   const { change, subject } = target.change;
-  const common = { ...metadataHeading(subject, context.courses), status: statusOf(change), banners: [], tags: null, toggle: false };
+  const common = { ...metadataHeading(subject, context.courses), status: changeStatusOf(change), banners: [], tags: null, toggle: false };
   if (diff === undefined) {
     return { ...common, strip: subject.kind === 'ignoreRules' ? LOADING_STRIP : null, body: LOADING_BODY };
   }

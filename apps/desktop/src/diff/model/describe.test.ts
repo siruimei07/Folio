@@ -516,7 +516,7 @@ group('tag and settings changes', () => {
     expect(read(description)).toEqual({ heading: [`${MAT}/notes.md`, 'Tags'], strip: null, banners: [] });
     expect(description).toEqual({
       icon: { kind: 'tag' },
-      heading: { kind: 'path', path: `${MAT}/notes.md`, suffix: { key: 'heading.tags' } },
+      heading: { kind: 'path', path: `${MAT}/notes.md`, suffix: { key: 'common:changeRow.tags' } },
       status: 'modified',
       strip: null,
       banners: [],

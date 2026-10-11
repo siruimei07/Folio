@@ -1,32 +1,15 @@
-import { CloudOff, FileCog, Folder, FolderOpen, Info, Lock, type LucideIcon, Settings, Tag, Tags } from 'lucide-react';
+import { CloudOff, Info, Lock, type LucideIcon, Tag } from 'lucide-react';
 import type { MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { ChangeStatusIcon } from '../../components/ChangeStatusIcon/ChangeStatusIcon';
+import { ChangeRowParts } from '../../components/ChangeRow/ChangeRow';
 import { CheckboxMark, type CheckState } from '../../components/Checkbox/Checkbox';
 import { CourseBadge } from '../../components/CourseBadge/CourseBadge';
-import { FileTypeIcon } from '../../components/FileTypeIcon/FileTypeIcon';
-import { PathText } from '../../components/PathHeading/PathHeading';
 import { SelectionIndicator } from '../../components/SelectionIndicator/SelectionIndicator';
 import { SIZE } from '../../tokens/tokens';
-import type { PlaceText, RowIcon, RowMark, RowText } from './describe';
-
-const ICONS: Readonly<Record<Exclude<RowIcon['kind'], 'file'>, LucideIcon>> = {
-  folder: Folder,
-  folderOpen: FolderOpen,
-  tag: Tag,
-  settings: Settings,
-  tags: Tags,
-  fileCog: FileCog,
-};
+import type { PlaceText, RowMark, RowText } from './describe';
 
 const MARKS: Readonly<Record<RowMark, LucideIcon>> = { tags: Tag, notLocal: CloudOff, unreadable: Lock };
-
-function RowIconView({ icon }: { icon: RowIcon }) {
-  if (icon.kind === 'file') return <FileTypeIcon name={icon.name} />;
-  const Icon = ICONS[icon.kind];
-  return <Icon size={SIZE.icon} />;
-}
 
 /** An item's check box (§3.2, §3.4): on, off, or on and disabled for a required item. */
 export interface RowBox {
@@ -69,23 +52,17 @@ export function ChangeRowView({ text, selected, box, descriptionId }: ChangeRowV
           <CheckboxMark state={box.state} isDisabled={box.disabled} onPress={box.onPress} />
         </span>
       )}
-      <span className="change-row__icon" aria-hidden>
-        <RowIconView icon={text.icon} />
-      </span>
-      <PathText {...text.path} title={text.title} />
-      {text.tagsTag && <span className="change-row__tag">{t('rows.tags')}</span>}
-      {text.count !== null && <span className="change-row__count">{text.count}</span>}
-      {text.marks.map((mark) => {
-        const Mark = MARKS[mark];
-        return (
-          <span key={mark} className="change-row__mark" data-mark={mark} title={marks[mark]}>
-            <Mark aria-hidden size={SIZE.iconSmall} />
-          </span>
-        );
-      })}
-      <span className="change-row__status">
-        <ChangeStatusIcon status={text.status} />
-      </span>
+      <ChangeRowParts face={text}>
+        {text.count !== null && <span className="change-row__count">{text.count}</span>}
+        {text.marks.map((mark) => {
+          const Mark = MARKS[mark];
+          return (
+            <span key={mark} className="change-row__mark" data-mark={mark} title={marks[mark]}>
+              <Mark aria-hidden size={SIZE.iconSmall} />
+            </span>
+          );
+        })}
+      </ChangeRowParts>
       {text.description !== null && (
         <span id={descriptionId} hidden>
           {text.description}

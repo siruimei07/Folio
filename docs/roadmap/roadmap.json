@@ -4257,8 +4257,21 @@
         "feat/ui-history-view"
       ],
       "summary": "历史视图的文件卡片行复制了改动列表的行代码（图标表、状态和路径拆分、设置行标题、.card-row 样式），差异组件里还有第三份标题：合成一个共用的改动行模块（CLAUDE.md §3.1）",
-      "status": "planned",
-      "updated": "2026-10-07",
+      "status": "done",
+      "updated": "2026-10-11",
+      "landed": "2026-10-11",
+      "gates": {
+        "check": "pass",
+        "e2e": "pass",
+        "codeReview": "pass",
+        "simplify": "pass",
+        "designCritique": "pass",
+        "a11y": "pass",
+        "securityReview": "na"
+      },
+      "notes": [
+        "FIX round 1: both low notes fixed (a41219b History rows pinned to change-row incl. placeholder; 0e98f57 shared test courses and stylesheet reader); desktop suite 1737 pass"
+      ],
       "links": [
         "docs/specs/ui-architecture.md"
       ],

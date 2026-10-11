@@ -1,12 +1,4 @@
 {
-  "heading": {
-    "tags": "Tags",
-    "courseSettings": "{{name}} course settings",
-    "semesterSettings": "{{name}} semester settings",
-    "tagDefinitions": "Tag definitions",
-    "librarySettings": "Library settings",
-    "ignoreRules": "Ignore rules"
-  },
   "strip": {
     "separator": " · ",
     "compared": "Compared with the last commit ({{when}})",

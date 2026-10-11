@@ -1,0 +1,53 @@
+/* A change row (workspace-history handoff §3.2–§3.4, §7.2; app-shell §7): what the Changes list's
+   rows and History's card rows share. Each view's stylesheet adds its own height, padding,
+   position and states, and never redeclares a property set here, so the order of the sheets does
+   not matter. */
+
+.change-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  box-sizing: border-box;
+  border-bottom: var(--border-width) solid var(--color-border-guide);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-body);
+  white-space: nowrap;
+  cursor: default;
+}
+
+.change-row__icon {
+  display: flex;
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+.change-row[data-deleted] .path-text {
+  text-decoration: line-through;
+}
+
+/* The "Tags" tag of a tag change (§3.3). */
+.change-row__tag {
+  flex: none;
+  box-sizing: border-box;
+  height: var(--size-changes-tag);
+  padding: 0 var(--space-4);
+  border: var(--border-width) solid var(--color-border-default);
+  border-radius: var(--radius-row);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+  line-height: calc(var(--size-changes-tag) - 2 * var(--border-width));
+}
+
+.change-row__status {
+  display: flex;
+  flex: none;
+  margin-left: auto;
+}
+
+/* A row whose change is on its way. */
+.change-row__placeholder {
+  width: 60%;
+  height: var(--space-8);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-sunken);
+}

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import base from '../../../../design/tokens/base.tokens.json';
 import dark from '../../../../design/tokens/color.dark.tokens.json';
 import light from '../../../../design/tokens/color.light.tokens.json';
+import { STYLESHEETS } from '../test/stylesheets';
 import { generateTokensCss, generateTokensTs, type TokenFiles } from './generate';
 
 describe('tokens.css and tokens.ts', () => {
@@ -13,14 +14,9 @@ describe('tokens.css and tokens.ts', () => {
   });
 
   it('defines every custom property that the stylesheets read', () => {
-    const sheets = import.meta.glob<string>('/src/**/*.css', {
-      query: '?raw',
-      import: 'default',
-      eager: true,
-    });
-    const text = Object.values(sheets).join('\n');
+    const text = Object.values(STYLESHEETS).join('\n');
     const defined = new Set([...text.matchAll(/(--[\w-]+)\s*:/g)].map((match) => match[1]));
-    const read = Object.entries(sheets).flatMap(([file, sheet]) =>
+    const read = Object.entries(STYLESHEETS).flatMap(([file, sheet]) =>
       [...sheet.matchAll(/var\(\s*(--[\w-]+)/g)].map((match) => ({ file, name: match[1] })),
     );
     expect(read.length).toBeGreaterThan(0);

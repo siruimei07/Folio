@@ -4,40 +4,35 @@
 // render it.
 import type { TFunction } from 'i18next';
 
-import type { ChangeStatus } from '../../components/ChangeStatusIcon/ChangeStatusIcon';
-import type { ChangeKind, Course, MetadataChange, MetadataSubject, SummaryGroup, WorkspaceItem } from '../../ipc';
-import { courseCode, courseLabel, courseNameAfterCode, courseTitle } from '../../lib/courses';
+import {
+  CHANGE_ROW_TAGS,
+  type ChangeRowFace,
+  changeRowIcon,
+  changeStatusOf,
+  joinRowLabel,
+  metadataTitle,
+  rowPath,
+  wholePath,
+} from '../../components/ChangeRow/words';
+import type { Course, MetadataChange, SummaryGroup, WorkspaceItem } from '../../ipc';
+import { courseCode, courseNameAfterCode, courseTitle } from '../../lib/courses';
 import { formatNumber } from '../../lib/format';
 import { nameOf, parentOf } from '../../lib/paths';
-import { courseIn, headingPrefix } from '../../lib/places';
 import { includabilityOf } from '../inclusion';
 import { type PlaceCheck, placeOfItem, type PlaceRef } from './grouped';
-
-/** The 16 px icon: the file's type icon, or a Lucide icon. */
-export type RowIcon =
-  | { kind: 'file'; name: string }
-  | { kind: 'folder' | 'folderOpen' | 'tag' | 'settings' | 'tags' | 'fileCog' };
 
 /** A 14 px mark after the name, with its tooltip (§3.3, §3.4). */
 export type RowMark = 'tags' | 'notLocal' | 'unreadable';
 
-export interface RowText {
-  icon: RowIcon;
-  /**
-   * `PathText`'s parts: the course code, the folders, the name (or a title such as "Ignore rules").
-   * Grouped by course, only the folders below the row's course, semester or library (§3.5).
-   */
-  path: { label: string; prefix: string; name: string };
-  /** The tooltip: the whole path as the flat list shows it, course code first. */
-  title: string;
-  /** A tag change of a file or folder: the "Tags" tag after the path. */
-  tagsTag: boolean;
+/**
+ * A row's face (`ChangeRowFace`): grouped by course, its path has only the folders below the row's
+ * course, semester or library (§3.5); its tooltip is the whole path as the flat list shows it,
+ * course code first.
+ */
+export interface RowText extends ChangeRowFace {
   /** "4 files", "Empty folder", "2 changes". */
   count: string | null;
   marks: readonly RowMark[];
-  status: ChangeStatus;
-  /** Struck through: a deleted file or folder. */
-  deleted: boolean;
   /** For type-ahead: the file's or folder's name, or the title. */
   name: string;
   /** The accessible name: the whole path (as shown, uncut), the status, then the rest. */
@@ -58,35 +53,12 @@ export interface DescribeContext {
   grouped?: boolean;
 }
 
-/** A change's status icon: a move is "Renamed" (ipc-m2 §5.2). */
-function statusOf(change: ChangeKind): ChangeStatus {
-  return change === 'moved' ? 'renamed' : change;
-}
-
-function pathParts(path: string, courses: readonly Course[]): RowText['path'] {
-  const { label, folders } = headingPrefix(parentOf(path), courses);
-  return { label, prefix: folders, name: nameOf(path) };
-}
-
-function joined(context: DescribeContext, parts: readonly string[]): string {
-  return new Intl.ListFormat(context.language, { type: 'unit', style: 'short' }).format(parts);
-}
-
-function whole(path: RowText['path']): string {
-  return `${path.label}${path.prefix}${path.name}`;
-}
-
 /** An item's path under its group's header: the folders below its course, semester or the library. */
 function groupedParts(item: WorkspaceItem): RowText['path'] {
   const { id } = placeOfItem(item);
   const parent = parentOf(item.path);
   const below = item.path === id || parent === id ? '' : id === '' ? parent : parent.slice(id.length + 1);
   return { label: '', prefix: below === '' ? '' : `${below}/`, name: nameOf(item.path) };
-}
-
-function itemIcon(item: WorkspaceItem): RowIcon {
-  if (item.kind === 'file') return { kind: 'file', name: nameOf(item.path) };
-  return { kind: item.change === 'moved' ? 'folderOpen' : 'folder' };
 }
 
 function itemCount(item: WorkspaceItem, t: DescribeContext['t']): string | null {
@@ -116,73 +88,55 @@ function itemDescription(item: WorkspaceItem, t: DescribeContext['t']): string |
 /** A workspace item's row (§3.2, §3.4). */
 export function describeItem(item: WorkspaceItem, context: DescribeContext): RowText {
   const { t } = context;
-  const path = pathParts(item.path, context.courses);
-  const status = statusOf(item.change);
+  const path = rowPath(item.path, context.courses);
+  const status = changeStatusOf(item.change);
   const count = itemCount(item, t);
-  const label = [whole(path), t(`common:changeStatus.${status}`)];
+  const label = [wholePath(path), t(`common:changeStatus.${status}`)];
   if (count !== null) label.push(count);
   if (item.tagsChanged) label.push(t('rows.tagsChangedPart'));
   return {
-    icon: itemIcon(item),
+    icon: changeRowIcon(item),
     path: context.grouped === true ? groupedParts(item) : path,
-    title: whole(path),
+    tooltip: wholePath(path),
     tagsTag: false,
     count,
     marks: itemMarks(item),
     status,
     deleted: item.change === 'deleted',
     name: path.name,
-    label: joined(context, label),
+    label: joinRowLabel(context.language, label),
     description: itemDescription(item, t),
   };
-}
-
-function subjectTitle(subject: Exclude<MetadataSubject, { kind: 'tags' }>, context: DescribeContext): { icon: RowIcon; title: string } {
-  const { t } = context;
-  switch (subject.kind) {
-    case 'semester':
-      return { icon: { kind: 'settings' }, title: t('rows.semesterSettings', { name: nameOf(subject.path) }) };
-    case 'course': {
-      const course = courseIn(subject.path, context.courses);
-      const name = course?.folder.path === subject.path ? courseLabel(course) : nameOf(subject.path);
-      return { icon: { kind: 'settings' }, title: t('rows.courseSettings', { name }) };
-    }
-    case 'tagDefinitions':
-      return { icon: { kind: 'tags' }, title: t('rows.tagDefinitions') };
-    case 'library':
-      return { icon: { kind: 'settings' }, title: t('rows.librarySettings') };
-    case 'ignoreRules':
-      return { icon: { kind: 'fileCog' }, title: t('rows.ignoreRules') };
-  }
 }
 
 /** A tag or settings change's row (§3.3): no check box, in every commit unless its file is left out. */
 export function describeMetadata(change: MetadataChange, context: DescribeContext): RowText {
   const { t } = context;
   const { subject } = change;
-  const status = statusOf(change.change);
+  const status = changeStatusOf(change.change);
   const common = { count: null, marks: [], status, deleted: false, description: t('rows.metadata') };
   if (subject.kind === 'tags') {
-    const path = pathParts(subject.path, context.courses);
+    const path = rowPath(subject.path, context.courses);
     return {
       ...common,
       icon: { kind: 'tag' },
       path,
-      title: whole(path),
+      tooltip: wholePath(path),
       tagsTag: true,
       name: path.name,
-      label: joined(context, [whole(path), t('rows.tags'), t(`common:changeStatus.${status}`)]),
+      label: joinRowLabel(context.language, [wholePath(path), t(CHANGE_ROW_TAGS), t(`common:changeStatus.${status}`)]),
     };
   }
-  const { icon, title } = subjectTitle(subject, context);
+  const { icon, title: message } = metadataTitle(subject, context.courses);
+  const title = t(message.key, message.values ?? {});
   return {
     ...common,
     icon,
     path: { label: '', prefix: '', name: title },
-    title,
+    tooltip: title,
     tagsTag: false,
     name: title,
-    label: joined(context, [title, t(`common:changeStatus.${status}`)]),
+    label: joinRowLabel(context.language, [title, t(`common:changeStatus.${status}`)]),
   };
 }
 

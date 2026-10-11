@@ -3,16 +3,9 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import type { Course } from '../../ipc';
 import { headingPrefix } from '../../lib/places';
+import { LINEAR, MAT } from '../../test/courses';
 import { PathHeading, PathText } from './PathHeading';
-
-function course(path: string, code: string | null, name: string): Course {
-  return { folder: { id: path, path }, name, abbr: null, code, color: null, archived: false, files: 0 };
-}
-
-const MAT = course('Fall 2026/MAT232 Calculus of Several Variables', 'MAT232', 'MAT232 Calculus of Several Variables');
-const LINEAR = course('Fall 2026/线性代数', null, '线性代数');
 
 describe('headingPrefix', () => {
   it('splits the course code from the folders below it', () => {

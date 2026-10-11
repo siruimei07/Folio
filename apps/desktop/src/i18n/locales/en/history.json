@@ -93,13 +93,7 @@
     "version": "This file in this commit",
     "others_one": "and {{count, number}} other file in this commit",
     "others_other": "and {{count, number}} other files in this commit",
-    "movedFrom": "Moved from {{path}}",
-    "tags": "Tags",
-    "semesterSettings": "{{name}} semester settings",
-    "courseSettings": "{{name}} course settings",
-    "tagDefinitions": "Tag definitions",
-    "librarySettings": "Library settings",
-    "ignoreRules": "Ignore rules"
+    "movedFrom": "Moved from {{path}}"
   },
   "files": {
     "menu": "Actions for {{name}}",

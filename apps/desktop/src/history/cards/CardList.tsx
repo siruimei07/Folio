@@ -1,30 +1,17 @@
-import { FileCog, Folder, FolderOpen, type LucideIcon, Settings, Tag, Tags } from 'lucide-react';
 import { type FocusEvent, type KeyboardEvent, type MouseEvent, type Ref, useContext, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { CommitRef } from '../../app/panes';
-import { ChangeStatusIcon } from '../../components/ChangeStatusIcon/ChangeStatusIcon';
+import { ChangeRowParts } from '../../components/ChangeRow/ChangeRow';
 import { keyboardMenuAnchor } from '../../components/collections/rows';
-import { FileTypeIcon } from '../../components/FileTypeIcon/FileTypeIcon';
 import { isContextMenuKey } from '../../components/Menu/Menu';
-import { PathText } from '../../components/PathHeading/PathHeading';
 import { SelectionIndicator } from '../../components/SelectionIndicator/SelectionIndicator';
 import { useCourses } from '../../data/groups';
 import type { Course } from '../../ipc';
-import { SIZE } from '../../tokens/tokens';
 import { hasFileMenu } from '../menus/FileMenuItems';
 import { keyboardMenuOpen, openRowMenu } from '../menus/RowMenu';
-import { type CardRow, type CardRowIcon, cardRowId, type CardRowText, describeCardRow } from '../model/rows';
+import { type CardRow, cardRowId, describeCardRow } from '../model/rows';
 import { CardHostContext } from './host';
-
-const ICONS: Readonly<Record<Exclude<CardRowIcon['kind'], 'file'>, LucideIcon>> = {
-  folder: Folder,
-  folderOpen: FolderOpen,
-  tag: Tag,
-  settings: Settings,
-  tags: Tags,
-  fileCog: FileCog,
-};
 
 const NO_COURSES: readonly Course[] = [];
 
@@ -46,30 +33,6 @@ function optionIndex(target: EventTarget): number | null {
 export interface CardItem {
   row: CardRow;
   commit: CommitRef;
-}
-
-function RowIcon({ icon }: { icon: CardRowIcon }) {
-  if (icon.kind === 'file') return <FileTypeIcon name={icon.name} />;
-  const Icon = ICONS[icon.kind];
-  return <Icon size={SIZE.icon} />;
-}
-
-/** What a row shows (app-shell §7): the icon, the path, the "Tags" tag of a tag change, the status. */
-function CardRowView({ text, selected }: { text: CardRowText; selected: boolean }) {
-  const { t } = useTranslation('history');
-  return (
-    <>
-      {selected && <SelectionIndicator />}
-      <span className="card-row__icon" aria-hidden>
-        <RowIcon icon={text.icon} />
-      </span>
-      <PathText {...text.path} title={text.tooltip} />
-      {text.tagsTag && <span className="card-row__tag">{t('cards.tags')}</span>}
-      <span className="card-row__status">
-        <ChangeStatusIcon status={text.status} />
-      </span>
-    </>
-  );
 }
 
 export interface CardListProps {
@@ -178,7 +141,7 @@ export function CardList({ label, items, selectedId, setSize, onSelect, ref }: C
           <div
             key={id}
             role="option"
-            className="card-row"
+            className="change-row card-row"
             data-index={index}
             data-deleted={text.deleted || undefined}
             aria-selected={selected}
@@ -193,7 +156,8 @@ export function CardList({ label, items, selectedId, setSize, onSelect, ref }: C
               onContextMenu(event, index);
             }}
           >
-            <CardRowView text={text} selected={selected} />
+            {selected && <SelectionIndicator />}
+            <ChangeRowParts face={text} />
           </div>
         );
       })}

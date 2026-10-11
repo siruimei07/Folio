@@ -1,58 +1,23 @@
 import type { TFunction } from 'i18next';
-import {
-  ArrowLeft,
-  Ellipsis,
-  Eye,
-  FileCog,
-  FileDiff,
-  Folder,
-  FolderOpen,
-  type LucideIcon,
-  RotateCcw,
-  Settings,
-  Tag,
-  Tags,
-} from 'lucide-react';
+import { ArrowLeft, Ellipsis, Eye, FileDiff, RotateCcw } from 'lucide-react';
 import { type ReactElement, type ReactNode, type Ref, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button as AriaButton, Focusable } from 'react-aria-components';
 
 import { Button } from '../components/Button/Button';
+import { ChangeRowIconView } from '../components/ChangeRow/ChangeRow';
+import { type ChangeRowIcon, rowPath } from '../components/ChangeRow/words';
 import { ChangeStatusIcon, type ChangeStatus } from '../components/ChangeStatusIcon/ChangeStatusIcon';
 import { useFocusKeeper } from '../components/collections/useFocusKeeper';
-import { FileTypeIcon } from '../components/FileTypeIcon/FileTypeIcon';
 import { IconButton } from '../components/IconButton/IconButton';
 import { Menu, MenuButton, MenuItem, MenuSeparator } from '../components/Menu/Menu';
 import { PathHeading } from '../components/PathHeading/PathHeading';
 import { SegmentedControl } from '../components/SegmentedControl/SegmentedControl';
 import { Tooltip } from '../components/Tooltip/Tooltip';
 import type { Course } from '../ipc';
-import { nameOf, parentOf } from '../lib/paths';
-import { headingPrefix } from '../lib/places';
 import { SIZE } from '../tokens/tokens';
-import { type DiffHeading, type HeadingIcon, renderMessage } from './model/describe';
+import { type DiffHeading, renderMessage } from './model/describe';
 import type { DiffBack, DiffRestore } from './types';
-
-const ICONS: Readonly<Record<Exclude<HeadingIcon['kind'], 'file'>, LucideIcon>> = {
-  folder: Folder,
-  folderOpen: FolderOpen,
-  tag: Tag,
-  settings: Settings,
-  tags: Tags,
-  fileCog: FileCog,
-};
-
-function HeadingIconView({ icon }: { icon: HeadingIcon }) {
-  if (icon.kind === 'file') return <FileTypeIcon name={icon.name} />;
-  const Icon = ICONS[icon.kind];
-  return <Icon size={SIZE.icon} />;
-}
-
-/** The course code and the folders before a path's name, as `PathHeading` takes them. */
-function placeOfHeading(path: string, courses: readonly Course[]): { label: string; prefix: string } {
-  const { label, folders } = headingPrefix(parentOf(path), courses);
-  return { label, prefix: folders };
-}
 
 /** What the body shows: the diff, or the file at this version through the preview (§6.7). */
 export type DiffView = 'changes' | 'version';
@@ -156,7 +121,7 @@ function paneMenuItems(
 }
 
 export interface DiffHeaderProps {
-  icon: HeadingIcon;
+  icon: ChangeRowIcon;
   heading: DiffHeading;
   status: ChangeStatus;
   courses: readonly Course[];
@@ -211,8 +176,7 @@ export function DiffHeader({
   const title =
     heading.kind === 'path'
       ? {
-          ...placeOfHeading(heading.path, courses),
-          name: nameOf(heading.path),
+          ...rowPath(heading.path, courses),
           suffix: heading.suffix === null ? undefined : `${t('strip.separator')}${renderMessage(t, heading.suffix)}`,
         }
       : { label: '', prefix: '', name: renderMessage(t, heading.title), suffix: undefined };
@@ -228,7 +192,7 @@ export function DiffHeader({
           {t('header.back')}
         </AriaButton>
       )}
-      <PathHeading icon={<HeadingIconView icon={icon} />} id={headingId} ref={headingRef} {...title} />
+      <PathHeading icon={<ChangeRowIconView icon={icon} />} id={headingId} ref={headingRef} {...title} />
       <ChangeStatusIcon status={status} />
       {(segmented || restoreButton || more) && (
         <div ref={actionsRef} className="diff-header__actions">

@@ -38,21 +38,13 @@
   border-radius: 0;
 }
 
-/* A row (§3.2): 32 px, the check box column, the icon, the path, then what follows the name. Not
-   positioned: a positioned row would paint its background over the focus ring that its virtual
-   row draws inside itself (app-shell §10); that row, absolutely positioned, holds the selection bar. */
-.change-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-6);
-  box-sizing: border-box;
+/* A row (§3.2; the shared parts in components/ChangeRow): 32 px, the check box column, the icon,
+   the path, then what follows the name. Not positioned: a positioned row would paint its background
+   over the focus ring that its virtual row draws inside itself (app-shell §10); that row,
+   absolutely positioned, holds the selection bar. */
+.changes-list__rows .change-row {
   height: 100%;
   padding: 0 var(--space-10) 0 var(--space-6);
-  border-bottom: var(--border-width) solid var(--color-border-guide);
-  color: var(--color-text-primary);
-  font-size: var(--font-size-body);
-  white-space: nowrap;
-  cursor: default;
 }
 
 .virtual-collection__row:hover > .change-row {
@@ -73,32 +65,9 @@
   width: var(--size-target-min);
 }
 
-.change-row__icon {
-  display: flex;
-  flex: none;
-  color: var(--color-text-secondary);
-}
-
 /* Not on this computer, or unreadable (§3.4): the name in the secondary colour. */
 .change-row[data-blocked] .path-text {
   color: var(--color-text-secondary);
-}
-
-.change-row[data-deleted] .path-text {
-  text-decoration: line-through;
-}
-
-/* The "Tags" tag of a tag change (§3.3). */
-.change-row__tag {
-  flex: none;
-  box-sizing: border-box;
-  height: var(--size-changes-tag);
-  padding: 0 var(--space-4);
-  border: var(--border-width) solid var(--color-border-default);
-  border-radius: var(--radius-row);
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-caption);
-  line-height: calc(var(--size-changes-tag) - 2 * var(--border-width));
 }
 
 .change-row__count {
@@ -117,19 +86,9 @@
   color: var(--color-feedback-warning);
 }
 
-.change-row__status {
-  display: flex;
-  flex: none;
-  margin-left: auto;
-}
-
-/* A row whose page has not arrived. */
-.change-row__placeholder {
-  width: 60%;
-  height: var(--space-8);
+/* A row whose page has not arrived: in the path's place, after the check box column. */
+.changes-list__rows .change-row__placeholder {
   margin-left: calc(var(--size-target-min) + var(--space-6));
-  border-radius: var(--radius-pill);
-  background: var(--color-surface-sunken);
   box-shadow: inset 0 0 0 var(--border-width) var(--color-border-guide);
 }
 

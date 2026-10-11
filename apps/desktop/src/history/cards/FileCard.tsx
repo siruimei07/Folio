@@ -179,8 +179,8 @@ function CardPlaceholder({ rows }: { rows: number }) {
   return (
     <div className="file-card__rows" aria-hidden>
       {Array.from({ length: Math.max(1, rows) }, (_, index) => (
-        <div key={index} className="card-row">
-          <span className="card-row__placeholder" />
+        <div key={index} className="change-row card-row">
+          <span className="change-row__placeholder" />
         </div>
       ))}
     </div>

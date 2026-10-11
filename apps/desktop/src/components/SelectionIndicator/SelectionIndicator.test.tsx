@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react';
 import { Tab, TabList, TabPanel, Tabs } from 'react-aria-components';
 import { describe, expect, it } from 'vitest';
 
+import { stylesheetsReading } from '../../test/stylesheets';
 import sheet from './SelectionIndicator.css?raw';
 import { SelectionIndicator } from './SelectionIndicator';
 
@@ -64,11 +65,9 @@ describe('SelectionIndicator', () => {
   it('is the only stylesheet that draws a selection bar', () => {
     // The tree, search, the settings nav and the rail each drew their own copy before; a new list
     // renders the component instead of a sixth.
-    const sheets = import.meta.glob<string>('/src/**/*.css', { query: '?raw', import: 'default', eager: true });
-    const drawing = Object.entries(sheets)
-      .filter(([, text]) => /var\(\s*--size-selection-bar-(width|inset)\b/.test(text))
-      .map(([file]) => file);
-    expect(drawing).toEqual(['/src/components/SelectionIndicator/SelectionIndicator.css']);
+    expect(stylesheetsReading('--size-selection-bar-width', '--size-selection-bar-inset')).toEqual([
+      '/src/components/SelectionIndicator/SelectionIndicator.css',
+    ]);
     // 3 px of the indicator colour, inset top and bottom, rounded on the right.
     expect(sheet).toMatch(/width: var\(--size-selection-bar-width\)/);
     expect(sheet).toMatch(/top: var\(--size-selection-bar-inset\)/);

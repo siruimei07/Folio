@@ -11,7 +11,7 @@ import { smallHistoryWith } from '../../test/history';
 import { settle } from '../../test/render';
 import { SIZE } from '../../tokens/tokens';
 import { showTypes, useHistoryView } from '../state';
-import { findFeed, renderHistory, resetHistoryPreferences } from '../test/render';
+import { findFeed, holdAnswers, renderHistory, resetHistoryPreferences } from '../test/render';
 
 resetHistoryPreferences();
 
@@ -90,14 +90,16 @@ describe('a commit’s card', () => {
       expect(row).toHaveAttribute('aria-selected', 'false');
     }
     const deleted = within(card).getByRole('option', { name: 'MAT232/Old slides L2.pdf, Deleted' });
-    expect(deleted).toHaveAttribute('data-deleted');
+    // The shared row's look (components/ChangeRow), the deleted path's strike-through among it.
+    for (const row of rows) expect(row).toHaveClass('change-row', 'card-row');
+    expect(deleted.matches('.change-row[data-deleted]')).toBe(true);
     const moved = within(card).getByRole('option', { name: /^MAT232\/Problem sets\/ps2 solutions\.md, Renamed, Moved from MAT232\/ps2 solutions\.md$/ });
     expect(moved.querySelector('.path-text')).toHaveAttribute(
       'title',
       'MAT232/Problem sets/ps2 solutions.md\nMoved from MAT232/ps2 solutions.md',
     );
     const folder = within(card).getByRole('option', { name: /习题, Renamed, Moved from .*Exercises$/ });
-    expect(folder.querySelector('.card-row__icon svg')?.getAttribute('class')).toContain('lucide-folder-open');
+    expect(folder.querySelector('.change-row__icon svg')?.getAttribute('class')).toContain('lucide-folder-open');
     expect(within(card).getByRole('option', { name: 'MAT232/Exams/Midterm/Midterm review.md, Modified' })).toBeInTheDocument();
     expect(within(await article('Tidy up')).getByRole('button', { name: 'Show all 5 changes' })).toBeInTheDocument();
   });
@@ -372,6 +374,28 @@ describe('a restore’s card', () => {
     await waitFor(() => {
       expect(diffHeading()).toBe('MAT232/Exams/Midterm/Midterm review.md');
     });
+  });
+
+  it('holds its place with a placeholder row, drawn as a change row, while its row is read', async () => {
+    const { shell } = renderHistory();
+    await findFeed();
+    const source = headId(shell);
+    const answers = holdAnswers(shell, 'list_file_history');
+    await act(async () => {
+      await shell.invoke('restore_version', { request: { commit: source, path: REVIEW } });
+    });
+    const restored = await screen.findByRole('article', { name: RESTORED });
+    const placeholder = await waitFor(() => {
+      const found = restored.querySelector('.file-card__rows[aria-hidden] > .change-row.card-row > .change-row__placeholder');
+      expect(found).not.toBeNull();
+      return found;
+    });
+    expect(within(restored).queryByRole('listbox')).not.toBeInTheDocument();
+
+    answers.release();
+    const card = await within(restored).findByRole('listbox', { name: 'Restored file' });
+    expect(placeholder).not.toBeInTheDocument();
+    expect(within(card).getByRole('option')).toHaveClass('change-row', 'card-row');
   });
 
   // A version from a commit of thousands of files (the brief's 50,000-file library, a file's
